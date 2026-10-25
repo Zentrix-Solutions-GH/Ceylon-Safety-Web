@@ -1,0 +1,80 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/hooks/context-reminder.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": { "tool_name": "Edit|Write" },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/hooks/guard-paths.sh",
+            "env": { "CLAUDE_TOOL_INPUT_PATH": "{{tool_input.file_path}}" }
+          },
+          {
+            "type": "command",
+            "command": "bash scripts/hooks/scan-secrets.sh",
+            "env": { "CLAUDE_TOOL_INPUT_NEW_STRING": "{{tool_input.new_string}}" }
+          }
+        ]
+      },
+      {
+        "matcher": { "tool_name": "Bash" },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/hooks/guard-git.sh",
+            "env": { "CLAUDE_TOOL_INPUT_COMMAND": "{{tool_input.command}}" }
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": { "tool_name": "Write" },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/hooks/scan-secrets.sh",
+            "env": { "CLAUDE_TOOL_INPUT_NEW_STRING": "{{tool_input.content}}" }
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/hooks/stop-check.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git branch:*)",
+      "Bash(git show:*)",
+      "Bash(npx tsc --noEmit:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(bash scripts/check.sh:*)",
+      "Bash(supabase status:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh run list:*)"
+    ]
+  }
+}
