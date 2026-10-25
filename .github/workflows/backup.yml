@@ -1,0 +1,13 @@
+﻿# Nightly database copy to a private R2 bucket (D5, M28)
+# Backend owner: S-116
+name: Nightly DB backup
+on:
+  schedule:
+    - cron: "0 20 * * *"  # 02:00 Sri Lanka time (UTC+5:30)
+  workflow_dispatch:
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: TODO implement backup
+        run: echo "Not yet implemented"

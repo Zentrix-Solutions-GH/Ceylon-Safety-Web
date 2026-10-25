@@ -1,0 +1,99 @@
+---
+id: S-024
+title: Image component (two widths), messages/en.ts, t()
+status: ready
+owner: frontend
+risk: normal
+branch: feature/S-024-image-component-messages
+pr: ~
+depends_on: [S-022]
+reqs: [REQ-003, REQ-186, REQ-190]
+---
+
+## Goal
+
+Give every screen three shared tools: one image component that serves the two stored WebP widths through `srcset`, one text dictionary read through a `t()` helper (English at launch, ready for Sinhala and Tamil), and one typed map from action error codes to messages, plus date and money formatting helpers.
+
+## Requirements covered
+
+- REQ-003 (CONFIRMED): English only at launch. REQ-190 (CONFIRMED): ready for Sinhala and Tamil, so all text comes from one dictionary.
+- REQ-186 (CONFIRMED): mobile-friendly; images sized for slow mobile data (frontend 9.2).
+- Source: frontend architecture 4.6, 9.2, 12; content design 14, 14.1 (image widths).
+
+## Acceptance criteria
+
+- [ ] AC1: `messages/en.ts` exports the typed dictionary; `t(key, params?)` returns the text, with `{name}`-style parameters replaced. A key that does not exist is a type error.
+- [ ] AC2: One entry per error code from `types/api.ts` (common list: `validation_failed`, `not_allowed`, `not_found`, `rate_limited`, `version_conflict`, `upload_failed`, `purge_failed`, `reauth_required`, `mfa_required`, `unknown`) and per auth-only code from `types/auth.ts` (`invalid_credentials`, `email_not_verified`, `code_invalid`, `code_expired`, `code_attempts_exceeded`, `weak_password`, `captcha_failed`, `account_suspended`). Entries per `reason` exist where the text differs (`rate_limited`: `hourly`, `pending_cap`; `validation_failed`: `already_done`, `files_missing`, `confirm_large_change`, `confirm_mismatch`, `too_many_rows`).
+- [ ] AC3: `errorMessage(code, reason?)` returns the mapped text, and the `unknown` text for any unmapped code. A Vitest test fails if a code in the type files has no entry.
+- [ ] AC4: Texts given in the specs are used word for word (for example "You do not have permission to do this.", "Someone else changed this while you were editing. Reload to see their changes. Your text is kept.", "Email or password is not correct", "That code is not right"). Wording the specs do not give is listed in the Plan and approved by the owner.
+- [ ] AC5: Formatting helpers: dates in Asia/Colombo (for example "17 Oct 2026, 2:30 pm"); money "LKR 1,500.00" formatted from cents. The helper never calculates totals.
+- [ ] AC6: `components/shared/ResponsiveImage.tsx` takes the variant URLs (480 and 1200 wide), builds `srcset` and `sizes`, always sets `width` and `height`, lazy-loads unless marked as the first visible image, and uses a plain `<img>` (the Next.js image optimiser is off).
+- [ ] AC7: An image with only one variant (original narrower than 480 px) renders a plain `src`, no `srcset`.
+- [ ] AC8: Alt text is required by the component type: either `alt` (max 200 characters) or an explicit `decorative` flag. Display crops use CSS `object-fit` and a focal position only.
+
+## Edge cases
+
+- [ ] EC1: A parameter value containing braces or HTML is shown as text, never interpreted.
+- [ ] EC2: Unknown `reason` for a known code falls back to the code's default text.
+- [ ] EC3: Missing variant URL (for example a pending image) renders nothing broken: no empty `src`, no layout jump (width and height keep the space).
+- [ ] EC4: Dates around midnight Sri Lanka time show the Sri Lanka day, not UTC.
+- [ ] EC5: Money values of 0 and values above 1,000,000 cents format correctly.
+
+## Contract
+
+- Consumes: `ErrorCode` and the auth code union from `types/api.ts` and `types/auth.ts` (Backend). The Vitest check needs a runtime list of codes; Spec gap: ask Backend to export a `const` array next to each type, otherwise the test only checks at compile time.
+- Consumes: media variant URLs already built by the data layer. Spec gap: the rule that names variants from a file key ("key plus width", content design 14) and the type that carries them (`types/media.ts`) are not written down; Frontend cannot import `lib/media/`.
+
+## Out of scope
+
+- Upload resize helper and `useMediaUpload` (S-055, uses `lib/content/image-resize.ts`).
+- Real screen text beyond shared error and common strings; each story adds its own keys.
+- i18n library, Sinhala/Tamil dictionaries (not in v1).
+- Variant naming rule and media types (Backend).
+
+## Assumptions accepted
+
+- ASSUMPTION (frontend 21.12, F2/M27): simple dictionary now, no i18n library.
+- ASSUMPTION (frontend 6.3, F6/M27): image optimiser off; two widths through `srcset`.
+- Spec contradiction, resolved here as `messages/en.ts`: the frontend architecture (v2.1, newer) says `en.ts`; file structure v8 says `en.json`. Typed keys need TypeScript, so `.ts`. Owner to confirm and fix file structure.
+- Location of the formatting helper: the specs do not say (Frontend owns no `lib/`). Proposed: `messages/format.ts`. Owner to confirm.
+- Component name `ResponsiveImage` is a proposal (spec says "one shared image component").
+
+## Test plan
+
+| Test | Type | File |
+|---|---|---|
+| `t()` parameters and missing key | unit | `messages/__tests__/t.test.ts` |
+| Every code has a message; unknown -> `unknown` | unit | `messages/__tests__/errors.test.ts` |
+| Date (Asia/Colombo) and money format | unit | `messages/__tests__/format.test.ts` |
+| srcset builder: two widths, one width | unit | `components/shared/__tests__/ResponsiveImage.test.tsx` |
+| Alt or decorative required | type test | same file |
+
+## Plan
+
+Prior art: designer pass 2026-10-25 read frontend architecture 4.6, 9.2, 12, file structure (messages/), content design 14.1, auth design 17. Extends them. `/story-run` re-runs `grep -ril "messages/\|srcset" docs/`.
+<!-- Rest filled by /story-run at Step 3. -->
+
+## Evidence
+
+<!-- Paste scripts/check.sh output here after Step 7 -->
+
+```
+$ bash scripts/check.sh
+```
+
+## Review notes
+
+<!-- Filled by reviewer agents -->
+
+## After this merges, a user can:
+
+- Nothing visible. This PR is **infrastructure** and its title must say so.
+
+## After this merges, these still do NOT work:
+
+- Any page text, any image on a real page; Sinhala/Tamil interface (not in v1).
+
+## After this merges
+
+- S-025, S-026 and all feature stories use `t()`, `errorMessage()` and `ResponsiveImage`.

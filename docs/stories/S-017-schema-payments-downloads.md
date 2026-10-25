@@ -1,0 +1,113 @@
+---
+id: S-017
+title: Schema 7: payment events, entitlements, download requests/logs, claim_download, bank slips, invoices, email logs
+phase: MS1
+status: ready
+owner: backend
+risk: sensitive
+branch: feature/S-017-schema-payments-downloads
+pr: ~
+depends_on: [S-016]
+reqs: [REQ-049, REQ-049b, REQ-050, REQ-052, REQ-053, REQ-053b, REQ-055, REQ-146b, REQ-154, REQ-154b]
+---
+
+## Goal
+
+Create the payment and download tables: `payment_events`, `bank_transfer_slips`, `entitlements`, `download_logs`, `download_requests`, `invoices`, `email_logs`, plus the atomic functions `claim_download`, `release_download`, `approve_download_request` and `next_invoice_number`. Infrastructure PR; the title ends with `(infrastructure)`. This is the largest schema story; if it runs over a day, split `email_logs` into its own PR (Re-baseline: say so as soon as it is seen).
+
+## Requirements covered
+
+- REQ-049 / REQ-050: One purchase gives one download through a one-time link; the right never expires (CONFIRMED); the count is a per-entitlement limit copied from a setting
+- REQ-049b / REQ-053 / REQ-053b: Lost or failed download: "Request download" in My Purchases, admin approves (CONFIRMED)
+- REQ-052: No refund system (CONFIRMED): no `refunds` table
+- REQ-055: Downloads are protected, server checks the buyer's right (CONFIRMED)
+- REQ-146b: Admin approves or rejects download requests (ASSUMED, accepted below)
+- REQ-154 / REQ-154b: Bank transfer with slip upload and manual verification (CONFIRMED / ASSUMED)
+- REQ-154c, REQ-155, REQ-156: bank details, tax and invoice content are OPEN; only the columns that do not depend on the answers are built
+
+## Acceptance criteria
+
+- [ ] AC1: `payment_events`: `id`, `order_id` FK `orders` RESTRICT, `provider default 'payhere'`, `provider_payment_id`, `event_key NOT NULL UNIQUE`, `status_code int`, `amount_cents`, `currency`, `signature_valid`, `raw_payload jsonb`, `received_at`, `processed_at`, `outcome CHECK in (applied, duplicate_ignored, rejected_mismatch, second_payment_flagged, recorded_only)`; indexes `(order_id)` and `(received_at) WHERE processed_at IS NULL`. The append-only trigger from S-013 is applied: UPDATE and DELETE are refused for every role.
+- [ ] AC2: `bank_transfer_slips`: `id`, `order_id` FK RESTRICT (several slips per order allowed), `uploaded_by` FK RESTRICT, `file_key NOT NULL UNIQUE`, `mime_type`, `size_bytes`, `status CHECK in (uploaded, accepted, rejected) default uploaded`, `reviewed_by` FK SET NULL, `reviewed_at`, `rejection_reason` (CHECK: required when status = rejected), `uploaded_at`; indexes `(order_id, uploaded_at DESC)` and `(status) WHERE status='uploaded'`.
+- [ ] AC3: `entitlements`: `id`, `user_id` FK RESTRICT, `item_type CHECK in (document, course)`, `document_id` FK RESTRICT, `course_id uuid` (no foreign key yet; S-018 adds it), exactly ONE of the two set, `language` (REQUIRED for documents), `order_item_id` FK SET NULL, `source CHECK in (purchase, admin_grant)`, `granted_by` FK SET NULL, `granted_at`, `expires_at` (always empty in v1), `download_limit int NOT NULL CHECK >= 0`, `downloads_used default 0`, `revoked_at`, `revoke_reason`; `UNIQUE(order_item_id) WHERE order_item_id IS NOT NULL`; NO uniqueness on `(user_id, document_id)`; a non-unique index on `(user_id, document_id)`.
+- [ ] AC4: `download_logs`: `id bigint PK`, `entitlement_id`, `user_id`, `document_id`, `document_file_id` FK `document_files`, `ip_hash`, `downloaded_at`; indexes `(entitlement_id)`, `(document_id)`. A trigger adds 1 to `documents.download_count` atomically for each new row (per document, all languages together).
+- [ ] AC5: `download_requests`: `id`, `entitlement_id` FK RESTRICT, `user_id` FK, `note`, `status CHECK in (open, approved, rejected) default open`, `decided_by` FK SET NULL, `decided_at`, `decision_note` (CHECK: required when status = rejected), `requested_at`; `UNIQUE(entitlement_id) WHERE status = 'open'`; index `(status, requested_at) WHERE status = 'open'`.
+- [ ] AC6: `invoices`: `id`, `order_id` FK `orders` UNIQUE, `invoice_number UNIQUE` (from `next_invoice_number()`, `INV-YYYY-00001`), `pdf_key`, `tax_label`, `tax_rate_bps`, `tax_cents default 0`, `issued_at`, `seller_snapshot jsonb NOT NULL`.
+- [ ] AC7: `email_logs`: `id bigint PK`, `to_email`, `template`, `related_type CHECK in (order, user, comment, download_request, bank_transfer_slip)` (nullable), `related_id uuid`, `provider_message_id`, `status CHECK in (queued, sent, failed, bounced)`, `error`, `created_at`; `UNIQUE(template, related_type, related_id) WHERE template IN ('welcome','receipt','bank_expiring')`.
+- [ ] AC8: Functions in `private`, EXECUTE revoked from public/anon/authenticated (service role only): `claim_download(user, entitlement, ip_hash)` locks the entitlement `FOR UPDATE`, checks it belongs to the user, is not revoked and `downloads_used < download_limit` (no expiry check; ignores document status and `deleted_at`), adds 1, writes the log, returns the key of the CURRENT `ready` `full` file for the entitlement's language, and raises without changing anything when no such file exists. `release_download(entitlement, log)` undoes a claim (decrements, removes the log row). `approve_download_request(request, admin)` in one transaction checks the request is `open`, adds 1 to the entitlement's `download_limit`, marks it approved with reviewer and time; a second call does nothing. `next_invoice_number()` is sequence-based.
+- [ ] AC9: RLS enabled on all seven. `payment_events`: staff read only. `bank_transfer_slips`: a buyer reads own rows WITHOUT `file_key` (a customer `SELECT file_key` fails); staff with the bank-transfer review permission read and review. `entitlements`, `download_logs`, `download_requests`: customers read own; staff read (entitlements full for `orders.*`/grant area). `invoices`: customers read own; staff read. `email_logs`: staff read only. No client insert policy exists on any of these; all writes go through the service role.
+- [ ] AC10: RLS tests: customer A cannot read customer B's entitlement, download log, download request, invoice or slip; `anon` reads none of the seven; a customer cannot read `payment_events` or `email_logs`.
+- [ ] AC11: `types/database.ts` regenerated.
+
+## Edge cases
+
+- [ ] EC1: `download_limit = 1`, two parallel `claim_download` calls: exactly one succeeds and `downloads_used = 1`.
+- [ ] EC2: Claim by a different user, on a revoked entitlement, or at `downloads_used = download_limit`: refused, nothing changes. `download_limit = 0`: refused.
+- [ ] EC3: Claim for a document that is hidden or soft-deleted: succeeds (past buyers keep access).
+- [ ] EC4: No `ready` current full file for the entitlement's language: raises, `downloads_used` unchanged.
+- [ ] EC5: Same customer buys the same document twice: two entitlements, no uniqueness error.
+- [ ] EC6: A second `open` request for the same entitlement: refused; after the first is decided, a new one is allowed.
+- [ ] EC7: Reject a request or slip without a note/reason: refused.
+- [ ] EC8: `approve_download_request` called twice: limit raised only once.
+- [ ] EC9: Same `event_key` inserted twice: second refused. UPDATE of `raw_payload` as service role: refused here (the named purge exception is wired in S-019).
+- [ ] EC10: A second `welcome` or `receipt` log for the same user/order: refused; `receipt_resend` and `idle_deletion_warning` repeats: allowed.
+- [ ] EC11: A customer asks for another customer's slip `file_key`: refused.
+
+## Contract
+
+- `types/database.ts` regenerated (7 tables).
+- Server-only functions: `claim_download`, `release_download`, `approve_download_request`, `next_invoice_number` (consumed by S-081, S-085, S-087).
+
+## Out of scope
+
+- `replay_payment_events`, `expire_pending_orders`, `expire_bank_orders`, `purge_old_logs`, `recompute_counters`, `idle_account_candidates` (created with their jobs; `purge_old_logs` and `recompute_counters` have no roster story yet).
+- The `course_id` foreign keys (S-018). The `payment_events` purge exception (S-019).
+- Second-approval status and no-self-approval check for slips (M6, M7: PROPOSED, not built).
+
+## Assumptions accepted
+
+- A5: bank transfer uses `pending_verification` and a separate slips table; rejecting keeps the order `pending_verification`.
+- A7, A9, A10: chargeback/revoke rules; one entitlement per purchased line with `download_limit` copied from `default_download_limit`; approval adds 1 to `download_limit`; request status values are `open/approved/rejected` (the commerce doc wins over the auth doc's `pending`).
+- Q77 (no cap on the number of requests; each is logged) and Q76 (download page after payment).
+- The permission name for slip review is the schema v15 name `bank_transfers.review`. Decision M16 proposes `bank_slips.review`; it is one constant in the migration and changes with M16 (Spec gap).
+
+## Test plan
+
+| Test | Type | File |
+|---|---|---|
+| AC1-AC7 columns, CHECKs, indexes, EC5-EC10 | pgTAP | `supabase/tests/payments.test.sql` |
+| AC8/EC1-EC4/EC8 claim, release, approve (two connections for the race) | pgTAP | `supabase/tests/payments.test.sql` |
+| AC9/AC10/EC11 RLS: user cannot read another user's rows; slip key hidden | pgTAP | `supabase/tests/payments.test.sql` |
+| AC1 append-only on `payment_events` | pgTAP | `supabase/tests/payments.test.sql` |
+
+## Plan
+
+Prior art: searched `grep -ril "claim_download\|entitlements\|bank_transfer_slips\|download_requests\|email_logs" docs/`: found database-schema Groups H and J, sections 5, 6, 7, 7A, 9, 11.1 (A5 to A10); commerce-design sections 5A, 6, 7, 9, 10; this story implements them; nothing superseded.
+
+<!-- Filled in by /story-run at Step 3. Sensitive: the owner approves the plan. -->
+
+## Evidence
+
+<!-- Paste scripts/check.sh output here after Step 7. Not run = "not verified". -->
+
+```
+$ bash scripts/check.sh
+```
+
+## Review notes
+
+<!-- Filled in by reviewer / security-reviewer agents and /full-review -->
+
+## After this merges, a user can:
+
+- Nothing new. Infrastructure PR: payment, entitlement and download tables exist; a download can be claimed once, atomically, and nobody can read another user's purchases or slips.
+
+## After this merges, these still do NOT work:
+
+- Paying, receiving entitlements, downloading, requesting a download, invoices, emails (S-079 to S-088, S-095, S-096).
+- Next stories: S-018, S-019.
+
+## Spec gaps noted by the story writer
+
+- Schema does not say whether `release_download` must also lower `documents.download_count`; this story asserts it must (otherwise a failed download inflates the counter until `recompute_counters` runs); to confirm.
+- Whether the buyer's column-level hiding of `slip.file_key` is done with column privileges or a view is not specified; either is acceptable if EC11 passes.
