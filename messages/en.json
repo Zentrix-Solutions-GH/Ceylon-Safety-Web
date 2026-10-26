@@ -1,0 +1,13 @@
+{
+  "_comment": "All user-visible strings. Access via the t() helper. No hardcoded EN text in components.",
+  "nav": {},
+  "home": {},
+  "articles": {},
+  "documents": {},
+  "search": {},
+  "cart": {},
+  "checkout": {},
+  "auth": {},
+  "admin": {},
+  "common": {}
+}
