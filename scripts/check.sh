@@ -28,7 +28,7 @@ run "ESLint" npx eslint . --max-warnings 0
 run "TypeScript" npx tsc --noEmit
 
 # 3. Unit tests
-run "Vitest (unit)" npx vitest run --project unit --passWithNoTests
+run "Vitest (unit)" npx vitest run --passWithNoTests
 
 # ── Summary ─────────────────────────────────────────────────────────────────
 printf '\n════════════════════════════════\n'

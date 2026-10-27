@@ -1,2 +1,2 @@
-﻿// TODO: define types
+// TODO: define types
 export {};

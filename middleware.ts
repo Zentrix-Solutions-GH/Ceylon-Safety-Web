@@ -1,4 +1,4 @@
-﻿// Backend owner: S-034 (auth middleware), S-009 (rate limiting)
+// Backend owner: S-034 (auth middleware), S-009 (rate limiting)
 export { default } from "@/lib/auth/middleware";
 
 export const config = {

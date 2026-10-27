@@ -1,4 +1,4 @@
-﻿// All environment variables read here; missing required values fail at startup
+// All environment variables read here; missing required values fail at startup
 function required(name: string): string {
   const val = process.env[name];
   if (!val) throw new Error(`Missing required env var: ${name}`);
