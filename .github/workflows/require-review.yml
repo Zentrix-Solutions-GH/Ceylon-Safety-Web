@@ -21,6 +21,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.payload.pull_request.number,
+              per_page: 100,
             });
             const allDocs = files.length > 0 && files.every(f =>
               f.filename.startsWith('docs/') ||
