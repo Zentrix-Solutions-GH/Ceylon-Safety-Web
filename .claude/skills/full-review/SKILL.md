@@ -187,13 +187,29 @@ Merge both agents' findings (Mode B) or your own inline findings (Mode A):
 
 ---
 
-## Step 4: Post as PR Comment
+## Step 4: Post as Formal GitHub Review
+
+Use `gh pr review` — **not** `gh pr comment`. A plain comment is invisible to
+the Review Guard CI check (`listReviews` API); only a formal review counts.
+
+Map the recommendation to the right flag:
+
+| Recommendation | gh flag |
+|---|---|
+| APPROVE | `--approve` |
+| APPROVE WITH FOLLOW-UPS | `--approve` |
+| REQUEST CHANGES | `--request-changes` |
 
 ```bash
-gh pr comment <number> --body-file /tmp/ceylonsafety-review.md
+gh pr review <number> --approve --body-file /tmp/ceylonsafety-review.md
+# or
+gh pr review <number> --request-changes --body-file /tmp/ceylonsafety-review.md
 ```
 
-One comment per review run. If re-reviewing after fixes, scope the diff to new
+This triggers the `pull_request_review` event, which re-runs the Review Guard
+workflow and lets it find the formal review via `listReviews`.
+
+One review per run. If re-reviewing after fixes, scope the diff to new
 commits only:
 ```bash
 git diff <prev-head-sha>..HEAD
