@@ -44,6 +44,7 @@ Your role is set by `CS_ROLE` in `.claude/settings.local.json` (`frontend` or `b
 4. Never commit directly to `main` or `dev`. Both branches are protected.
 5. Pull requests go into `dev`. `main` receives only release merges from `dev`.
 6. The other developer reviews and merges. You never merge your own pull request.
+   - When acting as the reviewer agent, use `docs/review-template.md` as the exact structure for the GitHub review comment. Fill every section. Post as a formal GitHub review (Approve or Request changes), not a plain comment.
 7. Keep sessions short: one story per session. The story file holds state; resuming runs `/story-run S-XXX` again.
 
 ---
