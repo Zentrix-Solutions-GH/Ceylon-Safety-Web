@@ -2,11 +2,11 @@
 id: S-011
 title: Schema 1: profiles, roles, role_permissions, triggers
 phase: MS1
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-011-schema-users-roles
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/5"
 depends_on: [S-005]
 reqs: [REQ-113, REQ-117, REQ-118, REQ-118b, REQ-130, REQ-197c]
 ---
@@ -25,16 +25,16 @@ First schema migration: the three user tables (`profiles`, `user_roles`, `role_p
 
 ## Acceptance criteria
 
-- [ ] AC1: A schema `private` exists. Default privileges ensure functions created in it have EXECUTE revoked from `public`, `anon` and `authenticated`. A test lists the functions of `private` and fails if any is callable by those roles.
-- [ ] AC2: `set_updated_at()` trigger function exists and is applied to `profiles`.
-- [ ] AC3: `profiles` has every column of schema Group A: `id uuid PK` (no foreign key to `auth.users`), `first_name`, `last_name`, `display_name NOT NULL`, `email NOT NULL UNIQUE`, `phone`, `company_name`, `tax_id`, `billing_address jsonb`, `avatar_url`, `locale default 'en'`, `status CHECK in (active, suspended) default active`, `suspended_reason`, `terms_revision_id uuid` (NO foreign key yet, added in S-013), `terms_accepted_at`, `deleted_at`, `idle_warning_sent_at`, `created_at`, `updated_at`. CHECK length limits: first/last name 1-60, display_name 2-40, phone up to 30, company_name up to 120. Indexes: unique `email`; `(status) WHERE status = 'suspended'`; `(idle_warning_sent_at) WHERE idle_warning_sent_at IS NOT NULL`.
-- [ ] AC4: `user_roles` has `user_id uuid PK` FK to `profiles` ON DELETE CASCADE, `role CHECK in ('super_admin','admin','maintainer')`, `granted_by` FK to `profiles`, `granted_at`. `role_permissions` has `role` (same CHECK), `action text`, `PRIMARY KEY (role, action)`. Every foreign key column has an index.
-- [ ] AC5: `create_profile_for(auth_user)` (in `private`) is the ONE place that builds a profile row: trims and length-limits names; builds `display_name` as first name + last initial (e.g. "Nimal P."), otherwise "Member" + a short random suffix, never from the email address; refuses staff-like names (admin, support, moderator, the site name) by using "Member"; copies the avatar only when the sign-in provider is Google; reads names from the sign-up form or from Google (`given_name`, `family_name`, `full_name`); accepts a terms revision only if that revision exists (until S-013 adds `page_revisions` it stores NULL).
-- [ ] AC6: `handle_new_user` trigger on `auth.users` (after insert) calls `create_profile_for`. It never raises an error on odd input (missing metadata, 1000-character names, emoji, null names). `sync_auth_email` trigger updates `profiles.email` when the auth user's email changes.
-- [ ] AC7: A before insert/update trigger on `profiles` applies the same sanitising rules to every change: trims and limits fields, and resets a display name that looks like staff (after normalising case, spacing and look-alike characters) to "Member". A direct update through the API cannot set display name "Admin", "Admin " or a look-alike.
-- [ ] AC8: RLS is enabled on all three tables. A signed-in customer can read their own profile row and update ONLY these columns: `first_name`, `last_name`, `display_name`, `phone`, `company_name`, `tax_id`, `billing_address`, `avatar_url`, `locale`. No customer policy allows insert or delete on `profiles`. `user_roles` and `role_permissions` have NO policy for `anon` or customers. Staff policies are added in S-012 (they need the permission functions).
-- [ ] AC9: RLS tests: customer A cannot read customer B's profile; customer A cannot update `status`, `email`, `deleted_at`, `suspended_reason` or `terms_accepted_at` on their own row; `anon` reads nothing; a customer cannot read `user_roles` or `role_permissions`; a customer cannot insert a row into `user_roles` for themselves (self-promotion).
-- [ ] AC10: `types/database.ts` is regenerated with `supabase gen types typescript --local` and committed.
+- [x] AC1: A schema `private` exists. Default privileges ensure functions created in it have EXECUTE revoked from `public`, `anon` and `authenticated`. A test lists the functions of `private` and fails if any is callable by those roles.
+- [x] AC2: `set_updated_at()` trigger function exists and is applied to `profiles`.
+- [x] AC3: `profiles` has every column of schema Group A: `id uuid PK` (no foreign key to `auth.users`), `first_name`, `last_name`, `display_name NOT NULL`, `email NOT NULL UNIQUE`, `phone`, `company_name`, `tax_id`, `billing_address jsonb`, `avatar_url`, `locale default 'en'`, `status CHECK in (active, suspended) default active`, `suspended_reason`, `terms_revision_id uuid` (NO foreign key yet, added in S-013), `terms_accepted_at`, `deleted_at`, `idle_warning_sent_at`, `created_at`, `updated_at`. CHECK length limits: first/last name 1-60, display_name 2-40, phone up to 30, company_name up to 120. Indexes: unique `email`; `(status) WHERE status = 'suspended'`; `(idle_warning_sent_at) WHERE idle_warning_sent_at IS NOT NULL`.
+- [x] AC4: `user_roles` has `user_id uuid PK` FK to `profiles` ON DELETE CASCADE, `role CHECK in ('super_admin','admin','maintainer')`, `granted_by` FK to `profiles`, `granted_at`. `role_permissions` has `role` (same CHECK), `action text`, `PRIMARY KEY (role, action)`. Every foreign key column has an index.
+- [x] AC5: `create_profile_for(auth_user)` (in `private`) is the ONE place that builds a profile row: trims and length-limits names; builds `display_name` as first name + last initial (e.g. "Nimal P."), otherwise "Member" + a short random suffix, never from the email address; refuses staff-like names (admin, support, moderator, the site name) by using "Member"; copies the avatar only when the sign-in provider is Google; reads names from the sign-up form or from Google (`given_name`, `family_name`, `full_name`); accepts a terms revision only if that revision exists (until S-013 adds `page_revisions` it stores NULL).
+- [x] AC6: `handle_new_user` trigger on `auth.users` (after insert) calls `create_profile_for`. It never raises an error on odd input (missing metadata, 1000-character names, emoji, null names). `sync_auth_email` trigger updates `profiles.email` when the auth user's email changes.
+- [x] AC7: A before insert/update trigger on `profiles` applies the same sanitising rules to every change: trims and limits fields, and resets a display name that looks like staff (after normalising case, spacing and look-alike characters) to "Member". A direct update through the API cannot set display name "Admin", "Admin " or a look-alike.
+- [x] AC8: RLS is enabled on all three tables. A signed-in customer can read their own profile row and update ONLY these columns: `first_name`, `last_name`, `display_name`, `phone`, `company_name`, `tax_id`, `billing_address`, `avatar_url`, `locale`. No customer policy allows insert or delete on `profiles`. `user_roles` and `role_permissions` have NO policy for `anon` or customers. Staff policies are added in S-012 (they need the permission functions).
+- [x] AC9: RLS tests: customer A cannot read customer B's profile; customer A cannot update `status`, `email`, `deleted_at`, `suspended_reason` or `terms_accepted_at` on their own row; `anon` reads nothing; a customer cannot read `user_roles` or `role_permissions`; a customer cannot insert a row into `user_roles` for themselves (self-promotion).
+- [ ] AC10: `types/database.ts` is regenerated with `supabase gen types typescript --local` and committed. (not verified — hand-written pending Docker availability)
 
 ## Edge cases
 
