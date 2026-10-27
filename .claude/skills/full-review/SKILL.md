@@ -187,13 +187,29 @@ Merge both agents' findings (Mode B) or your own inline findings (Mode A):
 
 ---
 
-## Step 4: Post as PR Comment
+## Step 4: Post as Formal GitHub Review
+
+Use `gh pr review` — **not** `gh pr comment`. A plain comment is invisible to
+the Review Guard CI check (`listReviews` API); only a formal review counts.
+
+Map the recommendation to the right flag:
+
+| Recommendation | gh flag |
+|---|---|
+| APPROVE | `--approve` |
+| APPROVE WITH FOLLOW-UPS | `--approve` |
+| REQUEST CHANGES | `--request-changes` |
 
 ```bash
-gh pr comment <number> --body-file /tmp/ceylonsafety-review.md
+gh pr review <number> --approve --body-file /tmp/ceylonsafety-review.md
+# or
+gh pr review <number> --request-changes --body-file /tmp/ceylonsafety-review.md
 ```
 
-One comment per review run. If re-reviewing after fixes, scope the diff to new
+This triggers the `pull_request_review` event, which re-runs the Review Guard
+workflow and lets it find the formal review via `listReviews`.
+
+One review per run. If re-reviewing after fixes, scope the diff to new
 commits only:
 ```bash
 git diff <prev-head-sha>..HEAD
@@ -202,7 +218,29 @@ and use Mode A unless the new diff is > 300 lines.
 
 ---
 
-## Step 5: Update Story File
+## Step 5: Ask Before Applying Any Fixes
+
+**After posting the comment, stop and ask the developer before touching any
+code.** Do not self-apply findings — even obvious ones. Present the findings,
+then ask:
+
+> "Found X findings (P0: N, P1: N, P2: N). Apply fixes now?"
+
+Wait for an explicit yes before editing any file.
+
+**Reviewer role boundary — NEVER edit the PR author's code:**
+
+- When reviewing another developer's PR, the reviewer's job ends at posting
+  the comment. The reviewer must **not** edit files, commit, or push to the
+  PR branch.
+- Only the PR author may apply fixes to their own PR.
+- If the reviewer is also the PR author (self-review on infra/docs), fixes may
+  be applied — but only after asking.
+- Violation of this rule undermines the review process.
+
+---
+
+## Step 6: Update Story File
 
 For every P0 and P1 finding, append a note to the story's `## Review notes`
 section (add the section if it does not exist):
@@ -306,3 +344,5 @@ tests 15 %, architecture 10 %.
 - NEVER skip the story file check.
 - ALWAYS post the review as a PR comment (`gh pr comment`).
 - ALWAYS update the story file for P0 / P1 findings.
+- ALWAYS ask the developer before applying any fixes after posting the review.
+- NEVER edit code in another developer's PR — post the findings and stop.
