@@ -1,0 +1,1 @@
+﻿# ads.txt - always served whatever the consent or ads switch
