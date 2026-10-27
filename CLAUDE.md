@@ -38,14 +38,19 @@ Your role is set by `CS_ROLE` in `.claude/settings.local.json` (`frontend` or `b
 
 ## Process
 
-1. Work only on a story with status `ready`.
-2. Use `/story-run S-XXX` to run a story end to end.
-3. One story per branch: `feature/S-XXX-short-title`, created from an up-to-date `dev`.
-4. Never commit directly to `main` or `dev`. Both branches are protected.
-5. Pull requests go into `dev`. `main` receives only release merges from `dev`.
-6. The other developer reviews and merges. You never merge your own pull request.
+### Starting a session
+
+0. Open a fresh session (`/clear` or new terminal) — one story per session.
+1. **Pick a story:** open `docs/PROJECT_STATUS.md`, find the first `ready` story whose dependencies are all done.
+   - For a **new feature not yet in the backlog**: run `/brainstorm` first → get design doc approved → run `/story-new` to create the story → mark it `ready`.
+2. Work only on a story with status `ready`.
+3. Use `/story-run S-XXX` to run a story end to end.
+4. One story per branch: `feature/S-XXX-short-title`, created from an up-to-date `dev`.
+5. Never commit directly to `main` or `dev`. Both branches are protected.
+6. Pull requests go into `dev`. `main` receives only release merges from `dev`.
+7. The other developer reviews and merges. You never merge your own pull request.
    - When acting as the reviewer agent, use `docs/review-template.md` as the exact structure for the GitHub review comment. Fill every section. Post as a formal GitHub review (Approve or Request changes), not a plain comment.
-7. Keep sessions short: one story per session. The story file holds state; resuming runs `/story-run S-XXX` again.
+8. Keep sessions short: one story per session. The story file holds state; resuming runs `/story-run S-XXX` again.
 
 ---
 
