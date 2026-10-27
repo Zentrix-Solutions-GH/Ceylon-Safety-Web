@@ -57,17 +57,28 @@ jobs:
               pull_number: pr.number,
             });
 
-            const changesRequested = reviews.filter(r =>
+            const headReviews = reviews.filter(r =>
               r.commit_id === headSha &&
-              r.state === 'CHANGES_REQUESTED'
+              ['APPROVED', 'CHANGES_REQUESTED'].includes(r.state)
             );
 
+            if (headReviews.length === 0) {
+              core.setFailed(
+                `No review on HEAD (${headSha.slice(0, 7)}). ` +
+                `Someone must submit a review after the latest commit.`
+              );
+              return;
+            }
+
+            const changesRequested = headReviews.filter(r => r.state === 'CHANGES_REQUESTED');
             if (changesRequested.length > 0) {
               const names = changesRequested.map(r => r.user.login).join(', ');
               core.setFailed(
                 `Changes requested by: ${names} on HEAD (${headSha.slice(0, 7)}). ` +
                 `Fix the issues and push a new commit.`
               );
-            } else {
-              console.log(`✓ No blocking reviews on HEAD (${headSha.slice(0, 7)}).`);
+              return;
             }
+
+            const names = headReviews.map(r => r.user.login).join(', ');
+            console.log(`✓ Approved by: ${names} on HEAD (${headSha.slice(0, 7)}).`);
