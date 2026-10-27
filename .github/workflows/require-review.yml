@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: Check if docs-only PR
         id: docs_check
-        uses: actions/github-script@60a0d83abc0f80f35c83427f04c823700b22aa34  # v7.0.1
+        uses: actions/github-script@v7
         with:
           script: |
             const { data: files } = await github.rest.pulls.listFiles({
@@ -37,7 +37,7 @@ jobs:
 
       - name: Check for review on current HEAD
         if: steps.docs_check.outputs.result != 'true'
-        uses: actions/github-script@60a0d83abc0f80f35c83427f04c823700b22aa34  # v7.0.1
+        uses: actions/github-script@v7
         with:
           script: |
             const pr = context.payload.pull_request;
