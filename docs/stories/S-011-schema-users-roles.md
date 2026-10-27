@@ -2,7 +2,7 @@
 id: S-011
 title: Schema 1: profiles, roles, role_permissions, triggers
 phase: MS1
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-011-schema-users-roles
@@ -57,6 +57,9 @@ First schema migration: the three user tables (`profiles`, `user_roles`, `role_p
 - `profiles.terms_revision_id` foreign key (S-013, needs `page_revisions`).
 - `anonymise_user` (S-019). `role_permissions` seed rows (S-020).
 - Enabling the auth hook and the "Confirm email" setting (S-031).
+- `public_profiles` view (belongs to S-019 which owns all views).
+- The part of the `role_permissions` write-guard that checks `is_super_admin()` — that function is added in S-012; the S-011 version restricts writes to the service role only and is enhanced in S-012.
+- Full Unicode confusables table — the sanitising trigger uses NFKC normalisation + a hard-coded set of common Greek/Cyrillic look-alikes (covers AC7/EC3 as written).
 
 ## Assumptions accepted
 
@@ -79,19 +82,93 @@ First schema migration: the three user tables (`profiles`, `user_roles`, `role_p
 
 Prior art: searched `grep -ril "profiles\|user_roles\|role_permissions" docs/`: found database-schema Group A (section 3), sections 5 (functions/triggers), 6 (access rules), 8 (account deletion), 9 (indexes) and auth-design sections 3, 11 and 12; this story implements them and supersedes nothing.
 
-<!-- Filled in by /story-run at Step 3. Sensitive: the owner approves the plan. -->
+**Note: SENSITIVE story. Full mode (security-reviewer + contract-checker) runs at Step 8.**
+
+### Files to create / edit
+
+| File | Action |
+|---|---|
+| `supabase/migrations/20261028000001_schema_users_roles.sql` | CREATE — the full schema migration |
+| `supabase/tests/users.test.sql` | CREATE — pgTAP tests for all ACs and ECs |
+| `types/database.ts` | EDIT — add Supabase-generated types for profiles, user_roles, role_permissions |
+
+### Migration structure (in order)
+
+1. Create `private` schema; revoke default EXECUTE from PUBLIC; revoke USAGE from PUBLIC
+2. `private.normalize_for_staff_check(text)` — NFKC normalization + look-alike substitution + lower/trim
+3. `private.is_staff_like_name(text)` — returns true if normalized name contains a banned word
+4. `public.set_updated_at()` trigger function — sets `updated_at = now()` on UPDATE
+5. `public.profiles` table — all Group A columns, CHECKs, indexes
+6. `public.user_roles` table — PK + FK to profiles (CASCADE), role CHECK, granted_by FK, indexes
+7. `public.role_permissions` table — composite PK (role, action), role CHECK
+8. Apply `set_updated_at` trigger to `profiles`
+9. `private.sanitise_profile()` — BEFORE INSERT OR UPDATE trigger on profiles: trims, length-limits, resets staff-like display_name to "Member"
+10. Apply `sanitise_profile` trigger to `profiles`
+11. `private.create_profile_for(user_id, email, raw_user_meta_data, raw_app_meta_data)` — the ONE place that builds a profile: sanitises names, builds display_name, copies avatar only for Google, validates terms revision (always NULL until S-013)
+12. `private.handle_new_user()` trigger function + AFTER INSERT trigger on `auth.users` — calls `create_profile_for`; wraps in EXCEPTION to never fail auth
+13. `private.sync_auth_email()` trigger function + AFTER UPDATE OF email trigger on `auth.users`
+14. Enable RLS on profiles, user_roles, role_permissions
+15. RLS policies: profiles (SELECT/UPDATE own; no INSERT/DELETE for customers), user_roles (no anon/customer policies), role_permissions (no anon/customer policies)
+16. Column-level GRANT: revoke UPDATE on profiles from authenticated; grant UPDATE only the allowed columns
+
+### pgTAP tests (supabase/tests/users.test.sql)
+- AC1: private schema functions not callable by anon / authenticated
+- AC3/AC4: columns, CHECKs, indexes via `has_column`, `col_type_is`, `index_is`, `col_has_check`
+- AC5/AC6: create_profile_for and handle_new_user covering EC1-EC7
+- AC7: sanitising trigger on direct UPDATE
+- AC8/AC9: RLS — customer A cannot read B; column-limited update; no self-promotion into user_roles
+
+### types/database.ts
+Hand-written Supabase CLI output format for the three tables (profiles, user_roles, role_permissions). Requires Docker + `supabase gen types typescript --local` to validate; noting in Evidence that it was manually written since Docker is not available in this environment.
+
+### Estimated step order
+Migration → Tests (fail) → Implement → Tests (pass) → check.sh → Review
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7. Not run = "not verified". -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+No test files found, exiting with code 0
+✓ Vitest (unit) passed
+
+════════════════════════════════
+  check.sh: 3 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
+
+pgTAP tests (`supabase/tests/users.test.sql`) — not verified: requires Docker +
+`supabase start`. Written to cover all ACs and ECs; run with `supabase test db`
+once the local stack is available.
+
+`types/database.ts` — hand-written in Supabase CLI output format (Docker not
+available). Regenerate with `npx supabase gen types typescript --local > types/database.ts`
+once the local stack is running.
 
 ## Review notes
 
-<!-- Filled in by reviewer / security-reviewer agents and /full-review -->
+### Round 1 findings (security-reviewer + reviewer) — fixed
+
+**Security-reviewer (FAIL → fixed):**
+- Dim 3: Five SECURITY DEFINER functions used `SET search_path = private, public` instead of `''` — fixed: all five now use `SET search_path = ''`.
+- Dim 11: `sync_auth_email` had no EXCEPTION handler — fixed: added `WHEN unique_violation THEN RAISE; WHEN OTHERS THEN NULL;`.
+- Additional: `guard_role_permissions` BEFORE DELETE returned `NEW` (NULL), silently suppressing all deletes — fixed: `IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;`.
+
+**Reviewer (REQUEST CHANGES → fixed):**
+- P0: `guard_role_permissions` RETURN NEW on DELETE — same fix as above.
+- P0: `plan(80)` declared but 59 assertions emitted — fixed: changed to `plan(59)`.
+- P1: AC9 column test covered only `status` — fixed: DO block now tests all 5 restricted columns.
+- P1: EC5 was a trivial `pass()` — fixed: now tests `profiles.email` UNIQUE constraint + TODO comment for full trigger test.
+- P1: AC1 `has_function_privilege` used bare function name — fixed: now uses `pg_get_function_identity_arguments` to include arg-type signatures.
 
 ## After this merges, a user can:
 
