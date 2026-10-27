@@ -12,7 +12,28 @@ jobs:
     name: Require review on HEAD
     runs-on: ubuntu-latest
     steps:
+      - name: Check if docs-only PR
+        id: docs_check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+            });
+            const allDocs = files.length > 0 && files.every(f =>
+              f.filename.startsWith('docs/') ||
+              f.filename === 'CLAUDE.md' ||
+              f.filename === 'README.md'
+            );
+            if (allDocs) {
+              console.log(`✓ Docs-only PR (${files.length} file(s)) — review not required.`);
+            }
+            return allDocs;
+
       - name: Check for review on current HEAD
+        if: steps.docs_check.outputs.result != 'true'
         uses: actions/github-script@v7
         with:
           script: |
