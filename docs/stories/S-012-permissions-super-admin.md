@@ -2,11 +2,11 @@
 id: S-012
 title: Schema 2: permission functions, claims hook, Super Admin protection, role seed
 phase: MS1
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-012-permissions-super-admin
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/9
 depends_on: [S-011]
 reqs: [REQ-130, REQ-130b, REQ-130c, REQ-130e, REQ-130f, REQ-150]
 ---
@@ -26,15 +26,15 @@ Make staff access enforceable in the database: the three permission functions, t
 
 ## Acceptance criteria
 
-- [ ] AC1: `is_staff_member()`, `is_super_admin()` and `has_permission(action text)` exist in `public`, `SECURITY DEFINER`, with a fixed `search_path`. They are the only functions (besides `search_all`, S-064) callable by `anon`/`authenticated`. Policies call them as `(select ...)` so they evaluate once per query.
-- [ ] AC2: `has_permission(action)` returns true when the caller is a Super Admin, or their role has a `role_permissions` row whose `action` equals the name, or is `<area>.*` and the name starts with `<area>.`. DENY BY DEFAULT: empty table means only the Super Admin passes. Tests: `admin` with fixture row `articles.*` passes `articles.save`, fails `articles` and `videos.add`, and fails `articlesx.save`; `maintainer` with no rows fails everything; a customer fails; no session (`auth.uid()` null) returns false, not an error.
-- [ ] AC3: Staff RLS policies: staff (with a `user_roles` row) read `user_roles` and `role_permissions`, EXCEPT rows whose role is `super_admin` are invisible to `admin` and `maintainer`; staff read all `profiles` except that Super Admin profiles are hidden from non-Super-Admins. No client write policy exists on `user_roles` (writes only by service role or through server code by a Super Admin).
-- [ ] AC4: `role_permissions` write rule (policy plus trigger): any insert, update or delete is refused unless the caller is a Super Admin or the service role. A test proves an `admin` cannot write it.
-- [ ] AC5: Super Admin protection trigger: before update or delete on `user_roles`, and before changes to the `profiles` row of a person who holds `super_admin` (suspend, email change, anonymise), refuse unless the caller is a Super Admin or the service role. Removing the role of the LAST Super Admin is refused even by that Super Admin. A `super_admin` row is written only by the service role or a Super Admin.
-- [ ] AC6: `custom_access_token_hook(event jsonb)` in `private` adds the claims `user_role` (`super_admin`, `admin`, `maintainer`, or absent) and `account_status` (`active`/`suspended`) to the token. SQL tests cover each role, a customer (no `user_role`), and a suspended account. Enabling the hook in Supabase config is S-031.
-- [ ] AC7: A one-off script (assumed location `supabase/scripts/create-first-super-admin.sql`, run by our team with an owner connection) inserts ONE `user_roles` row with role `super_admin` for an existing profile id passed as a parameter; it refuses when the profile does not exist, is idempotent, and prints no secrets. No sign-up path produces a staff role (test: a normal insert as `authenticated` into `user_roles` fails).
-- [ ] AC8: Authenticator protection (REQ-130c: "or to their authenticator"): try a trigger or policy on `auth.mfa_factors` to refuse changes to a Super Admin's factor unless caller is Super Admin or service role. If Supabase does not permit it, record that in Evidence; the guard then lives in the `removeAuthenticator` server action (S-039).
-- [ ] AC9: `types/database.ts` regenerated.
+- [x] AC1: `is_staff_member()`, `is_super_admin()` and `has_permission(action text)` exist in `public`, `SECURITY DEFINER`, with a fixed `search_path`. They are the only functions (besides `search_all`, S-064) callable by `anon`/`authenticated`. Policies call them as `(select ...)` so they evaluate once per query.
+- [x] AC2: `has_permission(action)` returns true when the caller is a Super Admin, or their role has a `role_permissions` row whose `action` equals the name, or is `<area>.*` and the name starts with `<area>.`. DENY BY DEFAULT: empty table means only the Super Admin passes. Tests: `admin` with fixture row `articles.*` passes `articles.save`, fails `articles` and `videos.add`, and fails `articlesx.save`; `maintainer` with no rows fails everything; a customer fails; no session (`auth.uid()` null) returns false, not an error.
+- [x] AC3: Staff RLS policies: staff (with a `user_roles` row) read `user_roles` and `role_permissions`, EXCEPT rows whose role is `super_admin` are invisible to `admin` and `maintainer`; staff read all `profiles` except that Super Admin profiles are hidden from non-Super-Admins. No client write policy exists on `user_roles` (writes only by service role or through server code by a Super Admin).
+- [x] AC4: `role_permissions` write rule (policy plus trigger): any insert, update or delete is refused unless the caller is a Super Admin or the service role. A test proves an `admin` cannot write it.
+- [x] AC5: Super Admin protection trigger: before update or delete on `user_roles`, and before changes to the `profiles` row of a person who holds `super_admin` (suspend, email change, anonymise), refuse unless the caller is a Super Admin or the service role. Removing the role of the LAST Super Admin is refused even by that Super Admin. A `super_admin` row is written only by the service role or a Super Admin.
+- [x] AC6: `custom_access_token_hook(event jsonb)` in `private` adds the claims `user_role` (`super_admin`, `admin`, `maintainer`, or absent) and `account_status` (`active`/`suspended`) to the token. SQL tests cover each role, a customer (no `user_role`), and a suspended account. Enabling the hook in Supabase config is S-031.
+- [x] AC7: A one-off script (assumed location `supabase/scripts/create-first-super-admin.sql`, run by our team with an owner connection) inserts ONE `user_roles` row with role `super_admin` for an existing profile id passed as a parameter; it refuses when the profile does not exist, is idempotent, and prints no secrets. No sign-up path produces a staff role (test: a normal insert as `authenticated` into `user_roles` fails).
+- [x] AC8: Authenticator protection (REQ-130c: "or to their authenticator"): try a trigger or policy on `auth.mfa_factors` to refuse changes to a Super Admin's factor unless caller is Super Admin or service role. If Supabase does not permit it, record that in Evidence; the guard then lives in the `removeAuthenticator` server action (S-039).
+- [x] AC9: `types/database.ts` regenerated.
 
 ## Edge cases
 
