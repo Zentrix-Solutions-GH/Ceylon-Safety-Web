@@ -92,7 +92,10 @@ BEGIN
     RETURN true;
   END IF;
 
-  -- For dotted names, extract the area prefix for wildcard matching
+  -- For dotted names, extract the area prefix for wildcard matching.
+  -- Only the first segment is used: 'documents.files.upload' → area 'documents'.
+  -- Multi-segment areas (e.g. 'documents.files.*') require an exact row; document
+  -- any such action name in the S-020 seed migration before adding it.
   IF p_action LIKE '%.%' THEN
     v_area := split_part(p_action, '.', 1);
   END IF;
@@ -326,7 +329,11 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- Supabase Auth calls the hook as supabase_auth_admin
+-- Deny all other callers first; then grant only supabase_auth_admin.
+-- The private schema already has REVOKE ALL ON SCHEMA private FROM PUBLIC (S-011),
+-- but object-level EXECUTE is a separate privilege axis — an explicit REVOKE ensures
+-- a future GRANT USAGE ON SCHEMA private to any role does not leak the hook.
+REVOKE ALL ON FUNCTION private.custom_access_token_hook(jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION private.custom_access_token_hook(jsonb)
   TO supabase_auth_admin;
 

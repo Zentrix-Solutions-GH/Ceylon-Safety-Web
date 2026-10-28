@@ -3,7 +3,7 @@
 -- Requires Docker + local Supabase stack.
 
 BEGIN;
-SELECT plan(41);
+SELECT plan(44);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Fixtures
@@ -263,6 +263,24 @@ SELECT is(
 );
 RESET role;
 
+-- Maintainer CANNOT see super_admin rows in user_roles
+SET LOCAL role TO authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"11111111-0000-0000-0000-000000000003","role":"authenticated"}';
+SELECT is(
+  (SELECT count(*)::int FROM public.user_roles WHERE role = 'super_admin'),
+  0,
+  'AC3: maintainer cannot see super_admin rows in user_roles'
+);
+
+-- Maintainer CANNOT read super_admin profile
+SELECT is(
+  (SELECT count(*)::int FROM public.profiles
+    WHERE id = '11111111-0000-0000-0000-000000000001'),
+  0,
+  'AC3: maintainer cannot read super_admin profile'
+);
+RESET role;
+
 -- Customer cannot read user_roles
 SET LOCAL role TO authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"11111111-0000-0000-0000-000000000004","role":"authenticated"}';
@@ -284,10 +302,13 @@ RESET role;
 -- AC4: role_permissions write guard — admin cannot write
 -- ─────────────────────────────────────────────────────────────────────────────
 
+-- SET ROLE at the transaction level (not inside a DO block) so the role stays
+-- in effect when the EXCEPTION handler fires. SET LOCAL inside DO $$ reverts to
+-- the outer transaction role on exception entry, silently defeating the guard check.
+SET ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"11111111-0000-0000-0000-000000000002","role":"authenticated"}';
 DO $$
 BEGIN
-  SET LOCAL role TO authenticated;
-  SET LOCAL request.jwt.claims TO '{"sub":"11111111-0000-0000-0000-000000000002","role":"authenticated"}';
   BEGIN
     INSERT INTO public.role_permissions (role, action) VALUES ('admin', 'articles.evil');
     ASSERT false, 'AC4: admin must not insert into role_permissions';
@@ -297,7 +318,7 @@ BEGIN
   END;
 END;
 $$;
-RESET role;
+RESET ROLE;
 SELECT pass('AC4: admin cannot write role_permissions (trigger + policy blocks insert)');
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -305,10 +326,10 @@ SELECT pass('AC4: admin cannot write role_permissions (trigger + policy blocks i
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- Authenticated (non-SA) cannot insert a super_admin row (AC7 test also)
+SET ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"11111111-0000-0000-0000-000000000004","role":"authenticated"}';
 DO $$
 BEGIN
-  SET LOCAL role TO authenticated;
-  SET LOCAL request.jwt.claims TO '{"sub":"11111111-0000-0000-0000-000000000004","role":"authenticated"}';
   BEGIN
     INSERT INTO public.user_roles (user_id, role)
       VALUES ('11111111-0000-0000-0000-000000000004'::uuid, 'super_admin');
@@ -319,15 +340,15 @@ BEGIN
   END;
 END;
 $$;
-RESET role;
+RESET ROLE;
 SELECT pass('AC5/AC7: authenticated cannot insert super_admin row into user_roles');
 
 -- Admin cannot delete a super_admin row (EC4: admin cannot act on SA)
+SET ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"11111111-0000-0000-0000-000000000002","role":"authenticated"}';
 DO $$
 DECLARE v_deleted int;
 BEGIN
-  SET LOCAL role TO authenticated;
-  SET LOCAL request.jwt.claims TO '{"sub":"11111111-0000-0000-0000-000000000002","role":"authenticated"}';
   BEGIN
     -- RLS hides SA rows from admin, so DELETE affects 0 rows (no error).
     -- If somehow the trigger fires, it raises an exception (also caught here).
@@ -341,7 +362,7 @@ BEGIN
   END;
 END;
 $$;
-RESET role;
+RESET ROLE;
 SELECT pass('AC5/EC4: admin cannot delete super_admin row (blocked by trigger/RLS)');
 
 -- Last Super Admin cannot be removed (EC1 single-transaction test)
@@ -367,20 +388,18 @@ $$;
 SELECT pass('EC1: cannot remove the last Super Admin');
 
 -- EC4: Admin cannot update super_admin profile (e.g., suspend via UPDATE)
+SET ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"11111111-0000-0000-0000-000000000002","role":"authenticated"}';
 DO $$
 BEGIN
-  SET LOCAL role TO authenticated;
-  SET LOCAL request.jwt.claims TO '{"sub":"11111111-0000-0000-0000-000000000002","role":"authenticated"}';
-  BEGIN
-    UPDATE public.profiles
-       SET status = 'suspended'
-     WHERE id = '11111111-0000-0000-0000-000000000001';
-    -- RLS hides the SA profile from admin, so UPDATE affects 0 rows without error
-    -- The trigger also blocks it if somehow reached — both outcomes are acceptable
-  END;
+  -- RLS hides the SA profile from admin, so UPDATE affects 0 rows without error.
+  -- The trigger also blocks it if somehow reached — both outcomes are acceptable.
+  UPDATE public.profiles
+     SET status = 'suspended'
+   WHERE id = '11111111-0000-0000-0000-000000000001';
 END;
 $$;
-RESET role;
+RESET ROLE;
 
 -- Verify the SA profile was not actually changed
 SELECT is(
@@ -515,14 +534,29 @@ END;
 $$;
 SELECT pass('AC6: hook does not raise on unknown user_id');
 
+-- AC6: supabase_auth_admin has EXECUTE on the hook (verifies the GRANT stuck)
+SET ROLE supabase_auth_admin;
+DO $$
+DECLARE
+  v_event  jsonb;
+  v_result jsonb;
+BEGIN
+  v_event  := jsonb_build_object('user_id', '11111111-0000-0000-0000-000000000001', 'claims', '{}'::jsonb);
+  v_result := private.custom_access_token_hook(v_event);
+  ASSERT v_result IS NOT NULL, 'AC6: supabase_auth_admin must be able to call the hook';
+END;
+$$;
+RESET ROLE;
+SELECT pass('AC6: supabase_auth_admin can execute custom_access_token_hook (GRANT verified)');
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- AC7: authenticated cannot insert into user_roles (no INSERT policy)
 -- ─────────────────────────────────────────────────────────────────────────────
 
+SET ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"11111111-0000-0000-0000-000000000004","role":"authenticated"}';
 DO $$
 BEGIN
-  SET LOCAL role TO authenticated;
-  SET LOCAL request.jwt.claims TO '{"sub":"11111111-0000-0000-0000-000000000004","role":"authenticated"}';
   BEGIN
     INSERT INTO public.user_roles (user_id, role)
       VALUES ('11111111-0000-0000-0000-000000000004'::uuid, 'admin');
@@ -533,7 +567,7 @@ BEGIN
   END;
 END;
 $$;
-RESET role;
+RESET ROLE;
 SELECT pass('AC7: no sign-up path produces a staff role (INSERT blocked for authenticated)');
 
 SELECT * FROM finish();
