@@ -171,17 +171,25 @@ CREATE POLICY role_permissions_select_staff ON public.role_permissions
 -- via the RLS policy on profiles. REVOKE ALL from PUBLIC, then GRANT only to
 -- authenticated — anon cannot call it. SECURITY DEFINER bypasses user_roles RLS
 -- so the check is always authoritative regardless of the caller's RLS view.
+-- Non-staff callers always get false — this prevents the function from being
+-- used as an RPC oracle to discover Super Admin UUIDs.
 CREATE OR REPLACE FUNCTION public.profile_is_super_admin(p_profile_id uuid)
   RETURNS boolean
-  LANGUAGE sql
+  LANGUAGE plpgsql
   STABLE
   SECURITY DEFINER
   SET search_path = ''
 AS $$
-  SELECT EXISTS (
+BEGIN
+  -- Non-staff users must not be able to probe SA identity via RPC.
+  IF NOT public.is_staff_member() THEN
+    RETURN false;
+  END IF;
+  RETURN EXISTS (
     SELECT 1 FROM public.user_roles
      WHERE user_id = p_profile_id AND role = 'super_admin'
-  )
+  );
+END;
 $$;
 
 REVOKE ALL ON FUNCTION public.profile_is_super_admin(uuid) FROM PUBLIC;

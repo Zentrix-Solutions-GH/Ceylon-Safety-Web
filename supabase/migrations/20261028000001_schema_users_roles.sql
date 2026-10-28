@@ -27,6 +27,10 @@ CREATE OR REPLACE FUNCTION public.set_updated_at()
   SET search_path = ''
 AS $$
 BEGIN
+  -- clock_timestamp() (wall-clock) is intentional: now() returns the transaction
+  -- start time, so two rows updated in one statement would share an updated_at.
+  -- clock_timestamp() gives each row a distinct timestamp. No batch-update path
+  -- exists in V1; revisit if bulk operations are added in a later story.
   NEW.updated_at := clock_timestamp();
   RETURN NEW;
 END;
