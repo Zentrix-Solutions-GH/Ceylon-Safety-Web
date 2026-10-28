@@ -156,6 +156,14 @@ once the local stack is running.
 
 ## Review notes
 
+### /full-review findings (2026-10-28)
+
+- **P1** `supabase/migrations/20261028000001_schema_users_roles.sql:677–679` — Missing `FORCE ROW LEVEL SECURITY` on profiles, user_roles, role_permissions. Postgres superuser bypasses RLS entirely without it. Add `ALTER TABLE public.profiles FORCE ROW LEVEL SECURITY;` (and equivalents) after ENABLE lines. (full-review 2026-10-28)
+- **P1** `supabase/migrations/20261028000001_schema_users_roles.sql:658` — `guard_role_permissions` uses `current_user` (role-switchable via SET ROLE) instead of `session_user` (login identity). Change `current_user` to `session_user` in the guard check. (full-review 2026-10-28)
+- **P1** `supabase/migrations/20261028000001_schema_users_roles.sql:579–583` — `create_profile_for` WHEN OTHERS THEN NULL silently drops all non-conflict INSERT failures with no log. Add `RAISE WARNING 'create_profile_for failed for user %: %', p_user_id, SQLERRM;` before NULL. (full-review 2026-10-28)
+- **P1** `supabase/tests/users.test.sql` — handle_new_user (AC6) trigger never invoked in tests; all tests call create_profile_for directly. Requires Docker. Must be formally scope-cut to a follow-up story. (full-review 2026-10-28)
+- **P1** `supabase/tests/users.test.sql` — EC5 sync_auth_email trigger path never exercised. Requires superuser access to auth.users. Must be formally scope-cut or tracked in a follow-up story. (full-review 2026-10-28)
+
 ### Round 1 findings (security-reviewer + reviewer) — fixed
 
 **Security-reviewer (FAIL → fixed):**
