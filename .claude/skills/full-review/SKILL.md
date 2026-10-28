@@ -216,6 +216,13 @@ git diff <prev-head-sha>..HEAD
 ```
 and use Mode A unless the new diff is > 300 lines.
 
+**Re-review rule:** Read the story's `## Review notes` section to see what
+was previously flagged. Do **not** re-report findings that are already fixed —
+only report findings present in the new diff. If a previously flagged issue
+is now resolved, say so once in the Executive Summary ("Previously flagged
+P0 at lib/foo.ts:42 — resolved.") and move on. Never list old findings as
+a separate section.
+
 ---
 
 ## Step 5: Ask Before Applying Any Fixes
@@ -342,7 +349,7 @@ tests 15 %, architecture 10 %.
 - Do not assume missing details are acceptable — call them out.
 - Works-but-fragile → flag accordingly.
 - NEVER skip the story file check.
-- ALWAYS post the review as a PR comment (`gh pr comment`).
+- ALWAYS post the review as a **formal GitHub review** (`gh pr review --approve` or `--request-changes`), never `gh pr comment` — plain comments are invisible to the Review Guard CI check.
 - ALWAYS update the story file for P0 / P1 findings.
 - ALWAYS ask the developer before applying any fixes after posting the review.
 - NEVER edit code in another developer's PR — post the findings and stop.
