@@ -43,8 +43,8 @@ jobs:
             }
             return allDocs;
 
-      - name: Block if changes requested on HEAD
-        if: steps.docs_check.outputs.result != 'true' && github.event_name == 'pull_request_review'
+      - name: Require approval on HEAD
+        if: steps.docs_check.outputs.result != 'true'
         uses: actions/github-script@v7
         with:
           script: |
