@@ -110,16 +110,23 @@ jobs:
             const APPROVE_RE       = /###\s+Recommendation\s+\*\*APPROVE(\s+WITH\s+FOLLOW[- ]UPS)?\*\*/im;
             const REQ_CHANGES_RE   = /###\s+Recommendation\s+\*\*REQUEST CHANGES\*\*/im;
 
-            const { data: comments } = await github.rest.issues.listComments({
+            const { data: issueComments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
               per_page: 100,
             });
 
+            // Also check formal PR reviews (posted via `gh pr review --comment`).
+            // Those go to pulls.listReviews, not issues.listComments.
+            const allBodies = [
+              ...issueComments.map(c => ({ body: c.body, user: c.user })),
+              ...reviews.map(r => ({ body: r.body, user: r.user })),
+            ];
+
             // Collect all full-review comments that match this HEAD.
-            const reviewComments = comments.filter(c =>
-              REVIEW_HEADING.test(c.body) && REVIEWED_HEAD_RE.test(c.body)
+            const reviewComments = allBodies.filter(c =>
+              c.body && REVIEW_HEADING.test(c.body) && REVIEWED_HEAD_RE.test(c.body)
             );
 
             const changesRequestedComment = reviewComments.find(c => REQ_CHANGES_RE.test(c.body));
