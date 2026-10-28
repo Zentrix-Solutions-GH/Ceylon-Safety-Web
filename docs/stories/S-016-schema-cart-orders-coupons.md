@@ -149,6 +149,8 @@ Note: renamed `20261028000005_schema_courses_trainers_banners.sql` → `20261028
 - **P1** `supabase/tests/commerce.test.sql:~800` — `coupon_uses` staff-read policy not exercised. Add a test confirming staff with `orders.*` can SELECT rows from `coupon_uses`. (full-review 2026-10-28)
 - **P1** `supabase/tests/commerce.test.sql:~632` — EC1 concurrency test is sequential (same connection, same transaction); `FOR UPDATE` lock never contended. Story requires two connections. Either rewrite with `dblink` or explicitly scope out and un-tick EC1. (full-review 2026-10-28)
 
+**All P0/P1 findings resolved in commit 0437d71 (2026-10-28). 155 tests pass. Follow-up review posted as APPROVE WITH FOLLOW-UPS.**
+
 ## After this merges, a user can:
 
 - Nothing new. Infrastructure PR: cart, order and coupon tables exist and one customer cannot see another's.
