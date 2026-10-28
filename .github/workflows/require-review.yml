@@ -106,7 +106,7 @@ jobs:
             // "REQUEST CHANGES" in a full-review comment blocks the PR the same as
             // a formal changes-requested review.
             const REVIEW_HEADING   = /##\s+CeylonSafety PR Review/i;
-            const REVIEWED_HEAD_RE = new RegExp(`Reviewed Head:\\s+${headSha}`, 'i');
+            const REVIEWED_HEAD_RE = new RegExp(`Reviewed Head:[*\\s]+${headSha}`, 'i');
             const APPROVE_RE       = /###\s+Recommendation\s+\*\*APPROVE(\s+WITH\s+FOLLOW[- ]UPS)?\*\*/im;
             const REQ_CHANGES_RE   = /###\s+Recommendation\s+\*\*REQUEST CHANGES\*\*/im;
 
