@@ -39,17 +39,21 @@ Run a backend story from `ready` to `PR created`.
    ```bash
    git checkout dev && git pull origin dev
    ```
-3. **Branch name rule:** The canonical branch name is `feature/S-XXX-short-title`
-   (read from the story's `branch:` frontmatter field).
+3. **Branch name:** always `feature/S-XXX-short-title` — read from the story's
+   `branch:` frontmatter field. Never use a `worktree-` prefix or any other prefix.
 
-   **Worktree mode** (when the user says "use worktree"): call `EnterWorktree`
-   with `name: "feature/S-XXX-short-title"`. The tool will create a branch named
-   `worktree-feature+S-XXX-short-title` (slashes become `+`, `worktree-` prefix
-   added automatically). Record **both** names clearly:
-   - Canonical branch: `feature/S-XXX-short-title` (for the story `branch:` field and PR `--head`)
-   - Worktree branch: `worktree-feature+S-XXX-short-title` (actual git branch; use this for `git push` and reviewer agent prompts)
+   **Worktree mode** (when the user says "use worktree"): do NOT use `EnterWorktree`
+   (it adds a `worktree-` prefix and converts `/` to `+`). Instead create the
+   worktree manually so the branch name is exact:
+   ```bash
+   # Verify .worktrees/ is git-ignored
+   git check-ignore -q .worktrees || echo ".worktrees" >> .gitignore
+   git worktree add .worktrees/feature/S-XXX-short-title -b feature/S-XXX-short-title
+   cd .worktrees/feature/S-XXX-short-title
+   npm install
+   ```
 
-   **No worktree**: create and checkout the branch manually:
+   **No worktree**: create and checkout the branch in place:
    ```bash
    git checkout -b feature/S-XXX-short-title
    ```
