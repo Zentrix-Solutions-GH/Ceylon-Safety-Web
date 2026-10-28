@@ -129,9 +129,11 @@ CREATE INDEX IF NOT EXISTS idx_page_revisions_published_by ON public.page_revisi
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5a. Append-only trigger
 --
---  Design: a GUC `ceylonsafety.allow_append_only_mutation` lets named functions
---  in S-017 and S-019 bypass the check on payment_events and admin_audit_log
---  (those tables get ONE named exception each).  page_revisions has no exception.
+--  page_revisions: absolutely no mutations, not even service_role.
+--  Other append-only tables (payment_events, admin_audit_log in S-017/S-019):
+--  service_role may write.  This is safe because SET ROLE service_role requires
+--  explicit role membership — an authenticated client cannot forge it, unlike
+--  a custom GUC which any session can SET.
 --
 --  The trigger function lives in the private schema so it is not callable from
 --  the browser.  It is attached to page_revisions here; later stories attach it
@@ -150,13 +152,17 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- Later stories may SET LOCAL ceylonsafety.allow_append_only_mutation = 'true'
-  -- inside a named function to bypass this check for payment_events / admin_audit_log.
-  -- page_revisions has NO exception — the check always fires for this table.
-  IF TG_TABLE_NAME <> 'page_revisions'
-     AND current_setting('ceylonsafety.allow_append_only_mutation', true) = 'true'
-  THEN
-    -- Permitted mutation by a named function
+  -- page_revisions has NO exception at all — not even for service_role.
+  IF TG_TABLE_NAME = 'page_revisions' THEN
+    RAISE EXCEPTION 'ceylonsafety: % on % is not allowed (append-only table)',
+      TG_OP, TG_TABLE_NAME
+      USING ERRCODE = 'restrict_violation';
+  END IF;
+
+  -- Other append-only tables: service_role (server-side code) may write.
+  -- current_setting('role') reflects SET ROLE, which requires role membership
+  -- and cannot be forged by an authenticated API client.
+  IF current_setting('role', true) = 'service_role' THEN
     IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
     RETURN NEW;
   END IF;
@@ -187,7 +193,7 @@ CREATE TABLE IF NOT EXISTS public.slug_redirects (
   CONSTRAINT slug_redirects_entity_type_check
     CHECK (entity_type IN ('article', 'document', 'course', 'trainer')),
   CONSTRAINT slug_redirects_unique
-    UNIQUE (entity_type, locale, old_slug)
+    UNIQUE NULLS NOT DISTINCT (entity_type, locale, old_slug)
 );
 
 COMMENT ON TABLE public.slug_redirects IS
@@ -437,9 +443,14 @@ CREATE POLICY "authors_public_read"
   TO anon, authenticated
   USING (is_active = true);
 
--- Staff with authors.write may write
-CREATE POLICY "authors_staff_write"
-  ON public.authors FOR ALL
+-- Staff with authors.write may insert or update (not delete — deactivate via is_active)
+CREATE POLICY "authors_staff_insert"
+  ON public.authors FOR INSERT
+  TO authenticated
+  WITH CHECK ((SELECT public.has_permission('authors.write')));
+
+CREATE POLICY "authors_staff_update"
+  ON public.authors FOR UPDATE
   TO authenticated
   USING      ((SELECT public.has_permission('authors.write')))
   WITH CHECK ((SELECT public.has_permission('authors.write')));

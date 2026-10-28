@@ -2,13 +2,13 @@
 --        pages, page_revisions, slug_redirects + FK, triggers, RLS.
 -- Run with: supabase test db (requires Docker + local Supabase stack).
 --
--- Assertion count: 103
+-- Assertion count: 104
 --   AC1 categories: 10, EC4: 1, AC1 authors: 11, AC2: 15,
 --   AC3 pages: 10, AC3 page_revisions: 8, EC3: 2, EC1/EC2/AC4: 6,
---   AC5: 5, AC6: 9, AC7/EC6/EC7: 10, AC8/AC9 reads: 9, AC9 writes: 7
+--   AC5: 5, AC6: 10, AC7/EC6/EC7: 10, AC8/AC9 reads: 9, AC9 writes: 7
 
 BEGIN;
-SELECT plan(103);
+SELECT plan(104);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Fixtures (postgres/service role; all rolled back after the test)
@@ -284,6 +284,16 @@ SELECT throws_ok(
   $$INSERT INTO public.slug_redirects (entity_type, entity_id, locale, old_slug)
     VALUES ('article', gen_random_uuid(), 'en', 'dup-redirect')$$,
   'AC6: UNIQUE(entity_type,locale,old_slug) is enforced'
+);
+
+-- NULLS NOT DISTINCT: two document rows with locale=NULL and same old_slug are also refused
+INSERT INTO public.slug_redirects (entity_type, entity_id, old_slug)
+VALUES ('document', gen_random_uuid(), 'dup-doc-slug');
+
+SELECT throws_ok(
+  $$INSERT INTO public.slug_redirects (entity_type, entity_id, old_slug)
+    VALUES ('document', gen_random_uuid(), 'dup-doc-slug')$$,
+  'AC6: NULLS NOT DISTINCT — duplicate null-locale old_slug is refused'
 );
 
 -- ─────────────────────────────────────────────────────────────────────────────

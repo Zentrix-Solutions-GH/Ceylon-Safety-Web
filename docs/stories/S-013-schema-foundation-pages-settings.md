@@ -163,7 +163,9 @@ Docker / `supabase test db` = not verified.
 
 ## Review notes
 
-<!-- Filled in by reviewer / security-reviewer agents and /full-review -->
+- **P0** `supabase/migrations/20261028000003_schema_foundation_pages_settings.sql:157` — GUC `ceylonsafety.allow_append_only_mutation` is settable by any database session; safe for `page_revisions` (TG_TABLE_NAME guard) but exploitable once S-017/S-019 attach this trigger to `payment_events`/`admin_audit_log`. Replace GUC check with `current_setting('role', true) = 'service_role'` (same pattern as `check_settings_group()` line 254). (full-review 2026-10-28)
+- **P1** `supabase/migrations/20261028000003_schema_foundation_pages_settings.sql:189` — `UNIQUE (entity_type, locale, old_slug)` allows NULL-locale duplicates (PostgreSQL NULL≠NULL). Add `NULLS NOT DISTINCT` (PG 15): `UNIQUE NULLS NOT DISTINCT (entity_type, locale, old_slug)`. (full-review 2026-10-28)
+- **P1** `supabase/migrations/20261028000003_schema_foundation_pages_settings.sql:442` — `authors_staff_write FOR ALL` permits DELETE; schema doc (Group B) says authors are deactivated, not deleted. Change to `FOR INSERT OR UPDATE`. (full-review 2026-10-28)
 
 ## After this merges, a user can:
 
