@@ -153,6 +153,65 @@ Result: PASS
 
 Both test files pass. 44 tests in permissions.test.sql, 59 tests in users.test.sql. All 103 pass.
 
+**S-012b verification — run 2026-10-28 (local Supabase stack, Docker Desktop)**
+
+`supabase test db` exits 0 (Result: PASS). Full TAP output for `permissions.test.sql` (via direct psql, confirming "1..44"):
+
+```
+ plan
+-------
+ 1..44
+
+ ok 1 - AC1: public.is_staff_member() exists
+ ok 2 - AC1: public.is_super_admin() exists
+ ok 3 - AC1: public.has_permission(text) exists
+ ok 4 - AC1: anon can call is_staff_member
+ ok 5 - AC1: anon can call is_super_admin
+ ok 6 - AC1: anon can call has_permission
+ ok 7 - AC2: admin with articles.* passes articles.save
+ ok 8 - AC2: admin fails articles (bare area name, no dot)
+ ok 9 - AC2: admin fails videos.add (no videos.* row)
+ ok 10 - AC2: admin fails articlesx.save (prefix mismatch)
+ ok 11 - AC2: maintainer with no permission rows fails everything
+ ok 12 - AC2: customer fails has_permission
+ ok 13 - EC6: anon (no session) returns false, not an error
+ ok 14 - EC6: anon is_staff_member returns false
+ ok 15 - EC6: anon is_super_admin returns false
+ ok 16 - AC2: super_admin passes has_permission (no rows needed)
+ ok 17 - EC3: has_permission(NULL) returns false
+ ok 18 - EC3: has_permission empty string returns false
+ ok 19 - EC2: has_permission reads DB; returns false after role deleted
+ ok 20 - AC3: admin can read maintainer user_roles row
+ ok 21 - AC3: admin cannot see super_admin rows in user_roles
+ ok 22 - AC3: super_admin can see super_admin rows
+ ok 23 - AC3: admin can read role_permissions
+ ok 24 - AC3: admin can read maintainer profile
+ ok 25 - AC3: admin cannot read super_admin profile
+ ok 26 - AC3: super_admin can read own super_admin profile
+ ok 27 - AC3: maintainer cannot see super_admin rows in user_roles
+ ok 28 - AC3: maintainer cannot read super_admin profile
+ ok 29 - AC3: customer cannot read user_roles
+ ok 30 - AC3: customer cannot read role_permissions
+ ok 31 - AC4: admin cannot write role_permissions (trigger + policy blocks insert)
+ ok 32 - AC5/AC7: authenticated cannot insert super_admin row into user_roles
+ ok 33 - AC5/EC4: admin cannot delete super_admin row (blocked by trigger/RLS)
+ ok 34 - EC1: cannot remove the last Super Admin
+ ok 35 - EC4: super_admin profile status unchanged after admin attempted suspend
+ ok 36 - EC5: same user cannot have a second role (PK constraint)
+ ok 37 - AC6: super_admin hook returns user_role=super_admin, account_status=active
+ ok 38 - AC6: admin hook returns user_role=admin
+ ok 39 - AC6: maintainer hook returns user_role=maintainer
+ ok 40 - AC6: customer hook has no user_role, account_status=active
+ ok 41 - AC6: suspended user hook returns account_status=suspended
+ ok 42 - AC6: hook does not raise on unknown user_id
+ ok 43 - AC6: supabase_auth_admin has EXECUTE on custom_access_token_hook (GRANT verified)
+ ok 44 - AC7: no sign-up path produces a staff role (INSERT blocked for authenticated)
+
+ROLLBACK
+```
+
+All 44 tests pass. No failures.
+
 AC8 (auth.mfa_factors trigger): Supabase hosted environments do not permit triggers on auth.* tables ("must be owner of table mfa_factors"). The guard lives in the removeAuthenticator server action (S-039) as noted in Out of scope.
 
 ## Review notes
