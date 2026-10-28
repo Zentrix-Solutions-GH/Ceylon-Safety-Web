@@ -84,7 +84,8 @@ CREATE TABLE IF NOT EXISTS public.cart_items (
 COMMENT ON TABLE public.cart_items IS
   'One line per (user, document, language). No quantity column (always 1). Max 50 lines enforced in server code (S-075).';
 
-CREATE INDEX IF NOT EXISTS cart_items_user_id_idx ON public.cart_items (user_id);
+CREATE INDEX IF NOT EXISTS cart_items_user_id_idx     ON public.cart_items (user_id);
+CREATE INDEX IF NOT EXISTS cart_items_document_id_idx ON public.cart_items (document_id);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. orders
@@ -175,8 +176,13 @@ LANGUAGE plpgsql
 SET search_path = private, public
 AS $$
 BEGIN
-  IF current_role <> 'authenticated' THEN
+  -- Only service_role and postgres/supabase_admin bypass the column lock.
+  -- All other roles (including authenticated staff) are subject to the restriction.
+  IF current_role IN ('service_role', 'postgres', 'supabase_admin') THEN
     RETURN NEW;
+  END IF;
+  IF current_role <> 'authenticated' THEN
+    RAISE EXCEPTION 'ceylonsafety: unexpected role % attempting orders update', current_role;
   END IF;
   IF NEW.order_number               IS DISTINCT FROM OLD.order_number               OR
      NEW.user_id                    IS DISTINCT FROM OLD.user_id                    OR
