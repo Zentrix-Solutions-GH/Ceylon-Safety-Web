@@ -60,6 +60,8 @@ First schema migration: the three user tables (`profiles`, `user_roles`, `role_p
 - `public_profiles` view (belongs to S-019 which owns all views).
 - The part of the `role_permissions` write-guard that checks `is_super_admin()` — that function is added in S-012; the S-011 version restricts writes to the service role only and is enhanced in S-012.
 - Full Unicode confusables table — the sanitising trigger uses NFKC normalisation + a hard-coded set of common Greek/Cyrillic look-alikes (covers AC7/EC3 as written).
+- **Scope cut (test, Docker-constrained):** AC6 `handle_new_user` trigger invoked via real `INSERT INTO auth.users` — requires superuser access to `auth.users`; deferred to the story that enables the auth hook (S-031).
+- **Scope cut (test, Docker-constrained):** EC5 `sync_auth_email` full trigger path — requires superuser access to `auth.users`; deferred to S-031 alongside AC6.
 
 ## Assumptions accepted
 

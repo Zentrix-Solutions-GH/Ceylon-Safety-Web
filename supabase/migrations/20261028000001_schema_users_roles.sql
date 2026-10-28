@@ -419,8 +419,9 @@ BEGIN
 
 EXCEPTION WHEN OTHERS THEN
   -- Never let profile creation fail an auth operation.
+  -- Log so the failure is visible in Supabase database logs.
   -- The server's requireUser() will retry creation on the next request.
-  NULL;
+  RAISE WARNING 'create_profile_for failed for user %: %', p_user_id, SQLERRM;
 END;
 $$;
 
@@ -472,7 +473,9 @@ BEGIN
   RETURN NEW;
 EXCEPTION
   WHEN unique_violation THEN RAISE;  -- re-raise to roll back auth.users UPDATE (EC5)
-  WHEN OTHERS THEN NULL;             -- swallow unexpected errors so auth email update is not silently broken
+  WHEN OTHERS THEN
+    -- Log unexpected errors before swallowing so they appear in Supabase database logs.
+    RAISE WARNING 'sync_auth_email failed for user %: %', NEW.id, SQLERRM;
 END;
 $$;
 
@@ -496,7 +499,8 @@ BEGIN
   -- Allow only postgres (migration runner) and service_role.
   -- current_user is the session user; in Supabase, service_role calls arrive as 'service_role'.
   -- S-012 will also permit super_admin callers via is_super_admin().
-  IF current_user NOT IN ('postgres', 'supabase_admin', 'service_role') THEN
+  -- Use session_user (login identity) not current_user (role-switchable via SET ROLE).
+  IF session_user NOT IN ('postgres', 'supabase_admin', 'service_role') THEN
     RAISE EXCEPTION 'role_permissions may only be written by the service role or a Super Admin';
   END IF;
   -- BEFORE DELETE: return OLD so the delete is not suppressed (RETURN NEW would return NULL for DELETE)
@@ -518,6 +522,13 @@ CREATE TRIGGER role_permissions_write_guard
 ALTER TABLE public.profiles         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_roles       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
+
+-- FORCE RLS so the postgres superuser is also subject to policies.
+-- Without this, direct DB connections and future migrations running as postgres
+-- bypass all policies and read every row unfiltered.
+ALTER TABLE public.profiles         FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.user_roles       FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.role_permissions FORCE ROW LEVEL SECURITY;
 
 -- profiles: signed-in customer can read their own row
 CREATE POLICY profiles_select_own ON public.profiles
