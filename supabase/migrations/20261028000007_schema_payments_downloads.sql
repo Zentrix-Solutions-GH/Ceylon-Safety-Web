@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS private.invoice_year_counters (
   counter int  NOT NULL DEFAULT 0,
   CONSTRAINT invoice_year_counters_pkey PRIMARY KEY (year)
 );
+-- next_invoice_number() is SECURITY DEFINER and runs as its owner (postgres / migration role).
+-- The owner has implicit INSERT/UPDATE rights on tables in the private schema it owns.
+-- No explicit GRANT to anon/authenticated is needed because the private schema has no
+-- USAGE grant to those roles — they can never access this table directly.
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. payment_events  (AC1 — card payments only; append-only; service role writes)
@@ -259,7 +263,7 @@ CREATE TABLE IF NOT EXISTS public.invoices (
 );
 
 COMMENT ON TABLE public.invoices IS
-  'One invoice per paid order. invoice_number uses a sequence (INV-YYYY-00001). '
+  'One invoice per paid order. invoice_number is year-scoped via private.invoice_year_counters (INV-YYYY-00001 resets each January 1). '
   'seller_snapshot copies site_settings business_* at issue time so re-renders stay correct.';
 
 -- ─────────────────────────────────────────────────────────────────────────────

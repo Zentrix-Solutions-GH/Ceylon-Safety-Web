@@ -5,7 +5,7 @@
 -- Requires Docker + local Supabase stack.
 
 BEGIN;
-SELECT plan(132);
+SELECT plan(133);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- UUID legend (all hex-valid, non-overlapping with earlier test files)
@@ -1088,6 +1088,7 @@ BEGIN
   IF v_count <> 0 THEN
     RAISE EXCEPTION 'AC10: customer A can read customer B download_log — RLS FAILURE';
   END IF;
+  PERFORM set_config('request.jwt.claims', '{}', true);
   RESET ROLE;
 END $$;
 SELECT ok(true, 'AC10: customer A cannot read customer B download_log');
@@ -1105,6 +1106,7 @@ BEGIN
   IF v_count <> 0 THEN
     RAISE EXCEPTION 'AC10: customer A can read customer B download_request — RLS FAILURE';
   END IF;
+  PERFORM set_config('request.jwt.claims', '{}', true);
   RESET ROLE;
 END $$;
 SELECT ok(true, 'AC10: customer A cannot read customer B download_request');
@@ -1122,6 +1124,7 @@ BEGIN
   IF v_count <> 0 THEN
     RAISE EXCEPTION 'AC10: customer A can read customer B invoice — RLS FAILURE';
   END IF;
+  PERFORM set_config('request.jwt.claims', '{}', true);
   RESET ROLE;
 END $$;
 SELECT ok(true, 'AC10: customer A cannot read customer B invoice');
@@ -1139,6 +1142,7 @@ BEGIN
   IF v_count <> 0 THEN
     RAISE EXCEPTION 'AC10: customer A can read customer B bank_transfer_slip — RLS FAILURE';
   END IF;
+  PERFORM set_config('request.jwt.claims', '{}', true);
   RESET ROLE;
 END $$;
 SELECT ok(true, 'AC10: customer A cannot read customer B bank_transfer_slip row');
@@ -1218,6 +1222,25 @@ BEGIN
   RESET ROLE;
 END $$;
 SELECT ok(true, 'AC10: anon reads no email_logs');
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- AC6: next_invoice_number() year-boundary — first invoice of a new year is 00001
+-- ─────────────────────────────────────────────────────────────────────────────
+DO $$
+DECLARE v_num text;
+BEGIN
+  -- Remove any counter row accumulated by earlier tests in this transaction,
+  -- then call once — the INSERT path must produce counter = 1.
+  DELETE FROM private.invoice_year_counters
+  WHERE year = extract(year FROM now())::int;
+
+  v_num := private.next_invoice_number();
+
+  IF v_num NOT LIKE 'INV-%-00001' THEN
+    RAISE EXCEPTION 'AC6 year-boundary: expected INV-YYYY-00001 for a fresh year, got %', v_num;
+  END IF;
+END $$;
+SELECT ok(true, 'AC6: next_invoice_number() returns -00001 for the first invoice of a new year');
 
 SELECT * FROM finish();
 ROLLBACK;

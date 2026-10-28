@@ -145,7 +145,15 @@ Post-review fixes (round 2 — full-review P0/P1):
 
 **P1** `supabase/tests/payments.test.sql` — AC10 gap: no anon isolation test for payment_events, bank_transfer_slips, download_logs, download_requests, invoices, email_logs (only entitlements tested for anon). (full-review 2026-10-28)
 
-**P1** `supabase/tests/payments.test.sql:677–701` — EC3 incomplete: `status = 'hidden'` not tested. AC8 says "ignores document status and deleted_at"; only deleted_at is covered. (full-review 2026-10-28)
+**P1** `supabase/tests/payments.test.sql:677–701` — EC3 incomplete: `status = 'hidden'` not tested. AC8 says "ignores document status and deleted_at"; only deleted_at is covered. (full-review 2026-10-28) **RESOLVED round 2**
+
+**P1** `supabase/tests/payments.test.sql` — `request.jwt.claims` GUC not cleared after cross-user DO blocks; subsequent anon tests inherit customer A's sub. Does not cause false passes with current deny-all anon policies but is fragile. Fix: add `PERFORM set_config('request.jwt.claims', '{}', true)` before `RESET ROLE` in each cross-user block (~lines 1063, 1081, 1099, 1117). (full-review 2026-10-28 round 2)
+
+**P1** `supabase/migrations/20261028000007_schema_payments_downloads.sql` — No year-boundary test for `next_invoice_number()`. AC6 format test checks the regex only; no test verifies that a fresh year starts counter at 00001. (full-review 2026-10-28 round 2)
+
+**P1** `supabase/migrations/20261028000007_schema_payments_downloads.sql` — No explicit INSERT/UPDATE grants on `private.invoice_year_counters`; relies on implicit function-owner privileges. Add comment or explicit GRANT. (full-review 2026-10-28 round 2)
+
+**P1** `supabase/migrations/20261028000007_schema_payments_downloads.sql:262` — Stale COMMENT ON TABLE public.invoices still reads "uses a sequence" after switch to year-counter table. (full-review 2026-10-28 round 2)
 
 ## After this merges, a user can:
 
