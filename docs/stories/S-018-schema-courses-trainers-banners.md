@@ -5,7 +5,7 @@ phase: MS1
 status: pr-open
 owner: backend
 risk: normal
-branch: feature/S-018-schema-courses-trainers-banners
+branch: worktree-feature+S-018-schema-courses-trainers-banners
 pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/17"
 depends_on: [S-013]
 reqs: [REQ-015b, REQ-061b, REQ-062b, REQ-064b, REQ-066b, REQ-071, REQ-072, REQ-080, REQ-081, REQ-094, REQ-095b, REQ-096, REQ-098]
