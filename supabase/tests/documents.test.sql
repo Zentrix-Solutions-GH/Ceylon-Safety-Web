@@ -3,7 +3,7 @@
 -- Requires Docker + local Supabase stack.
 
 BEGIN;
-SELECT plan(80);
+SELECT plan(72);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Helpers
@@ -15,7 +15,7 @@ VALUES (
   '00000000-0000-0000-0000-000000000001',
   'Test Category',
   'test-category',
-  'documents'
+  ARRAY['document']
 ) ON CONFLICT DO NOTHING;
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -55,12 +55,14 @@ SELECT hasnt_column('public', 'documents', 'file_key',              'AC1: no fil
 SELECT throws_ok(
   $$INSERT INTO public.documents (slug, title, category_id, file_format, doc_kind, price_cents, status)
     VALUES ('bad-price', 'Bad', '00000000-0000-0000-0000-000000000001', 'pptx', 'checklist', 0, 'draft')$$,
+  '23514', NULL,
   'EC1: price_cents = 0 is refused'
 );
 
 SELECT throws_ok(
   $$INSERT INTO public.documents (slug, title, category_id, file_format, doc_kind, price_cents, status)
     VALUES ('neg-price', 'Neg', '00000000-0000-0000-0000-000000000001', 'pptx', 'checklist', -100, 'draft')$$,
+  '23514', NULL,
   'EC1: negative price_cents is refused'
 );
 
@@ -68,12 +70,14 @@ SELECT throws_ok(
 SELECT throws_ok(
   $$INSERT INTO public.documents (slug, title, category_id, file_format, doc_kind, price_cents, status)
     VALUES ('bad-format', 'Bad', '00000000-0000-0000-0000-000000000001', 'pdf', 'checklist', 100, 'draft')$$,
+  '23514', NULL,
   'EC2: file_format = pdf is refused'
 );
 
 SELECT throws_ok(
   $$INSERT INTO public.documents (slug, title, category_id, file_format, doc_kind, price_cents, status)
     VALUES ('bad-kind', 'Bad', '00000000-0000-0000-0000-000000000001', 'pptx', 'poster', 100, 'draft')$$,
+  '23514', NULL,
   'EC2: doc_kind = poster is refused'
 );
 
@@ -110,6 +114,7 @@ SELECT pass('EC5: slug reuse after soft-delete is allowed, duplicate live slug r
 SELECT throws_ok(
   $$INSERT INTO public.documents (slug, title, category_id, file_format, doc_kind, price_cents, status, published_at)
     VALUES ('pub-no-date', 'Pub', '00000000-0000-0000-0000-000000000001', 'pptx', 'checklist', 100, 'published', NULL)$$,
+  '23514', NULL,
   'EC7: published without published_at is refused'
 );
 
@@ -174,6 +179,7 @@ SELECT pass('EC3/EC9: unique current (document_id, kind, language) enforced; non
 SELECT throws_ok(
   $$INSERT INTO public.document_files (document_id, kind, language, format, file_key, size_bytes)
     VALUES ('00000000-0000-0000-0000-000000000010', 'full', 'si', 'pptx', 'private/docs/v1/en.pptx', 999)$$,
+  '23505', NULL,
   'EC4: duplicate file_key is refused'
 );
 
@@ -181,12 +187,14 @@ SELECT throws_ok(
 SELECT throws_ok(
   $$INSERT INTO public.document_files (document_id, kind, language, format, file_key, size_bytes)
     VALUES ('00000000-0000-0000-0000-000000000010', 'full', 'ta', 'png', 'private/docs/bad.png', 100)$$,
+  '23514', NULL,
   'EC8: full file with format=png is refused'
 );
 
 SELECT throws_ok(
   $$INSERT INTO public.document_files (document_id, kind, language, format, file_key, size_bytes)
     VALUES ('00000000-0000-0000-0000-000000000010', 'preview', 'ta', 'pptx', 'private/previews/bad.pptx', 100)$$,
+  '23514', NULL,
   'EC8: preview file with format=pptx is refused'
 );
 
