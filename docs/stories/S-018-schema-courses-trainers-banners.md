@@ -2,11 +2,11 @@
 id: S-018
 title: Schema 8: courses, trainers, activity images, banners
 phase: MS1
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-018-schema-courses-trainers-banners
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/17"
 depends_on: [S-013]
 reqs: [REQ-015b, REQ-061b, REQ-062b, REQ-064b, REQ-066b, REQ-071, REQ-072, REQ-080, REQ-081, REQ-094, REQ-095b, REQ-096, REQ-098]
 ---
@@ -29,27 +29,27 @@ Create the information tables: `courses` (information cards, "coming soon"), `tr
 
 ## Acceptance criteria
 
-- [ ] AC1: `courses`: `id`, `locale`, `translation_group_id`, `slug` (`UNIQUE(locale, slug) WHERE deleted_at IS NULL`), `title NOT NULL`, `description`, `thumbnail_key`, `promo_youtube_id`, `level CHECK in (beginner, intermediate, advanced)` (nullable), `lesson_count`, `duration_minutes`, `pricing_type CHECK in (free, paid, enquire)`, `price_cents` (REQUIRED when `pricing_type = 'paid'`, otherwise NULL), `is_coming_soon boolean NOT NULL default true`, `category_id` FK RESTRICT, `status CHECK in (draft, published, hidden)`, `search_vector`, `deleted_at`, timestamps. GIN index on `search_vector`; index `(status, category_id)`. Search-vector trigger (title A, description B).
-- [ ] AC2: `trainers`: `id`, `name NOT NULL`, `position NOT NULL`, `bio`, `photo_key`, `phone`, `email`, `slug NOT NULL UNIQUE`, `whatsapp_number`, `qualifications`, `experience`, `order_index`, `is_active`, timestamps, with a CHECK that at least one of `phone`, `email`, `whatsapp_number` is filled. `search_vector` (name A, position B, bio C) with GIN index.
-- [ ] AC3: `activity_images`: `id`, `image_key NOT NULL`, `caption`, `order_index`, `is_active`, `alt_text NOT NULL` (CHECK length at most 140; the value `decorative` is allowed), `created_at`. The "at most 10 active rows" rule is server code.
-- [ ] AC4: `banners`: `id`, `name NOT NULL`, `advertiser_name`, `image_key NOT NULL`, `image_key_mobile`, `alt_text NOT NULL CHECK (length between 1 and 140)`, `link_url NOT NULL CHECK (length <= 2048)`, `open_in_new_tab default true`, `placements text[] NOT NULL` (CHECK: subset of `home_top`, `in_article`), `priority default 0`, `is_active`, `click_count bigint NOT NULL default 0`, timestamps; index `(is_active, priority)`. There are NO `starts_at` or `ends_at` columns, no click log table and no view counter.
-- [ ] AC5: `banners.link_url` CHECK (link policy): the value starts with `https://` or `http://`, OR it is an internal path with one leading `/` whose second character is neither `/` nor `\`. A test proves these are refused: `javascript:alert(1)`, `data:text/html,x`, `mailto:a@b.c`, `tel:123`, `//evil.com`, `/\evil.com`, an empty string and a 2049-character link; and these pass: `https://example.com/a`, `http://example.com`, `/articles/x`.
-- [ ] AC6: `ALTER TABLE order_items` and `ALTER TABLE entitlements` add `course_id` foreign keys to `courses` ON DELETE RESTRICT (with indexes).
-- [ ] AC7: `set_updated_at` is applied to every table here with `updated_at`.
-- [ ] AC8: RLS enabled on all four. Public and customers: read `courses` where visible (`published`, `published_at`-style rule: status published and not deleted), read active `trainers`, active `activity_images`, active `banners`. Staff with the matching permission area (`courses.*`, `trainers.*`, `banners.read` / `banners.write`) have full access; the `activity_images` area is covered by `trainers.*` (Spec gap). `banners.click_count` is changed only by the service role (no client write).
-- [ ] AC9: RLS tests: `anon` cannot read a hidden or draft course, an inactive trainer or an inactive banner; a customer cannot update any of the four tables; a staff user without `banners.write` cannot insert a banner.
-- [ ] AC10: `types/database.ts` regenerated.
+- [x] AC1: `courses`: `id`, `locale`, `translation_group_id`, `slug` (`UNIQUE(locale, slug) WHERE deleted_at IS NULL`), `title NOT NULL`, `description`, `thumbnail_key`, `promo_youtube_id`, `level CHECK in (beginner, intermediate, advanced)` (nullable), `lesson_count`, `duration_minutes`, `pricing_type CHECK in (free, paid, enquire)`, `price_cents` (REQUIRED when `pricing_type = 'paid'`, otherwise NULL), `is_coming_soon boolean NOT NULL default true`, `category_id` FK RESTRICT, `status CHECK in (draft, published, hidden)`, `search_vector`, `deleted_at`, timestamps. GIN index on `search_vector`; index `(status, category_id)`. Search-vector trigger (title A, description B).
+- [x] AC2: `trainers`: `id`, `name NOT NULL`, `position NOT NULL`, `bio`, `photo_key`, `phone`, `email`, `slug NOT NULL UNIQUE`, `whatsapp_number`, `qualifications`, `experience`, `order_index`, `is_active`, timestamps, with a CHECK that at least one of `phone`, `email`, `whatsapp_number` is filled. `search_vector` (name A, position B, bio C) with GIN index.
+- [x] AC3: `activity_images`: `id`, `image_key NOT NULL`, `caption`, `order_index`, `is_active`, `alt_text NOT NULL` (CHECK length at most 140; the value `decorative` is allowed), `created_at`. The "at most 10 active rows" rule is server code.
+- [x] AC4: `banners`: `id`, `name NOT NULL`, `advertiser_name`, `image_key NOT NULL`, `image_key_mobile`, `alt_text NOT NULL CHECK (length between 1 and 140)`, `link_url NOT NULL CHECK (length <= 2048)`, `open_in_new_tab default true`, `placements text[] NOT NULL` (CHECK: subset of `home_top`, `in_article`), `priority default 0`, `is_active`, `click_count bigint NOT NULL default 0`, timestamps; index `(is_active, priority)`. There are NO `starts_at` or `ends_at` columns, no click log table and no view counter.
+- [x] AC5: `banners.link_url` CHECK (link policy): the value starts with `https://` or `http://`, OR it is an internal path with one leading `/` whose second character is neither `/` nor `\`. A test proves these are refused: `javascript:alert(1)`, `data:text/html,x`, `mailto:a@b.c`, `tel:123`, `//evil.com`, `/\evil.com`, an empty string and a 2049-character link; and these pass: `https://example.com/a`, `http://example.com`, `/articles/x`.
+- [x] AC6: `ALTER TABLE order_items` and `ALTER TABLE entitlements` add `course_id` foreign keys to `courses` ON DELETE RESTRICT (with indexes).
+- [x] AC7: `set_updated_at` is applied to every table here with `updated_at`.
+- [x] AC8: RLS enabled on all four. Public and customers: read `courses` where visible (`published`, `published_at`-style rule: status published and not deleted), read active `trainers`, active `activity_images`, active `banners`. Staff with the matching permission area (`courses.*`, `trainers.*`, `banners.read` / `banners.write`) have full access; the `activity_images` area is covered by `trainers.*` (Spec gap). `banners.click_count` is changed only by the service role (no client write).
+- [x] AC9: RLS tests: `anon` cannot read a hidden or draft course, an inactive trainer or an inactive banner; a customer cannot update any of the four tables; a staff user without `banners.write` cannot insert a banner.
+- [x] AC10: `types/database.ts` regenerated.
 
 ## Edge cases
 
-- [ ] EC1: `pricing_type = 'paid'` without `price_cents`: refused; `free` with a price: refused.
-- [ ] EC2: A trainer with no phone, email or WhatsApp: refused.
-- [ ] EC3: Two trainers with the same slug: refused.
-- [ ] EC4: A banner with `placements = '{footer}'` or an empty array: refused.
-- [ ] EC5: `alt_text` of 141 characters or empty on a banner: refused.
-- [ ] EC6: A new course defaults to `is_coming_soon = true`.
-- [ ] EC7: Deleting a course that is on an order line or entitlement: refused (RESTRICT).
-- [ ] EC8: Course slug of a soft-deleted course reused: allowed.
+- [x] EC1: `pricing_type = 'paid'` without `price_cents`: refused; `free` with a price: refused.
+- [x] EC2: A trainer with no phone, email or WhatsApp: refused.
+- [x] EC3: Two trainers with the same slug: refused.
+- [x] EC4: A banner with `placements = '{footer}'` or an empty array: refused.
+- [x] EC5: `alt_text` of 141 characters or empty on a banner: refused.
+- [x] EC6: A new course defaults to `is_coming_soon = true`.
+- [x] EC7: Deleting a course that is on an order line or entitlement: refused (RESTRICT).
+- [x] EC8: Course slug of a soft-deleted course reused: allowed.
 
 ## Contract
 
