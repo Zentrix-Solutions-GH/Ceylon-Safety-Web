@@ -1,4 +1,7 @@
 -- S-018: Schema 8 — courses, trainers, activity_images, banners
+-- NOTE: renamed from 20261028000005_schema_courses_trainers_banners.sql (S-016/PR-19) to resolve
+-- a duplicate-timestamp conflict with 20261028000005_schema_documents.sql (S-015/PR-18).
+-- If your local environment already applied the old filename, run: npx supabase db reset
 -- Infrastructure PR; no user-visible change in Release 1.
 -- AC6 (course_id FKs on order_items / entitlements) is in migration 00009,
 -- which runs after S-016 (00007) and S-017 (00008) create those tables.

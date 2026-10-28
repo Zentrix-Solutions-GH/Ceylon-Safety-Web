@@ -4,7 +4,7 @@ import path from "path";
 export default defineConfig({
   test: {
     include: ["**/__tests__/**/*.test.ts", "**/*.test.ts"],
-    exclude: ["**/__tests__/integration/**", "node_modules/**", ".next/**"],
+    exclude: ["**/__tests__/integration/**", "node_modules/**", ".next/**", ".claude/**"],
     environment: "node",
   },
   resolve: {
