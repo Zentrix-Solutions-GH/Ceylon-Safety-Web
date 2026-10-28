@@ -2,7 +2,7 @@
 id: S-013
 title: Schema 3: categories, authors, site_settings, pages, page_revisions, slug_redirects
 phase: MS1
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-013-schema-foundation-pages-settings
@@ -78,15 +78,88 @@ Create the shared foundation tables that content and commerce point to: `categor
 
 Prior art: searched `grep -ril "site_settings\|page_revisions\|slug_redirects\|media_assets" docs/`: found database-schema Groups B, G, J, K, sections 5, 6, 9; content-system design section 6 (media) and 25; this story implements them; nothing superseded.
 
-<!-- Filled in by /story-run at Step 3. Sensitive: the owner approves the plan. -->
+### Implementation decisions
+
+1. **Action string for authors write RLS**: `authors.write` — one constant in the policy expression; must match a future `role_permissions` seed row in S-020.
+2. **`slug_redirects.locale`**: nullable (no NOT NULL) — documents have no locale column; a future story writes NULL for document slug redirects.
+3. **INSERT on `page_revisions`**: allowed by the append-only trigger — it only blocks UPDATE and DELETE.
+4. **Append-only trigger mechanism**: GUC `ceylonsafety.allow_append_only_mutation` — the named functions in S-017 and S-019 will `SET LOCAL ceylonsafety.allow_append_only_mutation = 'true'` before their writes. The trigger checks `current_setting('ceylonsafety.allow_append_only_mutation', true)`. For `page_revisions` the exception is never set (no exceptions on this table per AC4).
+5. **Service role bypass for settings group trigger**: `current_setting('role', true) = 'service_role'` check at the top of the trigger.
+6. **Cross-group settings test added** (per story-analyst gap report): staff with `settings.site` cannot update a `contact`-group row.
+
+### Files to create / edit
+
+- `supabase/migrations/20261028000003_schema_foundation_pages_settings.sql` — all 7 tables, triggers, RLS, FK patch
+- `supabase/tests/foundation.test.sql` — pgTAP tests for AC1–AC10, EC1–EC7
+- `types/database.ts` — updated (hand-written to match CLI format)
+
+### Migration structure (in order)
+
+1. `categories` table — Group B; CHECK on `applies_to`
+2. `authors` table — Group B; `set_updated_at` trigger
+3. `media_assets` table — Group K; index on `created_at`
+4. `pages` table — Group G; `UNIQUE(locale, slug)`; `set_updated_at` trigger
+5. `page_revisions` table — Group K; `UNIQUE(page_id, version)`; FK RESTRICT → pages; append-only trigger (no exceptions)
+6. `slug_redirects` table — Group K; `UNIQUE(entity_type, locale, old_slug)`
+7. `site_settings` table — Group J; index on `setting_group`; settings-group-check trigger (service role always allowed)
+8. `profiles.terms_revision_id` FK → `page_revisions` (ALTER TABLE ADD CONSTRAINT)
+9. Update `create_profile_for` to validate terms revision: accept a revision that exists, store NULL for one that does not
+10. RLS ENABLE + policies on all 7 tables
+11. `set_updated_at` trigger wired to `site_settings`
+
+### Append-only trigger design
+
+```sql
+-- Generic: checks TG_OP (UPDATE/DELETE) and blocks unless the GUC is set.
+-- For page_revisions: the GUC is never set (no exceptions).
+-- For payment_events, admin_audit_log (future): named functions will SET LOCAL.
+CREATE OR REPLACE FUNCTION private.enforce_append_only() ...
+  IF TG_OP IN ('UPDATE','DELETE') THEN
+    IF current_setting('ceylonsafety.allow_append_only_mutation', true) IS DISTINCT FROM 'true' THEN
+      RAISE EXCEPTION 'ceylonsafety: % on % is not allowed', TG_OP, TG_TABLE_NAME
+        USING ERRCODE = 'restrict_violation';
+    END IF;
+  END IF;
+```
+
+### Test plan (all pgTAP)
+
+File: `supabase/tests/foundation.test.sql`
+
+- AC1: columns, CHECKs on all 7 tables
+- AC2: `media_assets` column checks, index on `created_at`
+- AC3: `pages`/`page_revisions` columns, `UNIQUE(locale,slug)`, `UNIQUE(page_id,version)`
+- AC4/EC1/EC2: append-only — DELETE page with revision refused; UPDATE revision as service role refused; DELETE revision as service role refused; INSERT revision succeeds
+- AC5: `profiles.terms_revision_id` FK; `create_profile_for` with valid revision stores it; with invalid stores NULL
+- AC7/EC6/EC7: settings group trigger — service role can update any group; staff without permission cannot update contact-group row; Super Admin can update system group; setting_group outside 6 values refused
+- AC8/AC9/EC3/EC4/EC5: RLS — anon cannot read private setting; customer cannot update any table; admin without `settings.contact` cannot update contact row; Super Admin can; cross-group blocked; duplicate `file_key` refused; same slug in two locales allowed, same locale+slug refused
+- Active-authors policy test: anon cannot see inactive author
+- slug_redirects: anon can read
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7. Not run = "not verified". -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+No test files found, exiting with code 0
+✓ Vitest (unit) passed
+
+════════════════════════════════
+  check.sh: 3 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
+
+Note: pgTAP tests (foundation.test.sql) require `supabase test db` with a live local Supabase stack (Docker). Not verified in this environment — marked "not verified" per CLAUDE.md rules.
+Docker / `supabase test db` = not verified.
 
 ## Review notes
 
