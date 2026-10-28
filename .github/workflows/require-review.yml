@@ -59,7 +59,7 @@ jobs:
 
             const headReviews = reviews.filter(r =>
               r.commit_id === headSha &&
-              ['APPROVED', 'CHANGES_REQUESTED'].includes(r.state)
+              ['APPROVED', 'CHANGES_REQUESTED', 'COMMENTED'].includes(r.state)
             );
 
             if (headReviews.length === 0) {
