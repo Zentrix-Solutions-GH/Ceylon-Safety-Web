@@ -134,6 +134,14 @@ Previous P0 findings fixed:
 P1 fixed: has_index() assertions added for 4 missing indexes.
 P2 (cosmetic): profile insert column corrected to display_name.
 
+**full-review findings (2026-10-28) — REQUEST CHANGES (76/100):**
+
+- **P0** `supabase/tests/documents.test.sql` (entire suite) — pgTAP not executed against a real Supabase stack; Evidence states "not verified." Run `supabase test db` and paste output before merge.
+- **P1** `supabase/tests/documents.test.sql:263–269, 309–325` — `throws_ok` for RLS-blocked UPDATEs is wrong. PostgreSQL RLS silently returns 0 rows on a policy-blocked UPDATE — it does not raise an exception. Replace 4 assertions (anon UPDATE price_cents; customer UPDATE price_cents/download_count/status) with execute-then-`is()` SELECT-verify pattern.
+- **P1** `supabase/migrations/20261028000005_schema_documents.sql:138–162` — `SECURITY DEFINER` on `documents_search_vector_update()` is unnecessary and wrong. The function only touches `NEW.title`/`NEW.description`/`NEW.search_vector` — no elevated privilege required. Remove it.
+- **P1** `supabase/migrations/20261028000005_schema_documents.sql:44–47, 119–122` — Intermediate table-level `UNIQUE NULLS NOT DISTINCT (slug, deleted_at)` is created then dropped. If migration fails mid-way, table is left with the wrong constraint (refuses two soft-deleted rows sharing a slug, breaking EC5). Remove the table-level constraint; define only the partial unique index `WHERE deleted_at IS NULL` from the start.
+- **P1** `supabase/tests/documents.test.sql:284–295` — Authenticated customer RLS test inserts profile with `gen_random_uuid()` but JWT claims use hardcoded sub `00000000-0000-0000-0000-000000000099`. UUIDs don't match — not exercising a valid customer session. Align profile UUID with JWT sub.
+
 ## After this merges, a user can:
 
 - Nothing new. Infrastructure PR: documents and their private files are stored safely; the public can never read a file key.

@@ -36,10 +36,7 @@ CREATE TABLE IF NOT EXISTS public.documents (
   search_vector     tsvector,
   deleted_at        timestamptz,
   created_at        timestamptz NOT NULL DEFAULT now(),
-  updated_at        timestamptz NOT NULL DEFAULT now(),
-
-  -- Slug unique among live rows only
-  CONSTRAINT documents_slug_unique UNIQUE NULLS NOT DISTINCT (slug, deleted_at)
+  updated_at        timestamptz NOT NULL DEFAULT now()
 );
 
 -- published_at required when status = 'published'
@@ -130,10 +127,6 @@ CREATE UNIQUE INDEX documents_slug_live_unique
   ON public.documents (slug)
   WHERE deleted_at IS NULL;
 
--- Drop the table-level constraint now that the partial index handles it
-ALTER TABLE public.documents
-  DROP CONSTRAINT documents_slug_unique;
-
 -- Index on document_files.document_id
 CREATE INDEX document_files_document_id_idx
   ON public.document_files (document_id);
@@ -145,7 +138,6 @@ CREATE INDEX document_files_document_id_idx
 CREATE OR REPLACE FUNCTION public.documents_search_vector_update()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN

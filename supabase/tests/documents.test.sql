@@ -305,10 +305,12 @@ SELECT is(
   'AC6: anon cannot see hidden/draft/deleted/future documents'
 );
 
--- AC6: anon cannot update price_cents/download_count/status
-SELECT throws_ok(
-  $$UPDATE public.documents SET price_cents = 1 WHERE id = '00000000-0000-0000-0000-000000000020'$$,
-  'AC6: anon cannot update price_cents'
+-- AC6: anon cannot update price_cents (RLS silently returns 0 rows; value unchanged)
+UPDATE public.documents SET price_cents = 1 WHERE id = '00000000-0000-0000-0000-000000000020';
+SELECT is(
+  (SELECT price_cents FROM public.documents WHERE id = '00000000-0000-0000-0000-000000000020'),
+  1000,
+  'AC6: anon UPDATE price_cents is blocked — value unchanged'
 );
 
 RESET role;
@@ -317,12 +319,11 @@ RESET role;
 -- and cannot update documents
 
 DO $$
-DECLARE
-  customer_id uuid := gen_random_uuid();
 BEGIN
-  -- Create a test customer profile (no role_permissions rows → no documents.* permission)
+  -- Create a test customer profile matching the JWT sub used below
+  -- No role_permissions rows → no documents.* permission
   INSERT INTO public.profiles (id, email, display_name)
-  VALUES (customer_id, 'testcustomer@example.com', 'Test Customer')
+  VALUES ('00000000-0000-0000-0000-000000000099', 'testcustomer@example.com', 'Test Customer')
   ON CONFLICT DO NOTHING;
 END;
 $$;
@@ -347,19 +348,28 @@ SELECT is(
   'AC6: authenticated customer cannot see hidden/draft/deleted/future documents'
 );
 
-SELECT throws_ok(
-  $$UPDATE public.documents SET price_cents = 1 WHERE id = '00000000-0000-0000-0000-000000000020'$$,
-  'AC6: authenticated customer cannot update price_cents'
+-- AC6: authenticated customer cannot update price_cents (RLS silently returns 0 rows)
+UPDATE public.documents SET price_cents = 1 WHERE id = '00000000-0000-0000-0000-000000000020';
+SELECT is(
+  (SELECT price_cents FROM public.documents WHERE id = '00000000-0000-0000-0000-000000000020'),
+  1000,
+  'AC6: authenticated customer UPDATE price_cents blocked — value unchanged'
 );
 
-SELECT throws_ok(
-  $$UPDATE public.documents SET download_count = 999 WHERE id = '00000000-0000-0000-0000-000000000020'$$,
-  'AC6: authenticated customer cannot update download_count'
+-- AC6: authenticated customer cannot update download_count
+UPDATE public.documents SET download_count = 999 WHERE id = '00000000-0000-0000-0000-000000000020';
+SELECT is(
+  (SELECT download_count FROM public.documents WHERE id = '00000000-0000-0000-0000-000000000020'),
+  0,
+  'AC6: authenticated customer UPDATE download_count blocked — value unchanged'
 );
 
-SELECT throws_ok(
-  $$UPDATE public.documents SET status = 'hidden' WHERE id = '00000000-0000-0000-0000-000000000020'$$,
-  'AC6: authenticated customer cannot update status'
+-- AC6: authenticated customer cannot update status
+UPDATE public.documents SET status = 'hidden' WHERE id = '00000000-0000-0000-0000-000000000020';
+SELECT is(
+  (SELECT status FROM public.documents WHERE id = '00000000-0000-0000-0000-000000000020'),
+  'published',
+  'AC6: authenticated customer UPDATE status blocked — value unchanged'
 );
 
 RESET role;
