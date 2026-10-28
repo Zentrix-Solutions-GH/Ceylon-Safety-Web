@@ -121,7 +121,21 @@ No test files found, exiting with code 0
 ✅ All checks passed.
 ```
 
-pgTAP: requires running Supabase stack — not verified in this session (run `supabase test db` locally after applying migration).
+pgTAP (`supabase test db` — 2026-10-28):
+
+```
+Connecting to local database...
+/supabase/tests/content.test.sql ...... ok
+/supabase/tests/documents.test.sql .... ok
+/supabase/tests/permissions.test.sql .. ok
+
+Files=5, Tests=329
+documents.test.sql: 72/72 pass
+content.test.sql:   ok
+permissions.test.sql: ok
+```
+
+Note: `foundation.test.sql` and `users.test.sql` have pre-existing failures unrelated to S-015 (syntax error in S-013 `$sub$$$` dollar-quote and `private.enforce_append_only` assertion from S-012b). S-015 files pass cleanly.
 
 ## Review notes
 
