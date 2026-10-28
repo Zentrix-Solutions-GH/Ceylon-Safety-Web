@@ -35,12 +35,26 @@ Run a backend story from `ready` to `PR created`.
    - `blocked` → "Story is blocked. Resolve the open items first."
    - `in-progress` → Resume from the last completed step (check `## Plan`).
    - `done` → "Story already done."
-2. Confirm you are on branch `dev` (or create the story branch now):
+2. Confirm you are on branch `dev`:
    ```bash
    git checkout dev && git pull origin dev
+   ```
+3. **Branch name rule:** The canonical branch name is `feature/S-XXX-short-title`
+   (read from the story's `branch:` frontmatter field).
+
+   **Worktree mode** (when the user says "use worktree"): call `EnterWorktree`
+   with `name: "feature/S-XXX-short-title"`. The tool will create a branch named
+   `worktree-feature+S-XXX-short-title` (slashes become `+`, `worktree-` prefix
+   added automatically). Record **both** names clearly:
+   - Canonical branch: `feature/S-XXX-short-title` (for the story `branch:` field and PR `--head`)
+   - Worktree branch: `worktree-feature+S-XXX-short-title` (actual git branch; use this for `git push` and reviewer agent prompts)
+
+   **No worktree**: create and checkout the branch manually:
+   ```bash
    git checkout -b feature/S-XXX-short-title
    ```
-3. Update story status to `in-progress`.
+
+4. Update story status to `in-progress`.
 
 ### Step 2 — Story analyst
 
