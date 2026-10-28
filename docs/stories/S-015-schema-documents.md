@@ -2,7 +2,7 @@
 id: S-015
 title: Schema 5: documents and document files
 phase: MS1
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-015-schema-documents
@@ -29,10 +29,10 @@ Create `documents` (one public row per sellable document, English title and desc
 ## Acceptance criteria
 
 - [ ] AC1: `documents` has: `id`, `slug`, `title NOT NULL`, `description`, `cover_image_key`, `category_id` FK `categories` RESTRICT, `file_format CHECK in ('pptx')`, `doc_kind CHECK in (checklist, safety_sign, toolbox_talk)`, `price_cents int NOT NULL CHECK > 0`, `page_count`, `preview_pages default 3`, `download_count default 0`, `purchase_count default 0`, `status CHECK in (draft, published, hidden)`, `published_at` (CHECK required when published), `seo_title`, `seo_description`, `search_vector`, `deleted_at`, timestamps. NO `locale`, NO `translation_group_id`, and NO file-key column. `UNIQUE(slug) WHERE deleted_at IS NULL`.
-- [ ] AC2: `document_files` has: `id`, `document_id` FK CASCADE, `kind CHECK in (full, preview)`, `language CHECK in (en, si, ta)`, `format`, `file_key NOT NULL UNIQUE`, `size_bytes bigint NOT NULL`, `checksum_sha256`, `version int default 1`, `is_current boolean default true`, `status CHECK in (pending, ready)`, `uploaded_by` FK `profiles`, `created_at`. `UNIQUE(document_id, kind, language) WHERE is_current`; index on `document_id`.
+- [ ] AC2: `document_files` has: `id`, `document_id` FK CASCADE, `kind CHECK in (full, preview)`, `language CHECK in (en, si, ta)`, `format CHECK in (pptx, png, jpg, pdf)` with cross-column constraint (`full` → `pptx` only; `preview` → `png/jpg/pdf` only), `file_key NOT NULL UNIQUE`, `size_bytes bigint NOT NULL`, `checksum_sha256`, `version int default 1`, `is_current boolean default true`, `status CHECK in (pending, ready)`, `uploaded_by` FK `profiles` RESTRICT, `created_at`, `updated_at`. `UNIQUE(document_id, kind, language) WHERE is_current`; index on `document_id`.
 - [ ] AC3: Indexes on `documents`: `(status, published_at DESC)` partial for published, not deleted; `(category_id)`; GIN on `search_vector`; trigram on `title`; `(doc_kind)`; `(download_count DESC)`; `(purchase_count DESC)`. Search-vector trigger: title weight A, description weight B, config `english` (documents are English only).
-- [ ] AC4: `set_updated_at` applied to both tables.
-- [ ] AC5: RLS enabled on both. `documents`: public and customers read only visible rows (`published`, `published_at <= now()`, not deleted); staff with the `documents.*` permission area have full access. `document_files`: NO policy for `anon` or customers at all; staff with `documents.*` full access. Downloads will go through the server with the service role.
+- [ ] AC4: `set_updated_at` applied to both tables. `document_files` gets `updated_at` (owner decision: extend design doc deliberately). Service role bypasses RLS via Supabase default — no explicit policy needed.
+- [ ] AC5: RLS enabled on both. `documents`: public and customers read only visible rows (`published`, `published_at <= now()`, not deleted); staff with the `documents.*` permission area have full access. `document_files`: NO policy for `anon` or customers at all; staff with `documents.*` full access. Service role bypasses RLS by Supabase default (no explicit policy added).
 - [ ] AC6: RLS tests: `anon` selecting from `document_files` gets zero rows; a customer selecting `documents` with an embedded `document_files` gets no file rows; hidden, draft, scheduled and soft-deleted documents are invisible to `anon`; a customer cannot update `price_cents`, `download_count` or `status`.
 - [ ] AC7: `types/database.ts` regenerated.
 
@@ -45,6 +45,8 @@ Create `documents` (one public row per sellable document, English title and desc
 - [ ] EC5: Slug of a soft-deleted document reused: allowed; reuse among live rows: refused.
 - [ ] EC6: Hiding or deleting a document leaves its `document_files` rows untouched (past buyers still download).
 - [ ] EC7: Published without `published_at`: refused.
+- [ ] EC8: `kind = 'full'` with `format = 'png'` (or any non-pptx): refused. `kind = 'preview'` with `format = 'pptx'`: refused.
+- [ ] EC9: A second current `preview` for the same `(document, language)`: refused (same constraint as EC3).
 
 ## Contract
 
@@ -76,7 +78,24 @@ Create `documents` (one public row per sellable document, English title and desc
 
 Prior art: searched `grep -ril "document_files\|doc_kind\|file_key" docs/`: found database-schema Group E, sections 6, 9, 10, 11.1 (A1 to A3, A24); commerce-design sections 3 and 7; this story implements them; nothing superseded.
 
-<!-- Filled in by /story-run at Step 3. Sensitive: the owner approves the plan. -->
+Files:
+1. `supabase/migrations/<timestamp>_documents.sql` — creates `documents`, `document_files`, indexes, triggers, RLS
+2. `supabase/tests/documents.test.sql` — pgTAP tests for all ACs and ECs
+3. `types/database.ts` — regenerated via `supabase gen types`
+
+Steps:
+1. Write migration: `documents` table → `document_files` table → indexes → search-vector trigger → `set_updated_at` triggers → RLS policies
+2. Write pgTAP tests covering AC1–AC6, EC1–EC9
+3. Apply migration locally, run pgTAP tests (red → green)
+4. Regenerate types
+5. Run check.sh
+6. Reviewer + security-reviewer agents
+7. Commit and PR to dev
+
+Owner decisions recorded:
+- `document_files` gets `updated_at` (deliberate design extension)
+- Cross-column format/kind CHECK constraint added to AC2
+- Service role uses Supabase default RLS bypass (no explicit policy)
 
 ## Evidence
 
@@ -84,11 +103,36 @@ Prior art: searched `grep -ril "document_files\|doc_kind\|file_key" docs/`: foun
 
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+No test files found, exiting with code 0
+✓ Vitest (unit) passed
+
+════════════════════════════════
+  check.sh: 3 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
+
+pgTAP: requires running Supabase stack — not verified in this session (run `supabase test db` locally after applying migration).
 
 ## Review notes
 
-<!-- Filled in by reviewer / security-reviewer agents and /full-review -->
+Reviewer: APPROVED (89/100). All P0/P1 findings resolved after one fix round.
+Security reviewer: PASS — all 8 security dimensions clean.
+
+Previous P0 findings fixed:
+- AC7: types/database.ts updated with documents and document_files types
+- AC6: authenticated customer RLS tests added (5 assertions)
+P1 fixed: has_index() assertions added for 4 missing indexes.
+P2 (cosmetic): profile insert column corrected to display_name.
 
 ## After this merges, a user can:
 
