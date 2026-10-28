@@ -2,11 +2,11 @@
 id: S-014
 title: Schema 4: articles, likes, comments, videos, search vectors, comment limits
 phase: MS1
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-014-schema-articles-videos
-pr: ~
+pr: 16
 depends_on: [S-013]
 reqs: [REQ-024, REQ-025, REQ-025b, REQ-034, REQ-061, REQ-063, REQ-194, REQ-195, REQ-196]
 ---
