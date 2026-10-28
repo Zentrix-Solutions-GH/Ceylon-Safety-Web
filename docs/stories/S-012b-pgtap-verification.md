@@ -2,7 +2,7 @@
 id: S-012b
 title: Run pgTAP tests for S-012 (permissions, Super Admin)
 phase: MS1
-status: ready
+status: done
 owner: backend
 risk: normal
 branch: (no branch — run against local stack)
@@ -23,8 +23,8 @@ Run the 44 pgTAP tests written in S-012 against a live local Supabase stack and 
 
 ## Acceptance criteria
 
-- [ ] AC1: `supabase test db` exits 0 with "1..44" and no failed tests.
-- [ ] AC2: Full output pasted into S-012 Evidence section.
+- [x] AC1: `supabase test db` exits 0 with "1..44" and no failed tests.
+- [x] AC2: Full output pasted into S-012 Evidence section.
 
 ## Definition of done
 
