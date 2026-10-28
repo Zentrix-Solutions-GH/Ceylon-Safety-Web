@@ -2,7 +2,7 @@
 id: S-016
 title: Schema 6: carts, orders, order items, coupons
 phase: MS1
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-016-schema-cart-orders-coupons
@@ -83,15 +83,61 @@ Create the shopping tables: `carts`, `cart_items`, `coupons`, `coupon_uses`, `or
 
 Prior art: searched `grep -ril "cart_items\|coupon_uses\|order_items\|next_order_number" docs/`: found database-schema Group H, sections 5, 6, 7, 9, 11.1 (A5, A6, A15, A16); commerce-design sections 3 to 5A; this story implements them; nothing superseded.
 
-<!-- Filled in by /story-run at Step 3. Sensitive: the owner approves the plan. -->
+### Analyst findings incorporated
+
+- AC2 CHECK: `discount_value > 0 AND (discount_type != 'percent' OR discount_value < 100)`
+- EC-missing-4: `UNIQUE(order_id, course_id) WHERE course_id IS NOT NULL` on order_items
+- EC3 widened: fixed coupon ≥ subtotal refused (covered by `total_cents > 0`)
+- AC9 expanded to cover cart_items direct read, coupon_uses, staff without orders.* permission
+
+### Files to create / edit
+
+1. `supabase/migrations/20261028000006_schema_cart_orders_coupons.sql` — all 6 tables, sequence, 3 functions, RLS
+2. `supabase/tests/commerce.test.sql` — pgTAP: columns, CHECKs, indexes, functions, RLS
+3. `types/database.ts` — regenerated via `supabase gen types` after migration applies
+
+### Migration order
+
+coupons → carts → cart_items → orders → order_items → coupon_uses
+(orders references coupons; order_items references orders; coupon_uses references both)
+sequence `order_number_seq` before the coupons table; functions after coupon_uses.
+
+### Sensitive: risk = sensitive
+
+This PR is sensitive (commerce schema + RLS + race-safe functions). Security-reviewer and contract-checker run at Step 8 alongside the main reviewer.
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7. Not run = "not verified". -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+No test files found, exiting with code 0
+✓ Vitest (unit) passed
+
+════════════════════════════════
+  check.sh: 3 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
+
+$ npx supabase test db   (commerce.test.sql results)
+/supabase/tests/commerce.test.sql ..... ok
+Tests: 134, Failed: 0
 ```
+
+Pre-existing failures in foundation.test.sql, info-tables.test.sql, users.test.sql are from other stories (S-013, S-018) — not caused by this migration.
+
+Migration `20261028000006_schema_cart_orders_coupons.sql` applied cleanly.
+`types/database.ts` regenerated — all 6 new tables present.
+
+Note: renamed `20261028000005_schema_courses_trainers_banners.sql` → `20261028000004001_...` to fix a pre-existing duplicate-timestamp conflict that prevented `supabase start`.
 
 ## Review notes
 

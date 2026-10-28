@@ -1,3 +1,4 @@
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
@@ -33,51 +34,9 @@ export type Database = {
                   Update: {
                     "alt_text"?: string,"caption"?: string | null,"created_at"?: string,"id"?: string,"image_key"?: string,"is_active"?: boolean,"order_index"?: number | null
                   }
-                  Relationships: []
-                },"banners": {
-                  Row: {
-                    "advertiser_name": string | null,"alt_text": string,"click_count": number,"created_at": string,"id": string,"image_key": string,"image_key_mobile": string | null,"is_active": boolean,"link_url": string,"name": string,"open_in_new_tab": boolean,"placements": string[],"priority": number,"updated_at": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "advertiser_name"?: string | null,"alt_text": string,"click_count"?: number,"created_at"?: string,"id"?: string,"image_key": string,"image_key_mobile"?: string | null,"is_active"?: boolean,"link_url": string,"name": string,"open_in_new_tab"?: boolean,"placements": string[],"priority"?: number,"updated_at"?: string
-                  }
-                  Update: {
-                    "advertiser_name"?: string | null,"alt_text"?: string,"click_count"?: number,"created_at"?: string,"id"?: string,"image_key"?: string,"image_key_mobile"?: string | null,"is_active"?: boolean,"link_url"?: string,"name"?: string,"open_in_new_tab"?: boolean,"placements"?: string[],"priority"?: number,"updated_at"?: string
-                  }
-                  Relationships: []
-                },"courses": {
-                  Row: {
-                    "category_id": string | null,"created_at": string,"deleted_at": string | null,"description": string | null,"duration_minutes": number | null,"id": string,"is_coming_soon": boolean,"lesson_count": number | null,"level": string | null,"locale": string,"price_cents": number | null,"pricing_type": string,"promo_youtube_id": string | null,"search_vector": string | null,"slug": string,"status": string,"thumbnail_key": string | null,"title": string,"translation_group_id": string | null,"updated_at": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "category_id"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_coming_soon"?: boolean,"lesson_count"?: number | null,"level"?: string | null,"locale"?: string,"price_cents"?: number | null,"pricing_type"?: string,"promo_youtube_id"?: string | null,"search_vector"?: string | null,"slug": string,"status"?: string,"thumbnail_key"?: string | null,"title": string,"translation_group_id"?: string | null,"updated_at"?: string
-                  }
-                  Update: {
-                    "category_id"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_coming_soon"?: boolean,"lesson_count"?: number | null,"level"?: string | null,"locale"?: string,"price_cents"?: number | null,"pricing_type"?: string,"promo_youtube_id"?: string | null,"search_vector"?: string | null,"slug"?: string,"status"?: string,"thumbnail_key"?: string | null,"title"?: string,"translation_group_id"?: string | null,"updated_at"?: string
-                  }
                   Relationships: [
-                    {
-      foreignKeyName: "courses_category_id_fkey"
-      columns: ["category_id"]
-isOneToOne: false
-      referencedRelation: "categories"
-      referencedColumns: ["id"]
-    }
+                    
                   ]
-                },"trainers": {
-                  Row: {
-                    "bio": string | null,"created_at": string,"email": string | null,"experience": string | null,"id": string,"is_active": boolean,"name": string,"order_index": number | null,"phone": string | null,"photo_key": string | null,"position": string,"qualifications": string | null,"search_vector": string | null,"slug": string,"updated_at": string,"whatsapp_number": string | null
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "bio"?: string | null,"created_at"?: string,"email"?: string | null,"experience"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"order_index"?: number | null,"phone"?: string | null,"photo_key"?: string | null,"position": string,"qualifications"?: string | null,"search_vector"?: string | null,"slug": string,"updated_at"?: string,"whatsapp_number"?: string | null
-                  }
-                  Update: {
-                    "bio"?: string | null,"created_at"?: string,"email"?: string | null,"experience"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"order_index"?: number | null,"phone"?: string | null,"photo_key"?: string | null,"position"?: string,"qualifications"?: string | null,"search_vector"?: string | null,"slug"?: string,"updated_at"?: string,"whatsapp_number"?: string | null
-                  }
-                  Relationships: []
                 },"article_comments": {
                   Row: {
                     "article_id": string,"body": string,"created_at": string,"id": string,"moderated_at": string | null,"moderated_by": string | null,"status": string,"updated_at": string,"user_id": string
@@ -196,6 +155,66 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"banners": {
+                  Row: {
+                    "advertiser_name": string | null,"alt_text": string,"click_count": number,"created_at": string,"id": string,"image_key": string,"image_key_mobile": string | null,"is_active": boolean,"link_url": string,"name": string,"open_in_new_tab": boolean,"placements": (string)[],"priority": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "advertiser_name"?: string | null,"alt_text": string,"click_count"?: number,"created_at"?: string,"id"?: string,"image_key": string,"image_key_mobile"?: string | null,"is_active"?: boolean,"link_url": string,"name": string,"open_in_new_tab"?: boolean,"placements": (string)[],"priority"?: number,"updated_at"?: string
+                  }
+                  Update: {
+                    "advertiser_name"?: string | null,"alt_text"?: string,"click_count"?: number,"created_at"?: string,"id"?: string,"image_key"?: string,"image_key_mobile"?: string | null,"is_active"?: boolean,"link_url"?: string,"name"?: string,"open_in_new_tab"?: boolean,"placements"?: (string)[],"priority"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"cart_items": {
+                  Row: {
+                    "created_at": string,"document_id": string,"id": string,"language": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"document_id": string,"id"?: string,"language": string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"document_id"?: string,"id"?: string,"language"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "cart_items_document_id_fkey"
+      columns: ["document_id"]
+isOneToOne: false
+      referencedRelation: "documents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "cart_items_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "carts"
+      referencedColumns: ["user_id"]
+    }
+                  ]
+                },"carts": {
+                  Row: {
+                    "created_at": string,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "carts_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"categories": {
                   Row: {
                     "applies_to": (string)[],"created_at": string,"id": string,"name": string,"name_i18n": NonNullable<Json>,"order_index": number,"slug": string
@@ -209,6 +228,78 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"coupon_uses": {
+                  Row: {
+                    "coupon_id": string,"id": string,"order_id": string,"released_at": string | null,"used_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "coupon_id": string,"id"?: string,"order_id": string,"released_at"?: string | null,"used_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "coupon_id"?: string,"id"?: string,"order_id"?: string,"released_at"?: string | null,"used_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "coupon_uses_coupon_id_fkey"
+      columns: ["coupon_id"]
+isOneToOne: false
+      referencedRelation: "coupons"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "coupon_uses_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: true
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "coupon_uses_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"coupons": {
+                  Row: {
+                    "code": string,"created_at": string,"created_by": string | null,"discount_type": string,"discount_value": number,"expires_at": string,"id": string,"is_active": boolean,"max_uses": number,"max_uses_per_customer": number | null,"restrict_to_document_ids": (string)[] | null,"updated_at": string,"uses_count": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "code": string,"created_at"?: string,"created_by"?: string | null,"discount_type": string,"discount_value": number,"expires_at": string,"id"?: string,"is_active"?: boolean,"max_uses": number,"max_uses_per_customer"?: number | null,"restrict_to_document_ids"?: (string)[] | null,"updated_at"?: string,"uses_count"?: number
+                  }
+                  Update: {
+                    "code"?: string,"created_at"?: string,"created_by"?: string | null,"discount_type"?: string,"discount_value"?: number,"expires_at"?: string,"id"?: string,"is_active"?: boolean,"max_uses"?: number,"max_uses_per_customer"?: number | null,"restrict_to_document_ids"?: (string)[] | null,"updated_at"?: string,"uses_count"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "coupons_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"courses": {
+                  Row: {
+                    "category_id": string | null,"created_at": string,"deleted_at": string | null,"description": string | null,"duration_minutes": number | null,"id": string,"is_coming_soon": boolean,"lesson_count": number | null,"level": string | null,"locale": string,"price_cents": number | null,"pricing_type": string,"promo_youtube_id": string | null,"search_vector": unknown,"slug": string,"status": string,"thumbnail_key": string | null,"title": string,"translation_group_id": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "category_id"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_coming_soon"?: boolean,"lesson_count"?: number | null,"level"?: string | null,"locale"?: string,"price_cents"?: number | null,"pricing_type"?: string,"promo_youtube_id"?: string | null,"search_vector"?: unknown,"slug": string,"status"?: string,"thumbnail_key"?: string | null,"title": string,"translation_group_id"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "category_id"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_coming_soon"?: boolean,"lesson_count"?: number | null,"level"?: string | null,"locale"?: string,"price_cents"?: number | null,"pricing_type"?: string,"promo_youtube_id"?: string | null,"search_vector"?: unknown,"slug"?: string,"status"?: string,"thumbnail_key"?: string | null,"title"?: string,"translation_group_id"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "courses_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"document_files": {
                   Row: {
@@ -238,14 +329,14 @@ isOneToOne: false
                   ]
                 },"documents": {
                   Row: {
-                    "category_id": string | null,"cover_image_key": string | null,"created_at": string,"deleted_at": string | null,"description": string | null,"doc_kind": string,"download_count": number,"file_format": string,"id": string,"page_count": number | null,"preview_pages": number,"price_cents": number,"published_at": string | null,"purchase_count": number,"search_vector": unknown | null,"seo_description": string | null,"seo_title": string | null,"slug": string,"status": string,"title": string,"updated_at": string
+                    "category_id": string | null,"cover_image_key": string | null,"created_at": string,"deleted_at": string | null,"description": string | null,"doc_kind": string,"download_count": number,"file_format": string,"id": string,"page_count": number | null,"preview_pages": number,"price_cents": number,"published_at": string | null,"purchase_count": number,"search_vector": unknown,"seo_description": string | null,"seo_title": string | null,"slug": string,"status": string,"title": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "category_id"?: string | null,"cover_image_key"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"doc_kind": string,"download_count"?: number,"file_format"?: string,"id"?: string,"page_count"?: number | null,"preview_pages"?: number,"price_cents": number,"published_at"?: string | null,"purchase_count"?: number,"search_vector"?: unknown | null,"seo_description"?: string | null,"seo_title"?: string | null,"slug": string,"status"?: string,"title": string,"updated_at"?: string
+                    "category_id"?: string | null,"cover_image_key"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"doc_kind": string,"download_count"?: number,"file_format"?: string,"id"?: string,"page_count"?: number | null,"preview_pages"?: number,"price_cents": number,"published_at"?: string | null,"purchase_count"?: number,"search_vector"?: unknown,"seo_description"?: string | null,"seo_title"?: string | null,"slug": string,"status"?: string,"title": string,"updated_at"?: string
                   }
                   Update: {
-                    "category_id"?: string | null,"cover_image_key"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"doc_kind"?: string,"download_count"?: number,"file_format"?: string,"id"?: string,"page_count"?: number | null,"preview_pages"?: number,"price_cents"?: number,"published_at"?: string | null,"purchase_count"?: number,"search_vector"?: unknown | null,"seo_description"?: string | null,"seo_title"?: string | null,"slug"?: string,"status"?: string,"title"?: string,"updated_at"?: string
+                    "category_id"?: string | null,"cover_image_key"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"doc_kind"?: string,"download_count"?: number,"file_format"?: string,"id"?: string,"page_count"?: number | null,"preview_pages"?: number,"price_cents"?: number,"published_at"?: string | null,"purchase_count"?: number,"search_vector"?: unknown,"seo_description"?: string | null,"seo_title"?: string | null,"slug"?: string,"status"?: string,"title"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -271,6 +362,76 @@ isOneToOne: false
                     {
       foreignKeyName: "media_assets_uploaded_by_fkey"
       columns: ["uploaded_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"order_items": {
+                  Row: {
+                    "course_id": string | null,"created_at": string,"document_id": string | null,"id": string,"item_type": string,"language": string | null,"line_total_cents": number,"order_id": string,"quantity": number,"title_snapshot": string,"unit_price_cents": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "course_id"?: string | null,"created_at"?: string,"document_id"?: string | null,"id"?: string,"item_type": string,"language"?: string | null,"line_total_cents": number,"order_id": string,"quantity"?: number,"title_snapshot": string,"unit_price_cents": number
+                  }
+                  Update: {
+                    "course_id"?: string | null,"created_at"?: string,"document_id"?: string | null,"id"?: string,"item_type"?: string,"language"?: string | null,"line_total_cents"?: number,"order_id"?: string,"quantity"?: number,"title_snapshot"?: string,"unit_price_cents"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "order_items_course_id_fkey"
+      columns: ["course_id"]
+isOneToOne: false
+      referencedRelation: "courses"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_items_document_id_fkey"
+      columns: ["document_id"]
+isOneToOne: false
+      referencedRelation: "documents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_items_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"orders": {
+                  Row: {
+                    "bank_expiry_warned_at": string | null,"billing_address": Json | null,"billing_company": string | null,"billing_email": string | null,"billing_name": string | null,"billing_phone": string | null,"billing_tax_id": string | null,"cancel_reason": string | null,"coupon_code_snapshot": string | null,"coupon_id": string | null,"coupon_type_snapshot": string | null,"coupon_value_snapshot": number | null,"created_at": string,"currency": string,"discount_cents": number,"expires_at": string | null,"finalized_at": string | null,"id": string,"needs_review": boolean,"order_number": string,"paid_at": string | null,"payment_method": string | null,"payment_provider": string,"refund_policy_revision_id": string,"review_reason": string | null,"status": string,"subtotal_cents": number,"tax_cents": number,"terms_accepted_at": string,"terms_revision_id": string,"total_cents": number,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bank_expiry_warned_at"?: string | null,"billing_address"?: Json | null,"billing_company"?: string | null,"billing_email"?: string | null,"billing_name"?: string | null,"billing_phone"?: string | null,"billing_tax_id"?: string | null,"cancel_reason"?: string | null,"coupon_code_snapshot"?: string | null,"coupon_id"?: string | null,"coupon_type_snapshot"?: string | null,"coupon_value_snapshot"?: number | null,"created_at"?: string,"currency"?: string,"discount_cents"?: number,"expires_at"?: string | null,"finalized_at"?: string | null,"id"?: string,"needs_review"?: boolean,"order_number": string,"paid_at"?: string | null,"payment_method"?: string | null,"payment_provider"?: string,"refund_policy_revision_id": string,"review_reason"?: string | null,"status"?: string,"subtotal_cents": number,"tax_cents"?: number,"terms_accepted_at": string,"terms_revision_id": string,"total_cents": number,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "bank_expiry_warned_at"?: string | null,"billing_address"?: Json | null,"billing_company"?: string | null,"billing_email"?: string | null,"billing_name"?: string | null,"billing_phone"?: string | null,"billing_tax_id"?: string | null,"cancel_reason"?: string | null,"coupon_code_snapshot"?: string | null,"coupon_id"?: string | null,"coupon_type_snapshot"?: string | null,"coupon_value_snapshot"?: number | null,"created_at"?: string,"currency"?: string,"discount_cents"?: number,"expires_at"?: string | null,"finalized_at"?: string | null,"id"?: string,"needs_review"?: boolean,"order_number"?: string,"paid_at"?: string | null,"payment_method"?: string | null,"payment_provider"?: string,"refund_policy_revision_id"?: string,"review_reason"?: string | null,"status"?: string,"subtotal_cents"?: number,"tax_cents"?: number,"terms_accepted_at"?: string,"terms_revision_id"?: string,"total_cents"?: number,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "orders_coupon_id_fkey"
+      columns: ["coupon_id"]
+isOneToOne: false
+      referencedRelation: "coupons"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_refund_policy_revision_id_fkey"
+      columns: ["refund_policy_revision_id"]
+isOneToOne: false
+      referencedRelation: "page_revisions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_terms_revision_id_fkey"
+      columns: ["terms_revision_id"]
+isOneToOne: false
+      referencedRelation: "page_revisions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_user_id_fkey"
+      columns: ["user_id"]
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
@@ -390,6 +551,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"trainers": {
+                  Row: {
+                    "bio": string | null,"created_at": string,"email": string | null,"experience": string | null,"id": string,"is_active": boolean,"name": string,"order_index": number | null,"phone": string | null,"photo_key": string | null,"position": string,"qualifications": string | null,"search_vector": unknown,"slug": string,"updated_at": string,"whatsapp_number": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bio"?: string | null,"created_at"?: string,"email"?: string | null,"experience"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"order_index"?: number | null,"phone"?: string | null,"photo_key"?: string | null,"position": string,"qualifications"?: string | null,"search_vector"?: unknown,"slug": string,"updated_at"?: string,"whatsapp_number"?: string | null
+                  }
+                  Update: {
+                    "bio"?: string | null,"created_at"?: string,"email"?: string | null,"experience"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"order_index"?: number | null,"phone"?: string | null,"photo_key"?: string | null,"position"?: string,"qualifications"?: string | null,"search_vector"?: unknown,"slug"?: string,"updated_at"?: string,"whatsapp_number"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"user_roles": {
                   Row: {
                     "granted_at": string,"granted_by": string | null,"role": string,"user_id": string
@@ -497,124 +672,14 @@ isOneToOne: false
                 }
           }
           Views: {
-            "pg_all_foreign_keys": {
-                  Row: {
-                    "fk_columns": (unknown)[] | null,"fk_constraint_name": unknown,"fk_schema_name": unknown,"fk_table_name": unknown,"fk_table_oid": unknown,"is_deferrable": boolean | null,"is_deferred": boolean | null,"match_type": string | null,"on_delete": string | null,"on_update": string | null,"pk_columns": (unknown)[] | null,"pk_constraint_name": unknown,"pk_index_name": unknown,"pk_schema_name": unknown,"pk_table_name": unknown,"pk_table_oid": unknown
-                  }
-                  ComputedFields: never
-                  Relationships: [
-                    
-                  ]
-                },"tap_funky": {
-                  Row: {
-                    "args": string | null,"is_definer": boolean | null,"is_strict": boolean | null,"is_visible": boolean | null,"kind": unknown,"langoid": unknown,"name": unknown,"oid": unknown,"owner": unknown,"returns": string | null,"returns_set": boolean | null,"schema": unknown,"volatility": string | null
-                  }
-                  ComputedFields: never
-                  Relationships: [
-                    
-                  ]
-                }
+            [_ in never]: never
           }
           Functions: {
-            "_cleanup":
-{ Args: Record<PropertyKey, never>; Returns: boolean
-                           },
-"_contract_on":
-{ Args: { "": string }; Returns: unknown
-                           },
-"_currtest":
-{ Args: Record<PropertyKey, never>; Returns: number
-                           },
-"_db_privs":
-{ Args: Record<PropertyKey, never>; Returns: (unknown)[]
-                           },
-"_extensions":
-{ Args: Record<PropertyKey, never>; Returns: unknown[]
-                           },
-"_get":
-{ Args: { "": string }; Returns: number
-                           },
-"_get_latest":
-{ Args: { "": string }; Returns: (number)[]
-                           },
-"_get_note":
-{ Args: { "": string }; Returns: string
-                           },
-"_is_verbose":
-{ Args: Record<PropertyKey, never>; Returns: boolean
-                           },
-"_prokind":
-{ Args: { "p_oid": unknown }; Returns: unknown
-                           },
-"_query":
-{ Args: { "": string }; Returns: string
-                           },
-"_refine_vol":
-{ Args: { "": string }; Returns: string
-                           },
-"_retval":
-{ Args: { "": string }; Returns: string
-                           },
-"_table_privs":
-{ Args: Record<PropertyKey, never>; Returns: (unknown)[]
-                           },
-"_temptypes":
-{ Args: { "": string }; Returns: string
-                           },
-"_todo":
-{ Args: Record<PropertyKey, never>; Returns: string
-                           },
-"col_is_null":
-{ Args: { "column_name": unknown,"description"?: string,"schema_name": unknown,"table_name": unknown }; Returns: string
-                           } |
-{ Args: { "column_name": unknown,"description"?: string,"table_name": unknown }; Returns: string
-                           },
-"col_not_null":
-{ Args: { "column_name": unknown,"description"?: string,"schema_name": unknown,"table_name": unknown }; Returns: string
-                           } |
-{ Args: { "column_name": unknown,"description"?: string,"table_name": unknown }; Returns: string
-                           },
-"create_profile_for":
+            "create_profile_for":
 { Args: { "p_user": unknown }; Returns: undefined
-                           },
-"diag":
-{ Args: { "msg": unknown }; Returns: { error: true } & "Could not choose the best candidate function between: public.diag(msg => text), public.diag(msg => anyelement). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
-                           } |
-{ Args: { "msg": string }; Returns: { error: true } & "Could not choose the best candidate function between: public.diag(msg => text), public.diag(msg => anyelement). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
-                           },
-"diag_test_name":
-{ Args: { "": string }; Returns: string
-                           },
-"do_tap":
-{ Args: Record<PropertyKey, never>; Returns: string[]
-                           } |
-{ Args: { "": string }; Returns: string[]
-                           },
-"fail":
-{ Args: Record<PropertyKey, never>; Returns: string
-                           } |
-{ Args: { "": string }; Returns: string
-                           },
-"findfuncs":
-{ Args: { "": string }; Returns: (string)[]
-                           },
-"finish":
-{ Args: { "exception_on_failure"?: boolean }; Returns: string[]
-                           },
-"format_type_string":
-{ Args: { "": string }; Returns: string
                            },
 "has_permission":
 { Args: { "p_action": string }; Returns: boolean
-                           },
-"has_unique":
-{ Args: { "": string }; Returns: string
-                           },
-"in_todo":
-{ Args: Record<PropertyKey, never>; Returns: boolean
-                           },
-"is_empty":
-{ Args: { "": string }; Returns: string
                            },
 "is_staff_member":
 { Args: Record<PropertyKey, never>; Returns: boolean
@@ -622,82 +687,21 @@ isOneToOne: false
 "is_super_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
-"isnt_empty":
-{ Args: { "": string }; Returns: string
-                           },
-"lives_ok":
-{ Args: { "": string }; Returns: string
-                           },
-"no_plan":
-{ Args: Record<PropertyKey, never>; Returns: boolean[]
-                           },
-"num_failed":
-{ Args: Record<PropertyKey, never>; Returns: number
-                           },
-"os_name":
-{ Args: Record<PropertyKey, never>; Returns: string
-                           },
-"pass":
-{ Args: Record<PropertyKey, never>; Returns: string
-                           } |
-{ Args: { "": string }; Returns: string
-                           },
-"pg_version":
-{ Args: Record<PropertyKey, never>; Returns: string
-                           },
-"pg_version_num":
-{ Args: Record<PropertyKey, never>; Returns: number
-                           },
-"pgtap_version":
-{ Args: Record<PropertyKey, never>; Returns: number
-                           },
 "profile_is_super_admin":
 { Args: { "p_profile_id": string }; Returns: boolean
-                           },
-"runtests":
-{ Args: Record<PropertyKey, never>; Returns: string[]
-                           } |
-{ Args: { "": string }; Returns: string[]
                            },
 "show_limit":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
 "show_trgm":
 { Args: { "": string }; Returns: (string)[]
-                           },
-"skip":
-{ Args: { "": string }; Returns: string
-                           } |
-{ Args: { "how_many": number,"why": string }; Returns: string
-                           },
-"throws_ok":
-{ Args: { "": string }; Returns: string
-                           },
-"todo":
-{ Args: { "how_many": number }; Returns: boolean[]
-                           } |
-{ Args: { "how_many": number,"why": string }; Returns: boolean[]
-                           } |
-{ Args: { "why": string }; Returns: boolean[]
-                           } |
-{ Args: { "how_many": number,"why": string }; Returns: boolean[]
-                           },
-"todo_end":
-{ Args: Record<PropertyKey, never>; Returns: boolean[]
-                           },
-"todo_start":
-{ Args: Record<PropertyKey, never>; Returns: boolean[]
-                           } |
-{ Args: { "": string }; Returns: boolean[]
                            }
           }
           Enums: {
             [_ in never]: never
           }
           CompositeTypes: {
-            "_time_trial_type": {
-                        "a_time": number | null
-                      }
+            [_ in never]: never
           }
         }
 }
