@@ -210,6 +210,52 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"document_files": {
+                  Row: {
+                    "checksum_sha256": string | null,"created_at": string,"document_id": string,"file_key": string,"format": string,"id": string,"is_current": boolean,"kind": string,"language": string,"size_bytes": number,"status": string,"updated_at": string,"uploaded_by": string | null,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "checksum_sha256"?: string | null,"created_at"?: string,"document_id": string,"file_key": string,"format": string,"id"?: string,"is_current"?: boolean,"kind": string,"language": string,"size_bytes": number,"status"?: string,"updated_at"?: string,"uploaded_by"?: string | null,"version"?: number
+                  }
+                  Update: {
+                    "checksum_sha256"?: string | null,"created_at"?: string,"document_id"?: string,"file_key"?: string,"format"?: string,"id"?: string,"is_current"?: boolean,"kind"?: string,"language"?: string,"size_bytes"?: number,"status"?: string,"updated_at"?: string,"uploaded_by"?: string | null,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "document_files_document_id_fkey"
+      columns: ["document_id"]
+isOneToOne: false
+      referencedRelation: "documents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "document_files_uploaded_by_fkey"
+      columns: ["uploaded_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"documents": {
+                  Row: {
+                    "category_id": string | null,"cover_image_key": string | null,"created_at": string,"deleted_at": string | null,"description": string | null,"doc_kind": string,"download_count": number,"file_format": string,"id": string,"page_count": number | null,"preview_pages": number,"price_cents": number,"published_at": string | null,"purchase_count": number,"search_vector": unknown | null,"seo_description": string | null,"seo_title": string | null,"slug": string,"status": string,"title": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "category_id"?: string | null,"cover_image_key"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"doc_kind": string,"download_count"?: number,"file_format"?: string,"id"?: string,"page_count"?: number | null,"preview_pages"?: number,"price_cents": number,"published_at"?: string | null,"purchase_count"?: number,"search_vector"?: unknown | null,"seo_description"?: string | null,"seo_title"?: string | null,"slug": string,"status"?: string,"title": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "category_id"?: string | null,"cover_image_key"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"doc_kind"?: string,"download_count"?: number,"file_format"?: string,"id"?: string,"page_count"?: number | null,"preview_pages"?: number,"price_cents"?: number,"published_at"?: string | null,"purchase_count"?: number,"search_vector"?: unknown | null,"seo_description"?: string | null,"seo_title"?: string | null,"slug"?: string,"status"?: string,"title"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "documents_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"media_assets": {
                   Row: {
                     "alt_text": string | null,"bucket": string,"created_at": string,"file_key": string,"height": number | null,"id": string,"kind": string,"mime_type": string | null,"size_bytes": number | null,"status": string,"uploaded_by": string | null,"width": number | null
