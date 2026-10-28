@@ -37,6 +37,32 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"admin_audit_log": {
+                  Row: {
+                    "action": string,"actor_id": string,"after": Json | null,"before": Json | null,"created_at": string,"entity_id": string | null,"entity_type": string | null,"id": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"actor_id": string,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: never
+                  }
+                  Update: {
+                    "action"?: string,"actor_id"?: string,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: never
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "admin_audit_log_actor_id_fkey"
+      columns: ["actor_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "admin_audit_log_actor_id_fkey"
+      columns: ["actor_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"article_comments": {
                   Row: {
                     "article_id": string,"body": string,"created_at": string,"id": string,"moderated_at": string | null,"moderated_by": string | null,"status": string,"updated_at": string,"user_id": string
@@ -62,10 +88,22 @@ isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "article_comments_moderated_by_fkey"
+      columns: ["moderated_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "article_comments_user_id_fkey"
       columns: ["user_id"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "article_comments_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -92,6 +130,12 @@ isOneToOne: false
       columns: ["user_id"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "article_likes_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -180,10 +224,22 @@ isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "bank_transfer_slips_reviewed_by_fkey"
+      columns: ["reviewed_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "bank_transfer_slips_uploaded_by_fkey"
       columns: ["uploaded_by"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bank_transfer_slips_uploaded_by_fkey"
+      columns: ["uploaded_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -220,6 +276,12 @@ isOneToOne: false
       referencedRelation: "documents"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "cart_items_document_id_fkey"
+      columns: ["document_id"]
+isOneToOne: false
+      referencedRelation: "report_top_documents"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "cart_items_user_id_fkey"
       columns: ["user_id"]
 isOneToOne: false
@@ -244,6 +306,12 @@ isOneToOne: false
       columns: ["user_id"]
 isOneToOne: true
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "carts_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -291,6 +359,12 @@ isOneToOne: true
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "coupon_uses_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
     }
                   ]
                 },"coupons": {
@@ -310,6 +384,12 @@ isOneToOne: false
       columns: ["created_by"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "coupons_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -352,10 +432,22 @@ isOneToOne: false
       referencedRelation: "documents"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "document_files_document_id_fkey"
+      columns: ["document_id"]
+isOneToOne: false
+      referencedRelation: "report_top_documents"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "document_files_uploaded_by_fkey"
       columns: ["uploaded_by"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "document_files_uploaded_by_fkey"
+      columns: ["uploaded_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -404,6 +496,12 @@ isOneToOne: false
       referencedRelation: "documents"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "download_logs_document_id_fkey"
+      columns: ["document_id"]
+isOneToOne: false
+      referencedRelation: "report_top_documents"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "download_logs_entitlement_id_fkey"
       columns: ["entitlement_id"]
 isOneToOne: false
@@ -414,6 +512,12 @@ isOneToOne: false
       columns: ["user_id"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "download_logs_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -436,6 +540,12 @@ isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "download_requests_decided_by_fkey"
+      columns: ["decided_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "download_requests_entitlement_id_fkey"
       columns: ["entitlement_id"]
 isOneToOne: false
@@ -446,6 +556,12 @@ isOneToOne: false
       columns: ["user_id"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "download_requests_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -488,10 +604,22 @@ isOneToOne: false
       referencedRelation: "documents"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "entitlements_document_id_fkey"
+      columns: ["document_id"]
+isOneToOne: false
+      referencedRelation: "report_top_documents"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "entitlements_granted_by_fkey"
       columns: ["granted_by"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "entitlements_granted_by_fkey"
+      columns: ["granted_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "entitlements_order_item_id_fkey"
@@ -504,6 +632,12 @@ isOneToOne: false
       columns: ["user_id"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "entitlements_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -545,6 +679,12 @@ isOneToOne: true
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "media_assets_uploaded_by_fkey"
+      columns: ["uploaded_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
     }
                   ]
                 },"order_items": {
@@ -570,6 +710,12 @@ isOneToOne: false
       columns: ["document_id"]
 isOneToOne: false
       referencedRelation: "documents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_items_document_id_fkey"
+      columns: ["document_id"]
+isOneToOne: false
+      referencedRelation: "report_top_documents"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "order_items_order_id_fkey"
@@ -615,6 +761,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
     }
                   ]
                 },"page_revisions": {
@@ -641,6 +793,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "page_revisions_published_by_fkey"
+      columns: ["published_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
     }
                   ]
                 },"pages": {
@@ -660,6 +818,12 @@ isOneToOne: false
       columns: ["updated_by"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "pages_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -735,6 +899,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "site_settings_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
     }
                   ]
                 },"slug_redirects": {
@@ -784,10 +954,22 @@ isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "user_roles_granted_by_fkey"
+      columns: ["granted_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "user_roles_user_id_fkey"
       columns: ["user_id"]
 isOneToOne: true
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "user_roles_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -810,10 +992,22 @@ isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "video_comments_moderated_by_fkey"
+      columns: ["moderated_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "video_comments_user_id_fkey"
       columns: ["user_id"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "video_comments_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "video_comments_video_id_fkey"
@@ -840,6 +1034,12 @@ isOneToOne: false
       columns: ["user_id"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "video_likes_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "video_likes_video_id_fkey"
@@ -872,7 +1072,53 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            "feed_items": {
+                  Row: {
+                    "category_id": string | null,"comment_count": number | null,"deleted_at": string | null,"id": string | null,"image": string | null,"kind": string | null,"like_count": number | null,"locale": string | null,"published_at": string | null,"status": string | null,"summary": string | null,"title": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"home_counters": {
+                  Row: {
+                    "published_articles": number | null,"published_documents": number | null,"registered_users": number | null,"total_downloads": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"public_profiles": {
+                  Row: {
+                    "avatar_url": string | null,"display_name": string,"id": string,"is_staff": boolean | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                           "avatar_url"?: string | null,"display_name"?: string | null,"id"?: string | null,"is_staff"?: never
+                         }
+                        Update: {
+                           "avatar_url"?: string | null,"display_name"?: string | null,"id"?: string | null,"is_staff"?: never
+                         }
+                        Relationships: [
+                    
+                  ]
+                },"report_daily_sales": {
+                  Row: {
+                    "bank_gross_cents": number | null,"card_gross_cents": number | null,"chargebacks": number | null,"paid_orders": number | null,"sale_date": string | null,"total_gross_cents": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"report_top_documents": {
+                  Row: {
+                    "doc_kind": string,"download_count": number,"id": string,"revenue_cents": number | null,"revenue_en_cents": number | null,"revenue_si_cents": number | null,"revenue_ta_cents": number | null,"title": string,"units_sold": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                }
           }
           Functions: {
             "create_profile_for":

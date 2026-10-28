@@ -2,7 +2,7 @@
 id: S-019
 title: Schema 9: audit log, anonymise_user, views, append-only triggers
 phase: MS1
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-019-schema-audit-views-anonymise
@@ -82,15 +82,81 @@ Finish the schema: the insert-only `admin_audit_log`, the account anonymisation 
 
 Prior art: searched `grep -ril "anonymise_user\|public_profiles\|home_counters\|admin_audit_log\|purge_old_audit_rows" docs/`: found database-schema Group J, sections 4, 5, 6, 8; admin-panel design section 8 (audit); auth-design section 12 (deletion); this story implements them; nothing superseded.
 
-<!-- Filled in by /story-run at Step 3. Sensitive: the owner approves the plan. -->
+### Files
+
+- `supabase/migrations/20261029000001_schema_audit_views_anonymise.sql` — the migration
+- `supabase/tests/audit-views.test.sql` — pgTAP tests
+- `types/database.ts` — regenerated (table + views)
+
+### Migration steps (in order)
+
+1. **Alter `profiles.status` CHECK** — add `'anonymised'` to `('active','suspended','anonymised')`.
+2. **`admin_audit_log` table** — bigint PK (GENERATED ALWAYS AS IDENTITY), `actor_id` FK profiles RESTRICT, `action text`, `entity_type text`, `entity_id text`, `before jsonb`, `after jsonb`, `created_at timestamptz DEFAULT now()`. CHECK on action from the 33-item list.  Indexes: `(created_at)`, `(actor_id, created_at)`.
+3. **Update `private.enforce_append_only`** — more granular:
+   - `page_revisions`: block all (unchanged).
+   - `admin_audit_log`: block all UPDATEs; block DELETEs unless `ceylonsafety.purging_audit = 'true'` is set in session (set only by `purge_old_audit_rows`).
+   - `payment_events`: allow service_role UPDATEs (for `purge_old_logs` nulling `raw_payload`); block all DELETEs.
+4. **Attach trigger** to `admin_audit_log`.
+5. **`private.purge_old_audit_rows(p_cutoff timestamptz)`** — sets `SET LOCAL ceylonsafety.purging_audit = 'true'`, deletes rows `WHERE created_at < p_cutoff`, returns row count. REVOKE ALL from PUBLIC.
+6. **`private.anonymise_user(p_user_id uuid)`** in one transaction:
+   - Refuse if any `user_roles` row exists.
+   - Short-circuit (return) if `deleted_at IS NOT NULL` (idempotent).
+   - UPDATE profiles: clear PII, set `display_name='Deleted user'`, `email='deleted-{id}@invalid'`, `status='anonymised'`, `deleted_at=now()`.
+   - DELETE `carts` (cart_items cascade via FK).
+   - For each plain-pending card order (`status='pending' AND payment_provider='payhere'`): UPDATE to `status='cancelled', cancel_reason='account_deleted'`, then call `private.release_coupon_use(order_id)`.
+   - Does NOT touch auth.users (S-037). Does NOT touch pending_verification orders (EC9).
+   - REVOKE ALL from PUBLIC.
+7. **RLS on `admin_audit_log`** — no anon/customer policy; staff with `audit.read` read; Super Admin rows hidden from non-super-admins (actor_id check + entity_type/entity_id UUID-safe cast check).
+8. **`public_profiles` view** — `id`, `display_name`, `avatar_url`, `is_staff` (true when `admin` or `maintainer` in user_roles; never super_admin). Includes anonymised rows (shown as "Deleted user").
+9. **`feed_items` view** — `WITH (security_invoker = true)`. UNION of articles + videos with `kind`, `id`, `title`, `summary` (excerpt / description), `image` (cover_image_key / thumbnail_key), `published_at`, `like_count`, `comment_count`, `category_id`.
+10. **`home_counters` view** — four numbers: published articles count, published documents count, registered users (deleted_at IS NULL), download total (SUM of documents.download_count). Published = published_at <= now() AND deleted_at IS NULL.
+11. **`report_daily_sales` view** — per-day (Asia/Colombo) paid orders, gross revenue split by card/bank, chargeback count. No refund lines. No anon/authenticated/staff policy; only service role reads.
+12. **`report_top_documents` view** — documents ranked by units sold, revenue, downloads, per-language split. Same access rule.
+13. **REVOKE EXECUTE** on all private.* functions and all public.* functions except `has_permission`, `is_staff_member`, `is_super_admin`.
+
+### AC3 Super Admin filter design
+
+`entity_id` is `text`. To detect a SA target: check `entity_type = 'user'` AND `entity_id` matches UUID regex AND `entity_id::uuid` is in `user_roles` for `super_admin`. This avoids cast errors on non-UUID entity IDs (e.g. slugs).
+
+### Key constraints
+
+- The `status = 'anonymised'` UPDATE on profiles bypasses the `display_name` length trigger because the trigger's final validation accepts 'Deleted user' (12 chars, within [2,40]).
+- `purge_old_audit_rows` uses `SET LOCAL` so the session var is transaction-scoped (safe).
+- `payment_events` DELETE is now blocked even for service_role (stricter than S-017 allowed; no existing code deletes payment_events rows).
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7. Not run = "not verified". -->
-
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+No test files found, exiting with code 0
+✓ Vitest (unit) passed
+
+════════════════════════════════
+  check.sh: 3 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
+
+$ npx supabase test db -- supabase/tests/audit-views.test.sql
+All tests successful.
+Files=1, Tests=78, Result: PASS
 ```
+
+**Round-2 fixes (post-reviewer):**
+- P0: Fixed `report_top_documents` double-count — changed to subquery JOIN so only paid/chargeback order_items are aggregated.
+- P0: Regenerated `types/database.ts` — `admin_audit_log` + 5 views now present.
+- P1: `enforce_append_only` `payment_events` UPDATE exception changed from `current_setting('role')` to `ceylonsafety.nulling_payload` session variable (same pattern as `purging_audit`).
+- P1: EC8 test replaced — functional timezone test inserts a row at 23:30 UTC and asserts `sale_date = 2026-10-15`.
+- P1: AC10 `ok(true,...)` replaced — asserts table and all 5 views present in `information_schema`.
+- P1: Added `authenticated` block test for `report_top_documents`.
+- P2: `cancel_reason = 'account_deleted'` asserted in EC4.
+- P2: Anon sees 0 audit rows test added.
 
 ## Review notes
 
