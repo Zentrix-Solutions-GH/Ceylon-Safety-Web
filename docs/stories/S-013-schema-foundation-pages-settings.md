@@ -2,11 +2,11 @@
 id: S-013
 title: Schema 3: categories, authors, site_settings, pages, page_revisions, slug_redirects
 phase: MS1
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-013-schema-foundation-pages-settings
-pr: ~
+pr: "13"
 depends_on: [S-012]
 reqs: [REQ-031, REQ-034, REQ-190, REQ-201, REQ-202, REQ-203, REQ-204, REQ-205]
 ---
@@ -25,26 +25,26 @@ Create the shared foundation tables that content and commerce point to: `categor
 
 ## Acceptance criteria
 
-- [ ] AC1: `categories`: `id`, `slug UNIQUE`, `name UNIQUE`, `name_i18n jsonb default {}`, `applies_to text[]` (CHECK: subset of article, video, document, course), `order_index`, `created_at`. `authors`: `id`, `slug UNIQUE`, `name NOT NULL`, `bio`, `photo_key`, `is_active default true`, `order_index`, `created_at`, `updated_at`.
-- [ ] AC2: `media_assets`: `id`, `bucket CHECK in (public, private)`, `status CHECK in (pending, ready)`, `file_key NOT NULL UNIQUE`, `kind CHECK in (image, document, preview, invoice, other)`, `mime_type`, `size_bytes bigint`, `width`, `height`, `alt_text`, `uploaded_by` FK `profiles` ON DELETE SET NULL, `created_at`; index on `created_at`.
-- [ ] AC3: `pages`: `id`, `locale`, `slug`, `title NOT NULL`, `body jsonb`, `version int default 1`, `updated_by` FK, `created_at`, `updated_at`; `UNIQUE(locale, slug)`. `page_revisions`: `id`, `page_id` FK `pages` ON DELETE RESTRICT, `version int NOT NULL`, `title`, `body jsonb`, `published_by` FK, `published_at`; `UNIQUE(page_id, version)`.
-- [ ] AC4: Append-only: a shared trigger function refuses UPDATE and DELETE on `page_revisions` for every role including the service role (no exceptions on this table). The function is written so later stories can apply it to `payment_events` and `admin_audit_log` with one named exception each (see Spec gap below). A page that has revisions cannot be deleted (RESTRICT).
-- [ ] AC5: `profiles.terms_revision_id` gets its foreign key to `page_revisions` (nullable). `create_profile_for` now accepts a terms revision that exists and stores NULL for one that does not (re-run the S-011 test).
-- [ ] AC6: `slug_redirects`: `id`, `entity_type CHECK in (article, document, course, trainer)`, `entity_id uuid`, `locale`, `old_slug NOT NULL`, `created_at`; `UNIQUE(entity_type, locale, old_slug)`.
-- [ ] AC7: `site_settings`: `key text PK`, `value jsonb`, `is_public boolean default false`, `setting_group text NOT NULL CHECK in (site, contact, business, analytics, ads, system)`, `updated_by`, `updated_at`; index on `setting_group`. A before-update trigger refuses a change unless the caller passes `has_permission` for the row's group (`site` -> `settings.site`, `contact` -> `settings.contact`, `business` -> `settings.business`, `analytics` -> `settings.analytics`, `ads` -> `ads.settings`; `system` -> Super Admin only). The service role may always write.
-- [ ] AC8: RLS enabled on all seven tables. Public (anon and customer): read `categories`, active `authors`, all `pages`, `page_revisions` of those pages, `slug_redirects`, and only `site_settings` rows with `is_public = true`. `media_assets`: no public or customer access. Staff: read `site_settings` (all rows) and `media_assets`; write `authors` with `has_permission('authors.*'-area action)`, `media_assets` with the `media.upload` area. Client writes to `categories`, `pages`, `page_revisions` and `slug_redirects` are NOT enabled in Release 1 (service role / migrations only).
-- [ ] AC9: RLS tests: anon cannot read a private setting (`is_public = false`) or any `media_assets` row; a customer cannot update any of the seven tables; an `admin` without the `settings.contact` permission cannot update a `contact` setting; a Super Admin can; an `admin` cannot update a `system` setting.
-- [ ] AC10: `types/database.ts` regenerated.
+- [x] AC1: `categories`: `id`, `slug UNIQUE`, `name UNIQUE`, `name_i18n jsonb default {}`, `applies_to text[]` (CHECK: subset of article, video, document, course), `order_index`, `created_at`. `authors`: `id`, `slug UNIQUE`, `name NOT NULL`, `bio`, `photo_key`, `is_active default true`, `order_index`, `created_at`, `updated_at`.
+- [x] AC2: `media_assets`: `id`, `bucket CHECK in (public, private)`, `status CHECK in (pending, ready)`, `file_key NOT NULL UNIQUE`, `kind CHECK in (image, document, preview, invoice, other)`, `mime_type`, `size_bytes bigint`, `width`, `height`, `alt_text`, `uploaded_by` FK `profiles` ON DELETE SET NULL, `created_at`; index on `created_at`.
+- [x] AC3: `pages`: `id`, `locale`, `slug`, `title NOT NULL`, `body jsonb`, `version int default 1`, `updated_by` FK, `created_at`, `updated_at`; `UNIQUE(locale, slug)`. `page_revisions`: `id`, `page_id` FK `pages` ON DELETE RESTRICT, `version int NOT NULL`, `title`, `body jsonb`, `published_by` FK, `published_at`; `UNIQUE(page_id, version)`.
+- [x] AC4: Append-only: a shared trigger function refuses UPDATE and DELETE on `page_revisions` for every role including the service role (no exceptions on this table). The function is written so later stories can apply it to `payment_events` and `admin_audit_log` with one named exception each (see Spec gap below). A page that has revisions cannot be deleted (RESTRICT).
+- [x] AC5: `profiles.terms_revision_id` gets its foreign key to `page_revisions` (nullable). `create_profile_for` now accepts a terms revision that exists and stores NULL for one that does not (re-run the S-011 test).
+- [x] AC6: `slug_redirects`: `id`, `entity_type CHECK in (article, document, course, trainer)`, `entity_id uuid`, `locale`, `old_slug NOT NULL`, `created_at`; `UNIQUE(entity_type, locale, old_slug)`.
+- [x] AC7: `site_settings`: `key text PK`, `value jsonb`, `is_public boolean default false`, `setting_group text NOT NULL CHECK in (site, contact, business, analytics, ads, system)`, `updated_by`, `updated_at`; index on `setting_group`. A before-update trigger refuses a change unless the caller passes `has_permission` for the row's group (`site` -> `settings.site`, `contact` -> `settings.contact`, `business` -> `settings.business`, `analytics` -> `settings.analytics`, `ads` -> `ads.settings`; `system` -> Super Admin only). The service role may always write.
+- [x] AC8: RLS enabled on all seven tables. Public (anon and customer): read `categories`, active `authors`, all `pages`, `page_revisions` of those pages, `slug_redirects`, and only `site_settings` rows with `is_public = true`. `media_assets`: no public or customer access. Staff: read `site_settings` (all rows) and `media_assets`; write `authors` with `has_permission('authors.*'-area action)`, `media_assets` with the `media.upload` area. Client writes to `categories`, `pages`, `page_revisions` and `slug_redirects` are NOT enabled in Release 1 (service role / migrations only).
+- [x] AC9: RLS tests: anon cannot read a private setting (`is_public = false`) or any `media_assets` row; a customer cannot update any of the seven tables; an `admin` without the `settings.contact` permission cannot update a `contact` setting; a Super Admin can; an `admin` cannot update a `system` setting.
+- [x] AC10: `types/database.ts` regenerated.
 
 ## Edge cases
 
-- [ ] EC1: Delete a page that has a revision: refused.
-- [ ] EC2: Update a revision body as service role: refused. Delete a revision as service role: refused.
-- [ ] EC3: Two pages with the same `(locale, slug)`: refused; same slug in `si`: allowed.
-- [ ] EC4: `categories.applies_to` containing `'banner'`: refused by CHECK.
-- [ ] EC5: `file_key` reused in `media_assets`: refused.
-- [ ] EC6: Setting update by the service role for any group: allowed (migrations and server code).
-- [ ] EC7: A `setting_group` outside the six values: refused.
+- [x] EC1: Delete a page that has a revision: refused.
+- [x] EC2: Update a revision body as service role: refused. Delete a revision as service role: refused.
+- [x] EC3: Two pages with the same `(locale, slug)`: refused; same slug in `si`: allowed.
+- [x] EC4: `categories.applies_to` containing `'banner'`: refused by CHECK.
+- [x] EC5: `file_key` reused in `media_assets`: refused.
+- [x] EC6: Setting update by the service role for any group: allowed (migrations and server code).
+- [x] EC7: A `setting_group` outside the six values: refused.
 
 ## Contract
 
