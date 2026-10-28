@@ -189,25 +189,44 @@ Merge both agents' findings (Mode B) or your own inline findings (Mode A):
 
 ## Step 4: Post as Formal GitHub Review
 
-Use `gh pr review` — **not** `gh pr comment`. A plain comment is invisible to
-the Review Guard CI check (`listReviews` API); only a formal review counts.
+Use `gh pr review --comment` — **not** `gh pr comment`. A plain PR comment
+goes to the `issues/comments` API and is invisible to the Review Guard CI.
+`gh pr review` posts to the `pulls/reviews` API, which the workflow searches.
 
-Map the recommendation to the right flag:
-
-| Recommendation | gh flag |
-|---|---|
-| APPROVE | `--approve` |
-| APPROVE WITH FOLLOW-UPS | `--approve` |
-| REQUEST CHANGES | `--request-changes` |
+> **Self-review note:** GitHub blocks `--approve` and `--request-changes` on
+> your own PRs. Always use `--comment` for self-reviews on this project.
+> The Review Guard workflow accepts any review state (COMMENTED, APPROVED,
+> CHANGES_REQUESTED) as long as the body matches the format below.
 
 ```bash
-gh pr review <number> --approve --body-file /tmp/ceylonsafety-review.md
-# or
-gh pr review <number> --request-changes --body-file /tmp/ceylonsafety-review.md
+gh pr review <number> --comment --body-file /path/to/review.md
 ```
 
 This triggers the `pull_request_review` event, which re-runs the Review Guard
-workflow and lets it find the formal review via `listReviews`.
+workflow and lets it find the review via `listReviews`.
+
+### Review body format — Review Guard requirements
+
+The body file **must** contain all three of the following, exactly:
+
+```
+## CeylonSafety PR Review — [any title]
+
+**Reviewed Head:** <full 40-character SHA of current PR HEAD>
+
+### Recommendation
+**APPROVE WITH FOLLOW-UPS**
+```
+
+The Review Guard regexes (`.github/workflows/require-review.yml`):
+- Heading match: `## CeylonSafety PR Review` (case-insensitive)
+- SHA match: `Reviewed Head:[*\s]+<headSha>` — bold markers `** ` satisfy `[*\s]+`
+- Approve: `### Recommendation` followed by `**APPROVE**` or `**APPROVE WITH FOLLOW-UPS**`
+- Block: `### Recommendation` followed by `**REQUEST CHANGES**` → CI fails
+
+> **SHA must match current HEAD.** If a new commit is pushed after the review
+> is posted, HEAD changes and the old SHA no longer matches — a new review must
+> be posted for CI to pass.
 
 One review per run. If re-reviewing after fixes, scope the diff to new
 commits only:
