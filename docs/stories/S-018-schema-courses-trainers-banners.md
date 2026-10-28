@@ -127,7 +127,10 @@ AC6 pgTAP tests use conditional skip if order_items/entitlements are absent (add
 
 ## Review notes
 
-<!-- Filled in by reviewer / security-reviewer agents and /full-review -->
+- **P1** `supabase/migrations/...sql` — `trg_banners_protect_click_count` was UPDATE-only; INSERT path left open for banners.write staff. Fixed: `banners_staff_write` INSERT policy now enforces `click_count = 0`. (full-review 2026-10-28, resolved same session)
+- **P1** `supabase/tests/info-tables.test.sql` — click_count test used a user without `banners.write`; RLS blocked before trigger, test passed for wrong reason. Fixed: now uses banners.write admin + checks `restrict_violation` errcode. (full-review 2026-10-28, resolved same session)
+- **P1** `supabase/tests/info-tables.test.sql` (EC7) — Only pg_constraint catalog check; no live DELETE test. Deferred to S-016/S-017 test suites. (full-review 2026-10-28)
+- **P0 (process)** — pgTAP suite not executed against real Supabase stack. Run `supabase test db` and paste output before declaring story done. (full-review 2026-10-28)
 
 ## After this merges, a user can:
 
