@@ -405,12 +405,15 @@ SELECT ok((SELECT passed FROM _ac7_results WHERE label = 'banners'),  'AC7: bann
 INSERT INTO public.banners (id, name, image_key, alt_text, link_url, placements, is_active)
 VALUES ('cc180002-0000-0000-0000-000000000006'::uuid, 'Active Banner', 'img/ab.webp', 'Active', 'https://example.com', ARRAY['home_top'], true);
 
+-- Use the admin user who HAS banners.write so RLS passes and the trigger is what blocks.
 SET LOCAL ROLE authenticated;
 SET LOCAL "request.jwt.claims" TO '{"sub":"bb180001-0000-0000-0000-000000000002","role":"authenticated"}';
 
 SELECT throws_ok(
   $sql$ UPDATE public.banners SET click_count = 999 WHERE name = 'Active Banner' $sql$,
-  'AC8: staff with banners.write cannot directly update click_count'
+  'restrict_violation',
+  NULL,
+  'AC8: staff with banners.write cannot directly update click_count (trigger blocks, not RLS)'
 );
 
 RESET ROLE;

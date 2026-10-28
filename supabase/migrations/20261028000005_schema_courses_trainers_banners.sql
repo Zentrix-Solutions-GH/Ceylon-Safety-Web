@@ -354,11 +354,14 @@ CREATE POLICY "banners_staff_read"
   );
 
 -- Staff with banners.write: INSERT / UPDATE / DELETE
--- click_count is updated only by the service role (BYPASSRLS) — no client UPDATE policy for it
+-- click_count must be 0 on INSERT; the ALWAYS trigger blocks non-service_role UPDATE changes.
 CREATE POLICY "banners_staff_write"
   ON public.banners FOR INSERT
   TO authenticated
-  WITH CHECK ((SELECT public.has_permission('banners.write')));
+  WITH CHECK (
+    (SELECT public.has_permission('banners.write'))
+    AND click_count = 0
+  );
 
 CREATE POLICY "banners_staff_update"
   ON public.banners FOR UPDATE
