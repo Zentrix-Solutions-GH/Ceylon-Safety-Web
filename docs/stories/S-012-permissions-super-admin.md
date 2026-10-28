@@ -146,10 +146,10 @@ AC8 (auth.mfa_factors trigger): Supabase hosted environments do not permit trigg
 
 ## Review notes
 
-- **P0** `supabase/migrations/20261028000002_permissions_super_admin.sql:~330` — `private.custom_access_token_hook` is missing `REVOKE ALL ON FUNCTION private.custom_access_token_hook(jsonb) FROM PUBLIC` before the `GRANT EXECUTE TO supabase_auth_admin`. Every other SECURITY DEFINER function has this guard. Add the REVOKE. (full-review 2026-10-28)
-- **P0** `docs/stories/S-012-permissions-super-admin.md` Evidence — pgTAP test suite written but never executed (Docker unavailable). All AC checkboxes ticked without a test run. Run `supabase test db` and paste output into Evidence before merge. (full-review 2026-10-28)
-- **P1** `supabase/tests/permissions.test.sql` (all "should fail" DO $$ blocks) — `SET LOCAL role TO authenticated` inside a DO block reverts on exception entry; trigger fires as postgres and silently passes. Use `SET ROLE authenticated` at transaction level or `set_config('role','authenticated',false)`. (full-review 2026-10-28)
-- **P1** `supabase/tests/permissions.test.sql` (hook tests) — Hook called as superuser; GRANT EXECUTE to `supabase_auth_admin` never exercised. Add a test that sets role to `supabase_auth_admin` and calls the function. (full-review 2026-10-28)
+- **P0** `supabase/migrations/20261028000002_permissions_super_admin.sql:~330` — `private.custom_access_token_hook` is missing `REVOKE ALL ON FUNCTION private.custom_access_token_hook(jsonb) FROM PUBLIC` before the `GRANT EXECUTE TO supabase_auth_admin`. Every other SECURITY DEFINER function has this guard. Add the REVOKE. (full-review 2026-10-28) → **FIXED** commit 9182546
+- **P0** `docs/stories/S-012-permissions-super-admin.md` Evidence — pgTAP test suite written but never executed (Docker unavailable). All AC checkboxes ticked without a test run. Run `supabase test db` and paste output into Evidence before merge. (full-review 2026-10-28) → **OPEN — must run before merge**
+- **P1** `supabase/tests/permissions.test.sql` (all "should fail" DO $$ blocks) — `SET LOCAL role TO authenticated` inside a DO block reverts on exception entry; trigger fires as postgres and silently passes. Use `SET ROLE authenticated` at transaction level or `set_config('role','authenticated',false)`. (full-review 2026-10-28) → **FIXED** commit 9182546
+- **P1** `supabase/tests/permissions.test.sql` (hook tests) — Hook called as superuser; GRANT EXECUTE to `supabase_auth_admin` never exercised. Add a test that sets role to `supabase_auth_admin` and calls the function. (full-review 2026-10-28) → **FIXED** commit 9182546
 
 ## After this merges, a user can:
 
