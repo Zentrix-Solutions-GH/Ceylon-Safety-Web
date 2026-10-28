@@ -6,7 +6,7 @@ status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-017-schema-payments-downloads
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/20"
 depends_on: [S-016]
 reqs: [REQ-049, REQ-049b, REQ-050, REQ-052, REQ-053, REQ-053b, REQ-055, REQ-146b, REQ-154, REQ-154b]
 ---
