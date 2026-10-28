@@ -2,7 +2,7 @@
 id: S-018
 title: Schema 8: courses, trainers, activity images, banners
 phase: MS1
-status: ready
+status: in-progress
 owner: backend
 risk: normal
 branch: feature/S-018-schema-courses-trainers-banners
@@ -83,15 +83,47 @@ Create the information tables: `courses` (information cards, "coming soon"), `tr
 
 Prior art: searched `grep -ril "trainers\|activity_images\|banners\|is_coming_soon" docs/`: found database-schema Groups F, G, I, sections 6, 9, 11.1 (A18, A23); trainer-and-public-pages design sections on trainers, slideshow and pages; advertising design (banner link policy); this story implements them; nothing superseded.
 
-<!-- Filled in by /story-run at Step 3. -->
+### Implementation plan
+
+**Files to create / edit:**
+1. `supabase/migrations/20261028000005_schema_courses_trainers_banners.sql` — AC1–AC5, AC7–AC9
+2. `supabase/tests/info-tables.test.sql` — pgTAP tests for all ACs and ECs
+3. `types/database.ts` — add 4 new tables (AC10)
+
+**AC6 note:** `order_items` and `entitlements` tables do not yet exist (S-016/S-017 not run). The schema creation order (db schema doc section 3) has `courses` BEFORE `order_items`. S-016 and S-017 will create `order_items.course_id` and `entitlements.course_id` as FK columns directly (courses table will exist by then). The pgTAP AC6 tests use `CASE WHEN EXISTS(table)` so they skip if those tables are absent and pass once they exist.
+
+**Migration steps (within the .sql file):**
+1. `courses` table + indexes + price_cents CHECK + search-vector trigger
+2. `trainers` table + indexes + contact CHECK + search-vector trigger
+3. `activity_images` table + indexes
+4. `banners` table + indexes + link_url CHECK + placements CHECK + alt_text CHECK
+5. `set_updated_at` trigger on courses, trainers, banners (not activity_images — no updated_at)
+6. RLS: enable + FORCE on all 4 tables
+7. RLS policies: public/customer reads, staff writes per permission area
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7. Not run = "not verified". -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+No test files found, exiting with code 0
+✓ Vitest (unit) passed
+
+════════════════════════════════
+  check.sh: 3 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
 ```
+
+pgTAP (supabase test db): not verified — requires Docker + local Supabase stack.
+AC6 pgTAP tests use conditional skip if order_items/entitlements are absent (added in S-016/S-017).
 
 ## Review notes
 

@@ -22,7 +22,63 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "article_comments": {
+            "activity_images": {
+                  Row: {
+                    "alt_text": string,"caption": string | null,"created_at": string,"id": string,"image_key": string,"is_active": boolean,"order_index": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "alt_text": string,"caption"?: string | null,"created_at"?: string,"id"?: string,"image_key": string,"is_active"?: boolean,"order_index"?: number | null
+                  }
+                  Update: {
+                    "alt_text"?: string,"caption"?: string | null,"created_at"?: string,"id"?: string,"image_key"?: string,"is_active"?: boolean,"order_index"?: number | null
+                  }
+                  Relationships: []
+                },"banners": {
+                  Row: {
+                    "advertiser_name": string | null,"alt_text": string,"click_count": number,"created_at": string,"id": string,"image_key": string,"image_key_mobile": string | null,"is_active": boolean,"link_url": string,"name": string,"open_in_new_tab": boolean,"placements": string[],"priority": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "advertiser_name"?: string | null,"alt_text": string,"click_count"?: number,"created_at"?: string,"id"?: string,"image_key": string,"image_key_mobile"?: string | null,"is_active"?: boolean,"link_url": string,"name": string,"open_in_new_tab"?: boolean,"placements": string[],"priority"?: number,"updated_at"?: string
+                  }
+                  Update: {
+                    "advertiser_name"?: string | null,"alt_text"?: string,"click_count"?: number,"created_at"?: string,"id"?: string,"image_key"?: string,"image_key_mobile"?: string | null,"is_active"?: boolean,"link_url"?: string,"name"?: string,"open_in_new_tab"?: boolean,"placements"?: string[],"priority"?: number,"updated_at"?: string
+                  }
+                  Relationships: []
+                },"courses": {
+                  Row: {
+                    "category_id": string | null,"created_at": string,"deleted_at": string | null,"description": string | null,"duration_minutes": number | null,"id": string,"is_coming_soon": boolean,"lesson_count": number | null,"level": string | null,"locale": string,"price_cents": number | null,"pricing_type": string,"promo_youtube_id": string | null,"search_vector": string | null,"slug": string,"status": string,"thumbnail_key": string | null,"title": string,"translation_group_id": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "category_id"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_coming_soon"?: boolean,"lesson_count"?: number | null,"level"?: string | null,"locale"?: string,"price_cents"?: number | null,"pricing_type"?: string,"promo_youtube_id"?: string | null,"search_vector"?: string | null,"slug": string,"status"?: string,"thumbnail_key"?: string | null,"title": string,"translation_group_id"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "category_id"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_coming_soon"?: boolean,"lesson_count"?: number | null,"level"?: string | null,"locale"?: string,"price_cents"?: number | null,"pricing_type"?: string,"promo_youtube_id"?: string | null,"search_vector"?: string | null,"slug"?: string,"status"?: string,"thumbnail_key"?: string | null,"title"?: string,"translation_group_id"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "courses_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"trainers": {
+                  Row: {
+                    "bio": string | null,"created_at": string,"email": string | null,"experience": string | null,"id": string,"is_active": boolean,"name": string,"order_index": number | null,"phone": string | null,"photo_key": string | null,"position": string,"qualifications": string | null,"search_vector": string | null,"slug": string,"updated_at": string,"whatsapp_number": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bio"?: string | null,"created_at"?: string,"email"?: string | null,"experience"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"order_index"?: number | null,"phone"?: string | null,"photo_key"?: string | null,"position": string,"qualifications"?: string | null,"search_vector"?: string | null,"slug": string,"updated_at"?: string,"whatsapp_number"?: string | null
+                  }
+                  Update: {
+                    "bio"?: string | null,"created_at"?: string,"email"?: string | null,"experience"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"order_index"?: number | null,"phone"?: string | null,"photo_key"?: string | null,"position"?: string,"qualifications"?: string | null,"search_vector"?: string | null,"slug"?: string,"updated_at"?: string,"whatsapp_number"?: string | null
+                  }
+                  Relationships: []
+                },"article_comments": {
                   Row: {
                     "article_id": string,"body": string,"created_at": string,"id": string,"moderated_at": string | null,"moderated_by": string | null,"status": string,"updated_at": string,"user_id": string
                   }
