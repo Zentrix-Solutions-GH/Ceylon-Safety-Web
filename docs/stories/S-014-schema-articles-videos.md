@@ -204,13 +204,14 @@ Total: ≈128 assertions (exact count in the test file)
 
 ## Evidence
 
-**pgTAP tests** (`supabase test db` via Docker psql — 136/136 passed):
+**pgTAP tests** (`supabase test db` via Docker psql — 157/157 passed):
 ```
 ok 1 - AC1: articles table exists
-... (all 136 assertions ok)
-ok 134 - AC9: customer A cannot delete customer B's like (row survives)
-ok 135 - AC9: suspended customer cannot insert a like
-ok 136 - AC7: cross-table 61st like refused (30 video_likes + 30+ article_likes = 60+)
+... (all 157 assertions ok)
+ok 154 - AC9: customer cannot insert video_comment with status=approved
+ok 155 - AC9: suspended customer cannot insert a video comment
+ok 156 - AC9: suspended customer cannot insert a video like
+ok 157 - AC9: customer A cannot delete customer B's video like (row survives)
 ```
 
 **check.sh** (2026-10-28):

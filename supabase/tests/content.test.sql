@@ -2,15 +2,16 @@
 --        videos, video_likes, video_comments — columns, indexes, triggers, RLS.
 -- Run with: supabase test db (requires Docker + local Supabase stack).
 --
--- Assertion count: 136
---   AC1 articles: 27, EC1/EC2: 2, AC2 indexes: 10
+-- Assertion count: 157
+--   AC1 articles: 27, EC1/EC2: 2, AC2 indexes: 10, AC2 index type/predicate: 6
 --   AC3 article_refs: 11, AC4 article_likes: 4, AC4 article_comments: 15
 --   AC5 videos: 27, AC5 video_likes/comments: 5
---   AC6 search vector: 4, AC6 counters: 8, AC6 set_updated_at: 1
---   EC3 slug reuse: 3, AC7/EC5 limits: 4, AC8/AC9 RLS: 12
+--   AC6 search vector: 4, AC6 counters: 8, AC6 set_updated_at: 4
+--   EC3 slug reuse: 3, AC7/EC5 limits: 4, AC8/AC9 article RLS: 12
+--   P1 like-limit: 3, AC8/AC9 video RLS: 12
 
 BEGIN;
-SELECT plan(136);
+SELECT plan(157);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Fixtures (postgres superuser — bypasses RLS)
@@ -139,6 +140,39 @@ SELECT has_index('public', 'videos', 'idx_videos_search_vector',
   'AC2: videos GIN index on search_vector');
 SELECT has_index('public', 'videos', 'idx_videos_title_trgm',
   'AC2: videos trigram GIN index on title');
+
+-- AC2: verify GIN type for search_vector and trgm indexes
+SELECT ok(
+  (SELECT indexdef FROM pg_indexes
+   WHERE schemaname = 'public' AND indexname = 'idx_articles_search_vector') LIKE '%USING gin%',
+  'AC2: idx_articles_search_vector is GIN type'
+);
+SELECT ok(
+  (SELECT indexdef FROM pg_indexes
+   WHERE schemaname = 'public' AND indexname = 'idx_articles_title_trgm') LIKE '%USING gin%',
+  'AC2: idx_articles_title_trgm is GIN type'
+);
+SELECT ok(
+  (SELECT indexdef FROM pg_indexes
+   WHERE schemaname = 'public' AND indexname = 'idx_videos_search_vector') LIKE '%USING gin%',
+  'AC2: idx_videos_search_vector is GIN type'
+);
+SELECT ok(
+  (SELECT indexdef FROM pg_indexes
+   WHERE schemaname = 'public' AND indexname = 'idx_videos_title_trgm') LIKE '%USING gin%',
+  'AC2: idx_videos_title_trgm is GIN type'
+);
+-- AC2: verify partial predicate on status/published_at indexes
+SELECT ok(
+  (SELECT indexdef FROM pg_indexes
+   WHERE schemaname = 'public' AND indexname = 'idx_articles_status_published_at') LIKE '%status%published%deleted_at IS NULL%',
+  'AC2: idx_articles_status_published_at has partial predicate'
+);
+SELECT ok(
+  (SELECT indexdef FROM pg_indexes
+   WHERE schemaname = 'public' AND indexname = 'idx_videos_status_published_at') LIKE '%status%published%deleted_at IS NULL%',
+  'AC2: idx_videos_status_published_at has partial predicate'
+);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- AC3: article_refs — 11 assertions
@@ -504,6 +538,57 @@ SELECT ok(
   (SELECT updated_at > created_at FROM public.articles
    WHERE id = 'bb140001-0000-0000-0000-000000000010'::uuid),
   'AC6: set_updated_at trigger fires on articles UPDATE'
+);
+
+-- set_updated_at on videos
+DO $$
+BEGIN
+  PERFORM pg_sleep(0.01);
+  UPDATE public.videos SET description = 'updated description'
+  WHERE id = 'bb140001-0000-0000-0000-000000000020'::uuid;
+END;
+$$;
+
+SELECT ok(
+  (SELECT updated_at > created_at FROM public.videos
+   WHERE id = 'bb140001-0000-0000-0000-000000000020'::uuid),
+  'AC6: set_updated_at trigger fires on videos UPDATE'
+);
+
+-- set_updated_at on article_comments (uses the comment inserted for the counter test above)
+DO $$
+BEGIN
+  PERFORM pg_sleep(0.01);
+  UPDATE public.article_comments SET body = 'Nice article (edited)'
+  WHERE id = 'bb140001-0000-0000-0001-000000000001'::uuid;
+END;
+$$;
+
+SELECT ok(
+  (SELECT updated_at > created_at FROM public.article_comments
+   WHERE id = 'bb140001-0000-0000-0001-000000000001'::uuid),
+  'AC6: set_updated_at trigger fires on article_comments UPDATE'
+);
+
+-- set_updated_at on video_comments (insert one for the test)
+INSERT INTO public.video_comments (id, video_id, user_id, body, status)
+VALUES ('bb140001-0000-0000-0006-000000000010'::uuid,
+        'bb140001-0000-0000-0000-000000000020'::uuid,
+        'aa140001-0000-0000-0000-000000000004'::uuid,
+        'Test video comment', 'approved');
+
+DO $$
+BEGIN
+  PERFORM pg_sleep(0.01);
+  UPDATE public.video_comments SET body = 'Test video comment (edited)'
+  WHERE id = 'bb140001-0000-0000-0006-000000000010'::uuid;
+END;
+$$;
+
+SELECT ok(
+  (SELECT updated_at > created_at FROM public.video_comments
+   WHERE id = 'bb140001-0000-0000-0006-000000000010'::uuid),
+  'AC6: set_updated_at trigger fires on video_comments UPDATE'
 );
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -899,6 +984,163 @@ SELECT throws_ok(
     )$$,
   NULL::text, NULL,
   'AC7: cross-table 61st like refused (30 video_likes + 30+ article_likes = 60+)'
+);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- AC8/AC9: video, video_likes, video_comments RLS — 17 assertions
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Seed RLS test videos: published, draft, hidden, scheduled, deleted
+INSERT INTO public.videos (id, locale, youtube_id, title, thumbnail_key, status, published_at, category_id)
+VALUES
+  ('bb140001-0000-0000-0000-000000000060'::uuid, 'en', 'RLSPubVid01', 'RLS Published Video', 'v/rls-pub.jpg', 'published', now() - interval '1 hour', 'cc140001-0000-0000-0000-000000000001'::uuid),
+  ('bb140001-0000-0000-0000-000000000061'::uuid, 'en', 'RLSDraftVi1', 'RLS Draft Video',     'v/rls-dft.jpg', 'draft',     NULL, 'cc140001-0000-0000-0000-000000000001'::uuid),
+  ('bb140001-0000-0000-0000-000000000062'::uuid, 'en', 'RLSHiddenV1', 'RLS Hidden Video',    'v/rls-hid.jpg', 'hidden',    NULL, 'cc140001-0000-0000-0000-000000000001'::uuid),
+  ('bb140001-0000-0000-0000-000000000063'::uuid, 'en', 'RLSSchedV01', 'RLS Scheduled Video', 'v/rls-sch.jpg', 'published', now() + interval '1 day', 'cc140001-0000-0000-0000-000000000001'::uuid);
+
+INSERT INTO public.videos (id, locale, youtube_id, title, thumbnail_key, status, published_at, category_id, deleted_at)
+VALUES
+  ('bb140001-0000-0000-0000-000000000064'::uuid, 'en', 'RLSDeleteV1', 'RLS Deleted Video', 'v/rls-del.jpg', 'published', now() - interval '1 hour', 'cc140001-0000-0000-0000-000000000001'::uuid, now());
+
+-- Seed a video_like owned by customer_b on the published video
+ALTER TABLE public.video_likes DISABLE TRIGGER trg_video_likes_limit;
+ALTER TABLE public.video_likes DISABLE TRIGGER trg_video_likes_count;
+INSERT INTO public.video_likes (video_id, user_id)
+VALUES ('bb140001-0000-0000-0000-000000000060'::uuid,
+        'aa140001-0000-0000-0000-000000000004'::uuid);
+ALTER TABLE public.video_likes ENABLE ALWAYS TRIGGER trg_video_likes_limit;
+ALTER TABLE public.video_likes ENABLE ALWAYS TRIGGER trg_video_likes_count;
+
+-- Seed an approved + pending video_comment owned by customer_b
+ALTER TABLE public.video_comments DISABLE TRIGGER trg_video_comments_limits;
+INSERT INTO public.video_comments (id, video_id, user_id, body, status)
+VALUES
+  ('bb140001-0000-0000-0007-000000000001'::uuid,
+   'bb140001-0000-0000-0000-000000000060'::uuid,
+   'aa140001-0000-0000-0000-000000000004'::uuid,
+   'Approved video comment by B', 'approved'),
+  ('bb140001-0000-0000-0007-000000000002'::uuid,
+   'bb140001-0000-0000-0000-000000000060'::uuid,
+   'aa140001-0000-0000-0000-000000000004'::uuid,
+   'Pending video comment by B', 'pending');
+ALTER TABLE public.video_comments ENABLE ALWAYS TRIGGER trg_video_comments_limits;
+
+-- ── anon role — videos ─────────────────────────────────────────────────────
+
+SET LOCAL role TO anon;
+
+SELECT ok(
+  (SELECT COUNT(*)::int FROM public.videos
+   WHERE id = 'bb140001-0000-0000-0000-000000000060'::uuid) = 1,
+  'AC8: anon can read a published video'
+);
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.videos
+   WHERE id = 'bb140001-0000-0000-0000-000000000061'::uuid),
+  0, 'AC9: anon cannot read a draft video'
+);
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.videos
+   WHERE id = 'bb140001-0000-0000-0000-000000000062'::uuid),
+  0, 'AC9: anon cannot read a hidden video'
+);
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.videos
+   WHERE id = 'bb140001-0000-0000-0000-000000000063'::uuid),
+  0, 'AC9: anon cannot read a scheduled (future published_at) video'
+);
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.videos
+   WHERE id = 'bb140001-0000-0000-0000-000000000064'::uuid),
+  0, 'AC9: anon cannot read a soft-deleted video'
+);
+SELECT ok(
+  (SELECT COUNT(*)::int FROM public.video_comments
+   WHERE id = 'bb140001-0000-0000-0007-000000000001'::uuid) = 1,
+  'AC8: anon can read an approved video comment'
+);
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.video_comments
+   WHERE id = 'bb140001-0000-0000-0007-000000000002'::uuid),
+  0, 'AC9: anon cannot read a pending video comment'
+);
+
+RESET role;
+
+-- ── customer_a cannot read customer_b pending video comment ────────────────
+
+SET LOCAL role TO authenticated;
+SET LOCAL request.jwt.claims TO
+  '{"sub":"aa140001-0000-0000-0000-000000000003","role":"authenticated"}';
+
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.video_comments
+   WHERE id = 'bb140001-0000-0000-0007-000000000002'::uuid),
+  0, 'AC9: customer_a cannot read customer_b pending video comment'
+);
+
+-- AC9: customer cannot insert video comment with status=approved (WITH CHECK raises check_violation)
+SELECT throws_ok(
+  $$INSERT INTO public.video_comments (video_id, user_id, body, status)
+    VALUES (
+      'bb140001-0000-0000-0000-000000000060'::uuid,
+      'aa140001-0000-0000-0000-000000000003'::uuid,
+      'Sneaky approved video comment',
+      'approved'
+    )$$,
+  NULL::text, NULL,
+  'AC9: customer cannot insert video_comment with status=approved'
+);
+
+RESET role;
+
+-- ── suspended customer cannot insert video comment or video like ───────────
+
+SET LOCAL role TO authenticated;
+SET LOCAL request.jwt.claims TO
+  '{"sub":"aa140001-0000-0000-0000-000000000005","role":"authenticated"}';
+
+SELECT throws_ok(
+  $$INSERT INTO public.video_comments (video_id, user_id, body)
+    VALUES (
+      'bb140001-0000-0000-0000-000000000060'::uuid,
+      'aa140001-0000-0000-0000-000000000005'::uuid,
+      'Suspended user video comment'
+    )$$,
+  '42501', NULL,
+  'AC9: suspended customer cannot insert a video comment'
+);
+
+SELECT throws_ok(
+  $$INSERT INTO public.video_likes (video_id, user_id)
+    VALUES (
+      'bb140001-0000-0000-0000-000000000060'::uuid,
+      'aa140001-0000-0000-0000-000000000005'::uuid
+    )$$,
+  '42501', NULL,
+  'AC9: suspended customer cannot insert a video like'
+);
+
+RESET role;
+
+-- ── customer_a cannot delete customer_b video like ────────────────────────
+
+SET LOCAL role TO authenticated;
+SET LOCAL request.jwt.claims TO
+  '{"sub":"aa140001-0000-0000-0000-000000000003","role":"authenticated"}';
+
+DELETE FROM public.video_likes
+WHERE video_id = 'bb140001-0000-0000-0000-000000000060'::uuid
+  AND user_id  = 'aa140001-0000-0000-0000-000000000004'::uuid;
+
+RESET role;
+
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.video_likes
+   WHERE video_id = 'bb140001-0000-0000-0000-000000000060'::uuid
+     AND user_id  = 'aa140001-0000-0000-0000-000000000004'::uuid),
+  1,
+  'AC9: customer A cannot delete customer B''s video like (row survives)'
 );
 
 SELECT * FROM finish();

@@ -78,8 +78,9 @@ CREATE INDEX idx_articles_title_trgm
   ON public.articles USING GIN (title gin_trgm_ops);
 
 -- FK indexes
-CREATE INDEX idx_articles_author_id    ON public.articles (author_id);
-CREATE INDEX idx_articles_deleted_at   ON public.articles (deleted_at) WHERE deleted_at IS NOT NULL;
+CREATE INDEX idx_articles_author_id             ON public.articles (author_id);
+CREATE INDEX idx_articles_deleted_at            ON public.articles (deleted_at) WHERE deleted_at IS NOT NULL;
+CREATE INDEX idx_articles_translation_group_id  ON public.articles (translation_group_id) WHERE translation_group_id IS NOT NULL;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2. article_refs  (Group C — derived index rebuilt by server on every save)
@@ -239,8 +240,9 @@ CREATE INDEX idx_videos_search_vector ON public.videos USING GIN (search_vector)
 -- Trigram index for partial-word title search
 CREATE INDEX idx_videos_title_trgm ON public.videos USING GIN (title gin_trgm_ops);
 
--- FK index
-CREATE INDEX idx_videos_deleted_at ON public.videos (deleted_at) WHERE deleted_at IS NOT NULL;
+-- FK indexes
+CREATE INDEX idx_videos_deleted_at            ON public.videos (deleted_at) WHERE deleted_at IS NOT NULL;
+CREATE INDEX idx_videos_translation_group_id  ON public.videos (translation_group_id) WHERE translation_group_id IS NOT NULL;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 6. video_likes  (Group D — same shape as article_likes, video_id FK)
@@ -362,11 +364,14 @@ CREATE OR REPLACE FUNCTION private.adjust_article_like_count()
 AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    UPDATE public.articles SET like_count = like_count + 1
+    UPDATE public.articles
+      SET like_count = (SELECT COUNT(*) FROM public.article_likes WHERE article_id = NEW.article_id)
     WHERE id = NEW.article_id;
     RETURN NEW;
   ELSE -- DELETE
-    UPDATE public.articles SET like_count = GREATEST(like_count - 1, 0)
+    UPDATE public.articles
+      SET like_count = GREATEST(
+        (SELECT COUNT(*) FROM public.article_likes WHERE article_id = OLD.article_id), 0)
     WHERE id = OLD.article_id;
     RETURN OLD;
   END IF;
@@ -382,11 +387,14 @@ CREATE OR REPLACE FUNCTION private.adjust_video_like_count()
 AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    UPDATE public.videos SET like_count = like_count + 1
+    UPDATE public.videos
+      SET like_count = (SELECT COUNT(*) FROM public.video_likes WHERE video_id = NEW.video_id)
     WHERE id = NEW.video_id;
     RETURN NEW;
   ELSE -- DELETE
-    UPDATE public.videos SET like_count = GREATEST(like_count - 1, 0)
+    UPDATE public.videos
+      SET like_count = GREATEST(
+        (SELECT COUNT(*) FROM public.video_likes WHERE video_id = OLD.video_id), 0)
     WHERE id = OLD.video_id;
     RETURN OLD;
   END IF;
