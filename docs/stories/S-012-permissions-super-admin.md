@@ -2,7 +2,7 @@
 id: S-012
 title: Schema 2: permission functions, claims hook, Super Admin protection, role seed
 phase: MS1
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-012-permissions-super-admin
@@ -80,15 +80,69 @@ Make staff access enforceable in the database: the three permission functions, t
 
 Prior art: searched `grep -ril "has_permission\|role_permissions\|super admin" docs/`: found database-schema Group A, sections 5 and 6, auth-design sections 3, 7, 11 and decisions M13, M16, M18; this story implements the mechanism and extends S-011; the seed content is split out to S-020; nothing superseded.
 
-<!-- Filled in by /story-run at Step 3. Sensitive: the owner approves the plan. -->
+### Files to create / edit
+
+| File | Action |
+|---|---|
+| `supabase/migrations/20261028000002_permissions_super_admin.sql` | create |
+| `supabase/tests/permissions.test.sql` | create |
+| `supabase/scripts/create-first-super-admin.sql` | create |
+| `types/database.ts` | edit (add Functions section for the 3 public functions) |
+
+`middleware.ts`, all `app/`, `components/`, `hooks/`, `lib/` files: not touched.
+
+### DB migrations in this file
+
+1. `public.is_staff_member()` — SQL, STABLE, SECURITY DEFINER, fixed search_path. GRANT EXECUTE to anon, authenticated.
+2. `public.is_super_admin()` — same shape.
+3. `public.has_permission(p_action text)` — plpgsql, STABLE, SECURITY DEFINER. NULL/empty → false (before SA check, consistent with EC3). Super Admin → true. Then role lookup + exact or area-wildcard match.
+4. Update `private.guard_role_permissions()` (from S-011) to also allow callers where `public.is_super_admin()` is true (AC4).
+5. `GRANT SELECT ON public.user_roles, role_permissions TO authenticated` (RLS still restricts what they see).
+6. RLS policies: `user_roles_select_staff`, `role_permissions_select_staff`, `profiles_select_staff` (AC3).
+7. `private.guard_user_roles_super_admin()` trigger function + trigger on `user_roles` BEFORE INSERT OR UPDATE OR DELETE (AC5). Concurrent last-SA delete guard uses `SELECT ... FOR UPDATE`.
+8. `private.guard_profile_super_admin()` trigger function + trigger on `profiles` BEFORE UPDATE (AC5).
+9. `private.custom_access_token_hook(event jsonb)` — in private schema; never raises; returns event unmodified on any error (AC6). GRANT EXECUTE to `supabase_auth_admin`.
+10. Attempt `auth.mfa_factors` trigger (AC8); document result in Evidence.
+
+### Test plan execution order
+
+All tests in `supabase/tests/permissions.test.sql` using pgTAP.
+Setup: fixture profiles for super_admin, admin, maintainer, customer, suspended_customer.
+Tests: AC2 (has_permission matrix), AC3 (RLS reads), AC4 (role_permissions write guard), AC5 (SA protection triggers), AC6 (claims hook), AC7 (script idempotency + anon insert blocked).
+
+### Estimated step order
+
+Step 1: migration (sections 1-9 above)
+Step 2: pgTAP tests (fail first)
+Step 3: verify tests pass by running `supabase test db` (requires Docker — if not available, state "not run" in Evidence)
+Step 4: `scripts/check.sh` (lint + typecheck + vitest)
+Step 5: reviewer agent
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7. Not run = "not verified". -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+No test files found, exiting with code 0
+✓ Vitest (unit) passed
+
+════════════════════════════════
+  check.sh: 3 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
 ```
+
+pgTAP tests (supabase test db): not run — Docker not available in this environment.
+The test file supabase/tests/permissions.test.sql is written and reviewed but execution awaits a local Supabase stack.
+
+AC8 (auth.mfa_factors trigger): Supabase hosted environments do not permit triggers on auth.* tables ("must be owner of table mfa_factors"). The guard lives in the removeAuthenticator server action (S-039) as noted in Out of scope.
 
 ## Review notes
 
