@@ -234,7 +234,11 @@ No test files found, exiting with code 0
 
 ## Review notes
 
-<!-- Filled in by reviewer / security-reviewer agents and /full-review -->
+- **P0** `supabase/tests/content.test.sql` — Video RLS entirely untested. AC8/AC9 require video coverage. Add ~15 assertions: anon cannot read draft/hidden/scheduled/deleted video; customer A cannot read customer B's pending video comment; customer cannot insert approved video comment; suspended user cannot insert video comment or video like; customer A cannot delete customer B's video like. Update `SELECT plan(N)`. (full-review 2026-10-28)
+- **P1** `supabase/migrations/20261028000004_schema_articles_videos.sql:369,389` — `adjust_article_like_count` and `adjust_video_like_count` use `±1` arithmetic; concurrent DELETEs cause drift. Switch to `SELECT COUNT(*)` recompute, matching the comment counter pattern. (full-review 2026-10-28)
+- **P1** `supabase/migrations/20261028000004_schema_articles_videos.sql:18,189` — Missing indexes on `translation_group_id` for articles and videos; locale-switching queries will seq-scan at 10k rows. (full-review 2026-10-28)
+- **P1** `supabase/tests/content.test.sql:490–507` — `set_updated_at` trigger tested for `articles` only; `videos`, `article_comments`, `video_comments` untested. (full-review 2026-10-28)
+- **P1** `supabase/tests/content.test.sql:121–141` — `has_index` assertions verify name only, not index type (GIN vs btree), trgm ops, or WHERE predicate. (full-review 2026-10-28)
 
 ## After this merges, a user can:
 
