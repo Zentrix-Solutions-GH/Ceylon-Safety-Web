@@ -163,9 +163,11 @@ Docker / `supabase test db` = not verified.
 
 ## Review notes
 
-- **P0** `supabase/migrations/20261028000003_schema_foundation_pages_settings.sql:157` — GUC `ceylonsafety.allow_append_only_mutation` is settable by any database session; safe for `page_revisions` (TG_TABLE_NAME guard) but exploitable once S-017/S-019 attach this trigger to `payment_events`/`admin_audit_log`. Replace GUC check with `current_setting('role', true) = 'service_role'` (same pattern as `check_settings_group()` line 254). (full-review 2026-10-28)
-- **P1** `supabase/migrations/20261028000003_schema_foundation_pages_settings.sql:189` — `UNIQUE (entity_type, locale, old_slug)` allows NULL-locale duplicates (PostgreSQL NULL≠NULL). Add `NULLS NOT DISTINCT` (PG 15): `UNIQUE NULLS NOT DISTINCT (entity_type, locale, old_slug)`. (full-review 2026-10-28)
-- **P1** `supabase/migrations/20261028000003_schema_foundation_pages_settings.sql:442` — `authors_staff_write FOR ALL` permits DELETE; schema doc (Group B) says authors are deactivated, not deleted. Change to `FOR INSERT OR UPDATE`. (full-review 2026-10-28)
+- **P0 RESOLVED** `supabase/migrations/20261028000003_schema_foundation_pages_settings.sql:157` — GUC bypass replaced with `current_setting('role', true) = 'service_role'`; `page_revisions` guard fires unconditionally before the service_role check. (fixed 2026-10-28, re-review confirmed 2026-10-28)
+- **P1 RESOLVED** `supabase/migrations/20261028000003_schema_foundation_pages_settings.sql:189` — `UNIQUE NULLS NOT DISTINCT` applied; pgTAP test added (plan 103→104). (fixed 2026-10-28, re-review confirmed 2026-10-28)
+- **P1 RESOLVED** `supabase/migrations/20261028000003_schema_foundation_pages_settings.sql:442` — Split into `authors_staff_insert FOR INSERT` + `authors_staff_update FOR UPDATE`; DELETE now blocked under FORCE RLS. (fixed 2026-10-28, re-review confirmed 2026-10-28)
+- **P2** `supabase/migrations/…sql:489` — `page_revisions_staff_insert` contradicts AC8 R1 scope; harmless today. Address in the story enabling the legal page editor.
+- **P2** `supabase/tests/foundation.test.sql` — AC8 staff read paths, AC9 incomplete customer writes (media_assets/page_revisions/slug_redirects), AC2 CHECK runtime tests, authors DELETE block — all untested. Address in S-020 or S-013b.
 
 ## After this merges, a user can:
 
