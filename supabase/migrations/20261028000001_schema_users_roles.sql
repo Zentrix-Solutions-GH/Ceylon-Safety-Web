@@ -27,7 +27,7 @@ CREATE OR REPLACE FUNCTION public.set_updated_at()
   SET search_path = ''
 AS $$
 BEGIN
-  NEW.updated_at := now();
+  NEW.updated_at := clock_timestamp();
   RETURN NEW;
 END;
 $$;
@@ -125,6 +125,8 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION private.normalize_for_staff_check(text) FROM PUBLIC;
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. private.is_staff_like_name
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -145,6 +147,8 @@ BEGIN
   RETURN v ~ '\m(admin|support|moderator|ceylonsafety|ceylon safety|staff|maintainer|superadmin|super admin|operator|helpdesk|webmaster|root|sysadmin)\M';
 END;
 $$;
+
+REVOKE ALL ON FUNCTION private.is_staff_like_name(text) FROM PUBLIC;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5. profiles table
@@ -575,3 +579,12 @@ GRANT SELECT ON public.profiles TO authenticated;
 --  but we also explicitly revoke SELECT to be defence-in-depth.)
 REVOKE SELECT ON public.user_roles       FROM authenticated, anon;
 REVOKE SELECT ON public.role_permissions FROM authenticated, anon;
+
+-- Deny EXECUTE on remaining private functions to PUBLIC.
+-- The REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC above only covers functions
+-- that existed at that point; these were created after it.
+REVOKE ALL ON FUNCTION private.sanitise_profile()                    FROM PUBLIC;
+REVOKE ALL ON FUNCTION private.create_profile_for(uuid, text, jsonb, jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION private.handle_new_user()                     FROM PUBLIC;
+REVOKE ALL ON FUNCTION private.sync_auth_email()                     FROM PUBLIC;
+REVOKE ALL ON FUNCTION private.guard_role_permissions()              FROM PUBLIC;

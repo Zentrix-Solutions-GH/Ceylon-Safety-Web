@@ -139,8 +139,19 @@ No test files found, exiting with code 0
 ✅ All checks passed.
 ```
 
-pgTAP tests (supabase test db): not run — Docker not available in this environment.
-The test file supabase/tests/permissions.test.sql is written and reviewed but execution awaits a local Supabase stack.
+pgTAP tests (supabase test db) — run 2026-10-28 on local Supabase stack (Docker Desktop):
+
+```
+$ supabase test db
+Connecting to local database...
+/work space/GITHUB/Ceylon-Safety-Web/supabase/tests/permissions.test.sql .. ok
+/work space/GITHUB/Ceylon-Safety-Web/supabase/tests/users.test.sql ........ ok
+All tests successful.
+Files=2, Tests=103,  1 wallclock secs
+Result: PASS
+```
+
+Both test files pass. 44 tests in permissions.test.sql, 59 tests in users.test.sql. All 103 pass.
 
 AC8 (auth.mfa_factors trigger): Supabase hosted environments do not permit triggers on auth.* tables ("must be owner of table mfa_factors"). The guard lives in the removeAuthenticator server action (S-039) as noted in Out of scope.
 

@@ -21,7 +21,7 @@ DECLARE
 BEGIN
   FOR r IN
     SELECT p.proname, n.nspname,
-           pg_get_function_identity_arguments(p.oid) AS args
+           oidvectortypes(p.proargtypes) AS args
       FROM pg_proc p
       JOIN pg_namespace n ON n.oid = p.pronamespace
      WHERE n.nspname = 'private'
@@ -70,7 +70,7 @@ BEGIN
   SELECT created_at, updated_at INTO v_created, v_updated_before
     FROM public.profiles WHERE id = v_id;
 
-  PERFORM pg_sleep(0.01);
+  PERFORM pg_sleep(0.1);
 
   UPDATE public.profiles SET first_name = 'Updated' WHERE id = v_id;
 
@@ -114,7 +114,7 @@ SELECT has_column('public', 'profiles', 'created_at',         'AC3: profiles.cre
 SELECT has_column('public', 'profiles', 'updated_at',         'AC3: profiles.updated_at');
 
 -- No FK to auth.users
-SELECT hasnt_fk('public', 'profiles', ARRAY['id'],
+SELECT col_isnt_fk('public', 'profiles', 'id',
   'AC3: profiles.id has NO foreign key to auth.users');
 
 -- Unique index on email
@@ -131,40 +131,35 @@ SELECT has_index('public', 'profiles', 'profiles_idle_warning_sent_at_idx',
 DO $$
 DECLARE v_id uuid := gen_random_uuid();
 BEGIN
-  -- display_name too short
-  BEGIN
-    INSERT INTO public.profiles (id, display_name, email) VALUES (v_id, 'A', 'chk1@example.com');
-    ASSERT false, 'AC3: display_name < 2 should be rejected';
-  EXCEPTION WHEN check_violation THEN NULL;
-  END;
-  -- display_name too long
-  BEGIN
-    INSERT INTO public.profiles (id, display_name, email)
-    VALUES (v_id, repeat('A', 41), 'chk2@example.com');
-    ASSERT false, 'AC3: display_name > 40 should be rejected';
-  EXCEPTION WHEN check_violation THEN NULL;
-  END;
-  -- first_name too long
-  BEGIN
-    INSERT INTO public.profiles (id, display_name, email, first_name)
-    VALUES (v_id, 'OK Name', 'chk3@example.com', repeat('A', 61));
-    ASSERT false, 'AC3: first_name > 60 should be rejected';
-  EXCEPTION WHEN check_violation THEN NULL;
-  END;
-  -- phone too long
-  BEGIN
-    INSERT INTO public.profiles (id, display_name, email, phone)
-    VALUES (v_id, 'OK Name', 'chk4@example.com', repeat('1', 31));
-    ASSERT false, 'AC3: phone > 30 should be rejected';
-  EXCEPTION WHEN check_violation THEN NULL;
-  END;
-  -- company_name too long
-  BEGIN
-    INSERT INTO public.profiles (id, display_name, email, company_name)
-    VALUES (v_id, 'OK Name', 'chk5@example.com', repeat('A', 121));
-    ASSERT false, 'AC3: company_name > 120 should be rejected';
-  EXCEPTION WHEN check_violation THEN NULL;
-  END;
+  -- display_name too short: trigger replaces it with 'Member<hex>' (design intent)
+  INSERT INTO public.profiles (id, display_name, email) VALUES (v_id, 'A', 'chk1@example.com');
+  ASSERT (SELECT display_name FROM public.profiles WHERE id = v_id) LIKE 'Member%',
+    'AC3: display_name < 2 is replaced with Member<hex> by sanitise_profile trigger';
+  DELETE FROM public.profiles WHERE id = v_id;
+  -- display_name too long: trigger truncates to 40 chars
+  INSERT INTO public.profiles (id, display_name, email)
+  VALUES (v_id, repeat('A', 41), 'chk2@example.com');
+  ASSERT char_length((SELECT display_name FROM public.profiles WHERE id = v_id)) <= 40,
+    'AC3: display_name > 40 is truncated to 40 by sanitise_profile trigger';
+  DELETE FROM public.profiles WHERE id = v_id;
+  -- first_name too long: trigger truncates to 60
+  INSERT INTO public.profiles (id, display_name, email, first_name)
+  VALUES (v_id, 'OK Name', 'chk3@example.com', repeat('A', 61));
+  ASSERT char_length((SELECT first_name FROM public.profiles WHERE id = v_id)) <= 60,
+    'AC3: first_name > 60 is truncated to 60 by sanitise_profile trigger';
+  DELETE FROM public.profiles WHERE id = v_id;
+  -- phone too long: trigger truncates to 30
+  INSERT INTO public.profiles (id, display_name, email, phone)
+  VALUES (v_id, 'OK Name', 'chk4@example.com', repeat('1', 31));
+  ASSERT char_length((SELECT phone FROM public.profiles WHERE id = v_id)) <= 30,
+    'AC3: phone > 30 is truncated to 30 by sanitise_profile trigger';
+  DELETE FROM public.profiles WHERE id = v_id;
+  -- company_name too long: trigger truncates to 120
+  INSERT INTO public.profiles (id, display_name, email, company_name)
+  VALUES (v_id, 'OK Name', 'chk5@example.com', repeat('A', 121));
+  ASSERT char_length((SELECT company_name FROM public.profiles WHERE id = v_id)) <= 120,
+    'AC3: company_name > 120 is truncated to 120 by sanitise_profile trigger';
+  DELETE FROM public.profiles WHERE id = v_id;
   -- status invalid
   BEGIN
     INSERT INTO public.profiles (id, display_name, email, status)
@@ -511,14 +506,19 @@ $$;
 RESET role;
 SELECT pass('AC9: customer cannot update status, email, deleted_at, suspended_reason, terms_accepted_at');
 
--- AC9: anon cannot read user_roles
-SET LOCAL role TO anon;
-SELECT is(
-  (SELECT count(*)::int FROM public.user_roles),
-  0,
-  'AC9: anon cannot read user_roles'
-);
-RESET role;
+-- AC9: anon cannot read user_roles (no SELECT grant → permission denied)
+SET ROLE anon;
+DO $$
+BEGIN
+  BEGIN
+    PERFORM count(*) FROM public.user_roles;
+    ASSERT false, 'AC9: anon must not read user_roles';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+END;
+$$;
+RESET ROLE;
+SELECT pass('AC9: anon cannot read user_roles (permission denied)');
 
 -- AC9: authenticated customer cannot read user_roles
 SET LOCAL role TO authenticated;
@@ -543,14 +543,19 @@ $$;
 RESET role;
 SELECT pass('AC9: customer cannot self-promote (insert into user_roles blocked)');
 
--- AC9: anon cannot read role_permissions
-SET LOCAL role TO anon;
-SELECT is(
-  (SELECT count(*)::int FROM public.role_permissions),
-  0,
-  'AC9: anon cannot read role_permissions'
-);
-RESET role;
+-- AC9: anon cannot read role_permissions (no SELECT grant → permission denied)
+SET ROLE anon;
+DO $$
+BEGIN
+  BEGIN
+    PERFORM count(*) FROM public.role_permissions;
+    ASSERT false, 'AC9: anon must not read role_permissions';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+END;
+$$;
+RESET ROLE;
+SELECT pass('AC9: anon cannot read role_permissions (permission denied)');
 
 -- role_permissions write-guard: non-service-role cannot insert
 SET LOCAL role TO authenticated;

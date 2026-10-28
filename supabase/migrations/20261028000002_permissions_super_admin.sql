@@ -166,18 +166,39 @@ CREATE POLICY role_permissions_select_staff ON public.role_permissions
   FOR SELECT TO authenticated
   USING ((SELECT public.is_staff_member()));
 
+-- Helper: check if a profile belongs to a Super Admin, bypassing RLS.
+-- Must be in public schema (not private) so that authenticated can call it
+-- via the RLS policy on profiles. REVOKE ALL from PUBLIC, then GRANT only to
+-- authenticated — anon cannot call it. SECURITY DEFINER bypasses user_roles RLS
+-- so the check is always authoritative regardless of the caller's RLS view.
+CREATE OR REPLACE FUNCTION public.profile_is_super_admin(p_profile_id uuid)
+  RETURNS boolean
+  LANGUAGE sql
+  STABLE
+  SECURITY DEFINER
+  SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_roles
+     WHERE user_id = p_profile_id AND role = 'super_admin'
+  )
+$$;
+
+REVOKE ALL ON FUNCTION public.profile_is_super_admin(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.profile_is_super_admin(uuid) TO authenticated;
+
 -- profiles: staff can read all profiles, but Super Admin profiles are hidden from
--- non-Super-Admins (AC3). The existing profiles_select_own policy (S-011) still allows
--- every authenticated user to read their own row; this policy extends that for staff.
+-- non-Super-Admins (AC3). Uses public.profile_is_super_admin() to bypass the
+-- user_roles RLS view (which hides super_admin rows from non-SA staff).
+-- The existing profiles_select_own policy (S-011) still allows every authenticated
+-- user to read their own row; this policy extends that for staff.
 CREATE POLICY profiles_select_staff ON public.profiles
   FOR SELECT TO authenticated
   USING (
     (SELECT public.is_staff_member())
-    AND NOT EXISTS (
-      SELECT 1 FROM public.user_roles ur
-       WHERE ur.user_id = profiles.id
-         AND ur.role = 'super_admin'
-         AND NOT (SELECT public.is_super_admin())
+    AND NOT (
+      (SELECT public.profile_is_super_admin(id))
+      AND NOT (SELECT public.is_super_admin())
     )
   );
 
@@ -347,3 +368,13 @@ GRANT EXECUTE ON FUNCTION private.custom_access_token_hook(jsonb)
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- (No SQL — trigger on auth.mfa_factors not permitted; documented in story Evidence.)
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Deny EXECUTE on all private functions to PUBLIC.
+-- The S-011 schema-level REVOKE only covers functions that existed at that point;
+-- functions created in this migration need their own explicit REVOKE.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+REVOKE ALL ON FUNCTION private.guard_role_permissions()             FROM PUBLIC;
+REVOKE ALL ON FUNCTION private.guard_user_roles_super_admin()       FROM PUBLIC;
+REVOKE ALL ON FUNCTION private.guard_profile_super_admin()          FROM PUBLIC;
