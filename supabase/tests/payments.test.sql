@@ -5,7 +5,7 @@
 -- Requires Docker + local Supabase stack.
 
 BEGIN;
-SELECT plan(121);
+SELECT plan(132);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- UUID legend (all hex-valid, non-overlapping with earlier test files)
@@ -700,6 +700,34 @@ BEGIN
 END $$;
 SELECT ok(true, 'EC3: claim_download succeeds for soft-deleted document (past buyer access)');
 
+-- EC3: claim succeeds even when the document status = 'hidden' (past buyers keep access)
+DO $$
+DECLARE v_key text;
+BEGIN
+  -- Ensure there is headroom in the limit (previous EC3 test may have used 1).
+  UPDATE public.entitlements
+  SET download_limit = downloads_used + 1
+  WHERE id = '14000002-0000-0000-0000-000000000001';
+
+  UPDATE public.documents
+  SET status = 'hidden'
+  WHERE id = 'd1100000-0000-0000-0000-000000000001';
+
+  v_key := private.claim_download(
+    'a1100000-0000-0000-0000-000000000001',
+    '14000002-0000-0000-0000-000000000001',
+    'ip-hash-ec3b'
+  );
+  IF v_key IS NULL OR v_key = '' THEN
+    RAISE EXCEPTION 'EC3: claim_download returned empty key for hidden document';
+  END IF;
+
+  UPDATE public.documents
+  SET status = 'published'
+  WHERE id = 'd1100000-0000-0000-0000-000000000001';
+END $$;
+SELECT ok(true, 'EC3: claim_download succeeds for status=hidden document (past buyer access)');
+
 -- EC2: claim by a different user refused (insufficient_privilege = 42501)
 SELECT throws_ok(
   $$SELECT private.claim_download(
@@ -965,6 +993,231 @@ BEGIN
   END IF;
 END $$;
 SELECT ok(true, 'EC1: downloads_used = 1 after two sequential claim attempts (limit=1)');
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- AC10: cross-user row isolation for download_logs, download_requests, invoices,
+--       bank_transfer_slips (rows) — seed customer B rows, assert customer A sees 0
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Seed: customer B order (needed for invoice FK)
+DO $$
+BEGIN
+  INSERT INTO public.orders (
+    id, order_number, user_id, status, subtotal_cents, total_cents, currency,
+    terms_revision_id, refund_policy_revision_id, terms_accepted_at, paid_at
+  ) VALUES (
+    '1b000001-0000-0000-0000-000000000001',
+    'CS-S017-B-001',
+    'b1100000-0000-0000-0000-000000000001',
+    'paid', 1000, 1000, 'LKR',
+    '21100000-0000-0000-0000-000000000010',
+    '21200000-0000-0000-0000-000000000010',
+    now(), now()
+  ) ON CONFLICT DO NOTHING;
+END $$;
+
+-- Seed: customer B download_log row (id is GENERATED ALWAYS — let it auto-assign)
+DO $$
+BEGIN
+  INSERT INTO public.download_logs (
+    entitlement_id, user_id, document_id, document_file_id, ip_hash, downloaded_at
+  ) VALUES (
+    '14000003-0000-0000-0000-000000000001',
+    'b1100000-0000-0000-0000-000000000001',
+    'd1100000-0000-0000-0000-000000000001',
+    'df110000-0000-0000-0000-000000000001',
+    'ip-cust-b',
+    now()
+  );
+END $$;
+
+-- Seed: customer B download_request row
+DO $$
+BEGIN
+  INSERT INTO public.download_requests (
+    id, entitlement_id, user_id, status, requested_at
+  ) VALUES (
+    '1d000001-0000-0000-0000-000000000001',
+    '14000003-0000-0000-0000-000000000001',
+    'b1100000-0000-0000-0000-000000000001',
+    'open',
+    now()
+  ) ON CONFLICT DO NOTHING;
+END $$;
+
+-- Seed: customer B invoice row (FK: order 1b000001-...)
+DO $$
+BEGIN
+  INSERT INTO public.invoices (
+    id, order_id, invoice_number, issued_at, seller_snapshot
+  ) VALUES (
+    '1e000001-0000-0000-0000-000000000001',
+    '1b000001-0000-0000-0000-000000000001',
+    'INV-2026-99001',
+    now(),
+    '{"name":"CeylonSafety"}'
+  ) ON CONFLICT DO NOTHING;
+END $$;
+
+-- Seed: customer B bank_transfer_slip row
+DO $$
+BEGIN
+  INSERT INTO public.bank_transfer_slips (
+    id, order_id, uploaded_by, file_key, mime_type, size_bytes, status
+  ) VALUES (
+    '1f000001-0000-0000-0000-000000000001',
+    '1b000001-0000-0000-0000-000000000001',
+    'b1100000-0000-0000-0000-000000000001',
+    'slips/custb-slip.pdf',
+    'application/pdf',
+    102400,
+    'uploaded'
+  ) ON CONFLICT DO NOTHING;
+END $$;
+
+-- AC10: customer A cannot read customer B's download_log
+DO $$
+DECLARE v_count int;
+BEGIN
+  SET LOCAL ROLE authenticated;
+  SET LOCAL "request.jwt.claims"
+    TO '{"sub":"a1100000-0000-0000-0000-000000000001","role":"authenticated"}';
+  SELECT count(*) INTO v_count
+  FROM public.download_logs
+  WHERE user_id = 'b1100000-0000-0000-0000-000000000001';
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'AC10: customer A can read customer B download_log — RLS FAILURE';
+  END IF;
+  RESET ROLE;
+END $$;
+SELECT ok(true, 'AC10: customer A cannot read customer B download_log');
+
+-- AC10: customer A cannot read customer B's download_request
+DO $$
+DECLARE v_count int;
+BEGIN
+  SET LOCAL ROLE authenticated;
+  SET LOCAL "request.jwt.claims"
+    TO '{"sub":"a1100000-0000-0000-0000-000000000001","role":"authenticated"}';
+  SELECT count(*) INTO v_count
+  FROM public.download_requests
+  WHERE id = '1d000001-0000-0000-0000-000000000001';
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'AC10: customer A can read customer B download_request — RLS FAILURE';
+  END IF;
+  RESET ROLE;
+END $$;
+SELECT ok(true, 'AC10: customer A cannot read customer B download_request');
+
+-- AC10: customer A cannot read customer B's invoice
+DO $$
+DECLARE v_count int;
+BEGIN
+  SET LOCAL ROLE authenticated;
+  SET LOCAL "request.jwt.claims"
+    TO '{"sub":"a1100000-0000-0000-0000-000000000001","role":"authenticated"}';
+  SELECT count(*) INTO v_count
+  FROM public.invoices
+  WHERE id = '1e000001-0000-0000-0000-000000000001';
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'AC10: customer A can read customer B invoice — RLS FAILURE';
+  END IF;
+  RESET ROLE;
+END $$;
+SELECT ok(true, 'AC10: customer A cannot read customer B invoice');
+
+-- AC10: customer A cannot read customer B's bank_transfer_slip row
+DO $$
+DECLARE v_count int;
+BEGIN
+  SET LOCAL ROLE authenticated;
+  SET LOCAL "request.jwt.claims"
+    TO '{"sub":"a1100000-0000-0000-0000-000000000001","role":"authenticated"}';
+  SELECT count(*) INTO v_count
+  FROM public.bank_transfer_slips
+  WHERE id = '1f000001-0000-0000-0000-000000000001';
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'AC10: customer A can read customer B bank_transfer_slip — RLS FAILURE';
+  END IF;
+  RESET ROLE;
+END $$;
+SELECT ok(true, 'AC10: customer A cannot read customer B bank_transfer_slip row');
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- AC10: anon reads nothing from the remaining 6 tables
+-- ─────────────────────────────────────────────────────────────────────────────
+
+DO $$
+DECLARE v_count int;
+BEGIN
+  SET LOCAL ROLE anon;
+  SELECT count(*) INTO v_count FROM public.payment_events;
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'AC10: anon can read payment_events — RLS FAILURE';
+  END IF;
+  RESET ROLE;
+END $$;
+SELECT ok(true, 'AC10: anon reads no payment_events');
+
+DO $$
+DECLARE v_count int;
+BEGIN
+  SET LOCAL ROLE anon;
+  SELECT count(*) INTO v_count FROM public.bank_transfer_slips;
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'AC10: anon can read bank_transfer_slips — RLS FAILURE';
+  END IF;
+  RESET ROLE;
+END $$;
+SELECT ok(true, 'AC10: anon reads no bank_transfer_slips');
+
+DO $$
+DECLARE v_count int;
+BEGIN
+  SET LOCAL ROLE anon;
+  SELECT count(*) INTO v_count FROM public.download_logs;
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'AC10: anon can read download_logs — RLS FAILURE';
+  END IF;
+  RESET ROLE;
+END $$;
+SELECT ok(true, 'AC10: anon reads no download_logs');
+
+DO $$
+DECLARE v_count int;
+BEGIN
+  SET LOCAL ROLE anon;
+  SELECT count(*) INTO v_count FROM public.download_requests;
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'AC10: anon can read download_requests — RLS FAILURE';
+  END IF;
+  RESET ROLE;
+END $$;
+SELECT ok(true, 'AC10: anon reads no download_requests');
+
+DO $$
+DECLARE v_count int;
+BEGIN
+  SET LOCAL ROLE anon;
+  SELECT count(*) INTO v_count FROM public.invoices;
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'AC10: anon can read invoices — RLS FAILURE';
+  END IF;
+  RESET ROLE;
+END $$;
+SELECT ok(true, 'AC10: anon reads no invoices');
+
+DO $$
+DECLARE v_count int;
+BEGIN
+  SET LOCAL ROLE anon;
+  SELECT count(*) INTO v_count FROM public.email_logs;
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'AC10: anon can read email_logs — RLS FAILURE';
+  END IF;
+  RESET ROLE;
+END $$;
+SELECT ok(true, 'AC10: anon reads no email_logs');
 
 SELECT * FROM finish();
 ROLLBACK;

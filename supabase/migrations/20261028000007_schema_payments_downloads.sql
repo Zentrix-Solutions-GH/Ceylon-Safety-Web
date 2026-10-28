@@ -3,10 +3,14 @@
 -- Infrastructure PR. No application behaviour; RLS + atomic functions included.
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Sequence for invoice numbers
+-- Year-scoped invoice counter (one row per calendar year; resets each January 1)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-CREATE SEQUENCE IF NOT EXISTS private.invoice_number_seq;
+CREATE TABLE IF NOT EXISTS private.invoice_year_counters (
+  year    int  NOT NULL,
+  counter int  NOT NULL DEFAULT 0,
+  CONSTRAINT invoice_year_counters_pkey PRIMARY KEY (year)
+);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. payment_events  (AC1 — card payments only; append-only; service role writes)
@@ -299,13 +303,27 @@ COMMENT ON TABLE public.email_logs IS
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- 8a. next_invoice_number()
+--   Year-scoped: the counter resets each calendar year so the first invoice of
+--   each year is always INV-YYYY-00001. Uses INSERT … ON CONFLICT DO UPDATE to
+--   atomically increment and return the new value inside a single statement.
 CREATE OR REPLACE FUNCTION private.next_invoice_number()
 RETURNS text
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = private, public
 AS $$
-  SELECT 'INV-' || to_char(now(), 'YYYY') || '-' || lpad(nextval('invoice_number_seq')::text, 5, '0');
+DECLARE
+  v_year    int  := extract(year FROM now())::int;
+  v_counter int;
+BEGIN
+  INSERT INTO private.invoice_year_counters (year, counter)
+    VALUES (v_year, 1)
+    ON CONFLICT (year) DO UPDATE
+      SET counter = invoice_year_counters.counter + 1
+    RETURNING counter INTO v_counter;
+
+  RETURN 'INV-' || v_year::text || '-' || lpad(v_counter::text, 5, '0');
+END;
 $$;
 
 REVOKE ALL ON FUNCTION private.next_invoice_number() FROM PUBLIC;
@@ -575,6 +593,11 @@ CREATE POLICY email_logs_staff ON public.email_logs
 -- for every column except file_key. service_role retains full table-level SELECT.
 -- A simple REVOKE SELECT (file_key) is insufficient when a table-level SELECT grant
 -- exists, because table-level grants supersede column-level revokes in PostgreSQL.
+--
+-- API CONTRACT: Any admin route that fetches bank_transfer_slips via an authenticated
+-- JWT (e.g. a Supabase client with anon/service_role key in RLS context) will receive
+-- NULL for file_key — there is no error. Staff routes that need file_key MUST use the
+-- service_role key directly (bypassing RLS) and never forward file_key to the browser.
 
 REVOKE SELECT ON public.bank_transfer_slips FROM authenticated;
 GRANT SELECT (

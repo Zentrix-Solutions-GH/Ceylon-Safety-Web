@@ -107,11 +107,11 @@ No test files found, exiting with code 0
 ════════════════════════════════
 ✅ All checks passed.
 
-pgTAP (payments.test.sql): 121/121 tests pass, 0 failures.
-Pre-existing failures in foundation.test.sql, info-tables.test.sql, users.test.sql
+pgTAP (payments.test.sql): 132/132 tests pass, 0 failures.
+Pre-existing failures in foundation.test.sql, users.test.sql
 confirmed on dev branch before S-017 changes (not caused by this PR).
 
-Post-review fixes applied:
+Post-review fixes (round 1):
 - approve_download_request: added FOR UPDATE to prevent concurrent-approval race (P1)
 - EC3: dedicated test for claim on soft-deleted document added (P1)
 - EC9: throws_ok for UPDATE on payment_events (not just has_trigger) (P1)
@@ -119,11 +119,33 @@ Post-review fixes applied:
 - AC11: types/database.ts regenerated (7 new tables present)
 - service_role GRANT EXECUTE added for all 4 private callable functions (P2)
 - Column privilege: REVOKE table-level SELECT from authenticated + GRANT column-level for non-file_key columns (correct PostgreSQL approach)
+
+Post-review fixes (round 2 — full-review P0/P1):
+- next_invoice_number: replaced global sequence with private.invoice_year_counters table; counter resets each year; INV-YYYY-00001 always first invoice of each year (P1)
+- bank_transfer_slips section 10: added API constraint comment documenting staff-JWT/file_key limitation (P1)
+- EC3: added status='hidden' test in addition to deleted_at (P1)
+- AC10: added cross-user isolation tests for download_logs, download_requests, invoices, bank_transfer_slips rows (4 P0 tests)
+- AC10: added anon isolation tests for payment_events, bank_transfer_slips, download_logs, download_requests, invoices, email_logs (P1)
+- Plan count updated from 121 to 132.
 ```
 
 ## Review notes
 
-<!-- Filled in by reviewer / security-reviewer agents and /full-review -->
+**P0** `supabase/tests/payments.test.sql` — AC10 gap: no cross-user isolation test for `download_logs` (customer A reads customer B's log). RLS policy exists but is untested. (full-review 2026-10-28)
+
+**P0** `supabase/tests/payments.test.sql` — AC10 gap: no cross-user isolation test for `download_requests`. (full-review 2026-10-28)
+
+**P0** `supabase/tests/payments.test.sql` — AC10 gap: no cross-user isolation test for `invoices`. (full-review 2026-10-28)
+
+**P0** `supabase/tests/payments.test.sql` — AC10 gap: no cross-user row isolation test for `bank_transfer_slips` (separate from EC11 column privilege). (full-review 2026-10-28)
+
+**P1** `supabase/migrations/20261028000007_schema_payments_downloads.sql:420` — `invoice_number_seq` never resets per calendar year. `INV-2027-00001` would be `INV-2027-00006` after 5 invoices in 2026. Fix: year-scoped counter or sequence reset job. (full-review 2026-10-28)
+
+**P1** `supabase/migrations/20261028000007_schema_payments_downloads.sql:691–695` — Staff using an authenticated JWT cannot SELECT `file_key` on `bank_transfer_slips`. By design (service_role only), but must be documented as a firm API constraint so future admin routes don't silently receive NULL. (full-review 2026-10-28)
+
+**P1** `supabase/tests/payments.test.sql` — AC10 gap: no anon isolation test for payment_events, bank_transfer_slips, download_logs, download_requests, invoices, email_logs (only entitlements tested for anon). (full-review 2026-10-28)
+
+**P1** `supabase/tests/payments.test.sql:677–701` — EC3 incomplete: `status = 'hidden'` not tested. AC8 says "ignores document status and deleted_at"; only deleted_at is covered. (full-review 2026-10-28)
 
 ## After this merges, a user can:
 
