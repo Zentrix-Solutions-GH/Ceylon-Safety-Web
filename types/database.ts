@@ -155,6 +155,38 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"bank_transfer_slips": {
+                  Row: {
+                    "file_key": string,"id": string,"mime_type": string | null,"order_id": string,"rejection_reason": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"size_bytes": number | null,"status": string,"uploaded_at": string,"uploaded_by": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "file_key": string,"id"?: string,"mime_type"?: string | null,"order_id": string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes"?: number | null,"status"?: string,"uploaded_at"?: string,"uploaded_by": string
+                  }
+                  Update: {
+                    "file_key"?: string,"id"?: string,"mime_type"?: string | null,"order_id"?: string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes"?: number | null,"status"?: string,"uploaded_at"?: string,"uploaded_by"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bank_transfer_slips_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bank_transfer_slips_reviewed_by_fkey"
+      columns: ["reviewed_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bank_transfer_slips_uploaded_by_fkey"
+      columns: ["uploaded_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"banners": {
                   Row: {
                     "advertiser_name": string | null,"alt_text": string,"click_count": number,"created_at": string,"id": string,"image_key": string,"image_key_mobile": string | null,"is_active": boolean,"link_url": string,"name": string,"open_in_new_tab": boolean,"placements": (string)[],"priority": number,"updated_at": string
@@ -347,6 +379,154 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"download_logs": {
+                  Row: {
+                    "document_file_id": string,"document_id": string,"downloaded_at": string,"entitlement_id": string,"id": number,"ip_hash": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "document_file_id": string,"document_id": string,"downloaded_at"?: string,"entitlement_id": string,"id"?: never,"ip_hash"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "document_file_id"?: string,"document_id"?: string,"downloaded_at"?: string,"entitlement_id"?: string,"id"?: never,"ip_hash"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "download_logs_document_file_id_fkey"
+      columns: ["document_file_id"]
+isOneToOne: false
+      referencedRelation: "document_files"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "download_logs_document_id_fkey"
+      columns: ["document_id"]
+isOneToOne: false
+      referencedRelation: "documents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "download_logs_entitlement_id_fkey"
+      columns: ["entitlement_id"]
+isOneToOne: false
+      referencedRelation: "entitlements"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "download_logs_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"download_requests": {
+                  Row: {
+                    "decided_at": string | null,"decided_by": string | null,"decision_note": string | null,"entitlement_id": string,"id": string,"note": string | null,"requested_at": string,"status": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "decided_at"?: string | null,"decided_by"?: string | null,"decision_note"?: string | null,"entitlement_id": string,"id"?: string,"note"?: string | null,"requested_at"?: string,"status"?: string,"user_id": string
+                  }
+                  Update: {
+                    "decided_at"?: string | null,"decided_by"?: string | null,"decision_note"?: string | null,"entitlement_id"?: string,"id"?: string,"note"?: string | null,"requested_at"?: string,"status"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "download_requests_decided_by_fkey"
+      columns: ["decided_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "download_requests_entitlement_id_fkey"
+      columns: ["entitlement_id"]
+isOneToOne: false
+      referencedRelation: "entitlements"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "download_requests_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"email_logs": {
+                  Row: {
+                    "created_at": string,"error": string | null,"id": number,"provider_message_id": string | null,"related_id": string | null,"related_type": string | null,"status": string,"template": string,"to_email": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"error"?: string | null,"id"?: never,"provider_message_id"?: string | null,"related_id"?: string | null,"related_type"?: string | null,"status": string,"template": string,"to_email": string
+                  }
+                  Update: {
+                    "created_at"?: string,"error"?: string | null,"id"?: never,"provider_message_id"?: string | null,"related_id"?: string | null,"related_type"?: string | null,"status"?: string,"template"?: string,"to_email"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"entitlements": {
+                  Row: {
+                    "course_id": string | null,"document_id": string | null,"download_limit": number,"downloads_used": number,"expires_at": string | null,"granted_at": string,"granted_by": string | null,"id": string,"item_type": string,"language": string | null,"order_item_id": string | null,"revoke_reason": string | null,"revoked_at": string | null,"source": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "course_id"?: string | null,"document_id"?: string | null,"download_limit": number,"downloads_used"?: number,"expires_at"?: string | null,"granted_at"?: string,"granted_by"?: string | null,"id"?: string,"item_type": string,"language"?: string | null,"order_item_id"?: string | null,"revoke_reason"?: string | null,"revoked_at"?: string | null,"source": string,"user_id": string
+                  }
+                  Update: {
+                    "course_id"?: string | null,"document_id"?: string | null,"download_limit"?: number,"downloads_used"?: number,"expires_at"?: string | null,"granted_at"?: string,"granted_by"?: string | null,"id"?: string,"item_type"?: string,"language"?: string | null,"order_item_id"?: string | null,"revoke_reason"?: string | null,"revoked_at"?: string | null,"source"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "entitlements_course_id_fkey"
+      columns: ["course_id"]
+isOneToOne: false
+      referencedRelation: "courses"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "entitlements_document_id_fkey"
+      columns: ["document_id"]
+isOneToOne: false
+      referencedRelation: "documents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "entitlements_granted_by_fkey"
+      columns: ["granted_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "entitlements_order_item_id_fkey"
+      columns: ["order_item_id"]
+isOneToOne: false
+      referencedRelation: "order_items"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "entitlements_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"invoices": {
+                  Row: {
+                    "id": string,"invoice_number": string,"issued_at": string,"order_id": string,"pdf_key": string | null,"seller_snapshot": NonNullable<Json>,"tax_cents": number,"tax_label": string | null,"tax_rate_bps": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: string,"invoice_number": string,"issued_at"?: string,"order_id": string,"pdf_key"?: string | null,"seller_snapshot": NonNullable<Json>,"tax_cents"?: number,"tax_label"?: string | null,"tax_rate_bps"?: number | null
+                  }
+                  Update: {
+                    "id"?: string,"invoice_number"?: string,"issued_at"?: string,"order_id"?: string,"pdf_key"?: string | null,"seller_snapshot"?: NonNullable<Json>,"tax_cents"?: number,"tax_label"?: string | null,"tax_rate_bps"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: true
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"media_assets": {
                   Row: {
                     "alt_text": string | null,"bucket": string,"created_at": string,"file_key": string,"height": number | null,"id": string,"kind": string,"mime_type": string | null,"size_bytes": number | null,"status": string,"uploaded_by": string | null,"width": number | null
@@ -480,6 +660,26 @@ isOneToOne: false
       columns: ["updated_by"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_events": {
+                  Row: {
+                    "amount_cents": number | null,"currency": string | null,"event_key": string,"id": string,"order_id": string,"outcome": string | null,"processed_at": string | null,"provider": string,"provider_payment_id": string | null,"raw_payload": Json | null,"received_at": string,"signature_valid": boolean | null,"status_code": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount_cents"?: number | null,"currency"?: string | null,"event_key": string,"id"?: string,"order_id": string,"outcome"?: string | null,"processed_at"?: string | null,"provider"?: string,"provider_payment_id"?: string | null,"raw_payload"?: Json | null,"received_at"?: string,"signature_valid"?: boolean | null,"status_code"?: number | null
+                  }
+                  Update: {
+                    "amount_cents"?: number | null,"currency"?: string | null,"event_key"?: string,"id"?: string,"order_id"?: string,"outcome"?: string | null,"processed_at"?: string | null,"provider"?: string,"provider_payment_id"?: string | null,"raw_payload"?: Json | null,"received_at"?: string,"signature_valid"?: boolean | null,"status_code"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_events_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
       referencedColumns: ["id"]
     }
                   ]
