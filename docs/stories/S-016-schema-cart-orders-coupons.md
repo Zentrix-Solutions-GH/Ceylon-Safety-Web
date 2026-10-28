@@ -141,7 +141,13 @@ Note: renamed `20261028000005_schema_courses_trainers_banners.sql` → `20261028
 
 ## Review notes
 
-<!-- Filled in by reviewer / security-reviewer agents and /full-review -->
+- **P0** `supabase/migrations/` — Migration rename (`20261028000005_schema_courses_trainers_banners.sql` → `20261028000004001_…`) will cause drift/replay on any dev environment that already applied S-018. Revert rename; choose a different timestamp for the S-016 migration instead. (full-review 2026-10-28)
+- **P1** `supabase/migrations/20261028000006_schema_cart_orders_coupons.sql:~110` — Missing index on `cart_items.document_id` (FK column, violates AC6). Add `CREATE INDEX cart_items_document_id_idx ON public.cart_items (document_id)`. (full-review 2026-10-28)
+- **P1** `supabase/migrations/20261028000006_schema_cart_orders_coupons.sql:~320` — `restrict_orders_staff_update` trigger guard `current_role <> 'authenticated'` bypasses for ALL non-authenticated roles, not only `service_role`. Tighten to allow only `service_role` (and postgres/supabase_admin). (full-review 2026-10-28)
+- **P1** `supabase/tests/commerce.test.sql:~519` — No `has_index()` assertions for any of the 10+ named indexes (AC6). Add at minimum the six partial indexes on `orders` and two on `coupon_uses`. (full-review 2026-10-28)
+- **P1** `supabase/tests/commerce.test.sql:~760` — Staff update allow-path (needs_review/review_reason) not tested. Add a test confirming staff CAN update those two fields without the trigger raising. (full-review 2026-10-28)
+- **P1** `supabase/tests/commerce.test.sql:~800` — `coupon_uses` staff-read policy not exercised. Add a test confirming staff with `orders.*` can SELECT rows from `coupon_uses`. (full-review 2026-10-28)
+- **P1** `supabase/tests/commerce.test.sql:~632` — EC1 concurrency test is sequential (same connection, same transaction); `FOR UPDATE` lock never contended. Story requires two connections. Either rewrite with `dblink` or explicitly scope out and un-tick EC1. (full-review 2026-10-28)
 
 ## After this merges, a user can:
 
