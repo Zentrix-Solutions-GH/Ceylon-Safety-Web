@@ -263,6 +263,14 @@ BEGIN
 END $$;
 SELECT ok(true, 'AC2: payment_events DELETE refused for all roles');
 
+-- AC2: plain UPDATE on payment_events WITHOUT the session flag must be refused
+-- (this test must run before the SET LOCAL below, which persists for the transaction)
+SELECT throws_ok(
+  $$UPDATE public.payment_events SET raw_payload = '{}' WHERE id IN (SELECT id FROM public.payment_events LIMIT 1)$$,
+  '23001',
+  NULL,
+  'AC2: payment_events UPDATE without ceylonsafety.nulling_payload flag is refused');
+
 -- payment_events: UPDATE is allowed only with the ceylonsafety.nulling_payload flag
 -- (set exclusively by private.purge_old_logs, which has no story yet).
 -- Test the mechanism directly by setting the flag in a transaction-scoped block.
@@ -350,6 +358,16 @@ SELECT ok(
   ),
   'AC3: Super Admin sees rows where actor is themselves'
 );
+RESET ROLE;
+
+-- AC3: authenticated client INSERT on admin_audit_log must be refused
+SET ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"a1900001-0000-0000-0000-000000000002","role":"authenticated"}';
+SELECT throws_ok(
+  $$INSERT INTO public.admin_audit_log (actor_id, action) VALUES ('a1900001-0000-0000-0000-000000000002', 'settings.change')$$,
+  '42501',
+  NULL,
+  'AC3: authenticated client INSERT on admin_audit_log is refused');
 RESET ROLE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -647,6 +665,16 @@ SELECT hasnt_function('public', 'anonymise_user', ARRAY['uuid'],
 
 SELECT hasnt_function('public', 'purge_old_audit_rows', ARRAY['timestamp with time zone'],
   'AC9: purge_old_audit_rows is in private schema, not public');
+
+-- AC9: authenticated role cannot EXECUTE private.anonymise_user (EXECUTE revoked)
+SET ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"a1900001-0000-0000-0000-000000000003","role":"authenticated"}';
+SELECT throws_ok(
+  $$SELECT private.anonymise_user('a1900001-0000-0000-0000-000000000004'::uuid)$$,
+  '42501',
+  NULL,
+  'AC9: authenticated cannot EXECUTE private.anonymise_user');
+RESET ROLE;
 
 -- Browser-callable public functions exist
 SELECT has_function('public', 'has_permission',  ARRAY['text'],     'AC9: has_permission in public');

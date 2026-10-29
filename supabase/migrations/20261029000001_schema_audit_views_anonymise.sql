@@ -150,6 +150,9 @@ AS $$
 DECLARE
   v_count int;
 BEGIN
+  -- Serialise concurrent calls so two different cutoffs cannot interleave DELETEs.
+  PERFORM pg_advisory_xact_lock(hashtext('purge_old_audit_rows'));
+
   -- Signal to enforce_append_only that this transaction may delete audit rows.
   -- SET LOCAL is transaction-scoped: once the transaction ends the flag is gone.
   SET LOCAL "ceylonsafety.purging_audit" = 'true';
@@ -176,6 +179,11 @@ AS $$
 DECLARE
   v_order_id uuid;
 BEGIN
+  -- Lock the profile row to serialise concurrent anonymise_user calls for the
+  -- same user. Without this, two calls can both pass the idempotency check and
+  -- fire release_coupon_use twice on the same orders.
+  PERFORM id FROM public.profiles WHERE id = p_user_id FOR UPDATE;
+
   -- Refuse staff accounts (any role).
   IF EXISTS (
     SELECT 1 FROM public.user_roles WHERE user_id = p_user_id
@@ -241,7 +249,8 @@ CREATE POLICY admin_audit_log_staff_read ON public.admin_audit_log
   FOR SELECT
   TO authenticated
   USING (
-    public.has_permission('audit.read')
+    public.is_staff_member()
+    AND public.has_permission('audit.read')
     AND (
       -- Super Admins see everything.
       public.is_super_admin()
@@ -287,6 +296,10 @@ COMMENT ON VIEW public.public_profiles IS
   'Safe public profile view: id, display_name, avatar_url, is_staff. '
   'is_staff is never true for super_admin (REQ-130c). '
   'Anonymised users appear as ''Deleted user'' so old comments render.';
+
+-- PostgREST requires an explicit GRANT; without it anon/authenticated get a
+-- permission error when loading comment author display (S-049, S-050).
+GRANT SELECT ON public.public_profiles TO anon, authenticated;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 8. feed_items view
