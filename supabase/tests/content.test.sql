@@ -497,7 +497,7 @@ SELECT is(
 INSERT INTO public.videos (id, locale, youtube_id, title, thumbnail_key, status, published_at, category_id)
 VALUES (
   'bb140001-0000-0000-0000-000000000020'::uuid,
-  'en', 'CItestvideo1', 'Test Video',
+  'en', 'CItestVID01', 'Test Video',
   'videos/thumb-test.jpg', 'published', now() - interval '1 hour',
   'cc140001-0000-0000-0000-000000000001'::uuid
 );
