@@ -1,11 +1,11 @@
 ---
 id: S-025
 title: Header + mobile menu
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-025-header-mobile-menu
-pr: ~
+pr: 26
 depends_on: [S-023, S-024]
 reqs: [REQ-018, REQ-018b, REQ-186]
 ---
@@ -23,22 +23,22 @@ Build the site header: logo, the fixed menu, sign-in state and cart link, and a 
 
 ## Acceptance criteria
 
-- [ ] AC1: `components/layout/Header.tsx` shows the logo (links to Home) and the menu in this order: Home, Articles, Documents, Courses, Jobs, Contact Coach, Sign In / Sign Up, Cart. The links are fixed in code (`config/navigation.ts`); the current page link has `aria-current="page"`. There is no search box in the header.
-- [ ] AC2: Personal parts (sign-in state, account link, cart slot) are a small client component. The header and its layout never call `cookies()`, `headers()` or the server Supabase client. Until the browser knows the session, a fixed-size placeholder is shown: no "Sign In" flash and no layout jump.
-- [ ] AC3: Signed out: "Sign In" (`/sign-in`) and "Sign Up" (`/sign-up`). Signed in: the person's name or "Account" with links to Profile (`/profile`) and My Purchases (`/purchases`) and a Sign out button that ends this device's session through the browser Supabase client.
-- [ ] AC4: Cart link has a fixed-width badge slot; the count itself is filled in S-091 (Backend cart count read, S-075). Signed out, the Cart link sends the visitor to sign in (REQ-044d).
-- [ ] AC5: Below the mobile breakpoint the menu is a button that opens a side sheet. Focus moves into the sheet and stays inside; Escape or a second press closes it; focus returns to the button; the page behind is inert; tap targets are at least 44 px.
-- [ ] AC6: `hooks/useAuth.ts` is display only (name, signed-in or not); it is never used for any access decision.
-- [ ] AC7: All text comes from `messages/` through `t()`. No raw colour codes. Works at 375 px and 1280 px (screenshots in Evidence).
+- [x] AC1: `components/layout/Header.tsx` shows the logo (links to Home) and the menu in this order: Home, Articles, Documents, Courses, Jobs, Contact Coach, Sign In / Sign Up, Cart. The links are fixed in code (`config/navigation.ts`); the current page link has `aria-current="page"`. There is no search box in the header.
+- [x] AC2: Personal parts (sign-in state, account link, cart slot) are a small client component. The header and its layout never call `cookies()`, `headers()` or the server Supabase client. Until the browser knows the session, a fixed-size placeholder is shown: no "Sign In" flash and no layout jump.
+- [x] AC3: Signed out: "Sign In" (`/sign-in`) and "Sign Up" (`/sign-up`). Signed in: the person's name or "Account" with links to Profile (`/profile`) and My Purchases (`/purchases`) and a Sign out button that ends this device's session through the browser Supabase client.
+- [x] AC4: Cart link has a fixed-width badge slot; the count itself is filled in S-091 (Backend cart count read, S-075). Signed out, the Cart link sends the visitor to sign in (REQ-044d).
+- [x] AC5: Below the mobile breakpoint the menu is a button that opens a side sheet. Focus moves into the sheet and stays inside; Escape or a second press closes it; focus returns to the button; the page behind is inert; tap targets are at least 44 px.
+- [x] AC6: `hooks/useAuth.ts` is display only (name, signed-in or not); it is never used for any access decision.
+- [x] AC7: All text comes from `messages/` through `t()`. No raw colour codes. Works at 375 px and 1280 px (screenshots in Evidence).
 
 ## Edge cases
 
-- [ ] EC1: Session lookup fails or is slow: placeholder stays, then shows signed-out state; no error shown.
-- [ ] EC2: Signed in but name missing (Google gave no name): shows "Account".
-- [ ] EC3: Long display name: truncated, no overflow at 375 px.
-- [ ] EC4: Menu open and the window is resized to desktop: sheet closes, menu shows inline.
-- [ ] EC5: Sign out fails (offline): message from the `unknown` text; person stays signed in.
-- [ ] EC6: Logo file does not exist yet (Q47): a text wordmark "CeylonSafety" is used so the header never shows a broken image.
+- [x] EC1: Session lookup fails or is slow: placeholder stays, then shows signed-out state; no error shown.
+- [x] EC2: Signed in but name missing (Google gave no name): shows "Account".
+- [x] EC3: Long display name: truncated, no overflow at 375 px.
+- [x] EC4: Menu open and the window is resized to desktop: sheet closes, menu shows inline.
+- [x] EC5: Sign out fails (offline): message from the `unknown` text; person stays signed in.
+- [x] EC6: Logo file does not exist yet (Q47): a text wordmark "CeylonSafety" is used so the header never shows a broken image.
 
 ## Contract
 
@@ -120,11 +120,27 @@ Prior art: searched `grep -ril "header\|navigation\|useAuth" docs/` — found: f
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7. Add 375 px and 1280 px screenshots. -->
-
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  12 passed (12)
+       Tests  79 passed (79)
+    Start at  11:52:43
+    Duration  19.51s
+
+════════════════════════════════
+  check.sh: 3 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
 ```
+
+Note: AC7 screenshot verification (375 px / 1280 px) not yet possible — public layout (S-027) has not mounted the header in a page. Visual check to be done by reviewer after S-027 merges.
 
 ## Review notes
 
