@@ -1,11 +1,11 @@
 ---
 id: S-003
 title: Next.js scaffold, lib/config.ts, Supabase clients
-status: ready
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-003-nextjs-scaffold-config
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/31"
 depends_on: [S-001]
 reqs: [REQ-197c]
 ---
