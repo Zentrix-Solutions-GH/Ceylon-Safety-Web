@@ -100,11 +100,14 @@ describe("setConsent", () => {
       configurable: true,
     });
 
-    const result = setConsent("accepted");
-    expect(result.ok).toBe(false);
-
-    // Restore — delete the own-property override so prototype getter takes over
-    delete (document as unknown as Record<string, unknown>).cookie;
+    let result: { ok: boolean };
+    try {
+      result = setConsent("accepted");
+    } finally {
+      // Restore — delete the own-property override so prototype getter takes over
+      delete (document as unknown as Record<string, unknown>).cookie;
+    }
+    expect(result!.ok).toBe(false);
   });
 });
 
@@ -266,6 +269,11 @@ describe("setConsent — cookie attributes (AC2)", () => {
     expect(consentWrite).toMatch(/Max-Age=15552000/);
     expect(consentWrite).toMatch(/SameSite=Lax/);
     expect(consentWrite).toMatch(/Path=\//);
+
+    const tsWrite = written.find((s) => s.startsWith("hs_consent_ts="));
+    expect(tsWrite).toMatch(/Max-Age=15552000/);
+    expect(tsWrite).toMatch(/SameSite=Lax/);
+    expect(tsWrite).toMatch(/Path=\//);
   });
 });
 

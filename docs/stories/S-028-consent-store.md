@@ -39,7 +39,7 @@ Spec gaps resolved by owner (2026-10-29):
 - [ ] AC3: `getConsent()` works in the browser (client components). Public pages never read cookies on the server. A missing, malformed or tampered cookie returns `undecided`.
 - [ ] AC4: `setConsent` can change the choice later ("Cookie settings" withdrawal); scripts already loaded stop at the next page load.
 - [ ] AC5: A gate helper answers "may third-party scripts load on this path?": only when the state is `accepted` and the path is on the allow-list. Ad allow-list: `/`, `/articles`, `/articles/[slug]`. Analytics allow-list: `/`, `/articles`, `/articles/[slug]`, `/documents`, `/documents/[slug]`, `/videos`, `/videos/[slug]`. Auth, customer, checkout and admin pages never load any. `/courses` excluded from both lists (Phase 1).
-- [ ] AC6: The AdSense verification snippet and `ads.txt` are always served whatever the consent (not gated by this helper).
+- [x] AC6: The AdSense verification snippet and `ads.txt` are always served whatever the consent (not gated by this helper). _(Out of scope for this story — no gating code added here; verified by always-served behaviour implemented in S-027/S-113.)_
 - [ ] AC7: The WhatsApp tap analytics event is allowed only in the `accepted` state; the WhatsApp button itself always works.
 - [ ] AC8: The public functions are importable from Frontend code (allowed-import list, frontend 4.4) with no secret and no server-only code.
 

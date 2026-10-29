@@ -64,7 +64,7 @@ const ANALYTICS_EXACT = new Set(["/", "/articles", "/documents", "/videos"]);
 const ANALYTICS_PREFIX = ["/articles/", "/documents/", "/videos/"];
 
 // Paths that never get third-party scripts regardless of consent
-const BLOCKED_PREFIX = ["/admin", "/checkout", "/account", "/login", "/signup", "/reset-password", "/verify"];
+const BLOCKED_PREFIX = ["/admin", "/checkout", "/account", "/login", "/signup", "/reset-password", "/verify", "/cart", "/download", "/profile", "/purchases"];
 
 function isBlocked(path: string): boolean {
   return BLOCKED_PREFIX.some((p) => path === p || path.startsWith(p + "/") || path.startsWith(p + "?"));
