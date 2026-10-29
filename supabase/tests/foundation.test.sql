@@ -149,7 +149,7 @@ SELECT lives_ok(
 -- ─────────────────────────────────────────────────────────────────────────────
 
 INSERT INTO public.pages (id, locale, slug, title)
-VALUES ('bb000001-0000-0000-0000-000000000001'::uuid, 'en', 'privacy', 'Privacy');
+VALUES ('bb000001-0000-0000-0000-000000000001'::uuid, 'en', 'ci-test-privacy', 'Privacy');
 
 INSERT INTO public.page_revisions (page_id, version, title)
 VALUES ('bb000001-0000-0000-0000-000000000001'::uuid, 1, 'Privacy v1');
