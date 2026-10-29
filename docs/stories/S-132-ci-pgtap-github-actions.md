@@ -1,7 +1,7 @@
 ---
 id: S-132
 title: CI: lint, typecheck, npm audit, and pgTAP DB tests on every PR
-status: in-progress
+status: draft
 owner: backend
 risk: normal
 branch: feature/S-132-ci-pgtap-github-actions
