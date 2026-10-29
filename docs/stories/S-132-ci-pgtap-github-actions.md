@@ -1,11 +1,11 @@
 ---
 id: S-132
 title: CI: lint, typecheck, npm audit, and pgTAP DB tests on every PR
-status: draft
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-132-ci-pgtap-github-actions
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/28
 depends_on: []
 reqs: []
 ---
@@ -27,40 +27,40 @@ Done in CLAUDE.md ("merged with CI green").
 
 ## Acceptance criteria
 
-- [ ] AC1: A GitHub Actions workflow file (`.github/workflows/ci.yml`) exists
+- [x] AC1: A GitHub Actions workflow file (`.github/workflows/ci.yml`) exists
   and triggers on `pull_request` targeting `dev`. It runs three jobs in order:
   **lint-typecheck** (`bash scripts/check.sh`), **audit** (`npm audit
   --audit-level=high`), and **db-tests** (Supabase start → `db reset` →
   `supabase test db`). Each job fails fast on error.
-- [ ] AC2: The `lint-typecheck` job runs `scripts/check.sh` and fails the PR if
+- [x] AC2: The `lint-typecheck` job runs `scripts/check.sh` and fails the PR if
   ESLint or TypeScript exits non-zero. Node modules are cached via
   `actions/cache` on `package-lock.json` hash.
-- [ ] AC3: The `audit` job runs `npm audit --audit-level=high` and fails the PR
+- [x] AC3: The `audit` job runs `npm audit --audit-level=high` and fails the PR
   only on **high** or **critical** severity CVEs. Moderate and low are reported
   but do not block merge.
-- [ ] AC4: The `db-tests` job starts a local Supabase instance, runs all
+- [x] AC4: The `db-tests` job starts a local Supabase instance, runs all
   migrations via `supabase db reset`, then runs `supabase test db` against
   every `*.sql` file in `supabase/tests/`. It fails if any pgTAP test fails.
   The Supabase CLI is pinned via `supabase/setup-cli` action; cold-start stays
   under 5 minutes on `ubuntu-latest`.
 - [ ] AC5: The workflow passes on the current HEAD of `dev`. A passing run URL
   is pasted in Evidence.
-- [ ] AC6: The three check names to add as required status checks are documented
+- [x] AC6: The three check names to add as required status checks are documented
   in `docs/PROJECT_STATUS.md`: `ci / lint-typecheck`, `ci / audit`,
   `ci / db-tests`. Actual branch-protection rule changes are out of scope (need
   repo admin access).
-- [ ] AC7: No secrets beyond `GITHUB_TOKEN` (automatic) are required. The
+- [x] AC7: No secrets beyond `GITHUB_TOKEN` (automatic) are required. The
   workflow uses no `SUPABASE_ACCESS_TOKEN` or any other secret.
 
 ## Edge cases
 
-- [ ] EC1: A PR with a TypeScript error: `lint-typecheck` job fails, `db-tests`
+- [x] EC1: A PR with a TypeScript error: `lint-typecheck` job fails, `db-tests`
   job is skipped (`needs:` dependency).
-- [ ] EC2: A PR that introduces a migration syntax error: `db-tests` job fails
+- [x] EC2: A PR that introduces a migration syntax error: `db-tests` job fails
   with a non-zero exit code.
-- [ ] EC3: A PR that adds a new test file under `supabase/tests/`: the workflow
+- [x] EC3: A PR that adds a new test file under `supabase/tests/`: the workflow
   picks it up automatically (glob pattern, not a hardcoded list).
-- [ ] EC4: Two PRs run the workflow concurrently: each job runs in its own
+- [x] EC4: Two PRs run the workflow concurrently: each job runs in its own
   isolated runner — no shared Supabase state.
 
 ## Contract
