@@ -60,6 +60,16 @@ else
   printf '⚠ Supabase not running — skipping types check (run supabase start first)\n'
 fi
 
+# 6. Dev seed guard (EC3): verify the guard pattern exists in seed.dev.sql
+printf '\n── Dev seed guard ──\n'
+if grep -q "current_setting('app.environment', true)" supabase/seed.dev.sql; then
+  printf '✓ Dev seed guard passed\n'
+  PASS=$((PASS + 1))
+else
+  printf '✗ Dev seed guard FAILED — guard pattern missing from supabase/seed.dev.sql\n'
+  FAIL=$((FAIL + 1))
+fi
+
 # ── Summary ─────────────────────────────────────────────────────────────────
 printf '\n════════════════════════════════\n'
 printf '  check.sh: %d passed, %d failed\n' "$PASS" "$FAIL"

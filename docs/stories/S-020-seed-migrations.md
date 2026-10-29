@@ -2,7 +2,7 @@
 id: S-020
 title: Seed migrations: categories, settings, six pages, trainers, courses, dev seed
 phase: MS1
-status: blocked
+status: in-progress
 owner: backend
 risk: normal
 branch: feature/S-020-seed-migrations
@@ -11,17 +11,13 @@ depends_on: [S-018, S-019]
 reqs: [REQ-042b, REQ-130e, REQ-130f, REQ-201, REQ-202, REQ-203, REQ-204, REQ-205]
 ---
 
-## Blocked
+## Decisions (resolved 2026-10-29)
 
-Question numbers that must be answered (or accepted in writing by the owner) before the blocked parts can start:
-
-- Q69: final category list and document types (categories seed; the schema's 8 names are the proposal).
-- Q62, Q63, M16 (and M18): what Maintainer may do and the final permission names (the `role_permissions` seed).
-- Q73, Q51, C12: legal and refund page wording from the client (the four legal pages).
-- Q74: the training services text (`contact-coach-services`).
-- M32, Q61: trainer consent and sign-off, plus the client's trainer details (trainer seed). Q25: course card information (course seed).
-
-Parts that do NOT depend on an answer: setting keys with defaults, the dev seed file. Re-baseline proposal for the owner: split those parts into their own story so the frontend can start without waiting for real content; this story stays `blocked` until the answers arrive.
+- **Q69**: 8 categories as proposed (Workplace Safety, Fire Safety, First Aid, Electrical Safety, Construction Safety, Food Safety, Chemical Safety, Occupational Health). All three document types (Checklists, Safety Signs, Toolbox Talks) at launch.
+- **Q62/Q63/M16/M18**: Maintainer permissions = `articles.*`, `videos.*`, `authors.*`, `media.upload`, `comments.moderate` only. No commercial, settings, or admin access.
+- **Q73/Q51/C12/Q74**: All 6 pages seeded with realistic sample text, marked `draft`. Client to replace before go-live. A new story will add a Super Admin page editor.
+- **M32/Q61**: 2–3 sample Sri Lankan trainers, `consent_confirmed = true`, marked draft.
+- **Q25**: 4 sample courses (Fire Safety & Evacuation Training, First Aid & Emergency Response, Construction Site Safety, Workplace Hazard Identification), all `is_coming_soon = true`, "Contact for pricing".
 
 ## Goal
 
@@ -89,6 +85,36 @@ Prior art: searched `grep -ril "seed\|role_permissions\|page_revisions" docs/`: 
 
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  10 passed (10)
+      Tests  62 passed (62)
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+Files=1, Tests=94 — Result: PASS
+✓ pgTAP RLS suite passed
+
+── Types file freshness ──
+✓ Types file freshness passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 6 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
+
+pgTAP seed suite (seed.test.sql):
+Files=1, Tests=53 — Result: PASS
+All 53 seed assertions passed (AC1–AC5, AC8, EC1, EC4).
 ```
 
 ## Review notes
