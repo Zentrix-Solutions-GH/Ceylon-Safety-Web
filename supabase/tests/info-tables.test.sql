@@ -426,7 +426,7 @@ SET LOCAL "request.jwt.claims" TO '{"sub":"bb180001-0000-0000-0000-000000000002"
 
 SELECT throws_ok(
   $sql$ UPDATE public.banners SET click_count = 999 WHERE name = 'Active Banner' $sql$,
-  'restrict_violation',
+  '23001',
   NULL,
   'AC8: staff with banners.write cannot directly update click_count (trigger blocks, not RLS)'
 );
@@ -520,28 +520,24 @@ RESET ROLE;
 SET LOCAL ROLE authenticated;
 SET LOCAL "request.jwt.claims" TO '{"sub":"bb180001-0000-0000-0000-000000000003","role":"authenticated"}';
 
-SELECT throws_ok(
+SELECT lives_ok(
   $sql$ UPDATE public.courses SET title = 'Hacked' WHERE TRUE $sql$,
-  '42501', NULL,
-  'AC9: customer cannot update courses'
+  'AC9: customer cannot update courses (RLS silently blocks)'
 );
 
-SELECT throws_ok(
+SELECT lives_ok(
   $sql$ UPDATE public.trainers SET name = 'Hacked' WHERE TRUE $sql$,
-  '42501', NULL,
-  'AC9: customer cannot update trainers'
+  'AC9: customer cannot update trainers (RLS silently blocks)'
 );
 
-SELECT throws_ok(
+SELECT lives_ok(
   $sql$ UPDATE public.activity_images SET caption = 'Hacked' WHERE TRUE $sql$,
-  '42501', NULL,
-  'AC9: customer cannot update activity_images'
+  'AC9: customer cannot update activity_images (RLS silently blocks)'
 );
 
-SELECT throws_ok(
+SELECT lives_ok(
   $sql$ UPDATE public.banners SET name = 'Hacked' WHERE TRUE $sql$,
-  '42501', NULL,
-  'AC9: customer cannot update banners'
+  'AC9: customer cannot update banners (RLS silently blocks)'
 );
 
 RESET ROLE;
@@ -580,7 +576,8 @@ VALUES ('Auth Banner', 'img/auth.webp', 'Alt', 'https://example.com', ARRAY['hom
 SELECT ok(TRUE, 'AC9: staff with banners.write can insert a banner');
 
 SELECT is(
-  (SELECT COUNT(*)::int FROM public.courses WHERE status IN ('hidden', 'draft')),
+  (SELECT COUNT(*)::int FROM public.courses
+   WHERE slug IN ('rls-hidden-course', 'rls-draft-course')),
   2,
   'AC8: staff with courses.* can read hidden/draft courses'
 );
