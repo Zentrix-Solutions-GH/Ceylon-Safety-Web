@@ -4,10 +4,15 @@ on:
   pull_request:
     branches: [dev]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-typecheck:
     name: lint-typecheck
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +29,7 @@ jobs:
     name: audit
     runs-on: ubuntu-latest
     needs: [lint-typecheck]
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -40,6 +46,7 @@ jobs:
     name: db-tests
     runs-on: ubuntu-latest
     needs: [lint-typecheck]
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -49,10 +56,19 @@ jobs:
 
       - name: Start Supabase
         run: supabase start
-        timeout-minutes: 5
 
       - name: Reset database (run all migrations)
         run: supabase db reset --no-confirm
 
       - name: Run pgTAP tests
         run: supabase test db
+
+      - name: Check types file freshness
+        run: |
+          supabase gen types typescript --local > /tmp/database.ts.generated
+          if ! diff -q /tmp/database.ts.generated types/database.ts > /dev/null 2>&1; then
+            echo "types/database.ts is stale — run: supabase gen types typescript --local > types/database.ts"
+            diff /tmp/database.ts.generated types/database.ts || true
+            exit 1
+          fi
+          echo "types/database.ts is up to date"
