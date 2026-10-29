@@ -246,6 +246,59 @@ describe("isAnalyticsAllowed — WhatsApp path (AC7)", () => {
   });
 });
 
+// ── AC2: cookie attributes written by setConsent ─────────────────────────────
+
+describe("setConsent — cookie attributes (AC2)", () => {
+  it("writes hs_consent with Max-Age=15552000, SameSite=Lax, Path=/", () => {
+    const written: string[] = [];
+    const proto = Object.getPrototypeOf(document);
+    const original = Object.getOwnPropertyDescriptor(proto, "cookie")!;
+    Object.defineProperty(document, "cookie", {
+      get: original.get,
+      set(val: string) { written.push(val); original.set!.call(document, val); },
+      configurable: true,
+    });
+
+    setConsent("accepted");
+    delete (document as unknown as Record<string, unknown>).cookie;
+
+    const consentWrite = written.find((s) => s.startsWith("hs_consent=accepted"));
+    expect(consentWrite).toMatch(/Max-Age=15552000/);
+    expect(consentWrite).toMatch(/SameSite=Lax/);
+    expect(consentWrite).toMatch(/Path=\//);
+  });
+});
+
+// ── AC3: malformed hs_consent_ts ─────────────────────────────────────────────
+
+describe("getConsent — malformed timestamp (AC3)", () => {
+  it("returns undecided when hs_consent_ts is non-numeric (AC3)", () => {
+    setCookieRaw(`hs_consent=accepted; hs_consent_ts=abc`);
+    expect(getConsent()).toBe("undecided");
+  });
+});
+
+// ── AC7: WhatsApp caller contract ─────────────────────────────────────────────
+// The WhatsApp button caller passes the current page path to isAnalyticsAllowed.
+// The button itself always renders; only the analytics ping is gated.
+
+describe("isAnalyticsAllowed — WhatsApp path (AC7)", () => {
+  it("allows WhatsApp analytics event when accepted on an allowed page", () => {
+    setCookieRaw(`hs_consent=accepted; hs_consent_ts=${NOW_S}`);
+    expect(isAnalyticsAllowed("/")).toBe(true);
+  });
+
+  it("denies WhatsApp analytics event when rejected (button still works)", () => {
+    setCookieRaw(`hs_consent=rejected; hs_consent_ts=${NOW_S}`);
+    expect(isAnalyticsAllowed("/")).toBe(false);
+  });
+
+  it("denies WhatsApp analytics event when undecided", () => {
+    // No cookie — undecided state
+    expect(isAnalyticsAllowed("/")).toBe(false);
+  });
+});
+
 // ── EC4: two-tab behaviour ────────────────────────────────────────────────────
 
 describe("EC4 — two tabs", () => {
