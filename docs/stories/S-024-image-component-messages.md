@@ -71,8 +71,57 @@ Give every screen three shared tools: one image component that serves the two st
 
 ## Plan
 
-Prior art: designer pass 2026-10-25 read frontend architecture 4.6, 9.2, 12, file structure (messages/), content design 14.1, auth design 17. Extends them. `/story-run` re-runs `grep -ril "messages/\|srcset" docs/`.
-<!-- Rest filled by /story-run at Step 3. -->
+Prior art: designer pass 2026-10-25 read frontend architecture 4.6, 9.2, 12, file structure (messages/), content design 14.1, auth design 17. Extends them. Searched `grep -ril "messages/\|srcset" docs/` — found frontend arch 9.2 (srcset, two widths), content design 14.1 (480/1200 widths), auth design 17 (error codes). This work creates the shared tools those docs require.
+
+### Files to create
+
+| File | Purpose |
+|---|---|
+| `types/auth.ts` | Scaffold: `AuthErrorCode` union + `AUTH_ERROR_CODES` const array (backend-owned; frontend needs runtime list for coverage test) |
+| `types/api.ts` | Add `COMMON_ERROR_CODES` const array alongside existing `ActionResult` (backend-owned scaffold) |
+| `messages/en.ts` | Typed `en` dict, `t(key, params?)`, `errorMessage(code, reason?)` |
+| `messages/format.ts` | `formatDate(d)` → Asia/Colombo string; `formatMoney(cents)` → "LKR X,XXX.XX" |
+| `messages/__tests__/t.test.ts` | AC1, EC1 |
+| `messages/__tests__/errors.test.ts` | AC2, AC3, AC4, EC2 |
+| `messages/__tests__/format.test.ts` | AC5, EC4, EC5 |
+| `components/shared/ResponsiveImage.tsx` | AC6, AC7, AC8, EC3 |
+| `components/shared/__tests__/ResponsiveImage.test.tsx` | AC6, AC7, AC8, EC3 |
+
+### Wording for messages not given in specs (AC4)
+
+| Code / reason | Text |
+|---|---|
+| `validation_failed` (default) | "This value is not valid." |
+| `validation_failed` + `already_done` | "This has already been done." |
+| `validation_failed` + `files_missing` | "One or more required files are missing." |
+| `validation_failed` + `confirm_large_change` | "Please confirm you want to make this large change." |
+| `validation_failed` + `confirm_mismatch` | "The confirmation does not match." |
+| `validation_failed` + `too_many_rows` | "Too many rows selected." |
+| `not_found` | "The item you are looking for does not exist." |
+| `rate_limited` (default) | "Too many requests. Please wait and try again." |
+| `rate_limited` + `hourly` | "You have reached the hourly limit. Please try again later." |
+| `rate_limited` + `pending_cap` | "You have too many pending items. Please wait for them to be processed." |
+| `upload_failed` | "The file could not be uploaded. Please try again." |
+| `purge_failed` | "Saved, but the cache could not be cleared. It will expire on its own." |
+| `reauth_required` | "Please sign in again to continue." |
+| `mfa_required` | "A second factor is required. Please check your authenticator." |
+| `unknown` | "Something went wrong. Please try again." |
+| `email_not_verified` | "Please verify your email address before signing in." |
+| `code_expired` | "That code has expired. Please request a new one." |
+| `weak_password` | "Please choose a stronger password." |
+| `captcha_failed` | "Security check failed. Please try again." |
+
+### t() design
+
+Flat `as const` object — keys like `"errors.not_allowed"`, `"auth.code_sent"`. `t(key, params?)` is typed so unknown keys are compile errors. Parameter replacement: one pass of `text.replaceAll("{k}", v)` per param key. EC1 (braces in value not further substituted) is satisfied by a single pass with no recursion.
+
+### errorMessage() design
+
+Looks up `errors.{code}.{reason}` first, then `errors.{code}`, then `errors.unknown`.
+
+### ResponsiveImage design
+
+Props: `src480?`, `src1200?`, `width`, `height`, `eager?`, and an exclusive `alt | decorative` union (compile-time AC8). Render: both present → `srcSet`; only `src480` → plain `<img src>`; neither → `<span>` spacer with same dimensions (EC3). `loading={eager ? "eager" : "lazy"}` (AC6).
 
 ## Evidence
 
