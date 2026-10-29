@@ -152,6 +152,9 @@ Types added or changed in `types/` by this story:
 - ~~**P1** `.github/workflows/ci.yml:8,30,45` — No `timeout-minutes` on `lint-typecheck` or `audit` jobs~~ — **resolved** in HEAD: `timeout-minutes: 10` on lint-typecheck and audit, `15` on db-tests. (full-review 2026-10-29, resolved 2026-10-29)
 - ~~**P1** `.github/workflows/ci.yml` — Types-freshness check removed from CI~~ — **resolved** in HEAD: "Check types file freshness" step present in db-tests job (ci.yml:60–68). (full-review 2026-10-29, resolved 2026-10-29)
 - ~~**P1** `package-lock.json`~~ — `@supabase/supabase-js ^2.118.0`, `@supabase/ssr ^0.12.7`, `next ^15.5.28` are the intentional declared versions in `package.json` (not accidental lock drift). CI is green; versions upgraded deliberately during branch development. No further action needed. (full-review 2026-10-29, resolved 2026-10-29)
+- ~~**CI failure** `supabase/tests/*.test.sql` — "planned N but ran 0" in five test files after dev merge brought `20261029000003_seed_content.sql`~~ — **resolved** in `496907b`: added `ON CONFLICT (role, action) DO NOTHING` to role_permissions fixture inserts in foundation/content/info-tables/permissions tests; changed commerce page slugs to `ci-test-terms`/`ci-test-refund-policy` to avoid FK crash on skipped page insert. (2026-10-29)
+- ~~**CI failure** `supabase/tests/seed.dev.test.sql` — 38/38 assertions fail (have: 0)~~ — **resolved** in `496907b`: added `Load dev seed data` step to `ci.yml` (`psql -f supabase/seed.dev.sql`) after `supabase db reset`. (2026-10-29)
+- **P2** `supabase/tests/commerce.test.sql:13` — page slugs `ci-test-terms`/`ci-test-refund-policy` differ from real slugs; a comment explaining the conflict with `seed_content` would help future readers. (full-review 2026-10-29, non-blocking)
 
 ## After this merges
 
