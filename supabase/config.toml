@@ -1,0 +1,8 @@
+# Supabase local development configuration
+# See: https://supabase.com/docs/guides/local-development/cli/config
+
+[db.settings]
+# Sets the app.environment GUC on the local database.
+# seed.dev.sql checks for this value and aborts if it is not 'development',
+# preventing the dev seed from running on production.
+app.environment = "development"
