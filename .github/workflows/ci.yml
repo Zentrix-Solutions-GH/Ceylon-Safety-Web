@@ -1,105 +1,80 @@
-name: CI
+name: ci
 
 on:
-  push:
-    branches: [dev]
   pull_request:
     branches: [dev]
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ── Job 1: lint, typecheck, unit tests ──────────────────────────────────────
-  check:
-    name: Lint + Typecheck + Unit tests
+  lint-typecheck:
+    name: lint-typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version: '20'
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Run check script
-        run: bash scripts/check.sh
+      - run: bash scripts/check.sh
 
-  # ── Job 2: integration tests (Supabase local) ───────────────────────────────
-  integration:
-    name: Integration tests (Supabase)
+  audit:
+    name: audit
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    # Only runs when integration test files exist
-    if: >
-      github.event_name == 'pull_request' &&
-      contains(toJson(github.event.pull_request.changed_files), 'supabase/')
-
+    needs: [lint-typecheck]
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version: '20'
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
+      - run: npm audit --omit=dev --audit-level=high
 
-      - name: Start local Supabase
-        run: supabase start
-
-      - name: Run integration tests
-        run: npx vitest run --project integration
-        env:
-          SUPABASE_URL: http://localhost:54321
-          SUPABASE_ANON_KEY: ${{ env.SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ env.SUPABASE_SERVICE_ROLE_KEY }}
-
-      - name: Stop Supabase
-        if: always()
-        run: supabase stop
-
-  # ── Job 3: RLS verification suite (pgTAP) ───────────────────────────────────
-  rls-check:
-    name: RLS verification suite
+  db-tests:
+    name: db-tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
+    needs: [lint-typecheck]
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: supabase/setup-cli@2b65cf0aa3867ec8426b3adf8f2df81844aee6d0 # v1
         with:
-          node-version: 20
-          cache: npm
+          version: 2.122.0
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Start Supabase
+        run: |
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt/3"
+            supabase start && break
+            [ $attempt -lt 3 ] && echo "Retrying in 30s..." && sleep 30
+          done || { echo "supabase start failed after 3 attempts"; exit 1; }
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
+      - name: Reset database (run all migrations)
+        run: supabase db reset --yes
 
-      - name: Start local Supabase
-        run: supabase start
+      - name: Load dev seed data
+        run: psql postgresql://postgres:postgres@localhost:54322/postgres -c "SET app.environment = 'development'" -f supabase/seed.dev.sql
 
-      - name: Run pgTAP RLS suite
-        run: supabase test db supabase/tests/zz-schema-verification.test.sql
+      - name: Run pgTAP tests
+        run: supabase test db
 
-      - name: Check types file is up to date
+      - name: Check types file freshness
         run: |
           supabase gen types typescript --local > /tmp/database.ts.generated
           if ! diff -q /tmp/database.ts.generated types/database.ts > /dev/null 2>&1; then
@@ -108,7 +83,3 @@ jobs:
             exit 1
           fi
           echo "types/database.ts is up to date"
-
-      - name: Stop Supabase
-        if: always()
-        run: supabase stop

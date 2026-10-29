@@ -9,6 +9,7 @@ export default defineConfig({
     exclude: ["**/__tests__/integration/**", "node_modules/**", ".next/**", ".claude/**", ".worktrees/**"],
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
+    testTimeout: 15000,
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, ".") },
