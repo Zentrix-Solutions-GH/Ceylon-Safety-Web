@@ -5,6 +5,10 @@ function required(name: string): string {
   return val;
 }
 
+function optional(name: string, defaultVal: string): string {
+  return process.env[name] ?? defaultVal;
+}
+
 export const config = {
   supabase: {
     url: required("NEXT_PUBLIC_SUPABASE_URL"),
@@ -38,4 +42,25 @@ export const config = {
   },
   cron: { secret: required("CRON_SECRET") },
   app: { url: required("NEXT_PUBLIC_APP_URL") },
+  csp: {
+    mode: (() => {
+      const v = required("CSP_MODE");
+      if (v !== "report-only" && v !== "enforce")
+        throw new Error(`CSP_MODE must be "report-only" or "enforce", got: ${v}`);
+      return v as "report-only" | "enforce";
+    })(),
+    // Well-known stable CDN hosts; override via env var if they ever change
+    youtubeNocookieHost: optional(
+      "NEXT_PUBLIC_CSP_YOUTUBE_HOST",
+      "https://www.youtube-nocookie.com"
+    ),
+    googleAvatarHost: optional(
+      "NEXT_PUBLIC_CSP_GOOGLE_AVATAR_HOST",
+      "lh3.googleusercontent.com"
+    ),
+    turnstileHost: optional(
+      "NEXT_PUBLIC_CSP_TURNSTILE_HOST",
+      "challenges.cloudflare.com"
+    ),
+  },
 } as const;

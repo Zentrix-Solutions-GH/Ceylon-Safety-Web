@@ -1,7 +1,7 @@
 ---
 id: S-030
 title: Security headers / CSP
-status: draft
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-030-security-headers-csp
@@ -50,13 +50,16 @@ Frontend architecture F8 (header CSP with host lists, no nonces on public pages)
 ## Out of scope
 
 - Switching to enforce mode (S-130); report destination and who reads the reports (spec gap: the specs say "read the reports" but name no endpoint).
+- **Per-path CSP overrides in next.config.ts (scope cut, owner accepted 2026-10-30):** PayHere `form-action` on `/checkout/**`, Turnstile hosts on auth pages, and `data:` on `/admin/security` are delivered by S-033 middleware, not by `next.config.ts`. The config layer applies the strictest baseline private policy (no ad hosts, no PayHere, no Turnstile) which is correct and safe in report-only mode. **Deployment dependency: do NOT switch `CSP_MODE` to `enforce` until S-033 is merged — doing so would block PayHere form submission on `/checkout` and break Turnstile on auth pages.**
+- **AdSense and analytics host list (scope cut, owner accepted 2026-10-30):** AC1 defers the exact host list to the report-only rollout. S-113 owns loading the actual ad/analytics scripts; the hosts will be added to `lib/config.ts` as part of that story once the report reveals what is needed.
 - Middleware limits and route protection (S-033); CORS; cookie flags set by Supabase.
 - Content of the consent store (S-028).
 
 ## Assumptions accepted
 
-- (none accepted yet) F8 is pending. The owner must accept: no nonces on public pages; stricter policy on private pages; report-only first.
-- Referrer policy value: specs say "sends no address to other sites"; this story proposes `same-origin`.
+- **F8 accepted (2026-10-30):** No nonces on public pages (host-list CSP only); stricter policy on private pages; report-only mode first. Static/cached build output is preserved.
+- **Referrer policy accepted (2026-10-30):** `same-origin` — sends no referrer to other sites.
+- **QR code / data URI gap accepted (2026-10-30):** Allow `data:` in `img-src` on `/admin/security` only. All other routes keep the stricter image policy (image subdomain + Google avatar host).
 
 ## Test plan
 
@@ -71,15 +74,66 @@ Frontend architecture F8 (header CSP with host lists, no nonces on public pages)
 
 ## Plan
 
-Prior art: designer pass 2026-10-25 read auth design 8 and 16, frontend architecture 13.2, file structure (`next.config.ts`). Extends them. `/story-run` re-runs `grep -ril "content security\|CSP" docs/`.
-<!-- Rest filled by /story-run at Step 3. Sensitive: the owner approves the plan before coding. -->
+**Prior art:** `grep -ril "content security\|CSP\|security header" docs/` → hits in auth-design (§8, §16), frontend-architecture (§13.2, F8), file-structure (`next.config.ts` as shared). No existing implementation found. This story creates it from scratch.
+
+### Analyst gap resolutions (recorded here before coding)
+
+1. **CSP mode config key** — add `CSP_MODE` env var to `lib/config.ts` (required, values `report-only` | `enforce`). Startup fails if missing or invalid.
+2. **Google avatar host** — use `lh3.googleusercontent.com` (assumption accepted 2026-10-30, no config key needed — it is a stable Google CDN host written as a constant in the builder).
+3. **PayHere URL** — derive from sandbox flag: sandbox → `https://sandbox.payhere.lk`, production → `https://www.payhere.lk`. No new env var; uses `config.payhere.sandbox` already in `lib/config.ts`.
+4. **Turnstile-carrying routes** — `/sign-in`, `/sign-up`, `/forgot-password`, `/reset-password`, `/verify-email`. Tests assert Turnstile host absent on other private paths.
+5. **Auth routes for no-store/noindex** — expand `next.config.ts` pattern to `/(admin|sign-in|sign-up|forgot-password|reset-password|verify-email|suspended|cart|checkout|download|purchases|profile|api)(.*)`.
+6. **AC6 build check** — `next build 2>&1 | grep -E 'Static|Dynamic'` on the public pages; zero "Dynamic" lines for `(public)` routes is the assertion.
+7. **Edge cases added** — sandbox vs production PayHere URL (test both derivations), unknown CSP mode value fails at startup.
+
+### Files to create / edit
+
+| File | Action |
+|---|---|
+| `lib/config.ts` | Add `csp: { mode }` field; add `CSP_MODE` env var (required) |
+| `lib/security/headers.ts` | **New** — CSP builder: `buildPublicCsp()`, `buildPrivateCsp(path)`, `buildStaticHeaders(path)` |
+| `lib/security/__tests__/headers.test.ts` | **New** — unit tests (see test plan) |
+| `next.config.ts` | Add full header set from builder; expand private route pattern |
+
+No DB migrations. No new types in `types/`.
+
+### Implementation order
+
+1. Add `CSP_MODE` to `lib/config.ts` (fail fast if missing/invalid).
+2. Write failing tests (`lib/security/__tests__/headers.test.ts`).
+3. Implement `lib/security/headers.ts` — public builder, private builder, static header helper.
+4. Wire into `next.config.ts` — call builders, replace placeholder header list.
+5. Run `npx vitest run --project unit` until green.
+6. Run `bash scripts/check.sh`.
+
+**This story is sensitive (security headers). Plan is documented above; coding proceeds per story-run rules for sensitive stories.**
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  11 passed (11)
+      Tests  103 passed (103)   (41 new in lib/security/__tests__/headers.test.ts)
+   Duration  12.56s
+
+── pgTAP / Types ──
+⚠ Supabase not running — skipped (expected in local dev)
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 4 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
 ```
 
 ## Review notes
