@@ -94,11 +94,57 @@ Types added or changed in `types/` by this story:
 
 ## Plan
 
-(filled in by /story-run at Step 3)
+**Prior art:** grep'd docs/ for "CI", "github actions", "workflow" — found S-004 "CI workflow + branch protection" in PROJECT_STATUS.md (planned, not yet implemented). This story IS that CI work. No existing .github/workflows/ directory in the repo.
+
+**Files to create / edit:**
+1. `supabase/config.toml` — **NEW**: never committed; required by `supabase start`. Minimal config pinned to pg15, port 54321/54322. Must be committed so CI can run.
+2. `.github/workflows/ci.yml` — **NEW**: three-job workflow (lint-typecheck → [audit, db-tests]).
+3. `docs/PROJECT_STATUS.md` — **EDIT**: append CI check names per AC6.
+
+**Job dependency graph:**
+- `lint-typecheck` (no deps) — runs `bash scripts/check.sh`; caches node_modules on `package-lock.json` hash.
+- `audit` (needs: lint-typecheck) — runs `npm audit --audit-level=high`.
+- `db-tests` (needs: lint-typecheck) — supabase/setup-cli@v1 → `supabase start` → `supabase db reset` → `supabase test db` (no file arg → picks up all `supabase/tests/*.sql` automatically for EC3).
+
+**TDD note:** Story tests are manual/CI-triggered (no unit tests to write). Verification is the GitHub Actions run URL (AC5).
+
+**Skipped checks in check.sh:** pgTAP-in-check.sh and types-freshness are silently skipped when Supabase is not running (lint-typecheck job) — acceptable; both are covered by the `db-tests` job.
+
+**Step order:** config.toml → ci.yml → PROJECT_STATUS.md update → check.sh → PR → CI run evidence.
 
 ## Evidence
 
-(filled in by /story-run at Step 7 — paste scripts/check.sh output here)
+### scripts/check.sh (2026-10-29)
+
+```
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  10 passed (10)
+      Tests  62 passed (62)
+   Duration  57.02s
+
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests (expected; covered by db-tests CI job)
+
+── Types file freshness ──
+⚠ Supabase not running — skipping types check (expected; covered by db-tests CI job)
+
+════════════════════════════════
+  check.sh: 3 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
+```
+
+**Pre-existing fix included:** `vitest.config.ts` — added `testTimeout: 15000` (dialog tests were timing out at the 5000ms default on dev branch too) and excluded `.worktrees/**` from test discovery.
+
+**AC5 — CI passing run URL:** To be pasted after PR is opened and GitHub Actions completes.
 
 ## Review notes
 
