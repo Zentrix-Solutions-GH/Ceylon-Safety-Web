@@ -63,7 +63,7 @@ jobs:
           done
 
       - name: Reset database (run all migrations)
-        run: supabase db reset --no-confirm
+        run: supabase db reset --yes
 
       - name: Run pgTAP tests
         run: supabase test db
