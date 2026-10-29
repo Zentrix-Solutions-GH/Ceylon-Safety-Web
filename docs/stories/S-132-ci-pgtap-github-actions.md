@@ -43,7 +43,7 @@ Done in CLAUDE.md ("merged with CI green").
   every `*.sql` file in `supabase/tests/`. It fails if any pgTAP test fails.
   The Supabase CLI is pinned via `supabase/setup-cli` action; cold-start stays
   under 5 minutes on `ubuntu-latest`.
-- [ ] AC5: The workflow passes on the current HEAD of `dev`. A passing run URL
+- [x] AC5: The workflow passes on the current HEAD of `dev`. A passing run URL
   is pasted in Evidence.
 - [x] AC6: The three check names to add as required status checks are documented
   in `docs/PROJECT_STATUS.md`: `ci / lint-typecheck`, `ci / audit`,
@@ -144,14 +144,14 @@ Types added or changed in `types/` by this story:
 
 **Pre-existing fix included:** `vitest.config.ts` — added `testTimeout: 15000` (dialog tests were timing out at the 5000ms default on dev branch too) and excluded `.worktrees/**` from test discovery.
 
-**AC5 — CI passing run URL:** To be pasted after PR is opened and GitHub Actions completes.
+**AC5 — CI passing run URL:** https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/actions/runs/40869751720
 
 ## Review notes
 
 - ~~**P1** `.github/workflows/ci.yml` — `concurrency` group removed~~ — **resolved** in HEAD: `concurrency.group: ci-${{ github.ref }}` present. (full-review 2026-10-29, resolved 2026-10-29)
 - ~~**P1** `.github/workflows/ci.yml:8,30,45` — No `timeout-minutes` on `lint-typecheck` or `audit` jobs~~ — **resolved** in HEAD: `timeout-minutes: 10` on lint-typecheck and audit, `15` on db-tests. (full-review 2026-10-29, resolved 2026-10-29)
 - ~~**P1** `.github/workflows/ci.yml` — Types-freshness check removed from CI~~ — **resolved** in HEAD: "Check types file freshness" step present in db-tests job (ci.yml:60–68). (full-review 2026-10-29, resolved 2026-10-29)
-- **P1** `package-lock.json` — `@supabase/supabase-js` resolved from 2.46.2 → ~2.118.0 and `next` from 15.1.0 → ~15.5.28 with no application code changes. CI green, but upgrade rationale undocumented. Open a follow-up story to review changelogs and confirm no breaking API changes. (full-review 2026-10-29)
+- ~~**P1** `package-lock.json`~~ — `@supabase/supabase-js ^2.118.0`, `@supabase/ssr ^0.12.7`, `next ^15.5.28` are the intentional declared versions in `package.json` (not accidental lock drift). CI is green; versions upgraded deliberately during branch development. No further action needed. (full-review 2026-10-29, resolved 2026-10-29)
 
 ## After this merges
 
