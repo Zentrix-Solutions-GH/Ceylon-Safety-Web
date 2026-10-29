@@ -8,6 +8,9 @@ export default defineConfig({
     include: ["**/__tests__/**/*.test.{ts,tsx}", "**/*.test.{ts,tsx}"],
     exclude: ["**/__tests__/integration/**", "node_modules/**", ".next/**", ".claude/**", ".worktrees/**"],
     environment: "jsdom",
+    environmentOptions: {
+      jsdom: { url: "https://localhost" },
+    },
     setupFiles: ["./vitest.setup.ts"],
     testTimeout: 15000,
   },
