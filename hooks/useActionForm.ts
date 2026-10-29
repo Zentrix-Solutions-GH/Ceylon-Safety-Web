@@ -46,8 +46,9 @@ export function useActionForm<TData, TValues extends Record<string, unknown>>({
   const [isPending, setIsPending] = useState(false);
   const inFlight = useRef(false);
 
+  // Returns field errors on failure, null on success.
   const validate = useCallback(
-    (values: Record<string, unknown>): values is TValues => {
+    (values: Record<string, unknown>): Record<string, string> | null => {
       const result = schema.safeParse(values);
       if (!result.success) {
         const errs: Record<string, string> = {};
@@ -56,10 +57,10 @@ export function useActionForm<TData, TValues extends Record<string, unknown>>({
           if (!errs[key]) errs[key] = issue.message;
         }
         setFieldErrors(errs);
-        return false;
+        return errs;
       }
       setFieldErrors({});
-      return true;
+      return null;
     },
     [schema]
   );
@@ -94,17 +95,9 @@ export function useActionForm<TData, TValues extends Record<string, unknown>>({
       const form = e.currentTarget;
       const values = getFormValues(form);
 
-      if (!validate(values)) {
-        // fieldErrors state is set inside validate; grab them from the schema parse
-        const parseResult = schema.safeParse(values);
-        if (!parseResult.success) {
-          const errs: Record<string, string> = {};
-          for (const issue of parseResult.error.issues) {
-            const key = issue.path[0]?.toString() ?? "_";
-            if (!errs[key]) errs[key] = issue.message;
-          }
-          focusFirstError(form, errs);
-        }
+      const validationErrors = validate(values);
+      if (validationErrors) {
+        focusFirstError(form, validationErrors);
         return;
       }
 
@@ -134,7 +127,7 @@ export function useActionForm<TData, TValues extends Record<string, unknown>>({
         setIsPending(false);
       }
     },
-    [action, mapError, onSuccess, schema, validate]
+    [action, mapError, onSuccess, validate]
   );
 
   return { fieldErrors, formError, isPending, handleSubmit, handleBlur };

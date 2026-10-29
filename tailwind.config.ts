@@ -49,14 +49,6 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {
-        "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
         "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },
         "fade-out": { from: { opacity: "1" }, to: { opacity: "0" } },
         "slide-in-from-right": {

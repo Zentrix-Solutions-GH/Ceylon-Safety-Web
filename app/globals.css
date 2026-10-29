@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+/* TODO(S-022): add .dark { ... } token overrides once S-022 (design tokens) resolves */
+
 @layer base {
   :root {
     /* Ceylon Safety brand — #E30613 red, #3D3D3D charcoal */
