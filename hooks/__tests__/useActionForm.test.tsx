@@ -14,7 +14,7 @@ const mapError = (code: string) =>
   ({ user_not_found: "User not found", unknown: "Something went wrong" }[code] ?? "Something went wrong");
 
 function mockAction(result: ActionResult) {
-  return vi.fn((_v: { email: string }) => Promise.resolve(result));
+  return vi.fn(() => Promise.resolve(result)) as (v: { email: string }) => Promise<ActionResult>;
 }
 
 function TestForm({ action }: { action: (v: { email: string }) => Promise<ActionResult> }) {
@@ -85,8 +85,8 @@ describe("useActionForm", () => {
   it("EC1: second submit while in-flight is ignored", async () => {
     let resolveAction!: (r: ActionResult) => void;
     const action = vi.fn(
-      (_v: { email: string }) => new Promise<ActionResult>((res) => { resolveAction = res; })
-    );
+      () => new Promise<ActionResult>((res) => { resolveAction = res; })
+    ) as (v: { email: string }) => Promise<ActionResult>;
     render(<TestForm action={action} />);
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Email"), "test@example.com");
@@ -98,7 +98,7 @@ describe("useActionForm", () => {
   });
 
   it("EC2: action throws → shows unknown message, form stays filled", async () => {
-    const action = vi.fn((_v: { email: string }) => Promise.reject(new Error("Network error")));
+    const action = vi.fn(() => Promise.reject(new Error("Network error"))) as (v: { email: string }) => Promise<ActionResult>;
     render(<TestForm action={action} />);
     await userEvent.setup().type(screen.getByLabelText("Email"), "test@example.com");
     await userEvent.setup().click(screen.getByRole("button", { name: "Submit" }));
