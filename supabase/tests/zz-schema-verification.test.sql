@@ -587,65 +587,54 @@ RESET role;
 -- (search_all is skipped until S-064 exists.)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DO $$
-DECLARE
-  r        record;
-  -- profile_is_super_admin is whitelisted: authenticated needs EXECUTE for RLS
-  -- policies on profiles/admin_audit_log; it is SECURITY DEFINER and returns only boolean.
-  whitelisted_public text[] := ARRAY['has_permission','is_staff_member','is_super_admin','profile_is_super_admin'];
-  fn_sig   text;
-  has_pub  boolean;
-  has_anon boolean;
-  has_auth boolean;
-BEGIN
-  FOR r IN
-    SELECT p.proname, n.nspname, oidvectortypes(p.proargtypes) AS args
-    FROM pg_proc p
-    JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname IN ('public', 'private')
-      -- Skip trigger functions: they are callable only by the trigger mechanism,
-      -- not directly, so has_function_privilege always returns true.
-      AND p.prorettype <> 'trigger'::regtype::oid
-      -- Skip extension-owned functions (pg_trgm, pg_stat_statements, etc.)
-      AND NOT EXISTS (
-        SELECT 1 FROM pg_depend d
-        WHERE d.classid = 'pg_proc'::regclass
-          AND d.objid = p.oid
-          AND d.deptype = 'e'
-      )
-  LOOP
-    -- Skip whitelisted public functions
-    IF r.nspname = 'public' AND r.proname = ANY(whitelisted_public) THEN
-      CONTINUE;
-    END IF;
-    -- Skip search_all if it does not exist yet (S-064)
-    IF r.nspname = 'public' AND r.proname = 'search_all' THEN
-      CONTINUE;
-    END IF;
+-- AC5: One ok() per function per role so a stray grant is recorded as a named
+-- failure rather than aborting the transaction and silently skipping AC6/AC7.
+-- profile_is_super_admin is whitelisted: authenticated needs EXECUTE for RLS
+-- policies on profiles/admin_audit_log (SECURITY DEFINER, returns only boolean).
+-- search_all is skipped until S-064 exists.
+SELECT ok(
+  NOT has_function_privilege(
+    'anon',
+    format('%s.%s(%s)', n.nspname, p.proname, oidvectortypes(p.proargtypes)),
+    'EXECUTE'
+  ),
+  format('AC5: anon must not EXECUTE %s.%s(%s)', n.nspname, p.proname, oidvectortypes(p.proargtypes))
+)
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname IN ('public', 'private')
+  AND p.prorettype <> 'trigger'::regtype::oid
+  AND NOT EXISTS (
+    SELECT 1 FROM pg_depend d
+    WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e'
+  )
+  AND NOT (n.nspname = 'public' AND p.proname = ANY(
+    ARRAY['has_permission','is_staff_member','is_super_admin','profile_is_super_admin']
+  ))
+  AND NOT (n.nspname = 'public' AND p.proname = 'search_all')
+ORDER BY n.nspname, p.proname;
 
-    fn_sig := format('%s.%s(%s)', r.nspname, r.proname, r.args);
-
-    SELECT has_function_privilege('anon', fn_sig, 'EXECUTE')      INTO has_anon;
-    SELECT has_function_privilege('authenticated', fn_sig, 'EXECUTE') INTO has_auth;
-
-    ASSERT NOT has_anon,
-      format('AC5: anon must not EXECUTE %s', fn_sig);
-    ASSERT NOT has_auth,
-      format('AC5: authenticated must not EXECUTE %s', fn_sig);
-
-    -- public role check (catches future GRANT to PUBLIC)
-    BEGIN
-      SELECT has_function_privilege('public', fn_sig, 'EXECUTE') INTO has_pub;
-      ASSERT NOT has_pub,
-        format('AC5: public must not EXECUTE %s', fn_sig);
-    EXCEPTION WHEN OTHERS THEN
-      NULL; -- public role has no privilege entry = fine
-    END;
-  END LOOP;
-END;
-$$;
-
-SELECT pass('AC5: EXECUTE revoked from anon/authenticated for all non-whitelisted functions');
+SELECT ok(
+  NOT has_function_privilege(
+    'authenticated',
+    format('%s.%s(%s)', n.nspname, p.proname, oidvectortypes(p.proargtypes)),
+    'EXECUTE'
+  ),
+  format('AC5: authenticated must not EXECUTE %s.%s(%s)', n.nspname, p.proname, oidvectortypes(p.proargtypes))
+)
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname IN ('public', 'private')
+  AND p.prorettype <> 'trigger'::regtype::oid
+  AND NOT EXISTS (
+    SELECT 1 FROM pg_depend d
+    WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e'
+  )
+  AND NOT (n.nspname = 'public' AND p.proname = ANY(
+    ARRAY['has_permission','is_staff_member','is_super_admin','profile_is_super_admin']
+  ))
+  AND NOT (n.nspname = 'public' AND p.proname = 'search_all')
+ORDER BY n.nspname, p.proname;
 
 -- ── Whitelisted functions are callable by anon and authenticated ──────────────
 
