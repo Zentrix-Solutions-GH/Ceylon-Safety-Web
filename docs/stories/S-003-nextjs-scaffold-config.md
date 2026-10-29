@@ -104,8 +104,8 @@ $ bash scripts/check.sh
 ✓ TypeScript passed
 
 ── Vitest (unit) ──
- ✓ __tests__/config.test.ts (12 tests) 98ms
- ✓ __tests__/supabase.test.ts (4 tests) 60ms
+ ✓ __tests__/config.test.ts (21 tests) 127ms
+ ✓ __tests__/supabase.test.ts (7 tests) 149ms
  ✓ messages/__tests__/t.test.ts (5 tests)
  ✓ messages/__tests__/errors.test.ts (13 tests)
  ✓ messages/__tests__/format.test.ts (6 tests)
@@ -117,7 +117,7 @@ $ bash scripts/check.sh
  ✓ hooks/__tests__/useActionForm.test.tsx (8 tests)
  ✓ components/ui/__tests__/dialog.test.tsx (3 tests)
  Test Files  12 passed (12)
- Tests  78 passed (78)
+ Tests  90 passed (90)
 ✓ Vitest (unit) passed
 
 ⚠ Supabase not running — pgTAP tests skipped
