@@ -28,7 +28,8 @@ BEGIN
     (v_sa, 'super_admin'), (v_admin, 'admin');
   -- Admin has settings.site + authors.write; NOT settings.contact or settings.system
   INSERT INTO public.role_permissions (role, action) VALUES
-    ('admin', 'settings.site'), ('admin', 'authors.write');
+    ('admin', 'settings.site'), ('admin', 'authors.write')
+  ON CONFLICT (role, action) DO NOTHING;
 END;
 $$;
 

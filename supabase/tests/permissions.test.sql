@@ -35,7 +35,8 @@ BEGIN
 
   -- Permission row for admin: articles.*
   INSERT INTO public.role_permissions (role, action) VALUES
-    ('admin', 'articles.*');
+    ('admin', 'articles.*')
+  ON CONFLICT (role, action) DO NOTHING;
 END;
 $$;
 

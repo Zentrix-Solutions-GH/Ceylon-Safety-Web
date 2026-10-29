@@ -42,7 +42,8 @@ BEGIN
   INSERT INTO public.role_permissions (role, action) VALUES
     ('admin', 'articles.*'),
     ('admin', 'videos.*'),
-    ('admin', 'comments.moderate');
+    ('admin', 'comments.moderate')
+  ON CONFLICT (role, action) DO NOTHING;
 END;
 $$;
 

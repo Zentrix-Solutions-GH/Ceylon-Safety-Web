@@ -38,7 +38,8 @@ BEGIN
     ('admin', 'courses.*'),
     ('admin', 'trainers.*'),
     ('admin', 'banners.read'),
-    ('admin', 'banners.write');
+    ('admin', 'banners.write')
+  ON CONFLICT (role, action) DO NOTHING;
 END;
 $$;
 
