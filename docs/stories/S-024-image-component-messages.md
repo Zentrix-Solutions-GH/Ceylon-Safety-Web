@@ -1,11 +1,11 @@
 ---
 id: S-024
 title: Image component (two widths), messages/en.ts, t()
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-024-image-component-messages
-pr: ~
+pr: 25
 depends_on: [S-022]
 reqs: [REQ-003, REQ-186, REQ-190]
 ---
@@ -22,22 +22,22 @@ Give every screen three shared tools: one image component that serves the two st
 
 ## Acceptance criteria
 
-- [ ] AC1: `messages/en.ts` exports the typed dictionary; `t(key, params?)` returns the text, with `{name}`-style parameters replaced. A key that does not exist is a type error.
-- [ ] AC2: One entry per error code from `types/api.ts` (common list: `validation_failed`, `not_allowed`, `not_found`, `rate_limited`, `version_conflict`, `upload_failed`, `purge_failed`, `reauth_required`, `mfa_required`, `unknown`) and per auth-only code from `types/auth.ts` (`invalid_credentials`, `email_not_verified`, `code_invalid`, `code_expired`, `code_attempts_exceeded`, `weak_password`, `captcha_failed`, `account_suspended`). Entries per `reason` exist where the text differs (`rate_limited`: `hourly`, `pending_cap`; `validation_failed`: `already_done`, `files_missing`, `confirm_large_change`, `confirm_mismatch`, `too_many_rows`).
-- [ ] AC3: `errorMessage(code, reason?)` returns the mapped text, and the `unknown` text for any unmapped code. A Vitest test fails if a code in the type files has no entry.
-- [ ] AC4: Texts given in the specs are used word for word (for example "You do not have permission to do this.", "Someone else changed this while you were editing. Reload to see their changes. Your text is kept.", "Email or password is not correct", "That code is not right"). Wording the specs do not give is listed in the Plan and approved by the owner.
-- [ ] AC5: Formatting helpers: dates in Asia/Colombo (for example "17 Oct 2026, 2:30 pm"); money "LKR 1,500.00" formatted from cents. The helper never calculates totals.
-- [ ] AC6: `components/shared/ResponsiveImage.tsx` takes the variant URLs (480 and 1200 wide), builds `srcset` and `sizes`, always sets `width` and `height`, lazy-loads unless marked as the first visible image, and uses a plain `<img>` (the Next.js image optimiser is off).
-- [ ] AC7: An image with only one variant (original narrower than 480 px) renders a plain `src`, no `srcset`.
-- [ ] AC8: Alt text is required by the component type: either `alt` (max 200 characters) or an explicit `decorative` flag. Display crops use CSS `object-fit` and a focal position only.
+- [x] AC1: `messages/en.ts` exports the typed dictionary; `t(key, params?)` returns the text, with `{name}`-style parameters replaced. A key that does not exist is a type error.
+- [x] AC2: One entry per error code from `types/api.ts` (common list: `validation_failed`, `not_allowed`, `not_found`, `rate_limited`, `version_conflict`, `upload_failed`, `purge_failed`, `reauth_required`, `mfa_required`, `unknown`) and per auth-only code from `types/auth.ts` (`invalid_credentials`, `email_not_verified`, `code_invalid`, `code_expired`, `code_attempts_exceeded`, `weak_password`, `captcha_failed`, `account_suspended`). Entries per `reason` exist where the text differs (`rate_limited`: `hourly`, `pending_cap`; `validation_failed`: `already_done`, `files_missing`, `confirm_large_change`, `confirm_mismatch`, `too_many_rows`).
+- [x] AC3: `errorMessage(code, reason?)` returns the mapped text, and the `unknown` text for any unmapped code. A Vitest test fails if a code in the type files has no entry.
+- [x] AC4: Texts given in the specs are used word for word (for example "You do not have permission to do this.", "Someone else changed this while you were editing. Reload to see their changes. Your text is kept.", "Email or password is not correct", "That code is not right"). Wording the specs do not give is listed in the Plan and approved by the owner.
+- [x] AC5: Formatting helpers: dates in Asia/Colombo (for example "17 Oct 2026, 2:30 pm"); money "LKR 1,500.00" formatted from cents. The helper never calculates totals.
+- [x] AC6: `components/shared/ResponsiveImage.tsx` takes the variant URLs (480 and 1200 wide), builds `srcset` and `sizes`, always sets `width` and `height`, lazy-loads unless marked as the first visible image, and uses a plain `<img>` (the Next.js image optimiser is off).
+- [x] AC7: An image with only one variant (original narrower than 480 px) renders a plain `src`, no `srcset`.
+- [x] AC8: Alt text is required by the component type: either `alt` (max 200 characters) or an explicit `decorative` flag. Display crops use CSS `object-fit` and a focal position only.
 
 ## Edge cases
 
-- [ ] EC1: A parameter value containing braces or HTML is shown as text, never interpreted.
-- [ ] EC2: Unknown `reason` for a known code falls back to the code's default text.
-- [ ] EC3: Missing variant URL (for example a pending image) renders nothing broken: no empty `src`, no layout jump (width and height keep the space).
-- [ ] EC4: Dates around midnight Sri Lanka time show the Sri Lanka day, not UTC.
-- [ ] EC5: Money values of 0 and values above 1,000,000 cents format correctly.
+- [x] EC1: A parameter value containing braces or HTML is shown as text, never interpreted.
+- [x] EC2: Unknown `reason` for a known code falls back to the code's default text.
+- [x] EC3: Missing variant URL (for example a pending image) renders nothing broken: no empty `src`, no layout jump (width and height keep the space).
+- [x] EC4: Dates around midnight Sri Lanka time show the Sri Lanka day, not UTC.
+- [x] EC5: Money values of 0 and values above 1,000,000 cents format correctly.
 
 ## Contract
 
@@ -125,10 +125,15 @@ Props: `src480?`, `src1200?`, `width`, `height`, `eager?`, and an exclusive `alt
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
-$ bash scripts/check.sh
+$ npx eslint . --max-warnings 0   → 0 warnings, 0 errors
+$ npx tsc --noEmit                → clean
+$ npx vitest run --passWithNoTests
+
+ Test Files  10 passed (10)
+      Tests  62 passed (62)
+   Start at  11:12:18
+   Duration  27.21s
 ```
 
 ## Review notes
