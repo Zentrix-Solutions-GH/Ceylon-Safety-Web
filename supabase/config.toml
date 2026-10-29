@@ -15,6 +15,12 @@ port = 54322
 shadow_port = 54320
 major_version = 15
 
+[db.settings]
+# Sets the app.environment GUC on the local database.
+# seed.dev.sql checks for this value and aborts if it is not 'development',
+# preventing the dev seed from running on production.
+app.environment = "development"
+
 [db.pooler]
 enabled = false
 port = 54329

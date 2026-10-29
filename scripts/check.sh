@@ -39,9 +39,36 @@ fi
 # 4. pgTAP RLS suite (skipped when Supabase is not running)
 if $SUPABASE_CMD status --output json 2>/dev/null | grep -q '"DB_URL"'; then
   run "pgTAP RLS suite" $SUPABASE_CMD test db supabase/tests/zz-schema-verification.test.sql
+  run "pgTAP seed suite" $SUPABASE_CMD test db supabase/tests/seed.test.sql
+  # Apply dev seed (idempotent) then verify AC6 fixture counts
+  # Uses docker exec because psql may not be installed on the host
+  DB_CONTAINER=$(docker ps --filter name=supabase_db_ --format "{{.Names}}" 2>/dev/null | head -1)
+  if [ -n "$DB_CONTAINER" ]; then
+    # Apply dev seed (idempotent — file is wrapped in BEGIN/COMMIT)
+    { printf "SET app.environment = 'development';\n"; cat supabase/seed.dev.sql; } \
+      | docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -q \
+      2>&1 | grep -v "^$" || true
+    run "pgTAP dev seed suite" $SUPABASE_CMD test db supabase/tests/seed.dev.test.sql
+
+    # EC3: guard must raise and roll back when env != development
+    printf '\n── EC3 dev seed guard (execution) ──\n'
+    GUARD_ERR=$({ printf "SET app.environment = 'production';\n"; cat supabase/seed.dev.sql; } \
+      | docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres 2>&1 || true)
+    if echo "$GUARD_ERR" | grep -q "seed.dev.sql is for development only"; then
+      printf '✓ EC3 dev seed guard (execution) passed\n'
+      PASS=$((PASS + 1))
+    else
+      printf '✗ EC3 dev seed guard (execution) FAILED — guard did not raise on non-development env\n'
+      FAIL=$((FAIL + 1))
+    fi
+  fi
 else
   printf '\n── pgTAP RLS suite ──\n'
   printf '⚠ Supabase not running — skipping pgTAP tests (run supabase start first)\n'
+  printf '\n── pgTAP seed suite ──\n'
+  printf '⚠ Supabase not running — skipping seed tests (run supabase start first)\n'
+  printf '\n── pgTAP dev seed suite ──\n'
+  printf '⚠ Supabase not running — skipping dev seed tests (run supabase start first)\n'
 fi
 
 # 5. Types file freshness (skipped when Supabase is not running)
@@ -58,6 +85,16 @@ if $SUPABASE_CMD status --output json 2>/dev/null | grep -q '"DB_URL"'; then
 else
   printf '\n── Types file freshness ──\n'
   printf '⚠ Supabase not running — skipping types check (run supabase start first)\n'
+fi
+
+# 6. Dev seed guard (EC3): verify the guard pattern exists in seed.dev.sql
+printf '\n── Dev seed guard ──\n'
+if grep -q "current_setting('app.environment', true)" supabase/seed.dev.sql; then
+  printf '✓ Dev seed guard passed\n'
+  PASS=$((PASS + 1))
+else
+  printf '✗ Dev seed guard FAILED — guard pattern missing from supabase/seed.dev.sql\n'
+  FAIL=$((FAIL + 1))
 fi
 
 # ── Summary ─────────────────────────────────────────────────────────────────

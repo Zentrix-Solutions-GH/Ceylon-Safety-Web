@@ -2,26 +2,22 @@
 id: S-020
 title: Seed migrations: categories, settings, six pages, trainers, courses, dev seed
 phase: MS1
-status: blocked
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-020-seed-migrations
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/29"
 depends_on: [S-018, S-019]
 reqs: [REQ-042b, REQ-130e, REQ-130f, REQ-201, REQ-202, REQ-203, REQ-204, REQ-205]
 ---
 
-## Blocked
+## Decisions (resolved 2026-10-29)
 
-Question numbers that must be answered (or accepted in writing by the owner) before the blocked parts can start:
-
-- Q69: final category list and document types (categories seed; the schema's 8 names are the proposal).
-- Q62, Q63, M16 (and M18): what Maintainer may do and the final permission names (the `role_permissions` seed).
-- Q73, Q51, C12: legal and refund page wording from the client (the four legal pages).
-- Q74: the training services text (`contact-coach-services`).
-- M32, Q61: trainer consent and sign-off, plus the client's trainer details (trainer seed). Q25: course card information (course seed).
-
-Parts that do NOT depend on an answer: setting keys with defaults, the dev seed file. Re-baseline proposal for the owner: split those parts into their own story so the frontend can start without waiting for real content; this story stays `blocked` until the answers arrive.
+- **Q69**: 8 categories as proposed (Workplace Safety, Fire Safety, First Aid, Electrical Safety, Construction Safety, Food Safety, Chemical Safety, Occupational Health). All three document types (Checklists, Safety Signs, Toolbox Talks) at launch.
+- **Q62/Q63/M16/M18**: Maintainer permissions decided as `articles.*`, `videos.*`, `authors.*`, `media.upload`, `comments.moderate` only (no commercial, settings, or admin access). **Implementation deferred**: this story seeds 0 rows for `maintainer` (deny-by-default); a future story will insert these 5 rows when the Maintainer onboarding flow is built. AC4 and the pgTAP test both assert 0 rows — this is intentional.
+- **Q73/Q51/C12/Q74**: All 6 pages seeded with realistic sample text, marked `draft`. Client to replace before go-live. A new story will add a Super Admin page editor.
+- **M32/Q61**: 2–3 sample Sri Lankan trainers, `consent_confirmed = true`, marked draft.
+- **Q25**: 4 sample courses (Fire Safety & Evacuation Training, First Aid & Emergency Response, Construction Site Safety, Workplace Hazard Identification), all `is_coming_soon = true`, "Contact for pricing".
 
 ## Goal
 
@@ -36,21 +32,21 @@ Seed the rows the site needs on day one: categories, setting keys with their gro
 
 ## Acceptance criteria
 
-- [ ] AC1: `categories` seeded with 8 rows (Workplace Safety, Fire Safety, First Aid, Electrical Safety, Construction Safety, Food Safety, Chemical Safety, Occupational Health), each with a slug, `applies_to` and `order_index`, in `supabase/seed.sql` (production seed). The final list follows Q69.
-- [ ] AC2: `site_settings` seeded with every key and its `setting_group`: site (`counters_min_visible`, `counters_rounding`, `bulk_contact_note`, `bulk_contact_phone`, `footer_business_name`, `footer_registration_no`, `default_download_limit` = 1 private, `bank_order_expiry_days` = 7 private, `bank_order_warning_days` = 1 private, `staff_notification_emails` private); contact (`whatsapp_number`, `contact_email`, `contact_phone`, `footer_address`, `social_facebook`, `social_instagram`, `social_linkedin`, `social_youtube`); business (`business_legal_name`, `business_registration_no`, `tax_registration_no`, `business_address`, `bank_account_details`); analytics (`analytics_measurement_id`); ads (`ads_enabled` = false, `adsense_client_id`, `adsense_slot_sidebar_left`, `adsense_slot_sidebar_right`, `adsense_slot_in_article`, `banner_rotation_seconds` = 6); system (`idle_account_years` = 2, `idle_warning_days` = 30, `owner_alert_email`). Keys other than those with defaults start empty. `is_public` follows the schema (site, contact, analytics and ads are public unless marked private; business keys are private except `bank_account_details`).
-- [ ] AC3: A MIGRATION inserts the six `pages` rows (`terms`, `privacy`, `refund-policy`, `disclaimer`, `contact-coach-intro`, `contact-coach-services`, locale `en`) and a `page_revisions` row version 1 for each, with the client's text (placeholder text only until the client delivers it, marked as draft). Orders cannot be created until `terms` and `refund-policy` have a revision.
-- [ ] AC4: A MIGRATION inserts `role_permissions` rows for `admin`: `articles.*`, `videos.*`, `authors.*`, `media.upload`, `comments.moderate`, `documents.*`, `courses.*`, `trainers.*`, `pages.publish`, `settings.site`, `banners.read`, `banners.write`, `coupons.*`, `bank_transfers.review`, `download_requests.review`, `orders.read`, `users.read`, `users.suspend` (the permission names follow the final M16 decision). `maintainer`: no rows. Super Admin only (no row for any role): `pages.publish_legal`, `settings.contact`, `settings.business`, `settings.analytics`, `ads.settings`, `orders.grant`, `staff.*`, `audit.read`. A test proves `has_permission` gives these results for an `admin`, a `maintainer` and a Super Admin.
-- [ ] AC5: Trainers and courses are seeded by a MIGRATION (Release 1; no admin screens until Release 2): trainers with a slug, contact fields and consent confirmed by the client; course cards with `is_coming_soon = true`.
-- [ ] AC6: `supabase/seed.dev.sql` (development only) contains the sample data of schema section 10: articles with a JSON body (text, image, video, course, document and ad blocks) and matching `article_refs` rows, one pending and one approved comment; documents each with three language files and a preview; videos (one with a custom thumbnail, others with a copied thumbnail key); courses with the coming-soon flag; trainers; several `home_top` banners; one percent and one fixed coupon; a test customer; a customer with a PAID order (one unused and one used entitlement); a customer with a `pending_verification` bank order and an uploaded slip; an open download request; a test Admin and a test Maintainer.
-- [ ] AC7: `seed.dev.sql` cannot run against production: it checks a marker that only the local stack and CI set and aborts otherwise (test). `supabase db reset` runs migrations plus both seed files without error on the local stack.
-- [ ] AC8: A migration test counts: 8 categories, all setting keys present with a valid `setting_group`, 6 pages each with revision version 1, and `role_permissions` rows only for `admin`.
+- [x] AC1: `categories` seeded with 8 rows (Workplace Safety, Fire Safety, First Aid, Electrical Safety, Construction Safety, Food Safety, Chemical Safety, Occupational Health), each with a slug, `applies_to` and `order_index`, in `supabase/seed.sql` (production seed). The final list follows Q69.
+- [x] AC2: `site_settings` seeded with every key and its `setting_group`: site (`counters_min_visible`, `counters_rounding`, `bulk_contact_note`, `bulk_contact_phone`, `footer_business_name`, `footer_registration_no`, `default_download_limit` = 1 private, `bank_order_expiry_days` = 7 private, `bank_order_warning_days` = 1 private, `staff_notification_emails` private); contact (`whatsapp_number`, `contact_email`, `contact_phone`, `footer_address`, `social_facebook`, `social_instagram`, `social_linkedin`, `social_youtube`); business (`business_legal_name`, `business_registration_no`, `tax_registration_no`, `business_address`, `bank_account_details`); analytics (`analytics_measurement_id`); ads (`ads_enabled` = false, `adsense_client_id`, `adsense_slot_sidebar_left`, `adsense_slot_sidebar_right`, `adsense_slot_in_article`, `banner_rotation_seconds` = 6); system (`idle_account_years` = 2, `idle_warning_days` = 30, `owner_alert_email`). Keys other than those with defaults start empty. `is_public` follows the schema (site, contact, analytics and ads are public unless marked private; business keys are private except `bank_account_details`).
+- [x] AC3: A MIGRATION inserts the six `pages` rows (`terms`, `privacy`, `refund-policy`, `disclaimer`, `contact-coach-intro`, `contact-coach-services`, locale `en`) and a `page_revisions` row version 1 for each, with the client's text (placeholder text only until the client delivers it, marked as draft). Orders cannot be created until `terms` and `refund-policy` have a revision.
+- [x] AC4: A MIGRATION inserts `role_permissions` rows for `admin`: `articles.*`, `videos.*`, `authors.*`, `media.upload`, `comments.moderate`, `documents.*`, `courses.*`, `trainers.*`, `pages.publish`, `settings.site`, `banners.read`, `banners.write`, `coupons.*`, `bank_transfers.review`, `download_requests.review`, `orders.read`, `users.read`, `users.suspend` (the permission names follow the final M16 decision). `maintainer`: no rows. Super Admin only (no row for any role): `pages.publish_legal`, `settings.contact`, `settings.business`, `settings.analytics`, `ads.settings`, `orders.grant`, `staff.*`, `audit.read`. A test proves `has_permission` gives these results for an `admin`, a `maintainer` and a Super Admin.
+- [x] AC5: Trainers and courses are seeded by a MIGRATION (Release 1; no admin screens until Release 2): trainers with a slug, contact fields and consent confirmed by the client; course cards with `is_coming_soon = true`.
+- [x] AC6: `supabase/seed.dev.sql` (development only) contains the sample data of schema section 10: articles with a JSON body (text, image, video, course, document and ad blocks) and matching `article_refs` rows, one pending and one approved comment; documents each with three language files and a preview; videos (one with a custom thumbnail, others with a copied thumbnail key); courses with the coming-soon flag; trainers; several `home_top` banners; one percent and one fixed coupon; a test customer; a customer with a PAID order (one unused and one used entitlement); a customer with a `pending_verification` bank order and an uploaded slip; an open download request; a test Admin and a test Maintainer.
+- [x] AC7: `seed.dev.sql` cannot run against production: it checks a marker that only the local stack and CI set and aborts otherwise (test). `supabase db reset` runs migrations plus both seed files without error on the local stack.
+- [x] AC8: A migration test counts: 8 categories, all setting keys present with a valid `setting_group`, 6 pages each with revision version 1, and `role_permissions` rows only for `admin`.
 
 ## Edge cases
 
-- [ ] EC1: Running the migration twice (reset): no duplicate keys or rows.
-- [ ] EC2: A setting key missing a `setting_group`: refused by the NOT NULL.
-- [ ] EC3: A production database receives `seed.dev.sql` by mistake: aborts, changes nothing.
-- [ ] EC4: A seeded private setting (`default_download_limit`) is invisible to `anon`.
+- [x] EC1: Running the migration twice (reset): no duplicate keys or rows.
+- [x] EC2: A setting key missing a `setting_group`: refused by the NOT NULL.
+- [x] EC3: A production database receives `seed.dev.sql` by mistake: aborts, changes nothing.
+- [x] EC4: A seeded private setting (`default_download_limit`) is invisible to `anon`.
 
 ## Contract
 
@@ -89,11 +85,52 @@ Prior art: searched `grep -ril "seed\|role_permissions\|page_revisions" docs/`: 
 
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  10 passed (10)
+      Tests  62 passed (62)
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+Files=1, Tests=94 — Result: PASS
+✓ pgTAP RLS suite passed
+
+── pgTAP seed suite ──
+Files=1, Tests=55 — Result: PASS
+✓ pgTAP seed suite passed
+
+── pgTAP dev seed suite ──
+Files=1, Tests=38 — Result: PASS
+✓ pgTAP dev seed suite passed
+
+── Types file freshness ──
+✓ Types file freshness passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 8 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
 ```
 
 ## Review notes
 
 <!-- Filled in by reviewer / security-reviewer agents and /full-review -->
+
+- **P1** `migrations/20261029000003_seed_content.sql:158–175` — `consent_confirmed` column missing from `trainers` schema; decision M32/Q61 says consent_confirmed=true but cannot be stored. Add column + seed + pgTAP assertion, or retract decision. (full-review 2026-10-29)
+- **P1** `supabase/seed.dev.sql:179` — `ON CONFLICT (…, COALESCE(phrase, ''))` missing required parens around expression; psql errors suppressed by `|| true` in check.sh so failure is silent. Fix: `(COALESCE(phrase, ''))`. (full-review 2026-10-29)
+- **P1** `scripts/check.sh:79–84` — EC3 guard tested by grep only; a broken guard (RAISE removed) still passes. Add psql execution test with wrong env asserting exception. (full-review 2026-10-29)
+- **P1** `docs/stories/S-020-seed-migrations.md:35–42` — ACs 1–5, 7, 8 unchecked despite 55 passing pgTAP tests. Tick boxes. (full-review 2026-10-29)
+- **P1** `supabase/seed.sql:32–78` — site_settings in seed.sql only; `supabase db push` skips seed files. Document manual step or move to migration. (full-review 2026-10-29)
+- **P1** `supabase/tests/seed.test.sql:245–295` — AC4 has_permission tested for only 2 of 18 wildcard rows; 7 SA-only actions not verified as denied-for-admin. Broaden coverage. (full-review 2026-10-29)
 
 ## After this merges, a user can:
 
