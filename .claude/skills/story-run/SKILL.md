@@ -35,12 +35,30 @@ Run a backend story from `ready` to `PR created`.
    - `blocked` → "Story is blocked. Resolve the open items first."
    - `in-progress` → Resume from the last completed step (check `## Plan`).
    - `done` → "Story already done."
-2. Confirm you are on branch `dev` (or create the story branch now):
+2. Confirm you are on branch `dev`:
    ```bash
    git checkout dev && git pull origin dev
+   ```
+3. **Branch name:** always `feature/S-XXX-short-title` — read from the story's
+   `branch:` frontmatter field. Never use a `worktree-` prefix or any other prefix.
+
+   **Worktree mode** (when the user says "use worktree"): do NOT use `EnterWorktree`
+   (it adds a `worktree-` prefix and converts `/` to `+`). Instead create the
+   worktree manually so the branch name is exact:
+   ```bash
+   # Verify .worktrees/ is git-ignored
+   git check-ignore -q .worktrees || echo ".worktrees" >> .gitignore
+   git worktree add .worktrees/feature/S-XXX-short-title -b feature/S-XXX-short-title
+   cd .worktrees/feature/S-XXX-short-title
+   npm install
+   ```
+
+   **No worktree**: create and checkout the branch in place:
+   ```bash
    git checkout -b feature/S-XXX-short-title
    ```
-3. Update story status to `in-progress`.
+
+4. Update story status to `in-progress`.
 
 ### Step 2 — Story analyst
 

@@ -1,0 +1,152 @@
+name: Review Guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [dev, main]
+  pull_request_review:
+    types: [submitted, dismissed]
+  issue_comment:
+    types: [created, edited, deleted]
+
+jobs:
+  check-review:
+    name: Require review on HEAD
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Check if review required
+        id: docs_check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            // Only story branches (feature/S-NNN-*) require external review.
+            // Infrastructure, CI, chore, and docs branches are self-mergeable.
+            const isStoryBranch = /^feature\/S-\d+/i.test(branch);
+            if (!isStoryBranch) {
+              console.log(`✓ Non-story branch (${branch}) — review not required.`);
+              return true;
+            }
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+            const allDocs = files.length > 0 && files.every(f =>
+              f.filename.startsWith('docs/') ||
+              f.filename === 'CLAUDE.md' ||
+              f.filename === 'README.md'
+            );
+            if (allDocs) {
+              console.log(`✓ Docs-only PR (${files.length} file(s)) — review not required.`);
+            }
+            return allDocs;
+
+      # Event filter intentionally omitted: the original `github.event_name == 'pull_request_review'`
+      # guard caused this step to be skipped on push events, so the check always passed even with
+      # no review. It must run on both push and pull_request_review events.
+      - name: Require approval on HEAD
+        if: steps.docs_check.outputs.result != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // issue_comment events carry the PR number in context.payload.issue.number;
+            // pull_request and pull_request_review events carry it in context.payload.pull_request.number.
+            const prNumber = context.payload.pull_request
+              ? context.payload.pull_request.number
+              : context.payload.issue?.number;
+            if (!prNumber) {
+              console.log('No PR number found — skipping.');
+              return;
+            }
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            const headSha = pr.head.sha;
+
+            // ── 1. Formal GitHub reviews ────────────────────────────────────
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            const headReviews = reviews.filter(r =>
+              r.commit_id === headSha &&
+              ['APPROVED', 'CHANGES_REQUESTED', 'COMMENTED'].includes(r.state)
+            );
+
+            const changesRequestedFormal = headReviews.filter(r => r.state === 'CHANGES_REQUESTED');
+            if (changesRequestedFormal.length > 0) {
+              const names = changesRequestedFormal.map(r => r.user.login).join(', ');
+              core.setFailed(
+                `Changes requested by: ${names} on HEAD (${headSha.slice(0, 7)}). ` +
+                `Fix the issues and push a new commit.`
+              );
+              return;
+            }
+
+            if (headReviews.some(r => r.state === 'APPROVED')) {
+              const names = headReviews.filter(r => r.state === 'APPROVED').map(r => r.user.login).join(', ');
+              console.log(`✓ Formally approved by: ${names} on HEAD (${headSha.slice(0, 7)}).`);
+              return;
+            }
+
+            // ── 2. Full-review comments (CeylonSafety review tool) ──────────
+            // A full-review comment must:
+            //   • Contain "## CeylonSafety PR Review" (identifies the tool format)
+            //   • Contain "Reviewed Head: <sha>" matching the current HEAD
+            //   • Have "### Recommendation" followed by APPROVE (not REQUEST CHANGES)
+            // "REQUEST CHANGES" in a full-review comment blocks the PR the same as
+            // a formal changes-requested review.
+            const REVIEW_HEADING   = /##\s+CeylonSafety PR Review/i;
+            const REVIEWED_HEAD_RE = new RegExp(`Reviewed Head:[*\\s]+${headSha}`, 'i');
+            const APPROVE_RE       = /###\s+Recommendation\s+\*\*APPROVE(\s+WITH\s+FOLLOW[- ]UPS)?\*\*/im;
+            const REQ_CHANGES_RE   = /###\s+Recommendation\s+\*\*REQUEST CHANGES\*\*/im;
+
+            const { data: issueComments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+
+            // Also check formal PR reviews (posted via `gh pr review --comment`).
+            // Those go to pulls.listReviews, not issues.listComments.
+            const allBodies = [
+              ...issueComments.map(c => ({ body: c.body, user: c.user })),
+              ...reviews.map(r => ({ body: r.body, user: r.user })),
+            ];
+
+            // Collect all full-review comments that match this HEAD.
+            const reviewComments = allBodies.filter(c =>
+              c.body && REVIEW_HEADING.test(c.body) && REVIEWED_HEAD_RE.test(c.body)
+            );
+
+            const changesRequestedComment = reviewComments.find(c => REQ_CHANGES_RE.test(c.body));
+            if (changesRequestedComment) {
+              core.setFailed(
+                `Full-review comment requests changes on HEAD (${headSha.slice(0, 7)}). ` +
+                `Fix the issues and push a new commit.`
+              );
+              return;
+            }
+
+            const approvedComment = reviewComments.find(c => APPROVE_RE.test(c.body));
+            if (approvedComment) {
+              console.log(`✓ Full-review comment approves HEAD (${headSha.slice(0, 7)}) — by ${approvedComment.user.login}.`);
+              return;
+            }
+
+            // ── 3. No approval found ────────────────────────────────────────
+            core.setFailed(
+              `No review on HEAD (${headSha.slice(0, 7)}). ` +
+              `Submit a formal GitHub review or post a full-review comment that includes ` +
+              `"Reviewed Head: ${headSha}" and "### Recommendation **APPROVE**".`
+            );
