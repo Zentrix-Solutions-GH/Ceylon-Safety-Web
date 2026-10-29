@@ -134,7 +134,11 @@ $ bash scripts/check.sh
 
 ## Review notes
 
-<!-- Filled by reviewer agents -->
+- **P1** `lib/consent/index.ts:67` — `BLOCKED_PREFIX` missing `/(customer)/` paths (`/orders`, `/downloads`, `/profile`, `/cart`). A logged-in user with `accepted` consent would pass `isAdAllowed`/`isAnalyticsAllowed` on customer pages. Fix: add customer-area slugs or switch to allow-only model. (full-review 2026-10-30) → **resolved 2026-10-30**
+- **P1** `lib/consent/__tests__/consent.test.ts:103` — EC1 test overrides `document.cookie` with `Object.defineProperty` but restore (`delete`) runs outside `try/finally`. If `setConsent` throws, descriptor stays broken for all subsequent tests. Wrap in `try/finally`. (full-review 2026-10-30) → **resolved 2026-10-30**
+- **P1** `lib/consent/__tests__/consent.test.ts:240` — AC2 attribute test asserts `hs_consent` cookie attributes but not companion `hs_consent_ts` cookie. Both are part of the AC2 contract. Add assertion for `hs_consent_ts` write. (full-review 2026-10-30) → **resolved 2026-10-30**
+- **P1** `docs/stories/S-028-consent-store.md` — AC6 checkbox unchecked with no note. AdSense/`ads.txt` behaviour is handled in S-027/S-113; add a note to the AC6 line referencing those stories. (full-review 2026-10-30) → **resolved 2026-10-30**
+- **Re-review 2026-10-30** — All four P1s resolved. Score 93/100. **APPROVE**. P2: add EC8 tests for `/download`, `/profile`, `/purchases` (new BLOCKED_PREFIX entries, no dedicated assertions).
 
 ## After this merges, a user can:
 
