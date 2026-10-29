@@ -142,7 +142,9 @@ output: standalone confirmed in .next/standalone/
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `app/(public)/layout.tsx:2` — `modal: ReactNode` slot added with no `@modal/` directory; Next.js will throw 404 at runtime. Add `app/(public)/@modal/default.tsx` or remove the prop until the modal story. Notify frontend developer. (full-review 2026-10-30)
+- **P1** `__tests__/supabase.test.ts:56-65` — `createSupabaseServerClient` only verified to be a function; args (URL + anon key from config) not asserted. Add a test mirroring browser-client pattern at `supabase.test.ts:33-47`. (full-review 2026-10-30)
+- **P1** `lib/config.ts` (whole file) — All other env var validators removed (R2, Resend, PayHere, Upstash). Confirm with `git grep "from.*lib/config"` that no other file imports the removed exports before merging. (full-review 2026-10-30)
 
 ## After this merges, a user can:
 
