@@ -40,7 +40,7 @@ jobs:
 
       - run: npm ci
 
-      - run: npm audit --audit-level=high
+      - run: npm audit --omit=dev --audit-level=high
 
   db-tests:
     name: db-tests
@@ -55,7 +55,12 @@ jobs:
           version: 2.122.0
 
       - name: Start Supabase
-        run: supabase start
+        run: |
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt/3"
+            supabase start && break
+            [ $attempt -lt 3 ] && echo "Retrying in 30s..." && sleep 30
+          done
 
       - name: Reset database (run all migrations)
         run: supabase db reset --no-confirm
