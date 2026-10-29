@@ -205,6 +205,52 @@ describe("lib/config.public — validation (P1: untested copy)", () => {
   });
 });
 
+// ── AC1: scaffold files integrity ───────────────────────────────────────────
+describe("AC1: scaffold files integrity", () => {
+  it("package.json engines.node is >=20.0.0", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const pkg = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")
+    );
+    expect(pkg.engines?.node).toMatch(/>=20/);
+  });
+
+  it(".nvmrc exists and contains '20'", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const nvmrc = fs
+      .readFileSync(path.resolve(__dirname, "../.nvmrc"), "utf8")
+      .trim();
+    expect(nvmrc).toBe("20");
+  });
+
+  it("next.config.ts sets output: 'standalone'", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../next.config.ts"),
+      "utf8"
+    );
+    expect(src).toContain("standalone");
+  });
+});
+
+// ── AC6: .gitignore pattern ──────────────────────────────────────────────────
+describe("AC6: .gitignore pattern", () => {
+  it("contains .env* glob and !.env.example exception", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const gitignore = fs.readFileSync(
+      path.resolve(__dirname, "../.gitignore"),
+      "utf8"
+    );
+    const lines = gitignore.split("\n").map((l) => l.trim());
+    expect(lines).toContain(".env*");
+    expect(lines).toContain("!.env.example");
+  });
+});
+
 // ── AC6: .env.example contains no values ────────────────────────────────────
 describe("AC6: .env.example integrity", () => {
   it("has no line with a non-empty value (names only)", async () => {
