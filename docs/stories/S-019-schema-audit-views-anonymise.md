@@ -162,6 +162,16 @@ Files=1, Tests=78, Result: PASS
 
 <!-- Filled in by reviewer / security-reviewer agents and /full-review -->
 
+**full-review 2026-10-29 — APPROVE WITH FOLLOW-UPS (77/100)**
+
+- **P1** `supabase/migrations/20261029000001_schema_audit_views_anonymise.sql:269-291` — `public_profiles` has no `GRANT SELECT TO anon, authenticated`. PostgREST requires explicit grant; without it comment author display (S-049, S-050) will silently fail. Add `GRANT SELECT ON public.public_profiles TO anon, authenticated;` to the migration.
+- **P1** `supabase/migrations/20261029000001_schema_audit_views_anonymise.sql:235-264` — `admin_audit_log` RLS missing `is_staff_member()` guard. If a customer ever has `audit.read` in role_permissions they would satisfy the policy. Add `AND public.is_staff_member()` to the USING clause.
+- **P1** `supabase/migrations/20261029000001_schema_audit_views_anonymise.sql:157-215` — `anonymise_user` race condition: two concurrent calls can both pass the `deleted_at IS NOT NULL` guard and double-fire `release_coupon_use`. Add `SELECT id FROM public.profiles WHERE id = p_user_id FOR UPDATE` at the start.
+- **P1** `supabase/migrations/20261029000001_schema_audit_views_anonymise.sql:302-318` — `purge_old_audit_rows` no concurrency guard. Add `PERFORM pg_advisory_xact_lock(hashtext('purge_old_audit_rows'))` at the top.
+- **P1** `supabase/tests/audit-views.test.sql` — AC9 tests schema placement not EXECUTE privilege. Add `throws_ok` for `SET ROLE authenticated; SELECT private.anonymise_user(...)` expecting `42501`.
+- **P1** `supabase/tests/audit-views.test.sql` — AC2: no test for plain `UPDATE public.payment_events` without session flag raising `restrict_violation`.
+- **P1** `supabase/tests/audit-views.test.sql` — AC3: no test for client INSERT refused on `admin_audit_log`.
+
 ## After this merges, a user can:
 
 - Nothing new. Infrastructure PR: the database can anonymise an account, record admin actions that nobody can edit, and expose safe public views.
