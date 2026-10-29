@@ -2,11 +2,11 @@
 id: S-020
 title: Seed migrations: categories, settings, six pages, trainers, courses, dev seed
 phase: MS1
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-020-seed-migrations
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/29"
 depends_on: [S-018, S-019]
 reqs: [REQ-042b, REQ-130e, REQ-130f, REQ-201, REQ-202, REQ-203, REQ-204, REQ-205]
 ---
