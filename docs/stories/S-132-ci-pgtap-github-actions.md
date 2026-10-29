@@ -148,9 +148,10 @@ Types added or changed in `types/` by this story:
 
 ## Review notes
 
-- **P1** `.github/workflows/ci.yml` — `concurrency` group removed; add back `concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: true }` to avoid concurrent runs per branch. (full-review 2026-10-29)
-- **P1** `.github/workflows/ci.yml:8,30,45` — No `timeout-minutes` on `lint-typecheck` or `audit` jobs; add `timeout-minutes: 10` to each, `timeout-minutes: 15` to `db-tests`. (full-review 2026-10-29)
-- **P1** `.github/workflows/ci.yml` — Types-freshness check removed from CI (was in old `rls-check` job). Stale `types/database.ts` will not be caught. Restore in `db-tests` after `supabase start`, or document in Out of scope. (full-review 2026-10-29)
+- ~~**P1** `.github/workflows/ci.yml` — `concurrency` group removed~~ — **resolved** in HEAD: `concurrency.group: ci-${{ github.ref }}` present. (full-review 2026-10-29, resolved 2026-10-29)
+- ~~**P1** `.github/workflows/ci.yml:8,30,45` — No `timeout-minutes` on `lint-typecheck` or `audit` jobs~~ — **resolved** in HEAD: `timeout-minutes: 10` on lint-typecheck and audit, `15` on db-tests. (full-review 2026-10-29, resolved 2026-10-29)
+- ~~**P1** `.github/workflows/ci.yml` — Types-freshness check removed from CI~~ — **resolved** in HEAD: "Check types file freshness" step present in db-tests job (ci.yml:60–68). (full-review 2026-10-29, resolved 2026-10-29)
+- **P1** `package-lock.json` — `@supabase/supabase-js` resolved from 2.46.2 → ~2.118.0 and `next` from 15.1.0 → ~15.5.28 with no application code changes. CI green, but upgrade rationale undocumented. Open a follow-up story to review changelogs and confirm no breaking API changes. (full-review 2026-10-29)
 
 ## After this merges
 
