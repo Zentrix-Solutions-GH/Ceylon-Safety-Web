@@ -51,6 +51,7 @@ SELECT col_is_unique('public', 'categories', 'name', 'AC1: categories.name UNIQU
 SELECT throws_ok(
   $$INSERT INTO public.categories (slug, name, applies_to)
     VALUES ('bad', 'Bad Cat', ARRAY['banner'])$$,
+  '23514',
   'EC4: categories.applies_to=banner refused by CHECK'
 );
 
@@ -122,13 +123,14 @@ SELECT has_column('public', 'page_revisions', 'published_at', 'AC3: page_revisio
 
 -- EC3: UNIQUE(locale,slug) enforced; same slug in different locale allowed — 2 assertions
 SELECT throws_ok(
-  $$DO $sub$
+  $s$DO $sub$
     DECLARE v uuid;
     BEGIN
       INSERT INTO public.pages (locale, slug, title) VALUES ('en', 'dup-test', 'D1')
       RETURNING id INTO v;
       INSERT INTO public.pages (locale, slug, title) VALUES ('en', 'dup-test', 'D2');
-    END; $sub$$$,
+    END; $sub$$s$,
+  '23505',
   'EC3: same (locale,slug) pair is refused'
 );
 
@@ -193,6 +195,7 @@ SELECT lives_ok(
 SELECT throws_ok(
   $$INSERT INTO public.page_revisions (page_id, version, title)
     VALUES ('bb000001-0000-0000-0000-000000000001'::uuid, 1, 'Dup v1')$$,
+  '23505',
   'AC3: UNIQUE(page_id,version) is enforced'
 );
 
@@ -274,6 +277,7 @@ SELECT has_column('public', 'slug_redirects', 'created_at',  'AC6: slug_redirect
 SELECT throws_ok(
   $$INSERT INTO public.slug_redirects (entity_type, entity_id, old_slug)
     VALUES ('banner', gen_random_uuid(), 'old-banner')$$,
+  '23514',
   'AC6: invalid entity_type refused by CHECK'
 );
 
@@ -283,6 +287,7 @@ VALUES ('article', gen_random_uuid(), 'en', 'dup-redirect');
 SELECT throws_ok(
   $$INSERT INTO public.slug_redirects (entity_type, entity_id, locale, old_slug)
     VALUES ('article', gen_random_uuid(), 'en', 'dup-redirect')$$,
+  '23505',
   'AC6: UNIQUE(entity_type,locale,old_slug) is enforced'
 );
 
@@ -293,6 +298,7 @@ VALUES ('document', gen_random_uuid(), 'dup-doc-slug');
 SELECT throws_ok(
   $$INSERT INTO public.slug_redirects (entity_type, entity_id, old_slug)
     VALUES ('document', gen_random_uuid(), 'dup-doc-slug')$$,
+  '23505',
   'AC6: NULLS NOT DISTINCT — duplicate null-locale old_slug is refused'
 );
 
@@ -307,6 +313,7 @@ SELECT has_index('public', 'site_settings', 'idx_site_settings_group',
 SELECT throws_ok(
   $$INSERT INTO public.site_settings (key, value, setting_group)
     VALUES ('bad_key', '"x"', 'invalid_group')$$,
+  '23514',
   'EC7: setting_group outside 6 values is refused'
 );
 
