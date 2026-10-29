@@ -1,3 +1,9 @@
+# This file is tracked in git (committed in S-132).
+# If you already have a local supabase/config.toml, git pull may fail with
+# "untracked file would be overwritten by merge". To fix:
+#   git stash -u && git pull && git stash pop
+# Local overrides belong in supabase/config.local.toml (gitignored).
+
 project_id = "ceylonsafety"
 
 [api]

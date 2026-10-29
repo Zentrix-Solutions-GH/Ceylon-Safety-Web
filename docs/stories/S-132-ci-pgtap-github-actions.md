@@ -155,6 +155,8 @@ Types added or changed in `types/` by this story:
 - ~~**CI failure** `supabase/tests/*.test.sql` — "planned N but ran 0" in five test files after dev merge brought `20261029000003_seed_content.sql`~~ — **resolved** in `496907b`: added `ON CONFLICT (role, action) DO NOTHING` to role_permissions fixture inserts in foundation/content/info-tables/permissions tests; changed commerce page slugs to `ci-test-terms`/`ci-test-refund-policy` to avoid FK crash on skipped page insert. (2026-10-29)
 - ~~**CI failure** `supabase/tests/seed.dev.test.sql` — 38/38 assertions fail (have: 0)~~ — **resolved** in `496907b`: added `Load dev seed data` step to `ci.yml` (`psql -f supabase/seed.dev.sql`) after `supabase db reset`. (2026-10-29)
 - **P2** `supabase/tests/commerce.test.sql:13` — page slugs `ci-test-terms`/`ci-test-refund-policy` differ from real slugs; a comment explaining the conflict with `seed_content` would help future readers. (full-review 2026-10-29, non-blocking)
+- **P1** `.github/workflows/ci.yml` (top-level, missing) — No `permissions:` block; default GITHUB_TOKEN has `contents: write` + `pull-requests: write`; add `permissions: contents: read`. (full-review 2026-10-29)
+- **P1** `supabase/config.toml` (new tracked file) — First commit of previously-untracked file; devs with existing local `config.toml` will hit "untracked file would be overwritten by merge" on `git pull`. Add a header comment warning that this file is now tracked; document reconciliation in PR body or `supabase/README`. (full-review 2026-10-29)
 
 ## After this merges
 
