@@ -19,28 +19,34 @@ export function useAuth(): UseAuthResult {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
     const supabase = getSupabaseBrowserClient();
 
     // EC1: any error → treat as signed out.
     supabase.auth
       .getSession()
       .then(({ data: { session } }) => {
-        setUser(session ? extractUser(session.user) : null);
+        if (mounted) setUser(session ? extractUser(session.user) : null);
       })
-      .catch(() => setUser(null))
-      .finally(() => setIsLoading(false));
+      .catch(() => { if (mounted) setUser(null); })
+      .finally(() => { if (mounted) setIsLoading(false); });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session ? extractUser(session.user) : null);
       setIsLoading(false);
     });
 
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   async function signOut() {
     const supabase = getSupabaseBrowserClient();
-    await supabase.auth.signOut();
+    // EC5: signOut returns { error } rather than throwing — surface it so callers can catch it.
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   }
 
   return { user, isLoading, signOut };

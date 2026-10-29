@@ -13,7 +13,7 @@ export default function Header() {
         {/* EC6: text wordmark — logo image pending Q47. */}
         <Link
           href="/"
-          aria-label="CeylonSafety — home"
+          aria-label={t("nav.home_link_label")}
           className="mr-4 text-lg font-bold text-primary shrink-0"
         >
           {t("site.wordmark")}

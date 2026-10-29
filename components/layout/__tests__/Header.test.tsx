@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -195,6 +195,70 @@ describe("Header", () => {
       // The name span inside the button should have the truncate class.
       const truncEl = nameBtn.querySelector(".truncate") ?? nameBtn;
       expect(truncEl).toHaveClass("truncate");
+    });
+  });
+
+  describe("EC4: resize to desktop closes mobile sheet", () => {
+    it("closes the sheet when the viewport widens to desktop", async () => {
+      const handlers: Array<(e: { matches: boolean }) => void> = [];
+      const origMatchMedia = window.matchMedia;
+      window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn().mockImplementation(
+          (event: string, handler: (e: { matches: boolean }) => void) => {
+            if (event === "change") handlers.push(handler);
+          }
+        ),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+
+      const user = userEvent.setup();
+      render(<Header />);
+      await user.click(screen.getByRole("button", { name: /open menu/i }));
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+      act(() => {
+        handlers.forEach((h) => h({ matches: true } as MediaQueryListEvent));
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).toBeNull();
+      });
+
+      window.matchMedia = origMatchMedia;
+    });
+  });
+
+  describe("EC5: sign-out error", () => {
+    it("shows an error alert when sign out fails", async () => {
+      const user = userEvent.setup();
+      const failingSignOut = vi.fn().mockRejectedValue(new Error("offline"));
+      mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: failingSignOut });
+      render(<Header />);
+      await user.click(screen.getByRole("button", { name: "Kamal" }));
+      await user.click(screen.getByRole("menuitem", { name: /sign out/i }));
+      await waitFor(() => {
+        expect(screen.getByRole("alert")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("account dropdown: click-outside closes menu", () => {
+    it("closes the dropdown when clicking outside it", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: mockSignOut });
+      render(<Header />);
+      await user.click(screen.getByRole("button", { name: "Kamal" }));
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+      await user.click(document.body);
+      await waitFor(() => {
+        expect(screen.queryByRole("menu")).toBeNull();
+      });
     });
   });
 });

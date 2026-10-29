@@ -5,11 +5,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 let _client: SupabaseClient | null = null;
 
+function requiredEnv(name: string): string {
+  const val = process.env[name];
+  if (!val) throw new Error(`Missing required env var: ${name}`);
+  return val;
+}
+
 export function getSupabaseBrowserClient(): SupabaseClient {
   if (!_client) {
     _client = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      requiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
+      requiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
     );
   }
   return _client;

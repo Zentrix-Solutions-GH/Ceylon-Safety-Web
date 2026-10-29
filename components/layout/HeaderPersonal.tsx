@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ShoppingCart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { t, errorMessage } from "@/messages/en";
@@ -11,6 +11,18 @@ export function HeaderPersonal() {
   const { user, isLoading, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
 
   async function handleSignOut() {
     setSignOutError(null);
@@ -33,14 +45,13 @@ export function HeaderPersonal() {
       >
         <ShoppingCart className="h-5 w-5" aria-hidden="true" />
         {/* Fixed-width badge slot — count filled by S-091. */}
-        <span className="sr-only">{t("nav.cart")}</span>
       </Link>
 
       {/* AC2: fixed-size placeholder while the session is not yet known. */}
       {isLoading && (
         <div
           aria-busy="true"
-          aria-label="Loading account"
+          aria-label={t("nav.loading_account")}
           className="w-20 h-9 rounded-md bg-muted animate-pulse"
         />
       )}
@@ -65,7 +76,7 @@ export function HeaderPersonal() {
 
       {/* AC3: signed-in state with account dropdown */}
       {!isLoading && user && (
-        <div className="relative">
+        <div className="relative" ref={menuRef}>
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
