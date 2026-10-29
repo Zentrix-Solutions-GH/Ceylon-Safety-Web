@@ -82,7 +82,7 @@ SELECT throws_ok(
     INSERT INTO public.courses (locale, slug, title, pricing_type, price_cents, status)
     VALUES ('en', 'ec1-no-price', 'EC1 No Price', 'paid', NULL, 'draft')
   $sql$,
-  '23514',
+  '23514', NULL,
   'EC1: pricing_type=paid without price_cents refused'
 );
 
@@ -91,7 +91,7 @@ SELECT throws_ok(
     INSERT INTO public.courses (locale, slug, title, pricing_type, price_cents, status)
     VALUES ('en', 'ec1-price-free', 'EC1 Free With Price', 'free', 1000, 'draft')
   $sql$,
-  '23514',
+  '23514', NULL,
   'EC1: pricing_type=free with price_cents refused'
 );
 
@@ -144,7 +144,7 @@ SELECT throws_ok(
     INSERT INTO public.trainers (name, position, slug)
     VALUES ('No Contact', 'Engineer', 'no-contact-trainer')
   $sql$,
-  '23514',
+  '23514', NULL,
   'EC2: trainer with no phone/email/whatsapp refused'
 );
 
@@ -156,7 +156,7 @@ SELECT throws_ok(
     INSERT INTO public.trainers (name, position, slug, email)
     VALUES ('Trainer Duplicate', 'Safety Officer', 'trainer-one', 'dup@test.com')
   $sql$,
-  '23505',
+  '23505', NULL,
   'EC3: duplicate trainer slug refused'
 );
 
@@ -198,7 +198,7 @@ SELECT throws_ok(
     INSERT INTO public.banners (name, image_key, alt_text, link_url, placements)
     VALUES ('Bad Placement', 'img/x.webp', 'Alt', 'https://example.com', ARRAY['footer'])
   $sql$,
-  '23514',
+  '23514', NULL,
   'EC4: placement footer refused'
 );
 
@@ -207,7 +207,7 @@ SELECT throws_ok(
     INSERT INTO public.banners (name, image_key, alt_text, link_url, placements)
     VALUES ('Empty Placement', 'img/x.webp', 'Alt', 'https://example.com', ARRAY[]::text[])
   $sql$,
-  '23514',
+  '23514', NULL,
   'EC4: empty placements array refused'
 );
 
@@ -217,7 +217,7 @@ SELECT throws_ok(
     INSERT INTO public.banners (name, image_key, alt_text, link_url, placements)
     VALUES ('Long Alt', 'img/x.webp', repeat('a', 141), 'https://example.com', ARRAY['home_top'])
   $sql$,
-  '23514',
+  '23514', NULL,
   'EC5: alt_text > 140 chars refused'
 );
 
@@ -228,49 +228,49 @@ SELECT throws_ok(
 SELECT throws_ok(
   $sql$ INSERT INTO public.banners (name, image_key, alt_text, link_url, placements)
         VALUES ('js', 'img/x.webp', 'Alt', 'javascript:alert(1)', ARRAY['home_top']) $sql$,
-  '23514',
+  '23514', NULL,
   'AC5: javascript: scheme refused'
 );
 
 SELECT throws_ok(
   $sql$ INSERT INTO public.banners (name, image_key, alt_text, link_url, placements)
         VALUES ('data', 'img/x.webp', 'Alt', 'data:text/html,x', ARRAY['home_top']) $sql$,
-  '23514',
+  '23514', NULL,
   'AC5: data: scheme refused'
 );
 
 SELECT throws_ok(
   $sql$ INSERT INTO public.banners (name, image_key, alt_text, link_url, placements)
         VALUES ('mailto', 'img/x.webp', 'Alt', 'mailto:a@b.c', ARRAY['home_top']) $sql$,
-  '23514',
+  '23514', NULL,
   'AC5: mailto: scheme refused'
 );
 
 SELECT throws_ok(
   $sql$ INSERT INTO public.banners (name, image_key, alt_text, link_url, placements)
         VALUES ('tel', 'img/x.webp', 'Alt', 'tel:123', ARRAY['home_top']) $sql$,
-  '23514',
+  '23514', NULL,
   'AC5: tel: scheme refused'
 );
 
 SELECT throws_ok(
   $sql$ INSERT INTO public.banners (name, image_key, alt_text, link_url, placements)
         VALUES ('protorel', 'img/x.webp', 'Alt', '//evil.com', ARRAY['home_top']) $sql$,
-  '23514',
+  '23514', NULL,
   'AC5: //evil.com refused'
 );
 
 SELECT throws_ok(
   $sql$ INSERT INTO public.banners (name, image_key, alt_text, link_url, placements)
         VALUES ('backslash', 'img/x.webp', 'Alt', '/\evil.com', ARRAY['home_top']) $sql$,
-  '23514',
+  '23514', NULL,
   'AC5: /\evil.com refused'
 );
 
 SELECT throws_ok(
   $sql$ INSERT INTO public.banners (name, image_key, alt_text, link_url, placements)
         VALUES ('empty', 'img/x.webp', 'Alt', '', ARRAY['home_top']) $sql$,
-  '23514',
+  '23514', NULL,
   'AC5: empty link_url refused'
 );
 
@@ -279,7 +279,7 @@ SELECT throws_ok(
     INSERT INTO public.banners (name, image_key, alt_text, link_url, placements)
     VALUES ('toolong', 'img/x.webp', 'Alt', 'https://example.com/' || repeat('x', 2029), ARRAY['home_top'])
   $sql$,
-  '23514',
+  '23514', NULL,
   'AC5: 2049-char link_url refused'
 );
 
@@ -522,25 +522,25 @@ SET LOCAL "request.jwt.claims" TO '{"sub":"bb180001-0000-0000-0000-000000000003"
 
 SELECT throws_ok(
   $sql$ UPDATE public.courses SET title = 'Hacked' WHERE TRUE $sql$,
-  '42501',
+  '42501', NULL,
   'AC9: customer cannot update courses'
 );
 
 SELECT throws_ok(
   $sql$ UPDATE public.trainers SET name = 'Hacked' WHERE TRUE $sql$,
-  '42501',
+  '42501', NULL,
   'AC9: customer cannot update trainers'
 );
 
 SELECT throws_ok(
   $sql$ UPDATE public.activity_images SET caption = 'Hacked' WHERE TRUE $sql$,
-  '42501',
+  '42501', NULL,
   'AC9: customer cannot update activity_images'
 );
 
 SELECT throws_ok(
   $sql$ UPDATE public.banners SET name = 'Hacked' WHERE TRUE $sql$,
-  '42501',
+  '42501', NULL,
   'AC9: customer cannot update banners'
 );
 
@@ -565,7 +565,7 @@ SELECT throws_ok(
     INSERT INTO public.banners (name, image_key, alt_text, link_url, placements)
     VALUES ('Unauth Banner', 'img/x.webp', 'Alt', 'https://example.com', ARRAY['home_top'])
   $sql$,
-  '42501',
+  '42501', NULL,
   'AC9: staff without banners.write cannot insert a banner'
 );
 

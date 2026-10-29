@@ -51,7 +51,7 @@ SELECT col_is_unique('public', 'categories', 'name', 'AC1: categories.name UNIQU
 SELECT throws_ok(
   $$INSERT INTO public.categories (slug, name, applies_to)
     VALUES ('bad', 'Bad Cat', ARRAY['banner'])$$,
-  '23514',
+  '23514', NULL,
   'EC4: categories.applies_to=banner refused by CHECK'
 );
 
@@ -130,7 +130,7 @@ SELECT throws_ok(
       RETURNING id INTO v;
       INSERT INTO public.pages (locale, slug, title) VALUES ('en', 'dup-test', 'D2');
     END; $sub$$s$,
-  '23505',
+  '23505', NULL,
   'EC3: same (locale,slug) pair is refused'
 );
 
@@ -164,7 +164,7 @@ SELECT throws_ok(
 SELECT throws_ok(
   $$UPDATE public.page_revisions SET title = 'hacked'
     WHERE page_id = 'bb000001-0000-0000-0000-000000000001'::uuid$$,
-  'P0001', NULL,
+  '23001', NULL,
   'EC2: UPDATE page_revisions refused (append-only)'
 );
 
@@ -173,13 +173,13 @@ SET LOCAL role TO 'service_role';
 SELECT throws_ok(
   $$UPDATE public.page_revisions SET title = 'svc_hack'
     WHERE page_id = 'bb000001-0000-0000-0000-000000000001'::uuid$$,
-  'P0001', NULL,
+  '23001', NULL,
   'EC2: UPDATE page_revisions refused even as service_role'
 );
 SELECT throws_ok(
   $$DELETE FROM public.page_revisions
     WHERE page_id = 'bb000001-0000-0000-0000-000000000001'::uuid$$,
-  'P0001', NULL,
+  '23001', NULL,
   'EC2: DELETE page_revisions refused even as service_role'
 );
 RESET role;
@@ -195,7 +195,7 @@ SELECT lives_ok(
 SELECT throws_ok(
   $$INSERT INTO public.page_revisions (page_id, version, title)
     VALUES ('bb000001-0000-0000-0000-000000000001'::uuid, 1, 'Dup v1')$$,
-  '23505',
+  '23505', NULL,
   'AC3: UNIQUE(page_id,version) is enforced'
 );
 
@@ -224,7 +224,7 @@ VALUES ('cc000001-0000-0000-0000-000000000002'::uuid,
 
 -- Inserting into auth.users fires create_profile_for trigger
 INSERT INTO auth.users (
-  id, email, raw_user_meta_data, app_metadata,
+  id, email, raw_user_meta_data, raw_app_meta_data,
   aud, role, created_at, updated_at, confirmation_token, email_confirmed_at
 ) VALUES
   -- Case A: valid revision_id -> stored
@@ -277,7 +277,7 @@ SELECT has_column('public', 'slug_redirects', 'created_at',  'AC6: slug_redirect
 SELECT throws_ok(
   $$INSERT INTO public.slug_redirects (entity_type, entity_id, old_slug)
     VALUES ('banner', gen_random_uuid(), 'old-banner')$$,
-  '23514',
+  '23514', NULL,
   'AC6: invalid entity_type refused by CHECK'
 );
 
@@ -287,7 +287,7 @@ VALUES ('article', gen_random_uuid(), 'en', 'dup-redirect');
 SELECT throws_ok(
   $$INSERT INTO public.slug_redirects (entity_type, entity_id, locale, old_slug)
     VALUES ('article', gen_random_uuid(), 'en', 'dup-redirect')$$,
-  '23505',
+  '23505', NULL,
   'AC6: UNIQUE(entity_type,locale,old_slug) is enforced'
 );
 
@@ -298,7 +298,7 @@ VALUES ('document', gen_random_uuid(), 'dup-doc-slug');
 SELECT throws_ok(
   $$INSERT INTO public.slug_redirects (entity_type, entity_id, old_slug)
     VALUES ('document', gen_random_uuid(), 'dup-doc-slug')$$,
-  '23505',
+  '23505', NULL,
   'AC6: NULLS NOT DISTINCT — duplicate null-locale old_slug is refused'
 );
 
@@ -313,7 +313,7 @@ SELECT has_index('public', 'site_settings', 'idx_site_settings_group',
 SELECT throws_ok(
   $$INSERT INTO public.site_settings (key, value, setting_group)
     VALUES ('bad_key', '"x"', 'invalid_group')$$,
-  '23514',
+  '23514', NULL,
   'EC7: setting_group outside 6 values is refused'
 );
 
