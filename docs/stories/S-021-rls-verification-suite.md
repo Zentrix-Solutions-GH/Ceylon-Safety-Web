@@ -2,11 +2,11 @@
 id: S-021
 title: RLS verification suite + CI check
 phase: MS1
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-021-rls-verification-suite
-pr: ~
+pr: "23"
 depends_on: [S-019]
 reqs: [REQ-055, REQ-130c, REQ-150]
 ---
@@ -23,23 +23,23 @@ One automated suite that proves the whole schema is safe and complete: the table
 
 ## Acceptance criteria
 
-- [ ] AC1: TABLE-COUNT CHECK: after `supabase db reset`, the `public` schema contains exactly these 37 application tables: `profiles`, `user_roles`, `role_permissions`, `categories`, `authors`, `media_assets`, `site_settings`, `pages`, `page_revisions`, `slug_redirects`, `articles`, `article_refs`, `article_likes`, `article_comments`, `videos`, `video_likes`, `video_comments`, `documents`, `document_files`, `carts`, `cart_items`, `coupons`, `coupon_uses`, `orders`, `order_items`, `payment_events`, `bank_transfer_slips`, `entitlements`, `download_logs`, `download_requests`, `invoices`, `email_logs`, `courses`, `trainers`, `activity_images`, `banners`, `admin_audit_log`. Together with `training_programs` (optional, not created: Q74, services are page text) they are the 38 active tables of schema section 2. The test also asserts these do NOT exist: `enquiries`, `refunds`, `discount_tiers`, `article_sections`, `article_document_links`, `banner_clicks`.
-- [ ] AC2: Every table in `public` has row-level security ENABLED (`pg_class.relrowsecurity`). The test lists any offender by name and fails.
-- [ ] AC3: An access matrix test follows schema section 6: for each table it checks `anon`, customer A reading customer B's rows, `admin`, `maintainer` (no rows seeded) and Super Admin. The private tables covered explicitly with "customer A cannot read customer B's row": `profiles`, `carts`, `cart_items`, `orders`, `order_items`, `invoices`, `bank_transfer_slips`, `entitlements`, `download_logs`, `download_requests`, own pending/rejected comments, likes.
-- [ ] AC4: `anon` and customers get zero rows from `document_files`, `payment_events`, `email_logs`, `admin_audit_log`, `coupons`, `role_permissions`, `user_roles`, `media_assets`, including through an embedded select from a public table.
-- [ ] AC5: Function exposure: for every function in `public` and `private`, `EXECUTE` is revoked from `public`, `anon` and `authenticated`, except `has_permission`, `is_staff_member`, `is_super_admin` (and `search_all` once S-064 exists).
-- [ ] AC6: Regression tests for the guarded behaviour: append-only on `payment_events`, `page_revisions`, `admin_audit_log`; `role_permissions` write refused for Admin; Super Admin protection trigger; `site_settings` group trigger; `claim_download` race.
-- [ ] AC7: Index check: every foreign key column has an index (test compares `pg_constraint` against `pg_index`); the partial and unique indexes listed in schema section 9 exist.
-- [ ] AC8: Types check: CI regenerates `types/database.ts` and fails if it differs from the committed file.
-- [ ] AC9: The suite runs in CI as a named step (extend the existing workflow from S-004; the story authorises the edit to `.github/workflows/ci.yml`) and from `scripts/check.sh` against the local `supabase start` stack. A deliberately broken fixture migration (a table without RLS) makes the step fail (proved once and recorded in Evidence).
+- [x] AC1: TABLE-COUNT CHECK: after `supabase db reset`, the `public` schema contains exactly these 37 application tables: `profiles`, `user_roles`, `role_permissions`, `categories`, `authors`, `media_assets`, `site_settings`, `pages`, `page_revisions`, `slug_redirects`, `articles`, `article_refs`, `article_likes`, `article_comments`, `videos`, `video_likes`, `video_comments`, `documents`, `document_files`, `carts`, `cart_items`, `coupons`, `coupon_uses`, `orders`, `order_items`, `payment_events`, `bank_transfer_slips`, `entitlements`, `download_logs`, `download_requests`, `invoices`, `email_logs`, `courses`, `trainers`, `activity_images`, `banners`, `admin_audit_log`. Together with `training_programs` (optional, not created: Q74, services are page text) they are the 38 active tables of schema section 2. The test also asserts these do NOT exist: `enquiries`, `refunds`, `discount_tiers`, `article_sections`, `article_document_links`, `banner_clicks`.
+- [x] AC2: Every table in `public` has row-level security ENABLED (`pg_class.relrowsecurity`). The test lists any offender by name and fails.
+- [x] AC3: An access matrix test follows schema section 6: for each table it checks `anon`, customer A reading customer B's rows, `admin`, `maintainer` (no rows seeded) and Super Admin. The private tables covered explicitly with "customer A cannot read customer B's row": `profiles`, `carts`, `cart_items`, `orders`, `order_items`, `invoices`, `bank_transfer_slips`, `entitlements`, `download_logs`, `download_requests`, own pending/rejected comments, likes.
+- [x] AC4: `anon` and customers get zero rows from `document_files`, `payment_events`, `email_logs`, `admin_audit_log`, `coupons`, `role_permissions`, `user_roles`, `media_assets`, including through an embedded select from a public table.
+- [x] AC5: Function exposure: for every function in `public` and `private`, `EXECUTE` is revoked from `public`, `anon` and `authenticated`, except `has_permission`, `is_staff_member`, `is_super_admin` (and `search_all` once S-064 exists).
+- [x] AC6: Regression tests for the guarded behaviour: append-only on `payment_events`, `page_revisions`, `admin_audit_log`; `role_permissions` write refused for Admin; Super Admin protection trigger; `site_settings` group trigger; `claim_download` race.
+- [x] AC7: Index check: every foreign key column has an index (test compares `pg_constraint` against `pg_index`); the partial and unique indexes listed in schema section 9 exist.
+- [x] AC8: Types check: CI regenerates `types/database.ts` and fails if it differs from the committed file.
+- [x] AC9: The suite runs in CI as a named step (extend the existing workflow from S-004; the story authorises the edit to `.github/workflows/ci.yml`) and from `scripts/check.sh` against the local `supabase start` stack. A deliberately broken fixture migration (a table without RLS) makes the step fail (proved once and recorded in Evidence).
 
 ## Edge cases
 
-- [ ] EC1: A future migration adds a table without RLS: AC2 fails and names the table.
-- [ ] EC2: A future migration adds a function in `public` without revoking EXECUTE: AC5 fails and names the function.
-- [ ] EC3: A foreign key without an index: AC7 fails and names the constraint.
-- [ ] EC4: Tests must not depend on seed data from production; they create their own fixtures in a rolled-back transaction.
-- [ ] EC5: If Q74 later adds `training_programs`, the expected list in AC1 is updated in the same PR that adds the table.
+- [x] EC1: A future migration adds a table without RLS: AC2 fails and names the table.
+- [x] EC2: A future migration adds a function in `public` without revoking EXECUTE: AC5 fails and names the function.
+- [x] EC3: A foreign key without an index: AC7 fails and names the constraint.
+- [x] EC4: Tests must not depend on seed data from production; they create their own fixtures in a rolled-back transaction.
+- [x] EC5: If Q74 later adds `training_programs`, the expected list in AC1 is updated in the same PR that adds the table.
 
 ## Contract
 
