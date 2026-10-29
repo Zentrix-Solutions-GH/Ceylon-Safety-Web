@@ -125,6 +125,13 @@ Files=1, Tests=38 — Result: PASS
 
 <!-- Filled in by reviewer / security-reviewer agents and /full-review -->
 
+- **P1** `migrations/20261029000003_seed_content.sql:158–175` — `consent_confirmed` column missing from `trainers` schema; decision M32/Q61 says consent_confirmed=true but cannot be stored. Add column + seed + pgTAP assertion, or retract decision. (full-review 2026-10-29)
+- **P1** `supabase/seed.dev.sql:179` — `ON CONFLICT (…, COALESCE(phrase, ''))` missing required parens around expression; psql errors suppressed by `|| true` in check.sh so failure is silent. Fix: `(COALESCE(phrase, ''))`. (full-review 2026-10-29)
+- **P1** `scripts/check.sh:79–84` — EC3 guard tested by grep only; a broken guard (RAISE removed) still passes. Add psql execution test with wrong env asserting exception. (full-review 2026-10-29)
+- **P1** `docs/stories/S-020-seed-migrations.md:35–42` — ACs 1–5, 7, 8 unchecked despite 55 passing pgTAP tests. Tick boxes. (full-review 2026-10-29)
+- **P1** `supabase/seed.sql:32–78` — site_settings in seed.sql only; `supabase db push` skips seed files. Document manual step or move to migration. (full-review 2026-10-29)
+- **P1** `supabase/tests/seed.test.sql:245–295` — AC4 has_permission tested for only 2 of 18 wildcard rows; 7 SA-only actions not verified as denied-for-admin. Broaden coverage. (full-review 2026-10-29)
+
 ## After this merges, a user can:
 
 - Nothing new for visitors until screens exist. After it, a developer gets a database full of realistic data, and staff permissions work as seeded.
