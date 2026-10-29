@@ -148,7 +148,9 @@ Types added or changed in `types/` by this story:
 
 ## Review notes
 
-(filled in by reviewer agent and /full-review)
+- **P1** `.github/workflows/ci.yml` — `concurrency` group removed; add back `concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: true }` to avoid concurrent runs per branch. (full-review 2026-10-29)
+- **P1** `.github/workflows/ci.yml:8,30,45` — No `timeout-minutes` on `lint-typecheck` or `audit` jobs; add `timeout-minutes: 10` to each, `timeout-minutes: 15` to `db-tests`. (full-review 2026-10-29)
+- **P1** `.github/workflows/ci.yml` — Types-freshness check removed from CI (was in old `rls-check` job). Stale `types/database.ts` will not be caught. Restore in `db-tests` after `supabase start`, or document in Out of scope. (full-review 2026-10-29)
 
 ## After this merges
 
