@@ -44,10 +44,23 @@ if $SUPABASE_CMD status --output json 2>/dev/null | grep -q '"DB_URL"'; then
   # Uses docker exec because psql may not be installed on the host
   DB_CONTAINER=$(docker ps --filter name=supabase_db_ --format "{{.Names}}" 2>/dev/null | head -1)
   if [ -n "$DB_CONTAINER" ]; then
+    # Apply dev seed (idempotent — file is wrapped in BEGIN/COMMIT)
     { printf "SET app.environment = 'development';\n"; cat supabase/seed.dev.sql; } \
       | docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -q \
       2>&1 | grep -v "^$" || true
     run "pgTAP dev seed suite" $SUPABASE_CMD test db supabase/tests/seed.dev.test.sql
+
+    # EC3: guard must raise and roll back when env != development
+    printf '\n── EC3 dev seed guard (execution) ──\n'
+    GUARD_ERR=$({ printf "SET app.environment = 'production';\n"; cat supabase/seed.dev.sql; } \
+      | docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres 2>&1 || true)
+    if echo "$GUARD_ERR" | grep -q "seed.dev.sql is for development only"; then
+      printf '✓ EC3 dev seed guard (execution) passed\n'
+      PASS=$((PASS + 1))
+    else
+      printf '✗ EC3 dev seed guard (execution) FAILED — guard did not raise on non-development env\n'
+      FAIL=$((FAIL + 1))
+    fi
   fi
 else
   printf '\n── pgTAP RLS suite ──\n'

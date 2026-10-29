@@ -279,6 +279,38 @@ SELECT ok(
 
 RESET role;
 
+-- Admin: additional wildcard rows — coupons and trainers (re-set claims after maintainer block)
+SET LOCAL role TO authenticated;
+SET LOCAL "request.jwt.claims" TO '{"sub":"02000001-0000-0000-0000-000000000001","role":"authenticated"}';
+SELECT ok(
+  public.has_permission('coupons.create'),
+  'AC4: admin has_permission(coupons.create) = true via coupons.* wildcard'
+);
+SELECT ok(
+  public.has_permission('trainers.update'),
+  'AC4: admin has_permission(trainers.update) = true via trainers.* wildcard'
+);
+
+-- Admin: SA-only actions must be denied
+SELECT ok(
+  NOT public.has_permission('settings.contact'),
+  'AC4: admin has_permission(settings.contact) = false (SA only)'
+);
+SELECT ok(
+  NOT public.has_permission('settings.business'),
+  'AC4: admin has_permission(settings.business) = false (SA only)'
+);
+SELECT ok(
+  NOT public.has_permission('orders.grant'),
+  'AC4: admin has_permission(orders.grant) = false (SA only)'
+);
+SELECT ok(
+  NOT public.has_permission('staff.manage'),
+  'AC4: admin has_permission(staff.manage) = false (SA only)'
+);
+
+RESET role;
+
 -- Super Admin: passes everything
 SET LOCAL role TO authenticated;
 SET LOCAL "request.jwt.claims" TO '{"sub":"02000001-0000-0000-0000-000000000003","role":"authenticated"}';
@@ -289,6 +321,22 @@ SELECT ok(
 SELECT ok(
   public.has_permission('audit.read'),
   'AC4: super_admin has_permission(audit.read) = true (SA always passes)'
+);
+SELECT ok(
+  public.has_permission('settings.contact'),
+  'AC4: super_admin has_permission(settings.contact) = true'
+);
+SELECT ok(
+  public.has_permission('settings.business'),
+  'AC4: super_admin has_permission(settings.business) = true'
+);
+SELECT ok(
+  public.has_permission('orders.grant'),
+  'AC4: super_admin has_permission(orders.grant) = true'
+);
+SELECT ok(
+  public.has_permission('staff.manage'),
+  'AC4: super_admin has_permission(staff.manage) = true'
 );
 
 RESET role;
@@ -306,6 +354,11 @@ SELECT is(
 SELECT ok(
   (SELECT bool_and(slug IS NOT NULL AND slug != '') FROM public.trainers),
   'AC5: every trainer has a slug'
+);
+
+SELECT ok(
+  (SELECT bool_and(consent_confirmed) FROM public.trainers),
+  'AC5: all seeded trainers have consent_confirmed = true (M32/Q61)'
 );
 
 SELECT is(
@@ -377,6 +430,18 @@ SELECT is(
   'EC4: default_download_limit invisible to anon via RLS'
 );
 RESET role;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- EC2 — setting_group NOT NULL: inserting a key with NULL group is refused
+-- ─────────────────────────────────────────────────────────────────────────────
+
+SELECT throws_ok(
+  $$INSERT INTO public.site_settings (key, value, setting_group)
+    VALUES ('__ec2_test__', NULL, NULL)$$,
+  '23502',
+  NULL,
+  'EC2: site_settings setting_group NOT NULL constraint refuses NULL group'
+);
 
 SELECT * FROM finish();
 ROLLBACK;

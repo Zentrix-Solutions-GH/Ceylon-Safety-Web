@@ -6,6 +6,10 @@
 --        for local; set APP_ENV in CI workflow).
 -- ─────────────────────────────────────────────────────────────────────────────
 
+-- Wrap entire file in a transaction so that if the guard raises, ALL subsequent
+-- inserts are rolled back (not just the DO block's own transaction).
+BEGIN;
+
 -- ── Guard: refuse to run on production (AC7, EC3) ────────────────────────────
 
 DO $$
@@ -183,7 +187,7 @@ INSERT INTO public.article_refs (id, article_id, node_id, ref_type, ref_id) VALU
   ('02000035-0000-0000-0000-000000000003', '02000030-0000-0000-0000-000000000001',
    'node-doc-01', 'document',
    '02000050-0000-0000-0000-000000000001')
-ON CONFLICT (article_id, node_id, ref_type, ref_id, COALESCE(phrase, '')) DO NOTHING;
+ON CONFLICT (article_id, node_id, ref_type, ref_id, (COALESCE(phrase, ''))) DO NOTHING;
 
 -- ── Article comments (one pending, one approved) ──────────────────────────────
 
@@ -461,3 +465,5 @@ INSERT INTO public.download_requests (
   'I accidentally deleted my download and need to re-access it.',
   'open'
 ) ON CONFLICT (id) DO NOTHING;
+
+COMMIT;
