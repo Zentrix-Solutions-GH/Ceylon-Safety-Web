@@ -151,3 +151,76 @@ describe("lib/config — AC4: server-only protection", () => {
     expect(publicConfig.supabaseUrl).toBe("https://abc.supabase.co");
   });
 });
+
+// ── lib/config.public.ts — independent validator tests ────────────────────────
+// config.public.ts has its own copy of the validators (no server-only import).
+// These tests exercise it in isolation so a regression in the public copy is caught.
+
+describe("lib/config.public — happy path", () => {
+  beforeEach(() => setEnv());
+  afterEach(() => clearEnv());
+
+  it("returns publicConfig with URL and anon key", async () => {
+    const { publicConfig } = await importFresh("../lib/config.public");
+    expect(publicConfig.supabaseUrl).toBe("https://abc.supabase.co");
+    expect(publicConfig.supabaseAnonKey).toBe("anon-key-value");
+  });
+});
+
+describe("lib/config.public — validation (P1: untested copy)", () => {
+  afterEach(() => clearEnv());
+
+  it("throws when NEXT_PUBLIC_SUPABASE_URL is missing", async () => {
+    setEnv({ NEXT_PUBLIC_SUPABASE_URL: undefined });
+    await expect(importFresh("../lib/config.public")).rejects.toThrow(
+      "NEXT_PUBLIC_SUPABASE_URL"
+    );
+  });
+
+  it("throws when NEXT_PUBLIC_SUPABASE_URL is not a valid URL", async () => {
+    setEnv({ NEXT_PUBLIC_SUPABASE_URL: "not-a-url" });
+    await expect(importFresh("../lib/config.public")).rejects.toThrow(
+      "NEXT_PUBLIC_SUPABASE_URL"
+    );
+  });
+
+  it("throws when NEXT_PUBLIC_SUPABASE_ANON_KEY is missing", async () => {
+    setEnv({ NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined });
+    await expect(importFresh("../lib/config.public")).rejects.toThrow(
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    );
+  });
+
+  it("treats whitespace-only anon key as missing (EC1)", async () => {
+    setEnv({ NEXT_PUBLIC_SUPABASE_ANON_KEY: "   " });
+    await expect(importFresh("../lib/config.public")).rejects.toThrow(
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    );
+  });
+
+  it("accepts a localhost URL (EC6 — local dev stack)", async () => {
+    setEnv({ NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321" });
+    const { publicConfig } = await importFresh("../lib/config.public");
+    expect(publicConfig.supabaseUrl).toBe("http://127.0.0.1:54321");
+  });
+});
+
+// ── AC6: .env.example contains no values ────────────────────────────────────
+describe("AC6: .env.example integrity", () => {
+  it("has no line with a non-empty value (names only)", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const envExample = fs.readFileSync(
+      path.resolve(__dirname, "../.env.example"),
+      "utf8"
+    );
+    const violations = envExample
+      .split("\n")
+      .filter((line) => !line.startsWith("#") && line.trim() !== "")
+      .filter((line) => {
+        const [, value] = line.split("=");
+        return value !== undefined && value.trim() !== "";
+      });
+    expect(violations).toEqual([]);
+  });
+});

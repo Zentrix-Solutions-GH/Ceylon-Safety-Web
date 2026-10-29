@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // AC5: Supabase clients take values from lib/config.ts
 // We mock @supabase/ssr and @supabase/supabase-js to capture what URLs and keys
@@ -68,6 +68,44 @@ describe("lib/supabase/server — AC5: server client", () => {
       "https://abc.supabase.co",
       "service-role-key-value",
       expect.any(Object)
+    );
+  });
+
+  it("service-role client sets persistSession: false", async () => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const { createSupabaseServiceRoleClient } = await import(
+      "../lib/supabase/server"
+    );
+    createSupabaseServiceRoleClient();
+    const opts = (createClient as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[2];
+    expect(opts?.auth?.persistSession).toBe(false);
+    expect(opts?.auth?.autoRefreshToken).toBe(false);
+  });
+});
+
+// ── Failure-path tests (P1) ────────────────────────────────────────────────
+describe("lib/supabase — failure path: missing config", () => {
+  afterEach(() => {
+    for (const k of ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY", "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"]) {
+      delete process.env[k];
+    }
+    vi.resetModules();
+  });
+
+  it("importing client module throws when NEXT_PUBLIC_SUPABASE_URL is missing", async () => {
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    vi.resetModules();
+    await expect(import("../lib/supabase/client")).rejects.toThrow(
+      "NEXT_PUBLIC_SUPABASE_URL"
+    );
+  });
+
+  it("importing server module throws when SUPABASE_SERVICE_ROLE_KEY is missing", async () => {
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    vi.resetModules();
+    await expect(import("../lib/supabase/server")).rejects.toThrow(
+      "SUPABASE_SERVICE_ROLE_KEY"
     );
   });
 });
