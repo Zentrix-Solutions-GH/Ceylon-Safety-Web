@@ -69,8 +69,54 @@ Build the site header: logo, the fixed menu, sign-in state and cart link, and a 
 
 ## Plan
 
-Prior art: designer pass 2026-10-25 read trainer/public pages 3.5, frontend architecture 3.6/7/10, auth design 7/8. Extends them. `/story-run` re-runs `grep -ril "header\|navigation" docs/`.
-<!-- Rest filled by /story-run at Step 3. -->
+Prior art: searched `grep -ril "header\|navigation\|useAuth" docs/` — found: frontend architecture 3.6 (header layout), 7 (sheet-based phone menu, focus trap), 10 (sticky); trainer/public pages 3.5 (nav order); auth design 7/8 (browser client for header, no server read). Contradiction resolved: sheet (frontend arch 7, newer) over full-width (trainer pages 3.5). This story builds the designs they define.
+
+### Files to create / modify
+
+| File | Purpose |
+|---|---|
+| `messages/en.ts` | Add `nav.*` and `site.*` keys |
+| `config/navigation.ts` | Fixed nav item list (id, href, labelKey) |
+| `lib/supabase/client.ts` | Scaffold: `getSupabaseBrowserClient()` via `@supabase/ssr` (backend-owned) |
+| `hooks/useAuth.ts` | `"use client"` display-only hook: `{ user, isLoading, signOut }` |
+| `components/layout/HeaderNav.tsx` | `"use client"` — nav links, `aria-current`, mobile Sheet (Radix Dialog) |
+| `components/layout/HeaderPersonal.tsx` | `"use client"` — auth state, account menu, cart link |
+| `components/layout/Header.tsx` | Server component — sticky shell, text wordmark (EC6), mounts Nav + Personal |
+| `components/layout/__tests__/Header.test.tsx` | Component tests (written first) |
+| `scripts/__tests__/no-server-session-in-public.test.ts` | Repo-scan: no `next/headers` or server client in public/layout files |
+
+### Design decisions
+
+**Header.tsx** — server component. Sticky. Text wordmark "CeylonSafety" (EC6, Q47 open). Never calls `cookies()`, `headers()`, or server Supabase client (AC2). Renders `<HeaderNav />` and `<HeaderPersonal />` as client sub-components.
+
+**HeaderNav.tsx** — `"use client"`. Desktop: nav links with `usePathname()` for `aria-current="page"` (AC1). Mobile: hamburger button opens Sheet from `components/ui/sheet.tsx` (Radix Dialog — focus trap and Escape built-in, AC5). EC4: `useEffect` + `matchMedia("(min-width: 1024px)")` closes the sheet when resized to desktop. Nav order: Home, Articles, Documents, Courses, Jobs, Contact Coach.
+
+**HeaderPersonal.tsx** — `"use client"`. Uses `useAuth()`. `isLoading: true` → fixed-size `aria-busy` placeholder, no Sign In flash (AC2). Signed out → Sign In + Sign Up links. Signed in → name button (EC3: `truncate max-w-[8rem]`) toggles account dropdown (Profile, My Purchases, Sign Out). Cart link always `href="/cart"` (middleware redirects unsigned-in visitors, AC4). EC5: signOut error → `errorMessage("unknown")` shown inline.
+
+**useAuth.ts** — `"use client"`. `getSupabaseBrowserClient().auth.getUser()` for initial load + `onAuthStateChange` subscription. Returns `{ user: { name: string | null } | null, isLoading: boolean, signOut: () => Promise<void> }`. EC1: any error → `user=null`. EC2: `user_metadata.full_name` absent → `name: null` (component shows "Account").
+
+**lib/supabase/client.ts** — backend-owned scaffold. `createBrowserClient(url, key)` from `@supabase/ssr`. Singleton via module-level variable.
+
+### Messages added
+
+| Key | Text |
+|---|---|
+| `nav.home` | "Home" |
+| `nav.articles` | "Articles" |
+| `nav.documents` | "Documents" |
+| `nav.courses` | "Courses" |
+| `nav.jobs` | "Jobs" |
+| `nav.contact_coach` | "Contact Coach" |
+| `nav.cart` | "Cart" |
+| `nav.sign_in` | "Sign In" |
+| `nav.sign_up` | "Sign Up" |
+| `nav.account` | "Account" |
+| `nav.profile` | "Profile" |
+| `nav.my_purchases` | "My Purchases" |
+| `nav.sign_out` | "Sign out" |
+| `nav.open_menu` | "Open menu" |
+| `nav.close_menu` | "Close menu" |
+| `site.wordmark` | "CeylonSafety" |
 
 ## Evidence
 
