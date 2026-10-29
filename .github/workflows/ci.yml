@@ -70,3 +70,45 @@ jobs:
       - name: Stop Supabase
         if: always()
         run: supabase stop
+
+  # ── Job 3: RLS verification suite (pgTAP) ───────────────────────────────────
+  rls-check:
+    name: RLS verification suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase
+        run: supabase start
+
+      - name: Run pgTAP RLS suite
+        run: supabase test db supabase/tests/zz-schema-verification.test.sql
+
+      - name: Check types file is up to date
+        run: |
+          supabase gen types typescript --local > /tmp/database.ts.generated
+          if ! diff -q /tmp/database.ts.generated types/database.ts > /dev/null 2>&1; then
+            echo "types/database.ts is stale — run: supabase gen types typescript --local > types/database.ts"
+            diff /tmp/database.ts.generated types/database.ts || true
+            exit 1
+          fi
+          echo "types/database.ts is up to date"
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop

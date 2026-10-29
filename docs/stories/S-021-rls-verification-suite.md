@@ -2,7 +2,7 @@
 id: S-021
 title: RLS verification suite + CI check
 phase: MS1
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-021-rls-verification-suite
@@ -73,14 +73,52 @@ One automated suite that proves the whole schema is safe and complete: the table
 
 Prior art: searched `grep -ril "row level security\|RLS\|rls" docs/`: found database-schema sections 2, 6, 9; CLAUDE.md security rules; workflow-design (security layers: access rules in the database, tests per table); infrastructure design (CI checks); this story implements them; nothing superseded.
 
-<!-- Filled in by /story-run at Step 3. Sensitive: the owner approves the plan. -->
+### Files to create / edit
+
+| File | Action | Reason |
+|---|---|---|
+| `supabase/tests/zz-schema-verification.test.sql` | CREATE | pgTAP suite (AC1–AC7) |
+| `scripts/check.sh` | EDIT | Add `supabase test db` and types-file diff step (AC8, AC9) |
+| `.github/workflows/ci.yml` | EDIT | Add `rls-check` job (AC9) |
+
+### Step order
+
+1. Write pgTAP test file (`zz-` prefix = runs last, after other test files).
+2. Update `scripts/check.sh` to run `supabase test db` and diff types.
+3. Update CI workflow to add `rls-check` named step.
+4. Update story status to `in-progress`.
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7. Not run = "not verified". -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+No test files found, exiting with code 0
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+Connecting to local database...
+supabase/tests/zz-schema-verification.test.sql .. ok
+All tests successful.
+Files=1, Tests=57,  1 wallclock secs
+Result: PASS
+✓ pgTAP RLS suite passed
+
+── Types file freshness ──
+✓ Types file freshness passed
+
+════════════════════════════════
+  check.sh: 5 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
 
 ## Review notes

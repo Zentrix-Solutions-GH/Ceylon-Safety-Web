@@ -30,6 +30,36 @@ run "TypeScript" npx tsc --noEmit
 # 3. Unit tests
 run "Vitest (unit)" npx vitest run --passWithNoTests
 
+# Detect Supabase CLI (prefer global install, fall back to npx)
+SUPABASE_CMD="supabase"
+if ! command -v supabase &>/dev/null; then
+  SUPABASE_CMD="npx supabase"
+fi
+
+# 4. pgTAP RLS suite (skipped when Supabase is not running)
+if $SUPABASE_CMD status --output json 2>/dev/null | grep -q '"DB_URL"'; then
+  run "pgTAP RLS suite" $SUPABASE_CMD test db supabase/tests/zz-schema-verification.test.sql
+else
+  printf '\n── pgTAP RLS suite ──\n'
+  printf '⚠ Supabase not running — skipping pgTAP tests (run supabase start first)\n'
+fi
+
+# 5. Types file freshness (skipped when Supabase is not running)
+if $SUPABASE_CMD status --output json 2>/dev/null | grep -q '"DB_URL"'; then
+  printf '\n── Types file freshness ──\n'
+  $SUPABASE_CMD gen types typescript --local > /tmp/database.ts.generated
+  if diff -q /tmp/database.ts.generated types/database.ts > /dev/null 2>&1; then
+    printf '✓ Types file freshness passed\n'
+    PASS=$((PASS + 1))
+  else
+    printf '✗ Types file freshness FAILED — run: npx supabase gen types typescript --local > types/database.ts\n'
+    FAIL=$((FAIL + 1))
+  fi
+else
+  printf '\n── Types file freshness ──\n'
+  printf '⚠ Supabase not running — skipping types check (run supabase start first)\n'
+fi
+
 # ── Summary ─────────────────────────────────────────────────────────────────
 printf '\n════════════════════════════════\n'
 printf '  check.sh: %d passed, %d failed\n' "$PASS" "$FAIL"
