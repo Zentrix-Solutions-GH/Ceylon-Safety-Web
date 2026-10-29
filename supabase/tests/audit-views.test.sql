@@ -31,14 +31,17 @@ VALUES
   ('a1900001-0000-0000-0000-000000000003', 'Cust One',   'cust1.s019@test.invalid',   'active'),
   ('a1900001-0000-0000-0000-000000000004', 'Cust Two',   'cust2.s019@test.invalid',   'active'),
   ('a1900001-0000-0000-0000-000000000005', 'Cust Three', 'cust3.s019@test.invalid',   'active'),
-  ('a1900001-0000-0000-0000-000000000006', 'Cust Four',  'cust4.s019@test.invalid',   'active')
+  ('a1900001-0000-0000-0000-000000000006', 'Cust Four',  'cust4.s019@test.invalid',   'active'),
+  ('a1900001-0000-0000-0000-000000000007', 'Maint One',  'maint1.s019@test.invalid',  'active')
 ON CONFLICT (id) DO NOTHING;
 
 -- Roles
 INSERT INTO public.user_roles (user_id, role, granted_by)
 VALUES
-  ('a1900001-0000-0000-0000-000000000001', 'super_admin', 'a1900001-0000-0000-0000-000000000001'),
-  ('a1900001-0000-0000-0000-000000000002', 'admin',       'a1900001-0000-0000-0000-000000000001')
+  ('a1900001-0000-0000-0000-000000000001', 'super_admin',  'a1900001-0000-0000-0000-000000000001'),
+  ('a1900001-0000-0000-0000-000000000002', 'admin',        'a1900001-0000-0000-0000-000000000001'),
+  -- Maintainer has no audit.read permission → used to prove is_staff_member() alone is not enough
+  ('a1900001-0000-0000-0000-000000000007', 'maintainer',   'a1900001-0000-0000-0000-000000000001')
 ON CONFLICT DO NOTHING;
 
 -- role_permissions: give admin the audit.read action
@@ -60,10 +63,18 @@ VALUES
   ('c1900001-0000-0000-0000-000000000002', 'en', 's019-draft-art', 'S019 Draft Article',      'draft',
    NULL, '{"type":"doc","content":[]}', '', 0, 0,
    NULL),
-  ('c1900001-0000-0000-0000-000000000003', 'en', 's019-sched-art', 'S019 Scheduled Article',  'published',
+  ('c1900001-0000-0000-0000-000000000003', 'en', 's019-sched-art',   'S019 Scheduled Article',  'published',
    now() + interval '1 day', '{"type":"doc","content":[]}', '', 0, 0,
+   NULL),
+  -- Deleted but published: must be hidden from browser callers via base-table RLS (P2)
+  ('c1900001-0000-0000-0000-000000000004', 'en', 's019-deleted-art', 'S019 Deleted Article',    'published',
+   now() - interval '1 hour', '{"type":"doc","content":[]}', '', 0, 0,
    NULL)
 ON CONFLICT (id) DO NOTHING;
+
+UPDATE public.articles
+  SET deleted_at = now() - interval '30 minutes'
+  WHERE id = 'c1900001-0000-0000-0000-000000000004';
 
 -- Video (no slug column; youtube_id must be exactly 11 [A-Za-z0-9_-] chars)
 INSERT INTO public.videos (id, locale, youtube_id, title, thumbnail_key, status, published_at, like_count, comment_count, category_id)
@@ -346,6 +357,13 @@ SELECT ok(
   'AC3: customer sees 0 audit rows (no policy)'
 );
 
+-- P2: staff member (maintainer) without audit.read permission sees 0 rows
+-- Proves is_staff_member() alone is not sufficient — has_permission('audit.read') is also required.
+SET LOCAL request.jwt.claims TO '{"sub":"a1900001-0000-0000-0000-000000000007","role":"authenticated"}';
+SELECT ok(
+  (SELECT COUNT(*) FROM public.admin_audit_log) = 0,
+  'AC3/P2: maintainer without audit.read sees 0 audit rows');
+
 RESET ROLE;
 
 -- Super Admin sees SA-actor rows
@@ -546,6 +564,15 @@ SELECT ok(
 SELECT ok(
   EXISTS (SELECT 1 FROM public.feed_items WHERE id = 'c1900001-0000-0000-0000-000000000003'),
   'AC6: scheduled article IS in feed_items (caller must apply published_at <= now() filter)');
+
+-- P2: deleted-but-published article must be hidden from authenticated browser callers.
+-- security_invoker = true means the articles RLS (deleted_at IS NULL) applies to the caller.
+SET ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"a1900001-0000-0000-0000-000000000003","role":"authenticated"}';
+SELECT ok(
+  NOT EXISTS (SELECT 1 FROM public.feed_items WHERE id = 'c1900001-0000-0000-0000-000000000004'),
+  'AC6/P2: deleted published article is hidden from authenticated browser callers via security_invoker RLS');
+RESET ROLE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- AC7/EC7: home_counters view
