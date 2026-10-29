@@ -39,9 +39,12 @@ fi
 # 4. pgTAP RLS suite (skipped when Supabase is not running)
 if $SUPABASE_CMD status --output json 2>/dev/null | grep -q '"DB_URL"'; then
   run "pgTAP RLS suite" $SUPABASE_CMD test db supabase/tests/zz-schema-verification.test.sql
+  run "pgTAP seed suite" $SUPABASE_CMD test db supabase/tests/seed.test.sql
 else
   printf '\n── pgTAP RLS suite ──\n'
   printf '⚠ Supabase not running — skipping pgTAP tests (run supabase start first)\n'
+  printf '\n── pgTAP seed suite ──\n'
+  printf '⚠ Supabase not running — skipping seed tests (run supabase start first)\n'
 fi
 
 # 5. Types file freshness (skipped when Supabase is not running)

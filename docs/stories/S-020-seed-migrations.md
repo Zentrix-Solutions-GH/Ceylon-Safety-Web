@@ -14,7 +14,7 @@ reqs: [REQ-042b, REQ-130e, REQ-130f, REQ-201, REQ-202, REQ-203, REQ-204, REQ-205
 ## Decisions (resolved 2026-10-29)
 
 - **Q69**: 8 categories as proposed (Workplace Safety, Fire Safety, First Aid, Electrical Safety, Construction Safety, Food Safety, Chemical Safety, Occupational Health). All three document types (Checklists, Safety Signs, Toolbox Talks) at launch.
-- **Q62/Q63/M16/M18**: Maintainer permissions = `articles.*`, `videos.*`, `authors.*`, `media.upload`, `comments.moderate` only. No commercial, settings, or admin access.
+- **Q62/Q63/M16/M18**: Maintainer permissions decided as `articles.*`, `videos.*`, `authors.*`, `media.upload`, `comments.moderate` only (no commercial, settings, or admin access). **Implementation deferred**: this story seeds 0 rows for `maintainer` (deny-by-default); a future story will insert these 5 rows when the Maintainer onboarding flow is built. AC4 and the pgTAP test both assert 0 rows — this is intentional.
 - **Q73/Q51/C12/Q74**: All 6 pages seeded with realistic sample text, marked `draft`. Client to replace before go-live. A new story will add a Super Admin page editor.
 - **M32/Q61**: 2–3 sample Sri Lankan trainers, `consent_confirmed = true`, marked draft.
 - **Q25**: 4 sample courses (Fire Safety & Evacuation Training, First Aid & Emergency Response, Construction Site Safety, Workplace Hazard Identification), all `is_coming_soon = true`, "Contact for pricing".

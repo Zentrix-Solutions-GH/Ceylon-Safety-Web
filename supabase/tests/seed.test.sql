@@ -69,6 +69,13 @@ SELECT ok(
   'AC2: every setting_group is a valid value'
 );
 
+-- Exact total count
+SELECT is(
+  (SELECT count(*)::int FROM public.site_settings),
+  33,
+  'AC2: exactly 33 site_settings keys seeded'
+);
+
 -- Spot-check required keys exist
 SELECT ok(
   EXISTS (SELECT 1 FROM public.site_settings WHERE key = 'default_download_limit'),
@@ -361,6 +368,15 @@ SELECT ok(
   NOT (SELECT is_public FROM public.site_settings WHERE key = 'default_download_limit'),
   'EC4: default_download_limit is_public = false'
 );
+
+-- EC4 — anon RLS: private setting must not be visible to anonymous callers
+SET LOCAL role TO anon;
+SELECT is(
+  (SELECT count(*)::int FROM public.site_settings WHERE key = 'default_download_limit'),
+  0,
+  'EC4: default_download_limit invisible to anon via RLS'
+);
+RESET role;
 
 SELECT * FROM finish();
 ROLLBACK;
