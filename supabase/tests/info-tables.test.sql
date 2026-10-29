@@ -2,7 +2,7 @@
 --        columns, CHECKs, indexes, triggers, RLS, banner link policy.
 -- Run with: supabase test db (requires Docker + local Supabase stack).
 --
--- Assertion count: 99
+-- Assertion count: 94
 --   AC1 courses: 18, EC1: 2, EC6/EC8: 2
 --   AC2 trainers: 13, EC2/EC3: 2
 --   AC3 activity_images: 7
@@ -12,10 +12,10 @@
 --   EC7 RESTRICT check (conditional): 2
 --   AC7 set_updated_at: 3
 --   AC8 click_count protection: 1
---   AC8/AC9 RLS: 21
+--   AC8/AC9 RLS: 16
 
 BEGIN;
-SELECT plan(99);
+SELECT plan(94);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Fixtures
