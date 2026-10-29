@@ -1,4 +1,4 @@
-﻿-- Sample content for local development only, NEVER run on production
+-- Sample content for local development only, NEVER run on production
 -- Backend owner: S-020
 --
 -- How to run: supabase db reset (applies migrations + seed.sql + this file on local)
@@ -47,7 +47,7 @@ ON CONFLICT (slug) DO NOTHING;
 -- ── Articles (3 sample, covering different body block types) ──────────────────
 
 INSERT INTO public.articles (
-  id, locale, slug, title, summary, author_id,
+  id, locale, slug, title, excerpt, author_id,
   category_id, status, published_at, body, body_text, body_version
 ) VALUES
   (
@@ -137,7 +137,14 @@ INSERT INTO public.articles (
     'Construction sites present unique hazards.',
     1
   )
-ON CONFLICT (locale, slug) WHERE deleted_at IS NULL DO NOTHING;
+ON CONFLICT (locale, slug) WHERE deleted_at IS NULL DO UPDATE SET
+  title       = EXCLUDED.title,
+  excerpt     = EXCLUDED.excerpt,
+  body        = EXCLUDED.body,
+  body_text   = EXCLUDED.body_text,
+  status      = EXCLUDED.status,
+  author_id   = EXCLUDED.author_id,
+  category_id = EXCLUDED.category_id;
 
 -- ── media_assets (sample image used in article 1 body block) ─────────────────
 
@@ -220,14 +227,17 @@ INSERT INTO public.videos (
     'en',
     'CPR for Beginners',
     'Learn the basics of cardiopulmonary resuscitation with this step-by-step guide.',
-    'dQw4w9WgXcQ',
+    'dCPR0000001',
     'images/videos/02000040-0000-0000-0000-000000000002/custom-thumb.webp',
     'custom',
     (SELECT id FROM public.categories WHERE slug = 'first-aid'),
     'published',
     now() - interval '2 days'
   )
-ON CONFLICT DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+  title            = EXCLUDED.title,
+  thumbnail_source = EXCLUDED.thumbnail_source,
+  youtube_id       = EXCLUDED.youtube_id;
 
 -- ── Documents (2 sample, each with 3 language files) ─────────────────────────
 
@@ -261,27 +271,27 @@ INSERT INTO public.documents (
   )
 ON CONFLICT (slug) WHERE deleted_at IS NULL DO NOTHING;
 
-INSERT INTO public.document_files (id, document_id, language, kind, file_key, version, is_current, status) VALUES
-  ('02000051-0000-0000-0000-000000000001', '02000050-0000-0000-0000-000000000001', 'en', 'full',    'documents/02000050-0000-0000-0000-000000000001/en/v1/fire-safety-checklist.pptx', 1, true, 'ready'),
-  ('02000051-0000-0000-0000-000000000002', '02000050-0000-0000-0000-000000000001', 'si', 'full',    'documents/02000050-0000-0000-0000-000000000001/si/v1/fire-safety-checklist-si.pptx', 1, true, 'ready'),
-  ('02000051-0000-0000-0000-000000000003', '02000050-0000-0000-0000-000000000001', 'ta', 'full',    'documents/02000050-0000-0000-0000-000000000001/ta/v1/fire-safety-checklist-ta.pptx', 1, true, 'ready'),
-  ('02000051-0000-0000-0000-000000000004', '02000050-0000-0000-0000-000000000001', 'en', 'preview', 'previews/02000050-0000-0000-0000-000000000001/preview.pptx', 1, true, 'ready'),
-  ('02000051-0000-0000-0000-000000000005', '02000050-0000-0000-0000-000000000002', 'en', 'full',    'documents/02000050-0000-0000-0000-000000000002/en/v1/first-aid-toolbox-talk.pptx', 1, true, 'ready'),
-  ('02000051-0000-0000-0000-000000000006', '02000050-0000-0000-0000-000000000002', 'si', 'full',    'documents/02000050-0000-0000-0000-000000000002/si/v1/first-aid-toolbox-talk-si.pptx', 1, true, 'ready'),
-  ('02000051-0000-0000-0000-000000000007', '02000050-0000-0000-0000-000000000002', 'ta', 'full',    'documents/02000050-0000-0000-0000-000000000002/ta/v1/first-aid-toolbox-talk-ta.pptx', 1, true, 'ready'),
-  ('02000051-0000-0000-0000-000000000008', '02000050-0000-0000-0000-000000000002', 'en', 'preview', 'previews/02000050-0000-0000-0000-000000000002/preview.pptx', 1, true, 'ready')
+INSERT INTO public.document_files (id, document_id, language, kind, format, file_key, size_bytes, version, is_current, status) VALUES
+  ('02000051-0000-0000-0000-000000000001', '02000050-0000-0000-0000-000000000001', 'en', 'full',    'pptx', 'documents/02000050-0000-0000-0000-000000000001/en/v1/fire-safety-checklist.pptx',    0, 1, true, 'ready'),
+  ('02000051-0000-0000-0000-000000000002', '02000050-0000-0000-0000-000000000001', 'si', 'full',    'pptx', 'documents/02000050-0000-0000-0000-000000000001/si/v1/fire-safety-checklist-si.pptx', 0, 1, true, 'ready'),
+  ('02000051-0000-0000-0000-000000000003', '02000050-0000-0000-0000-000000000001', 'ta', 'full',    'pptx', 'documents/02000050-0000-0000-0000-000000000001/ta/v1/fire-safety-checklist-ta.pptx', 0, 1, true, 'ready'),
+  ('02000051-0000-0000-0000-000000000004', '02000050-0000-0000-0000-000000000001', 'en', 'preview', 'pdf',  'previews/02000050-0000-0000-0000-000000000001/preview.pdf',                          0, 1, true, 'ready'),
+  ('02000051-0000-0000-0000-000000000005', '02000050-0000-0000-0000-000000000002', 'en', 'full',    'pptx', 'documents/02000050-0000-0000-0000-000000000002/en/v1/first-aid-toolbox-talk.pptx',   0, 1, true, 'ready'),
+  ('02000051-0000-0000-0000-000000000006', '02000050-0000-0000-0000-000000000002', 'si', 'full',    'pptx', 'documents/02000050-0000-0000-0000-000000000002/si/v1/first-aid-toolbox-talk-si.pptx',0, 1, true, 'ready'),
+  ('02000051-0000-0000-0000-000000000007', '02000050-0000-0000-0000-000000000002', 'ta', 'full',    'pptx', 'documents/02000050-0000-0000-0000-000000000002/ta/v1/first-aid-toolbox-talk-ta.pptx',0, 1, true, 'ready'),
+  ('02000051-0000-0000-0000-000000000008', '02000050-0000-0000-0000-000000000002', 'en', 'preview', 'pdf',  'previews/02000050-0000-0000-0000-000000000002/preview.pdf',                          0, 1, true, 'ready')
 ON CONFLICT (id) DO NOTHING;
 
 -- ── Banners (3 home_top banners) ─────────────────────────────────────────────
 
-INSERT INTO public.banners (id, name, image_key, alt_text, link_url, placement, is_active) VALUES
+INSERT INTO public.banners (id, name, image_key, alt_text, link_url, placements, is_active) VALUES
   (
     '02000060-0000-0000-0000-000000000001',
     'Sample Banner 1',
     'images/banners/sample-banner-1.webp',
     'Safety training services in Sri Lanka',
     'https://ceylonsafety.com/contact-coach',
-    'home_top',
+    ARRAY['home_top'],
     true
   ),
   (
@@ -290,7 +300,7 @@ INSERT INTO public.banners (id, name, image_key, alt_text, link_url, placement, 
     'images/banners/sample-banner-2.webp',
     'Download health and safety documents',
     'https://ceylonsafety.com/documents',
-    'home_top',
+    ARRAY['home_top'],
     true
   ),
   (
@@ -299,19 +309,20 @@ INSERT INTO public.banners (id, name, image_key, alt_text, link_url, placement, 
     'images/banners/sample-banner-3.webp',
     'Fire safety resources for Sri Lankan businesses',
     'https://ceylonsafety.com/documents?category=fire-safety',
-    'home_top',
+    ARRAY['home_top'],
     false
   )
 ON CONFLICT (id) DO NOTHING;
 
 -- ── Coupons (one percent, one fixed) ─────────────────────────────────────────
 
-INSERT INTO public.coupons (id, code, coupon_type, discount_value, is_active, expires_at) VALUES
+INSERT INTO public.coupons (id, code, discount_type, discount_value, max_uses, is_active, expires_at) VALUES
   (
     '02000070-0000-0000-0000-000000000001',
     'DEV10PCT',
     'percent',
     10,
+    1000,
     true,
     now() + interval '1 year'
   ),
@@ -320,84 +331,113 @@ INSERT INTO public.coupons (id, code, coupon_type, discount_value, is_active, ex
     'DEV500OFF',
     'fixed',
     50000,
+    1000,
     true,
     now() + interval '1 year'
   )
-ON CONFLICT (code) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
 -- ── A customer with a PAID order (one used + one unused entitlement) ──────────
 
-INSERT INTO public.orders (
-  id, user_id, status, subtotal_cents, discount_cents, total_cents,
-  payment_method, terms_accepted_at, finalized_at
-) VALUES (
-  '02000080-0000-0000-0000-000000000001',
-  '02000010-0000-0000-0000-000000000001',
-  'paid',
-  99500, 0, 99500,
-  'card',
-  now() - interval '5 days',
-  now() - interval '5 days'
-) ON CONFLICT (id) DO NOTHING;
+-- terms and refund-policy revision IDs are resolved at runtime (set by migration)
+DO $$
+DECLARE
+  v_terms_rev_id   uuid;
+  v_refund_rev_id  uuid;
+BEGIN
+  SELECT pr.id INTO v_terms_rev_id
+    FROM public.page_revisions pr JOIN public.pages p ON p.id = pr.page_id
+    WHERE p.slug = 'terms' AND pr.version = 1;
+  SELECT pr.id INTO v_refund_rev_id
+    FROM public.page_revisions pr JOIN public.pages p ON p.id = pr.page_id
+    WHERE p.slug = 'refund-policy' AND pr.version = 1;
+
+  INSERT INTO public.orders (
+    id, order_number, user_id, status, currency,
+    subtotal_cents, discount_cents, total_cents,
+    payment_provider, payment_method,
+    terms_revision_id, refund_policy_revision_id,
+    terms_accepted_at, paid_at, finalized_at
+  ) VALUES (
+    '02000080-0000-0000-0000-000000000001',
+    'DEV-0001',
+    '02000010-0000-0000-0000-000000000001',
+    'paid', 'LKR',
+    99500, 0, 99500,
+    'payhere', 'card',
+    v_terms_rev_id, v_refund_rev_id,
+    now() - interval '5 days',
+    now() - interval '5 days',
+    now() - interval '5 days'
+  ) ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO public.orders (
+    id, order_number, user_id, status, currency,
+    subtotal_cents, discount_cents, total_cents,
+    payment_provider, payment_method,
+    terms_revision_id, refund_policy_revision_id,
+    terms_accepted_at
+  ) VALUES (
+    '02000090-0000-0000-0000-000000000001',
+    'DEV-0002',
+    '02000010-0000-0000-0000-000000000002',
+    'pending_verification', 'LKR',
+    79500, 0, 79500,
+    'bank_transfer', 'bank_transfer',
+    v_terms_rev_id, v_refund_rev_id,
+    now() - interval '1 day'
+  ) ON CONFLICT (id) DO NOTHING;
+END $$;
 
 INSERT INTO public.order_items (
-  id, order_id, document_id, language, unit_price_cents, quantity
+  id, order_id, item_type, document_id, language, title_snapshot, unit_price_cents, quantity, line_total_cents
 ) VALUES (
   '02000081-0000-0000-0000-000000000001',
   '02000080-0000-0000-0000-000000000001',
+  'document',
   '02000050-0000-0000-0000-000000000001',
   'en',
-  99500,
-  1
+  'Fire Safety Inspection Checklist',
+  99500, 1, 99500
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.entitlements (
-  id, user_id, order_item_id, document_id, language,
+  id, user_id, item_type, order_item_id, document_id, language,
   download_limit, downloads_used, source
 ) VALUES
-  -- Unused entitlement
   (
     '02000082-0000-0000-0000-000000000001',
     '02000010-0000-0000-0000-000000000001',
+    'document',
     '02000081-0000-0000-0000-000000000001',
     '02000050-0000-0000-0000-000000000001',
     'en',
     1, 0, 'purchase'
   ),
-  -- Used entitlement (simulate a second purchase for same customer)
+  -- admin_grant: order_item_id is NULL so the partial unique index is not triggered
   (
     '02000082-0000-0000-0000-000000000002',
     '02000010-0000-0000-0000-000000000001',
-    '02000081-0000-0000-0000-000000000001',
+    'document',
+    NULL,
     '02000050-0000-0000-0000-000000000001',
     'si',
-    1, 1, 'purchase'
+    1, 1, 'admin_grant'
   )
 ON CONFLICT (id) DO NOTHING;
 
--- ── A customer with a pending_verification bank order + uploaded slip ─────────
-
-INSERT INTO public.orders (
-  id, user_id, status, subtotal_cents, discount_cents, total_cents,
-  payment_method, terms_accepted_at
-) VALUES (
-  '02000090-0000-0000-0000-000000000001',
-  '02000010-0000-0000-0000-000000000002',
-  'pending_verification',
-  79500, 0, 79500,
-  'bank_transfer',
-  now() - interval '1 day'
-) ON CONFLICT (id) DO NOTHING;
+-- ── A pending_verification bank order + uploaded slip ─────────────────────────
 
 INSERT INTO public.order_items (
-  id, order_id, document_id, language, unit_price_cents, quantity
+  id, order_id, item_type, document_id, language, title_snapshot, unit_price_cents, quantity, line_total_cents
 ) VALUES (
   '02000091-0000-0000-0000-000000000001',
   '02000090-0000-0000-0000-000000000001',
+  'document',
   '02000050-0000-0000-0000-000000000002',
   'en',
-  79500,
-  1
+  'First Aid Toolbox Talk',
+  79500, 1, 79500
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.bank_transfer_slips (
@@ -407,13 +447,13 @@ INSERT INTO public.bank_transfer_slips (
   '02000090-0000-0000-0000-000000000001',
   '02000010-0000-0000-0000-000000000002',
   'slips/02000090-0000-0000-0000-000000000001/slip-dev.jpg',
-  'pending'
+  'uploaded'
 ) ON CONFLICT (id) DO NOTHING;
 
 -- ── An open download request ──────────────────────────────────────────────────
 
 INSERT INTO public.download_requests (
-  id, entitlement_id, user_id, reason, status
+  id, entitlement_id, user_id, note, status
 ) VALUES (
   '02000093-0000-0000-0000-000000000001',
   '02000082-0000-0000-0000-000000000001',

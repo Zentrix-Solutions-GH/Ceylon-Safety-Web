@@ -40,11 +40,22 @@ fi
 if $SUPABASE_CMD status --output json 2>/dev/null | grep -q '"DB_URL"'; then
   run "pgTAP RLS suite" $SUPABASE_CMD test db supabase/tests/zz-schema-verification.test.sql
   run "pgTAP seed suite" $SUPABASE_CMD test db supabase/tests/seed.test.sql
+  # Apply dev seed (idempotent) then verify AC6 fixture counts
+  # Uses docker exec because psql may not be installed on the host
+  DB_CONTAINER=$(docker ps --filter name=supabase_db_ --format "{{.Names}}" 2>/dev/null | head -1)
+  if [ -n "$DB_CONTAINER" ]; then
+    { printf "SET app.environment = 'development';\n"; cat supabase/seed.dev.sql; } \
+      | docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -q \
+      2>&1 | grep -v "^$" || true
+    run "pgTAP dev seed suite" $SUPABASE_CMD test db supabase/tests/seed.dev.test.sql
+  fi
 else
   printf '\n── pgTAP RLS suite ──\n'
   printf '⚠ Supabase not running — skipping pgTAP tests (run supabase start first)\n'
   printf '\n── pgTAP seed suite ──\n'
   printf '⚠ Supabase not running — skipping seed tests (run supabase start first)\n'
+  printf '\n── pgTAP dev seed suite ──\n'
+  printf '⚠ Supabase not running — skipping dev seed tests (run supabase start first)\n'
 fi
 
 # 5. Types file freshness (skipped when Supabase is not running)
