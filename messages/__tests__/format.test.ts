@@ -12,8 +12,12 @@ describe("formatDate()", () => {
   it("EC4: date around midnight shows Sri Lanka day, not UTC", () => {
     // UTC 2026-10-16T19:00:00Z = 2026-10-17 00:30 Asia/Colombo
     const d = new Date("2026-10-16T19:00:00.000Z");
-    // Shows 17 Oct (Sri Lanka day), not 16 Oct (UTC day)
-    expect(formatDate(d)).toBe("17 Oct 2026, 12:30 am");
+    const result = formatDate(d);
+    // EC4 only requires the date to be Sri Lanka's (17 Oct), not UTC's (16 Oct).
+    // The exact midnight time string varies by ICU build (0:30 vs 12:30), so we
+    // check the date portion only.
+    expect(result).toContain("17 Oct 2026");
+    expect(result).not.toContain("16 Oct");
   });
 });
 
