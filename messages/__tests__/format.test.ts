@@ -5,20 +5,15 @@ describe("formatDate()", () => {
   it("AC5: formats a date in Asia/Colombo timezone", () => {
     // UTC 2026-10-17T09:00:00Z = 2026-10-17 14:30 in Asia/Colombo (UTC+5:30)
     const d = new Date("2026-10-17T09:00:00.000Z");
-    const result = formatDate(d);
-    expect(result).toContain("17");
-    expect(result).toContain("Oct");
-    expect(result).toContain("2026");
-    expect(result).toMatch(/2:30/);
+    // Pinned to exact en-GB output — if this fails, the ICU format changed.
+    expect(formatDate(d)).toBe("17 Oct 2026, 2:30 pm");
   });
 
   it("EC4: date around midnight shows Sri Lanka day, not UTC", () => {
     // UTC 2026-10-16T19:00:00Z = 2026-10-17 00:30 Asia/Colombo
     const d = new Date("2026-10-16T19:00:00.000Z");
-    const result = formatDate(d);
-    // Should show 17 Oct (Sri Lanka day), not 16 Oct (UTC day)
-    expect(result).toContain("17");
-    expect(result).not.toMatch(/\b16\b/);
+    // Shows 17 Oct (Sri Lanka day), not 16 Oct (UTC day)
+    expect(formatDate(d)).toBe("17 Oct 2026, 12:30 am");
   });
 });
 

@@ -1,6 +1,8 @@
 // AC5: date in Asia/Colombo timezone, money from cents as "LKR X,XXX.XX".
 
-const DATE_FORMAT = new Intl.DateTimeFormat("en-LK", {
+// en-GB gives day-first format ("17 Oct 2026, 2:30 pm") matching the spec example.
+// en-LK behaves as en-US (month-first, uppercase AM/PM) on the ICU build used by Node.js.
+const DATE_FORMAT = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
   year: "numeric",

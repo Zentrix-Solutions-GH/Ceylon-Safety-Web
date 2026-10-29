@@ -44,12 +44,14 @@ export function ResponsiveImage({
     );
   }
 
-  // AC7: one variant only → plain <img src>.
-  if (!hasSrc1200) {
+  // AC6: both variants → srcset.
+  if (hasSrc480 && hasSrc1200) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src480}
+        srcSet={`${src480} 480w, ${src1200} 1200w`}
+        sizes="(max-width: 600px) 480px, 1200px"
         width={width}
         height={height}
         alt={altText}
@@ -60,13 +62,12 @@ export function ResponsiveImage({
     );
   }
 
-  // AC6: both variants → srcset.
+  // AC7: one variant only → plain <img src> (covers src480-only and src1200-only).
+  const singleSrc = src480 || src1200;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src480}
-      srcSet={`${src480} 480w, ${src1200} 1200w`}
-      sizes="(max-width: 600px) 480px, 1200px"
+      src={singleSrc}
       width={width}
       height={height}
       alt={altText}
