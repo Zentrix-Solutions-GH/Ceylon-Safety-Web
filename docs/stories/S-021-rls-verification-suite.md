@@ -121,6 +121,27 @@ Result: PASS
 ✅ All checks passed.
 ```
 
+### AC9 break-test — suite fails when a table without RLS is added
+
+A temporary migration (`20261029999999_s021_break_test.sql`) was applied that
+adds `public.s021_no_rls_test` with no `ENABLE ROW LEVEL SECURITY`. After
+`supabase db reset`, running the suite produced:
+
+```
+$ npx supabase test db supabase/tests/zz-schema-verification.test.sql
+
+Connecting to local database...
+psql:...zz-schema-verification.test.sql:278: ERROR:  AC1: expected 37 tables in public schema, found 38
+CONTEXT:  PL/pgSQL function inline_code_block line 37 at ASSERT
+...zz-schema-verification.test.sql .. Dubious, test returned 3 (wstat 768, 0x300)
+No subtests run
+Result: FAIL
+```
+
+AC1 fires first (table count 38 ≠ 37). AC2 would also name the offender
+(`s021_no_rls_test`) if AC1 were relaxed. The break-migration was removed and
+the DB was reset back to the clean state before committing.
+
 ## Review notes
 
 <!-- Filled in by reviewer / security-reviewer agents and /full-review -->
