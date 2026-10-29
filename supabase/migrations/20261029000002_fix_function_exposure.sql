@@ -57,3 +57,11 @@ CREATE INDEX IF NOT EXISTS entitlements_course_id_idx
 CREATE INDEX IF NOT EXISTS entitlements_granted_by_idx
   ON public.entitlements (granted_by)
   WHERE granted_by IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS entitlements_document_id_idx
+  ON public.entitlements (document_id)
+  WHERE document_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS order_items_course_id_idx
+  ON public.order_items (course_id)
+  WHERE course_id IS NOT NULL;

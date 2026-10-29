@@ -146,6 +146,11 @@ the DB was reset back to the clean state before committing.
 
 <!-- Filled in by reviewer / security-reviewer agents and /full-review -->
 
+- **P1** `zz-schema-verification.test.sql:502–516` — AC3 maintainer matrix incomplete: only `admin_audit_log`, `coupons`, `payment_events` checked; add `is(..., 0, ...)` assertions for `document_files`, `email_logs`, `role_permissions`, `user_roles`, `bank_transfer_slips`, `entitlements`, `download_logs`, `download_requests`, `invoices`. (full-review 2026-10-29)
+- **P1** `zz-schema-verification.test.sql:338–496` — AC4 missing embedded-select path test: add `SELECT df.file_key FROM public.documents d JOIN public.document_files df ON df.document_id = d.id` as anon/authenticated → 0 rows. (full-review 2026-10-29)
+- **P1** `zz-schema-verification.test.sql:823–843` — AC7 composite-FK false-negative: `a.attnum = ANY(i.indkey)` passes when FK column appears anywhere in the index, not necessarily as the leading column; add `i.indkey[0] = a.attnum` filter or a comment documenting the limitation. (full-review 2026-10-29)
+- **P1** `zz-schema-verification.test.sql:564` — No positive assertion that `authenticated` can still EXECUTE `profile_is_super_admin`; if a future migration accidentally revokes it, RLS policies on `profiles` and `admin_audit_log` silently break. Add `ok(... profile_is_super_admin(...)... IS NOT NULL, ...)` inside an authenticated session block. (full-review 2026-10-29)
+
 ## After this merges, a user can:
 
 - Nothing new. Infrastructure PR: after it, every future migration is checked automatically and the build fails if a table is exposed.

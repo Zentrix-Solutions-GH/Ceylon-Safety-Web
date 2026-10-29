@@ -514,6 +514,37 @@ SELECT is(
   (SELECT COUNT(*)::int FROM public.payment_events),
   0, 'AC3: maintainer gets 0 rows from payment_events'
 );
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.document_files),
+  0, 'AC3: maintainer gets 0 rows from document_files'
+);
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.email_logs),
+  0, 'AC3: maintainer gets 0 rows from email_logs'
+);
+-- role_permissions and user_roles are intentionally readable by authenticated
+-- (the has_permission / is_staff_member functions are SECURITY INVOKER and require
+-- the caller to be able to read these tables). Maintainer visibility is by design.
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.bank_transfer_slips),
+  0, 'AC3: maintainer gets 0 rows from bank_transfer_slips'
+);
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.entitlements),
+  0, 'AC3: maintainer gets 0 rows from entitlements'
+);
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.download_logs),
+  0, 'AC3: maintainer gets 0 rows from download_logs'
+);
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.download_requests),
+  0, 'AC3: maintainer gets 0 rows from download_requests'
+);
+SELECT is(
+  (SELECT COUNT(*)::int FROM public.invoices),
+  0, 'AC3: maintainer gets 0 rows from invoices'
+);
 
 RESET role;
 
@@ -638,6 +669,17 @@ SELECT throws_ok(
   '42501',
   NULL,
   'AC5: anon cannot EXECUTE public.profile_is_super_admin(uuid)'
+);
+RESET role;
+
+-- authenticated must retain EXECUTE on profile_is_super_admin so RLS policies
+-- on profiles and admin_audit_log continue to function. If a future migration
+-- accidentally revokes this, the policies silently break.
+SET LOCAL role TO authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"02100001-0000-0000-0000-000000000002","role":"authenticated"}';
+SELECT ok(
+  (SELECT public.profile_is_super_admin('02100001-0000-0000-0000-000000000001'::uuid)) IS NOT NULL,
+  'AC5: authenticated can still EXECUTE public.profile_is_super_admin(uuid)'
 );
 RESET role;
 
@@ -839,7 +881,12 @@ BEGIN
         SELECT 1
         FROM pg_index i
         WHERE i.indrelid = c.conrelid
-          AND a.attnum = ANY(i.indkey)
+          -- Leading-column check: passes only if the FK column is the first column
+          -- of the index. A.attnum = ANY(i.indkey) would pass for composite FKs
+          -- where the FK column appears as a non-leading column — those are
+          -- not useful for FK lookups. Single-column FKs (all current FKs) are
+          -- not affected because indkey[0] is the only column.
+          AND i.indkey[0] = a.attnum
       )
   LOOP
     RAISE EXCEPTION
@@ -946,6 +993,33 @@ SELECT ok(
   ),
   'AC7: profiles has unique index on email'
 );
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- AC4: Embedded-select path — document_files unreachable via JOIN from documents
+-- anon and authenticated customers must get 0 rows even through a JOIN that
+-- traverses a public-readable table.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+SET LOCAL role TO anon;
+SELECT is(
+  (SELECT COUNT(*)::int
+   FROM public.documents d
+   JOIN public.document_files df ON df.document_id = d.id),
+  0,
+  'AC4: anon gets 0 rows from document_files via JOIN from documents'
+);
+RESET role;
+
+SET LOCAL role TO authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"02100003-0000-0000-0000-000000000001","role":"authenticated"}';
+SELECT is(
+  (SELECT COUNT(*)::int
+   FROM public.documents d
+   JOIN public.document_files df ON df.document_id = d.id),
+  0,
+  'AC4: authenticated customer gets 0 rows from document_files via JOIN from documents'
+);
+RESET role;
 
 SELECT * FROM finish();
 ROLLBACK;
