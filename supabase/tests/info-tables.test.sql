@@ -44,7 +44,8 @@ END;
 $$;
 
 INSERT INTO public.categories (id, slug, name, applies_to)
-VALUES ('cc180001-0000-0000-0000-000000000001'::uuid, 'fire-safety', 'Fire Safety', ARRAY['course']);
+VALUES ('cc180001-0000-0000-0000-000000000001'::uuid, 'fire-safety', 'Fire Safety', ARRAY['course'])
+ON CONFLICT (slug) DO NOTHING;
 
 -- Temp table used by AC7 timing assertions (ON COMMIT DROP — rolled back at end)
 CREATE TEMP TABLE _ac7_results (label text PRIMARY KEY, passed boolean) ON COMMIT DROP;

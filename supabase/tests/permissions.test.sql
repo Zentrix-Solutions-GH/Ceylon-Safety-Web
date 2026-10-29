@@ -33,10 +33,11 @@ BEGIN
     (v_maint, 'maintainer'),
     (v_sa2,   'super_admin');
 
-  -- Permission row for admin: articles.*
-  INSERT INTO public.role_permissions (role, action) VALUES
-    ('admin', 'articles.*')
-  ON CONFLICT (role, action) DO NOTHING;
+  -- Clear pre-seeded admin permissions so the test controls exactly which
+  -- actions admin can perform (seed_content pre-inserts 18 admin rows).
+  DELETE FROM public.role_permissions WHERE role = 'admin';
+  -- Permission row for admin: articles.* only
+  INSERT INTO public.role_permissions (role, action) VALUES ('admin', 'articles.*');
 END;
 $$;
 

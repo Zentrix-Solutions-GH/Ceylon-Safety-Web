@@ -66,7 +66,7 @@ jobs:
         run: supabase db reset --yes
 
       - name: Load dev seed data
-        run: psql postgresql://postgres:postgres@localhost:54322/postgres -f supabase/seed.dev.sql
+        run: psql postgresql://postgres:postgres@localhost:54322/postgres -c "SET app.environment = 'development'" -f supabase/seed.dev.sql
 
       - name: Run pgTAP tests
         run: supabase test db

@@ -136,7 +136,8 @@ SELECT throws_ok(
 );
 
 INSERT INTO public.pages (locale, slug, title)
-VALUES ('en', 'terms', 'Terms EN');
+VALUES ('en', 'terms', 'Terms EN')
+ON CONFLICT (locale, slug) DO NOTHING;
 
 SELECT lives_ok(
   $$INSERT INTO public.pages (locale, slug, title) VALUES ('si', 'terms', 'Terms SI')$$,
