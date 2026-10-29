@@ -37,7 +37,7 @@ Seed the rows the site needs on day one: categories, setting keys with their gro
 - [ ] AC3: A MIGRATION inserts the six `pages` rows (`terms`, `privacy`, `refund-policy`, `disclaimer`, `contact-coach-intro`, `contact-coach-services`, locale `en`) and a `page_revisions` row version 1 for each, with the client's text (placeholder text only until the client delivers it, marked as draft). Orders cannot be created until `terms` and `refund-policy` have a revision.
 - [ ] AC4: A MIGRATION inserts `role_permissions` rows for `admin`: `articles.*`, `videos.*`, `authors.*`, `media.upload`, `comments.moderate`, `documents.*`, `courses.*`, `trainers.*`, `pages.publish`, `settings.site`, `banners.read`, `banners.write`, `coupons.*`, `bank_transfers.review`, `download_requests.review`, `orders.read`, `users.read`, `users.suspend` (the permission names follow the final M16 decision). `maintainer`: no rows. Super Admin only (no row for any role): `pages.publish_legal`, `settings.contact`, `settings.business`, `settings.analytics`, `ads.settings`, `orders.grant`, `staff.*`, `audit.read`. A test proves `has_permission` gives these results for an `admin`, a `maintainer` and a Super Admin.
 - [ ] AC5: Trainers and courses are seeded by a MIGRATION (Release 1; no admin screens until Release 2): trainers with a slug, contact fields and consent confirmed by the client; course cards with `is_coming_soon = true`.
-- [ ] AC6: `supabase/seed.dev.sql` (development only) contains the sample data of schema section 10: articles with a JSON body (text, image, video, course, document and ad blocks) and matching `article_refs` rows, one pending and one approved comment; documents each with three language files and a preview; videos (one with a custom thumbnail, others with a copied thumbnail key); courses with the coming-soon flag; trainers; several `home_top` banners; one percent and one fixed coupon; a test customer; a customer with a PAID order (one unused and one used entitlement); a customer with a `pending_verification` bank order and an uploaded slip; an open download request; a test Admin and a test Maintainer.
+- [x] AC6: `supabase/seed.dev.sql` (development only) contains the sample data of schema section 10: articles with a JSON body (text, image, video, course, document and ad blocks) and matching `article_refs` rows, one pending and one approved comment; documents each with three language files and a preview; videos (one with a custom thumbnail, others with a copied thumbnail key); courses with the coming-soon flag; trainers; several `home_top` banners; one percent and one fixed coupon; a test customer; a customer with a PAID order (one unused and one used entitlement); a customer with a `pending_verification` bank order and an uploaded slip; an open download request; a test Admin and a test Maintainer.
 - [ ] AC7: `seed.dev.sql` cannot run against production: it checks a marker that only the local stack and CI set and aborts otherwise (test). `supabase db reset` runs migrations plus both seed files without error on the local stack.
 - [ ] AC8: A migration test counts: 8 categories, all setting keys present with a valid `setting_group`, 6 pages each with revision version 1, and `role_permissions` rows only for `admin`.
 
@@ -101,6 +101,14 @@ $ bash scripts/check.sh
 Files=1, Tests=94 — Result: PASS
 ✓ pgTAP RLS suite passed
 
+── pgTAP seed suite ──
+Files=1, Tests=55 — Result: PASS
+✓ pgTAP seed suite passed
+
+── pgTAP dev seed suite ──
+Files=1, Tests=38 — Result: PASS
+✓ pgTAP dev seed suite passed
+
 ── Types file freshness ──
 ✓ Types file freshness passed
 
@@ -108,13 +116,9 @@ Files=1, Tests=94 — Result: PASS
 ✓ Dev seed guard passed
 
 ════════════════════════════════
-  check.sh: 6 passed, 0 failed
+  check.sh: 8 passed, 0 failed
 ════════════════════════════════
 ✅ All checks passed.
-
-pgTAP seed suite (seed.test.sql):
-Files=1, Tests=53 — Result: PASS
-All 53 seed assertions passed (AC1–AC5, AC8, EC1, EC4).
 ```
 
 ## Review notes
