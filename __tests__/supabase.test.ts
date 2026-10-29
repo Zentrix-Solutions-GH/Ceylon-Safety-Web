@@ -53,6 +53,19 @@ describe("lib/supabase/server — AC5: server client", () => {
     expect(typeof mod.createSupabaseServerClient).toBe("function");
   });
 
+  it("server client calls createServerClient with URL and anon key from publicConfig", async () => {
+    const { createServerClient } = await import("@supabase/ssr");
+    const { createSupabaseServerClient } = await import(
+      "../lib/supabase/server"
+    );
+    await createSupabaseServerClient();
+    expect(createServerClient).toHaveBeenCalledWith(
+      "https://abc.supabase.co",
+      "anon-key-value",
+      expect.any(Object)
+    );
+  });
+
   it("exports createSupabaseServiceRoleClient function", async () => {
     const mod = await import("../lib/supabase/server");
     expect(typeof mod.createSupabaseServiceRoleClient).toBe("function");
