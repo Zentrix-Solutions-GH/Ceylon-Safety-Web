@@ -1,0 +1,7 @@
+[allowlist]
+description = "CI workflow allowlist"
+# Supabase publishes this JWT in their documentation as the canonical demo/local
+# anon key. It is not a real secret and is safe to commit in CI dummy-value blocks.
+regexes = [
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9\.CRFA0NiK7W9Hx-u31c0M7MnK_nYbXuALMXkPOBdCrMXA',
+]

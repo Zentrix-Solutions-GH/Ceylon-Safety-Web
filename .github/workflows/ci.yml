@@ -2,7 +2,7 @@ name: ci
 
 on:
   pull_request:
-    branches: [dev]
+    branches: [dev, main]
 
 permissions:
   contents: read
@@ -15,18 +15,38 @@ jobs:
   lint-typecheck:
     name: lint-typecheck
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: npm
 
       - run: npm ci
 
       - run: bash scripts/check.sh
+
+      - name: No mocks in production code
+        run: bash scripts/check-no-mocks.sh
+
+      - name: Build (next build standalone)
+        run: |
+          npx next build
+          test -d .next/standalone || (echo "❌ next.config.ts must set output: 'standalone'" && exit 1)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRFA0NiK7W9Hx-u31c0M7MnK_nYbXuALMXkPOBdCrMXA
+          NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL: https://media.example.com
+          NEXT_PUBLIC_PAYHERE_SANDBOX: "true"
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+          NEXT_PUBLIC_SENTRY_DSN: ""
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          CSP_MODE: report-only
+          SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key-for-ci-build-only
+          NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: 0000000000000000000000000000000000000000000000000000000000000000
+          CRON_SECRET: dummy-cron-secret-for-ci-build-only
 
   audit:
     name: audit
@@ -38,7 +58,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: npm
 
       - run: npm ci
