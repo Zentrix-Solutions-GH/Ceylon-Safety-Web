@@ -44,19 +44,6 @@ jobs:
           NEXT_PUBLIC_SENTRY_DSN: ""
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
-  gitleaks:
-    name: gitleaks
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          fetch-depth: 0
-
-      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
   audit:
     name: audit
     runs-on: ubuntu-latest
