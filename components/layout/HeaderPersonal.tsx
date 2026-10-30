@@ -14,11 +14,12 @@ export function HeaderPersonal() {
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isSigningOut = useRef(false);
 
   useEffect(() => {
     if (!menuOpen) return;
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node) && !isSigningOut.current) {
         setMenuOpen(false);
       }
     }
@@ -62,12 +63,15 @@ export function HeaderPersonal() {
 
   async function handleSignOut() {
     setSignOutError(null);
+    isSigningOut.current = true;
     try {
       await signOut();
       setMenuOpen(false);
     } catch {
       // EC5: sign out fails — show error inside open menu; user stays signed in.
       setSignOutError(errorMessage("unknown"));
+    } finally {
+      isSigningOut.current = false;
     }
   }
 

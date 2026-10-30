@@ -140,6 +140,18 @@ describe("Header", () => {
       await user.click(screen.getByRole("menuitem", { name: /sign out/i }));
       expect(mockSignOut).toHaveBeenCalledOnce();
     });
+
+    it("closes the menu after successful sign-out", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: mockSignOut });
+      render(<Header />);
+      await user.click(screen.getByRole("button", { name: "Kamal" }));
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+      await user.click(screen.getByRole("menuitem", { name: /sign out/i }));
+      await waitFor(() => {
+        expect(screen.queryByRole("menu")).toBeNull();
+      });
+    });
   });
 
   describe("AC4: cart link", () => {
