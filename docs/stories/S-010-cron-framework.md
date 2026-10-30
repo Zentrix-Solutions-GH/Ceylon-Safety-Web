@@ -1,7 +1,7 @@
 ---
 id: S-010
 title: Cron route framework + scheduler wiring + keep-awake
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-010-cron-framework
@@ -70,9 +70,19 @@ Types added or changed in `types/` by this story:
 
 ## Plan
 
-Prior art: read infrastructure design 3.2 (D4), 4 (keep-awake), 9 (jobs table, cron.sh, cron-job.org fallback), 10 (`CRON_SECRET`), file structure design (`app/api/cron/[job]/route.ts`, `lib/jobs/`) and schema design 14.1. No cron code exists. Extends S-001 and S-002 results (scheduler choice). Replaces the earlier draft story.
+Prior art: infrastructure design sections 4 (keep-awake) and 9 (jobs, `CRON_SECRET`, `cron.sh`, cron-job.org fallback). File structure design names `app/api/cron/[job]/route.ts` and `lib/jobs/`. Existing stubs: `app/api/cron/[job]/route.ts` (returns 501), `lib/jobs/idle-deletion.ts` (empty). `CRON_SECRET` already listed in `.env.example`. No `job_runs` table — C8 says use heartbeats only. No redaction helper (S-008 stub is empty) — use `console.error` with safe message.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+**Files to create/edit:**
+1. `lib/config.ts` — add `CRON_SECRET` as required server setting, add Healthchecks URL helpers (optional)
+2. `app/api/cron/[job]/route.ts` — POST only, constant-time header compare, job dispatch, heartbeat ping, duration log
+3. `lib/jobs/index.ts` — JobHandler type, job registry, `pingHeartbeat` helper
+4. `lib/jobs/test.ts` — no-op test job
+5. `scripts/cron.sh` — reads secret from file, POSTs to `/api/cron/<job>` with header
+6. `.github/workflows/keep-awake.yml` — every 3 days + manual dispatch, one Supabase API read
+7. `__tests__/cron-route.test.ts` — AC1, AC2, EC1, EC2 unit tests
+8. `__tests__/jobs.test.ts` — AC3, AC4 unit tests
+
+**Step order:** tests (Step 4) → implementation (Step 5) → green (Step 6) → check.sh (Step 7).
 
 ## Evidence
 

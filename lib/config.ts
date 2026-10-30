@@ -53,6 +53,7 @@ const vals = collect([
   ["NEXT_PUBLIC_SUPABASE_ANON_KEY", string],
   ["SUPABASE_SERVICE_ROLE_KEY", string],
   ["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY", hex64],
+  ["CRON_SECRET", string],
 ]);
 
 // CSP config — validated separately so errors are specific
@@ -74,6 +75,7 @@ export const publicConfig = {
 export const serverConfig = {
   supabaseServiceRoleKey: vals["SUPABASE_SERVICE_ROLE_KEY"],
   encryptionKey: vals["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"],
+  cronSecret: vals["CRON_SECRET"],
 } as const;
 
 // CSP config — used in tests only. Production code (lib/security/headers.ts)
