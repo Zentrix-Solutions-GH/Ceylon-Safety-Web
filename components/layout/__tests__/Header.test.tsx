@@ -1,4 +1,4 @@
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -362,6 +362,48 @@ describe("Header", () => {
       expect(screen.getByRole("menu")).toBeInTheDocument();
 
       // Fail sign-out — error must appear inside the still-open menu.
+      await act(async () => { rejectSignOut(new Error("offline")); });
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
+
+    it("Escape during sign-out does not close the menu or swallow the error", async () => {
+      let rejectSignOut!: (e: Error) => void;
+      const slowSignOut = vi.fn().mockImplementation(
+        () => new Promise<void>((_, reject) => { rejectSignOut = reject; })
+      );
+      mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: slowSignOut });
+      render(<Header />);
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: "Kamal" }));
+
+      act(() => { screen.getByRole("menuitem", { name: /sign out/i }).click(); });
+
+      // Press Escape while sign-out is in-flight — closeMenu() guard should block.
+      act(() => { fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" }); });
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+
+      await act(async () => { rejectSignOut(new Error("offline")); });
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
+
+    it("Tab during sign-out does not close the menu or swallow the error", async () => {
+      let rejectSignOut!: (e: Error) => void;
+      const slowSignOut = vi.fn().mockImplementation(
+        () => new Promise<void>((_, reject) => { rejectSignOut = reject; })
+      );
+      mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: slowSignOut });
+      render(<Header />);
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: "Kamal" }));
+
+      act(() => { screen.getByRole("menuitem", { name: /sign out/i }).click(); });
+
+      // Press Tab while sign-out is in-flight — closeMenu() guard should block.
+      act(() => { fireEvent.keyDown(screen.getByRole("menu"), { key: "Tab" }); });
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+
       await act(async () => { rejectSignOut(new Error("offline")); });
       expect(screen.getByRole("alert")).toBeInTheDocument();
     });

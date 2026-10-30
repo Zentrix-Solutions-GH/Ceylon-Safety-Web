@@ -19,8 +19,8 @@ export function HeaderPersonal() {
   useEffect(() => {
     if (!menuOpen) return;
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node) && !isSigningOut.current) {
-        setMenuOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        closeMenu();
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -33,6 +33,13 @@ export function HeaderPersonal() {
     const first = dropdownRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
     first?.focus();
   }, [menuOpen]);
+
+  // Returns true when the menu actually closes; false when sign-out is in-flight.
+  function closeMenu(): boolean {
+    if (isSigningOut.current) return false;
+    setMenuOpen(false);
+    return true;
+  }
 
   function handleMenuKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     const items = Array.from(
@@ -47,12 +54,10 @@ export function HeaderPersonal() {
       items[(idx - 1 + items.length) % items.length]?.focus();
     } else if (e.key === "Escape") {
       e.preventDefault();
-      setMenuOpen(false);
-      menuButtonRef.current?.focus();
+      if (closeMenu()) menuButtonRef.current?.focus();
     } else if (e.key === "Tab") {
       e.preventDefault();
-      setMenuOpen(false);
-      menuButtonRef.current?.focus();
+      if (closeMenu()) menuButtonRef.current?.focus();
     }
   }
 
