@@ -1,11 +1,11 @@
 ---
 id: S-005
 title: Supabase projects (local, staging, prod) + migration flow
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-005-supabase-projects-migrations
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/36
 depends_on: [S-003]
 reqs: [REQ-198]
 ---
@@ -21,12 +21,12 @@ Create the three database environments (local Supabase CLI stack, staging projec
 
 ## Acceptance criteria
 
-- [ ] AC1: the Supabase CLI local stack (Docker) starts with `supabase start`; `supabase/config.toml` is committed; `supabase db reset` runs clean on an empty `supabase/migrations/` folder. The commands are written in `docs/ops/local-development.md`.
-- [ ] AC2: a Supabase project "ceylonsafety-staging" and a project "ceylonsafety-prod" exist on the free plan, one per environment, in the client's organisation (see Assumptions accepted). Their project references (not secret) are recorded in the same document. No third project is created.
-- [ ] AC3: the staging project's URL, anon key and service-role key are set as server environment values for staging only and as `NEXT_PUBLIC_*` build values for the staging build; none are in the repository.
-- [ ] AC4: the migration flow is documented and proven: one file per change in `supabase/migrations/`, applied in order, applied migrations are never edited (fix forward), and a migration must be backward-compatible with the previous code ("expand, then contract", infrastructure design 5.3). A first empty or no-op migration is pushed to staging with `supabase db push` and the migration history shows it.
+- [x] AC1: the Supabase CLI local stack (Docker) starts with `supabase start`; `supabase/config.toml` is committed; `supabase db reset` runs clean on an empty `supabase/migrations/` folder. The commands are written in `docs/ops/local-development.md`.
+- [x] AC2: a Supabase project "ceylonsafety-staging" and a project "ceylonsafety-prod" exist on the free plan, one per environment, in the client's organisation (see Assumptions accepted). Their project references (not secret) are recorded in the same document. No third project is created.
+- [x] AC3: the staging project's URL, anon key and service-role key are set as server environment values for staging only and as `NEXT_PUBLIC_*` build values for the staging build; none are in the repository.
+- [x] AC4: the migration flow is documented and proven: one file per change in `supabase/migrations/`, applied in order, applied migrations are never edited (fix forward), and a migration must be backward-compatible with the previous code ("expand, then contract", infrastructure design 5.3). A first empty or no-op migration is pushed to staging with `supabase db push` and the migration history shows it.
 - [ ] AC5: connectivity through the session pooler is proven from a GitHub-hosted runner (IPv4): `select 1` through host pooler, port 5432, user `postgres.<project ref>`, with the connection string as a masked secret. The direct host (IPv6 only, to verify) is not relied on.
-- [ ] AC6: the free-plan limits are written in the document: 500 MB database (alert at 400 MB), 2 projects, pause after a week of inactivity, no backups we can rely on (S-115 provides them).
+- [x] AC6: the free-plan limits are written in the document: 500 MB database (alert at 400 MB), 2 projects, pause after a week of inactivity, no backups we can rely on (S-115 provides them).
 
 ## Edge cases
 
