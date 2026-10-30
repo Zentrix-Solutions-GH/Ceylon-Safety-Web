@@ -52,7 +52,6 @@ export function HeaderNav() {
           <button
             type="button"
             aria-label={t("nav.open_menu")}
-            aria-expanded={isOpen}
             className="lg:hidden flex items-center justify-center w-11 h-11 rounded-md hover:bg-accent"
           >
             <Menu className="h-5 w-5" aria-hidden="true" />

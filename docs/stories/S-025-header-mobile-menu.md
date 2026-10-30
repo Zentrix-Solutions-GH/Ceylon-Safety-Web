@@ -77,7 +77,7 @@ Prior art: searched `grep -ril "header\|navigation\|useAuth" docs/` — found: f
 |---|---|
 | `messages/en.ts` | Add `nav.*` and `site.*` keys |
 | `config/navigation.ts` | Fixed nav item list (id, href, labelKey) |
-| `lib/supabase/client.ts` | Scaffold: `getSupabaseBrowserClient()` via `@supabase/ssr` (backend-owned) |
+| `lib/supabase/client.ts` | Backend-owned: `createSupabaseBrowserClient()` via `@supabase/ssr` (S-003 implementation, adopted in merge conflict resolution) |
 | `hooks/useAuth.ts` | `"use client"` display-only hook: `{ user, isLoading, signOut }` |
 | `components/layout/HeaderNav.tsx` | `"use client"` — nav links, `aria-current`, mobile Sheet (Radix Dialog) |
 | `components/layout/HeaderPersonal.tsx` | `"use client"` — auth state, account menu, cart link |
@@ -93,7 +93,7 @@ Prior art: searched `grep -ril "header\|navigation\|useAuth" docs/` — found: f
 
 **HeaderPersonal.tsx** — `"use client"`. Uses `useAuth()`. `isLoading: true` → fixed-size `aria-busy` placeholder, no Sign In flash (AC2). Signed out → Sign In + Sign Up links. Signed in → name button (EC3: `truncate max-w-[8rem]`) toggles account dropdown (Profile, My Purchases, Sign Out). Cart link always `href="/cart"` (middleware redirects unsigned-in visitors, AC4). EC5: signOut error → `errorMessage("unknown")` shown inline.
 
-**useAuth.ts** — `"use client"`. `getSupabaseBrowserClient().auth.getUser()` for initial load + `onAuthStateChange` subscription. Returns `{ user: { name: string | null } | null, isLoading: boolean, signOut: () => Promise<void> }`. EC1: any error → `user=null`. EC2: `user_metadata.full_name` absent → `name: null` (component shows "Account").
+**useAuth.ts** — `"use client"`. `createSupabaseBrowserClient().auth.getSession()` for initial load + `onAuthStateChange` subscription. Returns `{ user: { name: string | null } | null, isLoading: boolean, signOut: () => Promise<void> }`. EC1: any error → `user=null`. EC2: `user_metadata.full_name` absent → `name: null` (component shows "Account").
 
 **lib/supabase/client.ts** — backend-owned scaffold. `createBrowserClient(url, key)` from `@supabase/ssr`. Singleton via module-level variable.
 
