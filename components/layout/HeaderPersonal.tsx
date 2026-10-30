@@ -57,6 +57,7 @@ export function HeaderPersonal() {
   }
 
   function handleMenuToggle() {
+    if (isSigningOut.current) return;
     if (!menuOpen) setSignOutError(null);
     setMenuOpen((prev) => !prev);
   }

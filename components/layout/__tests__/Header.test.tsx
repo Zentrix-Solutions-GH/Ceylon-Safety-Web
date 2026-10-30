@@ -340,6 +340,33 @@ describe("Header", () => {
     });
   });
 
+  describe("EC5: sign-out race guard", () => {
+    it("click-outside while sign-out is in-flight does not swallow the error", async () => {
+      let rejectSignOut!: (e: Error) => void;
+      const slowSignOut = vi.fn().mockImplementation(
+        () => new Promise<void>((_, reject) => { rejectSignOut = reject; })
+      );
+      mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: slowSignOut });
+      render(<Header />);
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: "Kamal" }));
+
+      // Start sign-out directly so isSigningOut.current is set before we return.
+      act(() => { screen.getByRole("menuitem", { name: /sign out/i }).click(); });
+
+      // Fire mousedown outside while sign-out is in-flight — guard should block close.
+      act(() => {
+        document.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      });
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+
+      // Fail sign-out — error must appear inside the still-open menu.
+      await act(async () => { rejectSignOut(new Error("offline")); });
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
+  });
+
   describe("account dropdown: click-outside closes menu", () => {
     it("closes the dropdown when clicking outside it", async () => {
       const user = userEvent.setup();
