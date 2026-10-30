@@ -43,6 +43,7 @@ jobs:
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
           NEXT_PUBLIC_SENTRY_DSN: ""
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          CSP_MODE: report-only
 
   audit:
     name: audit
