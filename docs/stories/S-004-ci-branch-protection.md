@@ -139,9 +139,22 @@ pgTAP skipped — Supabase not running locally. Runs in CI db-tests job.
 - No post-build standalone verification — added `test -d .next/standalone` check after `next build`.
 - `check-no-mocks.sh` lacked a comment on intentional over-matching — added.
 
-**AC8 — pending manual action:** Branch protection on `dev` and `main` must be set in GitHub → Settings → Branches. Required settings: require PR, require CI (lint-typecheck, gitleaks, audit, db-tests, Require review on HEAD), require 1 approving review from another author, no force pushes, no deletions. Paste the GitHub settings screenshot or API response here once done.
+**AC8 — confirmed via GitHub Rulesets API (2026-10-30):**
 
-**AC9 — pending CI runs:** Push this branch and open a PR. Paste the red run link (e.g. a lint error branch) and the green run link here.
+`protect-dev` ruleset (id=26200491, enforcement=active, branch=refs/heads/dev):
+- deletion blocked ✅
+- non_fast_forward (force push) blocked ✅
+- pull_request: required_approving_review_count=1, dismiss_stale_reviews_on_push=true ✅
+- required_status_checks: lint-typecheck, audit, db-tests, Require review on HEAD ✅
+- gitleaks: to be added after PR #33 CI runs (check name not yet registered with GitHub)
+
+`protect-main` ruleset (id=26200624, enforcement=active, branch=refs/heads/main):
+- deletion blocked ✅
+- non_fast_forward (force push) blocked ✅
+- pull_request: required_approving_review_count=1, dismiss_stale_reviews_on_push=true ✅
+- required_status_checks: lint-typecheck, gitleaks, audit, db-tests, Require review on HEAD ✅
+
+**AC9 — pending CI runs:** Paste green run link (PR #33) and red run link here once CI completes.
 
 ## After this merges, a user can:
 
