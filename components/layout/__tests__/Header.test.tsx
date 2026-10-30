@@ -263,6 +263,22 @@ describe("Header", () => {
         expect(screen.getByRole("alert")).toBeInTheDocument();
       });
     });
+
+    it("clears the sign-out error when the menu is closed", async () => {
+      const user = userEvent.setup();
+      const failingSignOut = vi.fn().mockRejectedValue(new Error("offline"));
+      mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: failingSignOut });
+      render(<Header />);
+      await user.click(screen.getByRole("button", { name: "Kamal" }));
+      await user.click(screen.getByRole("menuitem", { name: /sign out/i }));
+      await waitFor(() => {
+        expect(screen.getByRole("alert")).toBeInTheDocument();
+      });
+      await user.keyboard("{Escape}");
+      await waitFor(() => {
+        expect(screen.queryByRole("alert")).toBeNull();
+      });
+    });
   });
 
   describe("account dropdown: keyboard navigation", () => {

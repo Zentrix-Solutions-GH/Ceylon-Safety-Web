@@ -64,11 +64,11 @@ export function HeaderPersonal() {
     setSignOutError(null);
     try {
       await signOut();
+      setMenuOpen(false);
     } catch {
-      // EC5: sign out fails — show the unknown message; user stays signed in.
+      // EC5: sign out fails — show error inside open menu; user stays signed in.
       setSignOutError(errorMessage("unknown"));
     }
-    setMenuOpen(false);
   }
 
   return (
@@ -119,6 +119,7 @@ export function HeaderPersonal() {
             onClick={handleMenuToggle}
             aria-expanded={menuOpen}
             aria-haspopup="menu"
+            aria-controls={menuOpen ? "account-menu" : undefined}
             className="flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium hover:bg-accent"
           >
             {/* EC3: truncate long names so they never break the header layout at 375 px. */}
@@ -126,44 +127,47 @@ export function HeaderPersonal() {
           </button>
 
           {menuOpen && (
-            <div
-              ref={dropdownRef}
-              role="menu"
-              onKeyDown={handleMenuKeyDown}
-              className="absolute right-0 mt-1 w-44 rounded-md border bg-popover shadow-md z-50 py-1"
-            >
-              <Link
-                href="/profile"
-                role="menuitem"
-                onClick={() => setMenuOpen(false)}
-                className="block px-4 py-2 text-sm hover:bg-accent"
+            <div className="absolute right-0 mt-1 z-50">
+              <div
+                id="account-menu"
+                ref={dropdownRef}
+                role="menu"
+                aria-label={t("nav.account")}
+                onKeyDown={handleMenuKeyDown}
+                className="w-44 rounded-md border bg-popover shadow-md py-1"
               >
-                {t("nav.profile")}
-              </Link>
-              <Link
-                href="/purchases"
-                role="menuitem"
-                onClick={() => setMenuOpen(false)}
-                className="block px-4 py-2 text-sm hover:bg-accent"
-              >
-                {t("nav.my_purchases")}
-              </Link>
-              <hr className="my-1" />
-              <button
-                type="button"
-                role="menuitem"
-                onClick={handleSignOut}
-                className="w-full text-left px-4 py-2 text-sm hover:bg-accent"
-              >
-                {t("nav.sign_out")}
-              </button>
+                <Link
+                  href="/profile"
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                  className="block px-4 py-2 text-sm hover:bg-accent"
+                >
+                  {t("nav.profile")}
+                </Link>
+                <Link
+                  href="/purchases"
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                  className="block px-4 py-2 text-sm hover:bg-accent"
+                >
+                  {t("nav.my_purchases")}
+                </Link>
+                <hr className="my-1" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleSignOut}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-accent"
+                >
+                  {t("nav.sign_out")}
+                </button>
+              </div>
+              {signOutError && (
+                <p role="alert" className="mt-1 text-xs text-destructive whitespace-nowrap px-1">
+                  {signOutError}
+                </p>
+              )}
             </div>
-          )}
-
-          {signOutError && (
-            <p role="alert" className="absolute right-0 mt-1 text-xs text-destructive whitespace-nowrap">
-              {signOutError}
-            </p>
           )}
         </div>
       )}
