@@ -5,29 +5,17 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const SUPABASE_URL = "https://abc.supabase.co";
 const IMAGE_CDN = "https://cdn.ceylonsafety.com";
-const APP_URL = "https://ceylonsafety.com";
+const HEX64 = "a".repeat(64);
 
 function makeEnv(extra: Record<string, string> = {}) {
   return {
+    // Required by lib/config.ts collect()
     NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon",
     SUPABASE_SERVICE_ROLE_KEY: "srk",
-    R2_ACCOUNT_ID: "r2aid",
-    R2_ACCESS_KEY_ID: "r2key",
-    R2_SECRET_ACCESS_KEY: "r2secret",
-    R2_BUCKET_PRIVATE: "priv",
-    R2_BUCKET_PUBLIC: "pub",
+    NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: HEX64,
+    // Required by cspConfig
     NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL: IMAGE_CDN,
-    RESEND_API_KEY: "resend",
-    RESEND_FROM_EMAIL: "no-reply@ceylonsafety.com",
-    PAYHERE_MERCHANT_ID: "mid",
-    PAYHERE_MERCHANT_SECRET: "msecret",
-    UPSTASH_REDIS_REST_URL: "https://redis.upstash.io",
-    UPSTASH_REDIS_REST_TOKEN: "tok",
-    NEXT_PUBLIC_TURNSTILE_SITE_KEY: "tskey",
-    TURNSTILE_SECRET_KEY: "tssecret",
-    CRON_SECRET: "cronsecret",
-    NEXT_PUBLIC_APP_URL: APP_URL,
     CSP_MODE: "report-only",
     ...extra,
   };
@@ -181,27 +169,27 @@ describe("CSP mode config (AC5, EC4)", () => {
     const env = makeEnv();
     delete (env as Record<string, string>)["CSP_MODE"];
     process.env = env as unknown as NodeJS.ProcessEnv;
-    await expect(import("@/lib/config")).rejects.toThrow("CSP_MODE");
+    await expect(import("@/lib/config")).rejects.toThrow(/CSP_MODE/);
   });
 
   it("throws at startup when CSP_MODE is invalid", async () => {
     vi.resetModules();
     process.env = makeEnv({ CSP_MODE: "block" }) as unknown as NodeJS.ProcessEnv;
-    await expect(import("@/lib/config")).rejects.toThrow("CSP_MODE");
+    await expect(import("@/lib/config")).rejects.toThrow(/CSP_MODE/);
   });
 
   it("accepts report-only mode", async () => {
     vi.resetModules();
     process.env = makeEnv({ CSP_MODE: "report-only" }) as unknown as NodeJS.ProcessEnv;
-    const { config } = await import("@/lib/config");
-    expect(config.csp.mode).toBe("report-only");
+    const { cspConfig } = await import("@/lib/config");
+    expect(cspConfig.mode).toBe("report-only");
   });
 
   it("accepts enforce mode", async () => {
     vi.resetModules();
     process.env = makeEnv({ CSP_MODE: "enforce" }) as unknown as NodeJS.ProcessEnv;
-    const { config } = await import("@/lib/config");
-    expect(config.csp.mode).toBe("enforce");
+    const { cspConfig } = await import("@/lib/config");
+    expect(cspConfig.mode).toBe("enforce");
   });
 });
 

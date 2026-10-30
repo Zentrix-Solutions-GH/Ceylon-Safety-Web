@@ -1,4 +1,4 @@
-import { config } from "@/lib/config";
+import { publicConfig, cspConfig } from "@/lib/config";
 
 // Routes that carry the Turnstile widget
 const TURNSTILE_PATHS = new Set([
@@ -27,7 +27,7 @@ const PRIVATE_PREFIXES = [
 ];
 
 function payhereHost(): string {
-  return config.payhere.sandbox ? "sandbox.payhere.lk" : "www.payhere.lk";
+  return cspConfig.payhereIsSandbox ? "sandbox.payhere.lk" : "www.payhere.lk";
 }
 
 function isPrivate(path: string): boolean {
@@ -41,9 +41,9 @@ function hasTurnstile(path: string): boolean {
 }
 
 export function buildPublicCsp(): string {
-  const imageCdn = config.r2.publicMediaBaseUrl;
-  const supabaseUrl = config.supabase.url;
-  const { youtubeNocookieHost, googleAvatarHost, turnstileHost } = config.csp;
+  const imageCdn = cspConfig.imageCdnUrl;
+  const supabaseUrl = publicConfig.supabaseUrl;
+  const { youtubeNocookieHost, googleAvatarHost, turnstileHost } = cspConfig;
 
   const directives: string[] = [
     `default-src 'self'`,
@@ -63,9 +63,9 @@ export function buildPublicCsp(): string {
 }
 
 export function buildPrivateCsp(path: string): string {
-  const imageCdn = config.r2.publicMediaBaseUrl;
-  const supabaseUrl = config.supabase.url;
-  const { googleAvatarHost, turnstileHost } = config.csp;
+  const imageCdn = cspConfig.imageCdnUrl;
+  const supabaseUrl = publicConfig.supabaseUrl;
+  const { googleAvatarHost, turnstileHost } = cspConfig;
 
   const imgSrcExtras = path === "/admin/security" ? " data:" : "";
 
@@ -94,7 +94,7 @@ export function buildPrivateCsp(path: string): string {
 }
 
 export function cspHeaderName(): string {
-  return config.csp.mode === "report-only"
+  return cspConfig.mode === "report-only"
     ? "Content-Security-Policy-Report-Only"
     : "Content-Security-Policy";
 }
