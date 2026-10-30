@@ -1,7 +1,7 @@
 ---
 id: S-004
 title: CI workflow + branch protection
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-004-ci-branch-protection
@@ -72,9 +72,25 @@ Types added or changed in `types/` by this story:
 
 ## Plan
 
-Prior art: read infrastructure design 5.1, 5.4, 5.5 and 11, workflow design 9 and 13.3, and file structure design (`.github/` entries and rule 8 on `mocks/`). No workflow files exist yet. Replaces the earlier draft story of the same name; extends nothing.
+Prior art: infrastructure design 5.1, 5.4, 5.5, 11; workflow design 9, 13.3; file structure design rule 8. Existing `.github/workflows/ci.yml` (partial, from S-132), `require-review.yml` (from S-004 prior work), `scripts/check.sh` found. This story extends/completes the existing ci.yml and adds missing files.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+**db-tests job decision:** The existing `ci.yml` already contains a `db-tests` job (Supabase startup, pgTAP, types freshness) added by S-021 scope via S-132. **Keep it unchanged** — removing it would be a regression. Record it as out of scope for this story's diff but do not delete it.
+
+**Files to create/edit:**
+1. `.github/workflows/ci.yml` — add `main` to trigger branches; switch `node-version` to `node-version-file: '.nvmrc'`; add `next build` step with dummy NEXT_PUBLIC_* env vars; add `gitleaks` job; add no-mocks check step.
+2. `.github/workflows/require-review.yml` — pin `actions/github-script@v7` → SHA `f28e40c7f34bde8b3046d885e986cb6290c5673b`.
+3. `scripts/check-no-mocks.sh` — search non-test TS/TSX/JS/JSX files for `mocks/` imports; exit 1 if found.
+4. `__tests__/check-no-mocks.test.ts` — unit tests: passes on clean tree, fails when a production file imports `mocks/`.
+5. `__tests__/workflows.test.ts` — reads all `.github/workflows/*.yml`; asserts every `uses:` line contains a 40-char commit SHA.
+6. `.github/pull_request_template.md` — AC6 fields: Summary, Story link, "user can", "still does not work", test evidence, security question, checklist.
+7. `.github/dependabot.yml` — weekly npm + github-actions updates.
+8. Inline env vars in ci.yml for `next build` dummy values (no `.env.ci` file committed — values set directly in the workflow step).
+
+**Spec gap noted:** `scripts/` and `__tests__/` folder ownership is undocumented in the file-structure design. Recorded in Spec gaps.
+
+**Action SHAs:**
+- `actions/github-script@v7` → `f28e40c7f34bde8b3046d885e986cb6290c5673b`
+- `gitleaks/gitleaks-action@v3.0.0` → `e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e`
 
 ## Evidence
 
@@ -82,11 +98,50 @@ Prior art: read infrastructure design 5.1, 5.4, 5.5 and 11, workflow design 9 an
 
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  16 passed (16)
+      Tests  199 passed (199)
+   (includes __tests__/workflows.test.ts 4 tests, __tests__/check-no-mocks.test.ts 6 tests)
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 4 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
+
+pgTAP skipped — Supabase not running locally. Runs in CI db-tests job.
 ```
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+### Full review 2026-10-30
+
+**Reviewer verdict:** REQUEST CHANGES → fixed
+
+**Security verdict:** PASS
+
+**Contract verdict:** PASS (no types/ changes)
+
+**P1 findings (fixed):**
+- P1a: No `.gitleaks.toml` allowlist — embedded Supabase demo JWT in ci.yml could be flagged by gitleaks. Fixed: created `.gitleaks.toml` with an allowlist entry and reason comment.
+- P1b: AC8 and AC9 evidence missing — branch protection settings and GitHub Actions run links not yet pasted. Branch protection requires manual setup (blocked by auto-mode classifier). AC9 requires pushing and waiting for CI runs.
+
+**P2 findings (fixed):**
+- `require-review.yml` had no top-level `permissions:` block — added `permissions: contents: read; pull-requests: read`.
+- No post-build standalone verification — added `test -d .next/standalone` check after `next build`.
+- `check-no-mocks.sh` lacked a comment on intentional over-matching — added.
+
+**AC8 — pending manual action:** Branch protection on `dev` and `main` must be set in GitHub → Settings → Branches. Required settings: require PR, require CI (lint-typecheck, gitleaks, audit, db-tests, Require review on HEAD), require 1 approving review from another author, no force pushes, no deletions. Paste the GitHub settings screenshot or API response here once done.
+
+**AC9 — pending CI runs:** Push this branch and open a PR. Paste the red run link (e.g. a lint error branch) and the green run link here.
 
 ## After this merges, a user can:
 

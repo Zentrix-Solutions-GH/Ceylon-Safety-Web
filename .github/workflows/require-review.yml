@@ -9,6 +9,10 @@ on:
   issue_comment:
     types: [created, edited, deleted]
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   check-review:
     name: Require review on HEAD
@@ -18,7 +22,7 @@ jobs:
     steps:
       - name: Check if review required
         id: docs_check
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const branch = context.payload.pull_request.head.ref;
@@ -50,7 +54,7 @@ jobs:
       # no review. It must run on both push and pull_request_review events.
       - name: Require approval on HEAD
         if: steps.docs_check.outputs.result != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             // issue_comment events carry the PR number in context.payload.issue.number;
