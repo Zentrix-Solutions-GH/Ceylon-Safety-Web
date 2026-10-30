@@ -36,7 +36,6 @@ const nextConfig: NextConfig = {
         source: PUBLIC_SOURCE,
         headers: [
           { key: headerName, value: buildPublicCsp() },
-          { key: "X-Frame-Options", value: "DENY" },
         ],
       },
       // Private pages — strictest baseline CSP + no-store + noindex
@@ -45,7 +44,6 @@ const nextConfig: NextConfig = {
         source: PRIVATE_SOURCE,
         headers: [
           { key: headerName, value: buildPrivateCsp(PRIVATE_SENTINEL) },
-          { key: "X-Frame-Options", value: "DENY" },
           ...privateStaticHeaders,
         ],
       },

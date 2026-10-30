@@ -76,7 +76,8 @@ export const serverConfig = {
   encryptionKey: vals["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"],
 } as const;
 
-// CSP config — used by lib/security/headers.ts and next.config.ts
+// CSP config — used in tests only. Production code (lib/security/headers.ts)
+// reads env vars directly to avoid importing server-only through next.config.ts.
 export const cspConfig = {
   mode: cspModeRaw,
   // Image CDN base URL — needed for img-src directive
