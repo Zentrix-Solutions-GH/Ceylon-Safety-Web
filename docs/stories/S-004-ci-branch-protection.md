@@ -1,11 +1,11 @@
 ---
 id: S-004
 title: CI workflow + branch protection
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-004-ci-branch-protection
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/33
 depends_on: [S-003]
 reqs: []
 ---
