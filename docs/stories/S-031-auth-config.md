@@ -54,6 +54,11 @@ Types added or changed in `types/` by this story:
 - Choosing or paying for a Resend plan (Q46, client cost question).
 - Custom auth domain (paid add-on).
 
+**Scope cuts (configuration not completable in this branch):**
+
+- **AC4 / AC8 staging+production manual checklists** — The staging Supabase project and Google OAuth client are created in S-005 / S-131. The `docs/ops/auth-settings.md` checklist rows (SMTP, SPF/DKIM, Turnstile secret, Google consent screen) must be ticked with dates by the person who provisions staging. Tracked as a prerequisite for S-034.
+- **EC3 cookie size measurement** — Requires the local Supabase stack with the hook enabled and a full sign-in cycle. This was not run in this branch (the stack is not running). The measurement field in `docs/ops/auth-settings.md` must be filled by the developer running `supabase start` before or during S-032 when the claims helpers are added.
+
 ## Assumptions accepted
 
 - M36: email code length 8 (else 6) with 10-minute expiry — recommended values from the decisions summary, pending the owner; fallback in EC1.
@@ -71,16 +76,65 @@ Types added or changed in `types/` by this story:
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+Prior art: `grep -ril "custom access token" docs/` returns auth-design.md, database-schema.md, and this story. Hook function created in S-012 migration `20261028000002_permissions_super_admin.sql` as `private.custom_access_token_hook`. This story enables it in config.toml. No conflict; supersedes nothing.
 
-Prior art: read auth design sections 3, 14, 19, 21 (settings checklist, email limits, hook drill, verify list items 1, 8, 11, 12, 13, 15, 20, 21, 25, 30). This story implements section 3; it supersedes nothing. Re-confirm with `grep -ril "custom access token" docs/` at /story-run time.
+**Files to create / edit (backend-owned only):**
+
+1. `supabase/config.toml` — update `[auth]`, `[auth.email]`, `[auth.mfa.totp]` sections; add `[auth.external.google]`, `[auth.hook.custom_access_token]`, `[auth.captcha]` sections; wire template paths.
+2. `supabase/templates/confirm-signup.html` — branded template with `{{ .Token }}`
+3. `supabase/templates/reset-password.html` — branded template with `{{ .Token }}`
+4. `supabase/templates/reauthentication.html` — branded template with `{{ .Token }}`
+5. `supabase/templates/magic-link.html` — re-verification template with `{{ .Token }}`
+6. `docs/ops/auth-settings.md` — manual checklist: staging/prod values, email cap, Supabase hourly cap, hook-failure drill, EC1 fallback record, Google consent screen status
+7. `supabase/tests/auth-config.test.ts` — unit test (reads config.toml TOML, asserts AC1/AC2/AC5/AC6/AC7/AC8 flags)
+8. `supabase/tests/auth-templates.test.ts` — unit test (template files exist, each contains `{{ .Token }}`)
+9. `supabase/tests/claims-hook.test.ts` — integration test (marked skip; instructions for running against local stack)
+
+**Key config values (AC2 + EC1):**
+- `minimum_password_length = 8`
+- `otp_length = 6` (EC1 fallback: Supabase CLI local does not accept 8; 6 with 10-min expiry)
+- `otp_expiry = 600` (10 minutes)
+- TOTP: `enroll_enabled = true`, `verify_enabled = true`
+- Turnstile: local/CI use published test keys (`1x0000000000000000000000000000000AA` = always-pass; `2x00000000000000000000000000000000AB` = always-block)
+- Hook URI: `pg-functions://postgres/private/custom_access_token_hook`
+- Google provider enabled; all others disabled
+
+**No DB migrations** (hook function already exists from S-012).
+
+**Step order:**
+1. Tests (TDD — must fail before implementation)
+2. config.toml changes
+3. Email templates
+4. docs/ops/auth-settings.md
+5. scripts/check.sh green
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  19 passed (19)
+      Tests  241 passed | 2 skipped (243)
+ (2 skipped = AC6 claims-hook integration tests; require local Supabase stack)
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping (run supabase start first)
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 4 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
 
 ## Review notes
