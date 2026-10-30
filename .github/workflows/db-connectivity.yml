@@ -1,0 +1,16 @@
+name: DB Connectivity Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  staging-pooler:
+    name: Staging session pooler — select 1
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Test connection via session pooler
+        env:
+          STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+        run: |
+          psql "$STAGING_DB_URL" -c "SELECT 1;"
