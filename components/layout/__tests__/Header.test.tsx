@@ -1,6 +1,6 @@
 import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // jsdom does not implement matchMedia or ResizeObserver — both needed by Radix Sheet.
 Object.defineProperty(window, "matchMedia", {
@@ -199,9 +199,12 @@ describe("Header", () => {
   });
 
   describe("EC4: resize to desktop closes mobile sheet", () => {
+    let origMatchMedia: typeof window.matchMedia;
+    beforeEach(() => { origMatchMedia = window.matchMedia; });
+    afterEach(() => { window.matchMedia = origMatchMedia; });
+
     it("closes the sheet when the viewport widens to desktop", async () => {
       const handlers: Array<(e: { matches: boolean }) => void> = [];
-      const origMatchMedia = window.matchMedia;
       window.matchMedia = vi.fn().mockImplementation((query: string) => ({
         matches: false,
         media: query,
@@ -230,7 +233,6 @@ describe("Header", () => {
         expect(screen.queryByRole("dialog")).toBeNull();
       });
 
-      window.matchMedia = origMatchMedia;
     });
   });
 

@@ -32,6 +32,7 @@ export function useAuth(): UseAuthResult {
       .finally(() => { if (mounted) setIsLoading(false); });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
       setUser(session ? extractUser(session.user) : null);
       setIsLoading(false);
     });

@@ -115,7 +115,8 @@ Prior art: searched `grep -ril "header\|navigation\|useAuth" docs/` — found: f
 | `nav.my_purchases` | "My Purchases" |
 | `nav.sign_out` | "Sign out" |
 | `nav.open_menu` | "Open menu" |
-| `nav.close_menu` | "Close menu" |
+| `nav.loading_account` | "Loading account" |
+| `nav.home_link_label` | "CeylonSafety — home" |
 | `site.wordmark` | "CeylonSafety" |
 
 ## Evidence
@@ -130,9 +131,9 @@ $ bash scripts/check.sh
 
 ── Vitest (unit) ──
  Test Files  12 passed (12)
-       Tests  79 passed (79)
-    Start at  11:52:43
-    Duration  19.51s
+       Tests  82 passed (82)
+    Start at  17:01:22
+    Duration  17.75s
 
 ════════════════════════════════
   check.sh: 3 passed, 0 failed
