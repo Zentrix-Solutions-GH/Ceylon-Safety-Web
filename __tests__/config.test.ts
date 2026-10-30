@@ -210,22 +210,22 @@ describe("lib/config.public — validation (P1: untested copy)", () => {
 
 // ── AC1: scaffold files integrity ───────────────────────────────────────────
 describe("AC1: scaffold files integrity", () => {
-  it("package.json engines.node is >=20.0.0", async () => {
+  it("package.json engines.node is >=22.0.0", async () => {
     const fs = await import("fs");
     const path = await import("path");
     const pkg = JSON.parse(
       fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")
     );
-    expect(pkg.engines?.node).toMatch(/>=20/);
+    expect(pkg.engines?.node).toMatch(/>=22/);
   });
 
-  it(".nvmrc exists and contains '20'", async () => {
+  it(".nvmrc exists and contains '22'", async () => {
     const fs = await import("fs");
     const path = await import("path");
     const nvmrc = fs
       .readFileSync(path.resolve(__dirname, "../.nvmrc"), "utf8")
       .trim();
-    expect(nvmrc).toBe("20");
+    expect(nvmrc).toBe("22");
   });
 
   it("next.config.ts sets output: 'standalone'", async () => {
