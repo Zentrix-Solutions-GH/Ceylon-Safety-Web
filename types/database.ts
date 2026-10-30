@@ -923,14 +923,14 @@ isOneToOne: false
                   ]
                 },"trainers": {
                   Row: {
-                    "bio": string | null,"created_at": string,"email": string | null,"experience": string | null,"id": string,"is_active": boolean,"name": string,"order_index": number | null,"phone": string | null,"photo_key": string | null,"position": string,"qualifications": string | null,"search_vector": unknown,"slug": string,"updated_at": string,"whatsapp_number": string | null
+                    "bio": string | null,"consent_confirmed": boolean,"created_at": string,"email": string | null,"experience": string | null,"id": string,"is_active": boolean,"name": string,"order_index": number | null,"phone": string | null,"photo_key": string | null,"position": string,"qualifications": string | null,"search_vector": unknown,"slug": string,"updated_at": string,"whatsapp_number": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "bio"?: string | null,"created_at"?: string,"email"?: string | null,"experience"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"order_index"?: number | null,"phone"?: string | null,"photo_key"?: string | null,"position": string,"qualifications"?: string | null,"search_vector"?: unknown,"slug": string,"updated_at"?: string,"whatsapp_number"?: string | null
+                    "bio"?: string | null,"consent_confirmed"?: boolean,"created_at"?: string,"email"?: string | null,"experience"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"order_index"?: number | null,"phone"?: string | null,"photo_key"?: string | null,"position": string,"qualifications"?: string | null,"search_vector"?: unknown,"slug": string,"updated_at"?: string,"whatsapp_number"?: string | null
                   }
                   Update: {
-                    "bio"?: string | null,"created_at"?: string,"email"?: string | null,"experience"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"order_index"?: number | null,"phone"?: string | null,"photo_key"?: string | null,"position"?: string,"qualifications"?: string | null,"search_vector"?: unknown,"slug"?: string,"updated_at"?: string,"whatsapp_number"?: string | null
+                    "bio"?: string | null,"consent_confirmed"?: boolean,"created_at"?: string,"email"?: string | null,"experience"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"order_index"?: number | null,"phone"?: string | null,"photo_key"?: string | null,"position"?: string,"qualifications"?: string | null,"search_vector"?: unknown,"slug"?: string,"updated_at"?: string,"whatsapp_number"?: string | null
                   }
                   Relationships: [
                     

@@ -1,6 +1,21 @@
 # CeylonSafety — Project Status
 
-**Last updated:** 2026-10-25
+**Last updated:** 2026-10-29
+
+## CI required status checks (S-132)
+
+The following GitHub Actions job names must be added as required status checks in
+**Settings → Branches → Branch protection rules → `dev`** (repo admin action):
+
+| Check name | Job |
+|---|---|
+| `ci / lint-typecheck` | ESLint + TypeScript + Vitest via `bash scripts/check.sh` |
+| `ci / audit` | `npm audit --audit-level=high` (high/critical CVEs only) |
+| `ci / db-tests` | Supabase start → db reset → `supabase test db` (all `supabase/tests/*.sql`) |
+
+These checks run on every PR targeting `dev`. No secrets beyond the automatic `GITHUB_TOKEN` are required.
+
+---
 **Release 1:** Thursday 14 January 2027 (MS1–MS7, all of it). **Release 2:** ~16 Feb. **Release 3:** ~15 Mar.
 **Source of truth:** `docs/superpowers/specs/2026-10-17-ceylonsafety-milestones.md` and the requirements doc. This roster was rebuilt on 2026-10-25 after an audit of the first draft against all 15 specs.
 

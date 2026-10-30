@@ -11,7 +11,7 @@ SELECT plan(155);
 
 -- A terms page + revision (orders.terms_revision_id and refund_policy_revision_id FK)
 INSERT INTO public.pages (id, slug, title)
-VALUES ('10000000-0000-0000-0000-000000000001', 'terms', 'Terms')
+VALUES ('10000000-0000-0000-0000-000000000001', 'ci-test-terms', 'Terms')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.page_revisions (id, page_id, version, published_at)
@@ -22,7 +22,7 @@ VALUES (
 ) ON CONFLICT DO NOTHING;
 
 INSERT INTO public.pages (id, slug, title)
-VALUES ('10000000-0000-0000-0000-000000000002', 'refund-policy', 'Refund Policy')
+VALUES ('10000000-0000-0000-0000-000000000002', 'ci-test-refund-policy', 'Refund Policy')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.page_revisions (id, page_id, version, published_at)

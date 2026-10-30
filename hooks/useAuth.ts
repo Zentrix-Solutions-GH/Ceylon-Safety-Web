@@ -2,7 +2,7 @@
 
 // AC6: display-only — name and signed-in state. Never used for access decisions.
 import { useEffect, useState } from "react";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export type AuthUser = {
   name: string | null;
@@ -20,7 +20,7 @@ export function useAuth(): UseAuthResult {
 
   useEffect(() => {
     let mounted = true;
-    const supabase = getSupabaseBrowserClient();
+    const supabase = createSupabaseBrowserClient();
 
     // EC1: any error → treat as signed out.
     supabase.auth
@@ -44,7 +44,7 @@ export function useAuth(): UseAuthResult {
   }, []);
 
   async function signOut() {
-    const supabase = getSupabaseBrowserClient();
+    const supabase = createSupabaseBrowserClient();
     // EC5: signOut returns { error } rather than throwing — surface it so callers can catch it.
     const { error } = await supabase.auth.signOut();
     if (error) throw error;

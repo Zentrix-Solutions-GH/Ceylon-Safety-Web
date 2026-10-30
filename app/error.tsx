@@ -1,1 +1,2 @@
-﻿export default function Page() { return null; }
+﻿"use client";
+export default function Page() { return null; }

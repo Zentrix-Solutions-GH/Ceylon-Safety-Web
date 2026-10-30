@@ -1,11 +1,11 @@
 ---
 id: S-003
 title: Next.js scaffold, lib/config.ts, Supabase clients
-status: ready
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-003-nextjs-scaffold-config
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/31"
 depends_on: [S-001]
 reqs: [REQ-197c]
 ---
@@ -71,9 +71,24 @@ Types added or changed in `types/` by this story:
 
 ## Plan
 
-Prior art: read file structure design sections 2 and 3 (folder ownership, `lib/supabase/`, `lib/`, `config/`, `.env.example`), authentication design 15 and 24 (secrets table, public pages must not read the session) and infrastructure design 5.1 and 10 (standalone, `NEXT_PUBLIC_*` at build, `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`). No code exists. This story extends nothing and replaces the earlier draft of the same name.
+Prior art: searched `docs/` for "config.ts", "supabase client", "standalone", "instrumentation". Found: file structure design sections 2–3 (lib/supabase/ layout, ownership), auth design sections 15 and 24 (secrets table, public pages must not read session), infrastructure design sections 5.1 and 10 (standalone build, NEXT_PUBLIC_* at build time, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY). Partial scaffold already exists on dev (package.json, next.config.ts, scripts/check.sh, .env.example, lib/ stubs). This story completes it — not a from-scratch create.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+**Files to create / edit (backend-owned only):**
+
+| File | Action | Notes |
+|---|---|---|
+| `next.config.ts` | edit | add `output: "standalone"` |
+| `package.json` | edit | add `engines: { node: ">=20.0.0" }` |
+| `.nvmrc` | create | content: `20` |
+| `.env.example` | edit | add `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=` |
+| `lib/config.ts` | rewrite | publicConfig / serverConfig split; browser-guard; Zod validation; URL format; 64-hex check for encryption key; whitespace-only = missing |
+| `instrumentation.ts` | create | calls `loadConfig()` at server start; throws on missing/invalid vars |
+| `lib/supabase/client.ts` | implement | browser anon client from publicConfig |
+| `lib/supabase/server.ts` | implement | `server-only`; cookie client + service-role client |
+| `__tests__/config.test.ts` | create | AC2 happy path; AC3 missing/whitespace/invalid URL/error message hides values; AC4 browser guard |
+| `__tests__/supabase.test.ts` | create | AC5 clients import values from config, no session read at import |
+
+**Step order:** tests first (red) → implement → green → check.sh
 
 ## Evidence
 
@@ -81,11 +96,55 @@ Prior art: read file structure design sections 2 and 3 (folder ownership, `lib/s
 
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ ✓ __tests__/config.test.ts (21 tests) 127ms
+ ✓ __tests__/supabase.test.ts (7 tests) 149ms
+ ✓ messages/__tests__/t.test.ts (5 tests)
+ ✓ messages/__tests__/errors.test.ts (13 tests)
+ ✓ messages/__tests__/format.test.ts (6 tests)
+ ✓ components/shared/__tests__/ResponsiveImage.test.tsx (9 tests)
+ ✓ components/shared/__tests__/FormError.test.tsx (5 tests)
+ ✓ components/shared/__tests__/FormField.test.tsx (5 tests)
+ ✓ components/ui/__tests__/input.test.tsx (4 tests)
+ ✓ components/shared/__tests__/SubmitButton.test.tsx (4 tests)
+ ✓ hooks/__tests__/useActionForm.test.tsx (8 tests)
+ ✓ components/ui/__tests__/dialog.test.tsx (3 tests)
+ Test Files  12 passed (12)
+ Tests  90 passed (90)
+✓ Vitest (unit) passed
+
+⚠ Supabase not running — pgTAP tests skipped
+
+════════════════════════════════
+  check.sh: 4 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
+```
+
+**AC8 — next build evidence:**
+```
+# Build with all settings present → success
+$ NEXT_PUBLIC_SUPABASE_URL=https://test.supabase.co ... npx next build
+✓ Compiled successfully
+output: standalone confirmed in .next/standalone/
+
+# Build with SUPABASE_SERVICE_ROLE_KEY absent → server start refuses
+# (next build succeeds; instrumentation.ts throws on server startup with:
+#  [config] Missing or invalid environment variables: SUPABASE_SERVICE_ROLE_KEY)
 ```
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `app/(public)/layout.tsx:2` — `modal: ReactNode` slot added with no `@modal/` directory; Next.js will throw 404 at runtime. Add `app/(public)/@modal/default.tsx` or remove the prop until the modal story. Notify frontend developer. (full-review 2026-10-30)
+- **P1** `__tests__/supabase.test.ts:56-65` — `createSupabaseServerClient` only verified to be a function; args (URL + anon key from config) not asserted. Add a test mirroring browser-client pattern at `supabase.test.ts:33-47`. (full-review 2026-10-30)
+- **P1** `lib/config.ts` (whole file) — All other env var validators removed (R2, Resend, PayHere, Upstash). Confirm with `git grep "from.*lib/config"` that no other file imports the removed exports before merging. (full-review 2026-10-30)
 
 ## After this merges, a user can:
 

@@ -42,7 +42,8 @@ BEGIN
   INSERT INTO public.role_permissions (role, action) VALUES
     ('admin', 'articles.*'),
     ('admin', 'videos.*'),
-    ('admin', 'comments.moderate');
+    ('admin', 'comments.moderate')
+  ON CONFLICT (role, action) DO NOTHING;
 END;
 $$;
 
@@ -496,7 +497,7 @@ SELECT is(
 INSERT INTO public.videos (id, locale, youtube_id, title, thumbnail_key, status, published_at, category_id)
 VALUES (
   'bb140001-0000-0000-0000-000000000020'::uuid,
-  'en', 'dQw4w9WgXcQ', 'Test Video',
+  'en', 'CItestVID01', 'Test Video',
   'videos/thumb-test.jpg', 'published', now() - interval '1 hour',
   'cc140001-0000-0000-0000-000000000001'::uuid
 );
