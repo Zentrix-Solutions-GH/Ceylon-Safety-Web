@@ -2,7 +2,7 @@
 id: S-021
 title: RLS verification suite + CI check
 phase: MS1
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-021-rls-verification-suite
