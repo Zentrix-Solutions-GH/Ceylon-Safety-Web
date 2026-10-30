@@ -1,11 +1,11 @@
 ---
 id: S-025
 title: Header + mobile menu
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-025-header-mobile-menu
-pr: ~
+pr: 26
 depends_on: [S-023, S-024]
 reqs: [REQ-018, REQ-018b, REQ-186]
 ---
@@ -23,22 +23,22 @@ Build the site header: logo, the fixed menu, sign-in state and cart link, and a 
 
 ## Acceptance criteria
 
-- [ ] AC1: `components/layout/Header.tsx` shows the logo (links to Home) and the menu in this order: Home, Articles, Documents, Courses, Jobs, Contact Coach, Sign In / Sign Up, Cart. The links are fixed in code (`config/navigation.ts`); the current page link has `aria-current="page"`. There is no search box in the header.
-- [ ] AC2: Personal parts (sign-in state, account link, cart slot) are a small client component. The header and its layout never call `cookies()`, `headers()` or the server Supabase client. Until the browser knows the session, a fixed-size placeholder is shown: no "Sign In" flash and no layout jump.
-- [ ] AC3: Signed out: "Sign In" (`/sign-in`) and "Sign Up" (`/sign-up`). Signed in: the person's name or "Account" with links to Profile (`/profile`) and My Purchases (`/purchases`) and a Sign out button that ends this device's session through the browser Supabase client.
-- [ ] AC4: Cart link has a fixed-width badge slot; the count itself is filled in S-091 (Backend cart count read, S-075). Signed out, the Cart link sends the visitor to sign in (REQ-044d).
-- [ ] AC5: Below the mobile breakpoint the menu is a button that opens a side sheet. Focus moves into the sheet and stays inside; Escape or a second press closes it; focus returns to the button; the page behind is inert; tap targets are at least 44 px.
-- [ ] AC6: `hooks/useAuth.ts` is display only (name, signed-in or not); it is never used for any access decision.
-- [ ] AC7: All text comes from `messages/` through `t()`. No raw colour codes. Works at 375 px and 1280 px (screenshots in Evidence).
+- [x] AC1: `components/layout/Header.tsx` shows the logo (links to Home) and the menu in this order: Home, Articles, Documents, Courses, Jobs, Contact Coach, Sign In / Sign Up, Cart. The links are fixed in code (`config/navigation.ts`); the current page link has `aria-current="page"`. There is no search box in the header.
+- [x] AC2: Personal parts (sign-in state, account link, cart slot) are a small client component. The header and its layout never call `cookies()`, `headers()` or the server Supabase client. Until the browser knows the session, a fixed-size placeholder is shown: no "Sign In" flash and no layout jump.
+- [x] AC3: Signed out: "Sign In" (`/sign-in`) and "Sign Up" (`/sign-up`). Signed in: the person's name or "Account" with links to Profile (`/profile`) and My Purchases (`/purchases`) and a Sign out button that ends this device's session through the browser Supabase client.
+- [ ] AC4: Cart link has a fixed-width badge slot; the count itself is filled in S-091 (Backend cart count read, S-075). Signed out, the Cart link sends the visitor to sign in (REQ-044d). <!-- redirect implemented by S-033 middleware (not yet merged); link renders correctly, redirect not yet active -->
+- [x] AC5: Below the mobile breakpoint the menu is a button that opens a side sheet. Focus moves into the sheet and stays inside; Escape or a second press closes it; focus returns to the button; the page behind is inert; tap targets are at least 44 px.
+- [x] AC6: `hooks/useAuth.ts` is display only (name, signed-in or not); it is never used for any access decision.
+- [ ] AC7: All text comes from `messages/` through `t()`. No raw colour codes. Works at 375 px and 1280 px (screenshots in Evidence). <!-- text and colours verified; 375px/1280px screenshots pending reviewer after S-027 mounts the header -->
 
 ## Edge cases
 
-- [ ] EC1: Session lookup fails or is slow: placeholder stays, then shows signed-out state; no error shown.
-- [ ] EC2: Signed in but name missing (Google gave no name): shows "Account".
-- [ ] EC3: Long display name: truncated, no overflow at 375 px.
-- [ ] EC4: Menu open and the window is resized to desktop: sheet closes, menu shows inline.
-- [ ] EC5: Sign out fails (offline): message from the `unknown` text; person stays signed in.
-- [ ] EC6: Logo file does not exist yet (Q47): a text wordmark "CeylonSafety" is used so the header never shows a broken image.
+- [x] EC1: Session lookup fails or is slow: placeholder stays, then shows signed-out state; no error shown.
+- [x] EC2: Signed in but name missing (Google gave no name): shows "Account".
+- [x] EC3: Long display name: truncated, no overflow at 375 px.
+- [x] EC4: Menu open and the window is resized to desktop: sheet closes, menu shows inline.
+- [x] EC5: Sign out fails (offline): message from the `unknown` text; person stays signed in.
+- [x] EC6: Logo file does not exist yet (Q47): a text wordmark "CeylonSafety" is used so the header never shows a broken image.
 
 ## Contract
 
@@ -69,16 +69,80 @@ Build the site header: logo, the fixed menu, sign-in state and cart link, and a 
 
 ## Plan
 
-Prior art: designer pass 2026-10-25 read trainer/public pages 3.5, frontend architecture 3.6/7/10, auth design 7/8. Extends them. `/story-run` re-runs `grep -ril "header\|navigation" docs/`.
-<!-- Rest filled by /story-run at Step 3. -->
+Prior art: searched `grep -ril "header\|navigation\|useAuth" docs/` — found: frontend architecture 3.6 (header layout), 7 (sheet-based phone menu, focus trap), 10 (sticky); trainer/public pages 3.5 (nav order); auth design 7/8 (browser client for header, no server read). Contradiction resolved: sheet (frontend arch 7, newer) over full-width (trainer pages 3.5). This story builds the designs they define.
+
+### Files to create / modify
+
+| File | Purpose |
+|---|---|
+| `messages/en.ts` | Add `nav.*` and `site.*` keys |
+| `config/navigation.ts` | Fixed nav item list (id, href, labelKey) |
+| `lib/supabase/client.ts` | Backend-owned (S-003): re-exports `createSupabaseBrowserClient()`; caching is handled internally by `@supabase/ssr` |
+| `hooks/useAuth.ts` | `"use client"` display-only hook: `{ user, isLoading, signOut }` |
+| `components/layout/HeaderNav.tsx` | `"use client"` — nav links, `aria-current`, mobile Sheet (Radix Dialog) |
+| `components/layout/HeaderPersonal.tsx` | `"use client"` — auth state, account menu, cart link |
+| `components/layout/Header.tsx` | Server component — sticky shell, text wordmark (EC6), mounts Nav + Personal |
+| `components/layout/__tests__/Header.test.tsx` | Component tests (written first) |
+| `scripts/__tests__/no-server-session-in-public.test.ts` | Repo-scan: no `next/headers` or server client in public/layout files |
+
+### Design decisions
+
+**Header.tsx** — server component. Sticky. Text wordmark "CeylonSafety" (EC6, Q47 open). Never calls `cookies()`, `headers()`, or server Supabase client (AC2). Renders `<HeaderNav />` and `<HeaderPersonal />` as client sub-components.
+
+**HeaderNav.tsx** — `"use client"`. Desktop: nav links with `usePathname()` for `aria-current="page"` (AC1). Mobile: hamburger button opens Sheet from `components/ui/sheet.tsx` (Radix Dialog — focus trap and Escape built-in, AC5). EC4: `useEffect` + `matchMedia("(min-width: 1024px)")` closes the sheet when resized to desktop. Nav order: Home, Articles, Documents, Courses, Jobs, Contact Coach.
+
+**HeaderPersonal.tsx** — `"use client"`. Uses `useAuth()`. `isLoading: true` → fixed-size `aria-busy` placeholder, no Sign In flash (AC2). Signed out → Sign In + Sign Up links. Signed in → name button (EC3: `truncate max-w-[8rem]`) toggles account dropdown (Profile, My Purchases, Sign Out). Cart link always `href="/cart"` (middleware redirects unsigned-in visitors, AC4). EC5: signOut error → `errorMessage("unknown")` shown inline.
+
+**useAuth.ts** — `"use client"`. `createSupabaseBrowserClient().auth.getSession()` for initial load + `onAuthStateChange` subscription. Returns `{ user: { name: string | null } | null, isLoading: boolean, signOut: () => Promise<void> }`. EC1: any error → `user=null`. EC2: `user_metadata.full_name` absent → `name: null` (component shows "Account").
+
+**lib/supabase/client.ts** — backend-owned scaffold (S-003). Re-exports `createSupabaseBrowserClient()`; `@supabase/ssr` handles browser-client caching internally per URL — no module-level singleton is needed or used.
+
+### Messages added
+
+| Key | Text |
+|---|---|
+| `nav.home` | "Home" |
+| `nav.articles` | "Articles" |
+| `nav.documents` | "Documents" |
+| `nav.courses` | "Courses" |
+| `nav.jobs` | "Jobs" |
+| `nav.contact_coach` | "Contact Coach" |
+| `nav.cart` | "Cart" |
+| `nav.sign_in` | "Sign In" |
+| `nav.sign_up` | "Sign Up" |
+| `nav.account` | "Account" |
+| `nav.profile` | "Profile" |
+| `nav.my_purchases` | "My Purchases" |
+| `nav.sign_out` | "Sign out" |
+| `nav.open_menu` | "Open menu" |
+| `nav.mobile_nav_title` | "Navigation" |
+| `nav.loading_account` | "Loading account" |
+| `nav.home_link_label` | "CeylonSafety — home" |
+| `site.wordmark` | "CeylonSafety" |
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7. Add 375 px and 1280 px screenshots. -->
-
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  12 passed (12)
+       Tests  87 passed (87)
+    Start at  21:39:16
+    Duration  42.75s
+
+════════════════════════════════
+  check.sh: 3 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
 ```
+
+Note: AC7 screenshot verification (375 px / 1280 px) not yet possible — public layout (S-027) has not mounted the header in a page. Visual check to be done by reviewer after S-027 merges.
 
 ## Review notes
 

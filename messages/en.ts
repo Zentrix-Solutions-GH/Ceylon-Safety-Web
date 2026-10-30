@@ -37,6 +37,26 @@ const en = {
   "errors.weak_password": "Please choose a stronger password.",
   "errors.captcha_failed": "Security check failed. Please try again.",
   "errors.account_suspended": "This account has been suspended. Contact support",
+
+  // --- navigation and site chrome (S-025) ---
+  "nav.home": "Home",
+  "nav.articles": "Articles",
+  "nav.documents": "Documents",
+  "nav.courses": "Courses",
+  "nav.jobs": "Jobs",
+  "nav.contact_coach": "Contact Coach",
+  "nav.cart": "Cart",
+  "nav.sign_in": "Sign In",
+  "nav.sign_up": "Sign Up",
+  "nav.account": "Account",
+  "nav.profile": "Profile",
+  "nav.my_purchases": "My Purchases",
+  "nav.sign_out": "Sign out",
+  "nav.open_menu": "Open menu",
+  "nav.mobile_nav_title": "Navigation",
+  "nav.loading_account": "Loading account",
+  "nav.home_link_label": "CeylonSafety — home",
+  "site.wordmark": "CeylonSafety",
 } as const;
 
 export type MessageKey = keyof typeof en;
