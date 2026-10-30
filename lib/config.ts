@@ -78,6 +78,18 @@ export const serverConfig = {
   cronSecret: vals["CRON_SECRET"],
 } as const;
 
+// Healthchecks config — optional; returns null when env vars are absent so the
+// caller skips the ping silently outside production.
+export function healthchecksConfig(
+  job: string
+): { baseUrl: string; checkId: string } | null {
+  const baseUrl = process.env["HEALTHCHECKS_BASE_URL"]?.trim();
+  const idKey = `HEALTHCHECKS_${job.toUpperCase().replace(/-/g, "_")}_ID`;
+  const checkId = process.env[idKey]?.trim();
+  if (!baseUrl || !checkId) return null;
+  return { baseUrl, checkId };
+}
+
 // CSP config — used in tests only. Production code (lib/security/headers.ts)
 // reads env vars directly to avoid importing server-only through next.config.ts.
 export const cspConfig = {

@@ -27,7 +27,14 @@ CRON_SECRET="$(cat "$SECRET_FILE")"
 
 APP_URL="${APP_URL:?APP_URL must be set (e.g. https://ceylonsafety.com for production or the staging URL)}"
 
-curl -s -o /dev/null -w "%{http_code}" \
+HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
   -X POST \
   -H "x-cron-secret: ${CRON_SECRET}" \
-  "${APP_URL}/api/cron/${JOB}"
+  "${APP_URL}/api/cron/${JOB}")
+
+echo "[cron.sh] ${JOB} → HTTP ${HTTP_STATUS}"
+
+if [ "${HTTP_STATUS}" != "200" ]; then
+  echo "[cron.sh] ERROR: unexpected status ${HTTP_STATUS}" >&2
+  exit 1
+fi

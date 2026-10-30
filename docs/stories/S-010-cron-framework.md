@@ -122,6 +122,13 @@ AC7 manual evidence (keep-awake workflow run): **not yet — requires S-005 secr
 - P2 (deferred): `JobHandler` type has no JSDoc documenting idempotency/UTC requirement.
 - P2 (deferred): test spy on `console.log`/`console.error` to close EC1 log-path assertion gap.
 
+**Full review — APPROVE WITH FOLLOW-UPS (84/100) — 2026-10-30:**
+- P1 `scripts/cron.sh:30-33` — script exits 0 on HTTP 4xx/5xx; curl captures `%{http_code}` but never checks it. Fix: capture status, `exit 1` on non-200.
+- P1 `lib/jobs/index.ts:41-43` — `pingHeartbeat` reads `HEALTHCHECKS_BASE_URL` and `HEALTHCHECKS_<JOB>_ID` directly from `process.env`, bypassing `lib/config.ts`. Fix: add `healthchecksConfig(job)` helper to `lib/config.ts`.
+- P2 `__tests__/jobs.test.ts:61-72` — UTC tests are vacuous (test JS built-ins, not project code). Deferred to S-081/S-082/S-084.
+- P2 `__tests__/cron-route.test.ts:94` — no Content-Type assertion on 200 response.
+- P2 `lib/jobs/index.ts:53-56` — `pingHeartbeat` network-error (fetch-throw) path untested.
+
 ## After this merges, a user can:
 
 Nothing visible to site users. This PR is infrastructure: staging has a scheduler that can run jobs on a secret-protected route, and staging no longer pauses for lack of use.

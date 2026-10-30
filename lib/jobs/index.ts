@@ -1,5 +1,6 @@
 import "server-only";
 import { timingSafeEqual } from "node:crypto";
+import { healthchecksConfig } from "../config";
 import { testJob } from "./test";
 
 export type JobHandler = () => Promise<{ ok: boolean }>;
@@ -30,25 +31,18 @@ export function timingSafeStringEqual(a: string, b: string): boolean {
   return (lengthOk & contentsOk) === 1;
 }
 
-// Job-specific heartbeat check IDs in env:  HEALTHCHECKS_<JOB_UPPER>_ID
-// e.g. HEALTHCHECKS_TEST_ID for the "test" job.
-// Base URL: HEALTHCHECKS_BASE_URL (e.g. "https://hc-ping.com")
-// If either is absent, the ping is skipped silently outside production.
+// Pings the Healthchecks heartbeat for the given job.
+// URLs come from lib/config.ts healthchecksConfig(); missing config is skipped
+// silently so staging runs without Healthchecks set up.
 export async function pingHeartbeat(
   job: string,
   outcome: "success" | "fail"
 ): Promise<void> {
-  const baseUrl = process.env["HEALTHCHECKS_BASE_URL"];
-  const idKey = `HEALTHCHECKS_${job.toUpperCase().replace(/-/g, "_")}_ID`;
-  const checkId = process.env[idKey];
-
-  if (!baseUrl || !checkId) {
-    // Missing URL — skip silently outside production
-    return;
-  }
+  const cfg = healthchecksConfig(job);
+  if (!cfg) return;
 
   const suffix = outcome === "fail" ? "/fail" : "";
-  const url = `${baseUrl}/${checkId}${suffix}`;
+  const url = `${cfg.baseUrl}/${cfg.checkId}${suffix}`;
 
   try {
     await fetch(url, { method: "GET" });

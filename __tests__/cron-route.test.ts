@@ -143,6 +143,9 @@ describe("EC2: application code does not add extra trimming", () => {
 // ── AC1: constant-time compare ───────────────────────────────────────────────
 
 describe("AC1: constant-time compare helper", () => {
+  beforeEach(() => setEnv());
+  afterEach(() => clearEnv());
+
   it("timingSafeEqual returns true for equal strings", async () => {
     vi.resetModules();
     const { timingSafeStringEqual } = await import(`../lib/jobs/index?t=${Date.now()}`);
