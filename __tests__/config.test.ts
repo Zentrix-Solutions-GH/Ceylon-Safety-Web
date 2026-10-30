@@ -11,6 +11,9 @@ const VALID_ENV = {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key-value",
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key-value",
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: "a".repeat(64),
+  // S-030: required by cspConfig
+  CSP_MODE: "report-only",
+  NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL: "https://cdn.ceylonsafety.com",
 };
 
 function setEnv(overrides: Record<string, string | undefined> = {}) {

@@ -44,12 +44,25 @@ function hex64(name: string): string {
   return val;
 }
 
+function optional(name: string, defaultVal: string): string {
+  return process.env[name]?.trim() || defaultVal;
+}
+
 const vals = collect([
   ["NEXT_PUBLIC_SUPABASE_URL", url],
   ["NEXT_PUBLIC_SUPABASE_ANON_KEY", string],
   ["SUPABASE_SERVICE_ROLE_KEY", string],
   ["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY", hex64],
 ]);
+
+// CSP config — validated separately so errors are specific
+const cspModeRaw = (() => {
+  const v = process.env["CSP_MODE"]?.trim();
+  if (!v) throw new Error("[config] Missing required env var: CSP_MODE");
+  if (v !== "report-only" && v !== "enforce")
+    throw new Error(`[config] CSP_MODE must be "report-only" or "enforce", got: ${v}`);
+  return v as "report-only" | "enforce";
+})();
 
 // Public values — safe for the browser; baked in at build time via NEXT_PUBLIC_*
 export const publicConfig = {
@@ -61,4 +74,27 @@ export const publicConfig = {
 export const serverConfig = {
   supabaseServiceRoleKey: vals["SUPABASE_SERVICE_ROLE_KEY"],
   encryptionKey: vals["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"],
+} as const;
+
+// CSP config — used in tests only. Production code (lib/security/headers.ts)
+// reads env vars directly to avoid importing server-only through next.config.ts.
+export const cspConfig = {
+  mode: cspModeRaw,
+  // Image CDN base URL — needed for img-src directive
+  imageCdnUrl: url("NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL"),
+  // PayHere sandbox flag — determines form-action host on /checkout
+  payhereIsSandbox: process.env["NEXT_PUBLIC_PAYHERE_SANDBOX"] === "true",
+  // Well-known stable CDN hosts; override via env var if they ever change
+  youtubeNocookieHost: optional(
+    "NEXT_PUBLIC_CSP_YOUTUBE_HOST",
+    "https://www.youtube-nocookie.com"
+  ),
+  googleAvatarHost: optional(
+    "NEXT_PUBLIC_CSP_GOOGLE_AVATAR_HOST",
+    "lh3.googleusercontent.com"
+  ),
+  turnstileHost: optional(
+    "NEXT_PUBLIC_CSP_TURNSTILE_HOST",
+    "challenges.cloudflare.com"
+  ),
 } as const;
