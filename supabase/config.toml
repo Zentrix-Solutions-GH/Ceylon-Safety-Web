@@ -59,24 +59,31 @@ enabled = false
 [auth]
 enabled = true
 site_url = "http://127.0.0.1:3000"
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = ["http://127.0.0.1:3000"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 enable_signup = true
 enable_anonymous_sign_ins = false
 enable_manual_linking = false
-minimum_password_length = 6
+minimum_password_length = 8
 password_requirements = ""
 
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
-enable_confirmations = false
+enable_confirmations = true
 secure_password_change = false
 max_frequency = "1s"
+# EC1: Supabase local stack caps OTP length at 6; production dashboard allows 8.
+# 6 digits with 10-minute expiry is the fallback recorded in docs/ops/auth-settings.md.
 otp_length = 6
-otp_expiry = 3600
+otp_expiry = 600
+# Template paths (relative to supabase/ directory)
+template.confirm_signup = "./templates/confirm-signup.html"
+template.recovery = "./templates/reset-password.html"
+template.reauthentication = "./templates/reauthentication.html"
+template.magic_link = "./templates/magic-link.html"
 
 [auth.sms]
 enable_signup = false
@@ -88,8 +95,8 @@ max_frequency = "5s"
 max_enrolled_factors = 10
 
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 [auth.mfa.phone]
 enroll_enabled = false
@@ -97,6 +104,32 @@ verify_enabled = false
 otp_length = 6
 template = "Your code is {{ .Code }}"
 max_frequency = "5s"
+
+# AC1: Google is the only external provider enabled.
+# Credentials come from environment variables; never hardcode them.
+[auth.external.google]
+enabled = true
+client_id = "env(GOOGLE_CLIENT_ID)"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+# AC8: exact callback path, no wildcards
+redirect_uri = "http://127.0.0.1:3000/api/auth/callback"
+skip_nonce_check = false
+
+# AC5: Cloudflare Turnstile captcha.
+# Local/CI use the published always-pass test key so sign-up and sign-in
+# succeed without a real browser challenge.
+# Production: credentials set in the Supabase dashboard only, never in this file.
+[auth.captcha]
+enabled = true
+provider = "turnstile"
+# Cloudflare always-pass test key (published; safe to commit).
+secret = "1x0000000000000000000000000000000AA"
+
+# AC6: Enable the custom access token hook created in S-012.
+# The hook adds user_role and account_status to every issued JWT.
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/private/custom_access_token_hook"
 
 [auth.sessions]
 timebox = "168h"
