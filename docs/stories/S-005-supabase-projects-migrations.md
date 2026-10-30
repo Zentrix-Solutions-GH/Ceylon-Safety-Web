@@ -179,7 +179,7 @@ Remote database is up to date.
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `.github/workflows/db-connectivity.yml:15` — `psql` not installed on `ubuntu-latest` by default; workflow will fail with `psql: command not found`. Add `sudo apt-get install -y postgresql-client` step before the connection test. (full-review 2026-10-30)
 
 ## After this merges, a user can:
 

@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     steps:
+      - name: Install psql client
+        run: sudo apt-get install -y postgresql-client
+
       - name: Test connection via session pooler
         env:
           STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
