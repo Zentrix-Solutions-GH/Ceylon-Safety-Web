@@ -160,7 +160,9 @@ AC6 CONFIRMED: security headers do not force dynamic rendering.
 
 ## Review notes
 
-<!-- Filled by reviewer and security-reviewer agents -->
+- **P1** `lib/security/headers.ts:80,103` — Turnstile missing from `frame-src` in both builders. Cloudflare Turnstile renders in a sandboxed iframe; `challenges.cloudflare.com` must be added to `frame-src` in `buildPublicCsp()` and conditionally (when `hasTurnstile(path)`) in `buildPrivateCsp()`. Will generate violations in report-only mode now and block Turnstile completely when S-130 enforces. (full-review 2026-10-30)
+- **P1** `docs/stories/S-030-security-headers-csp.md` AC2 checkbox — AC2 is ticked `[x]` but per-path enforcement (PayHere, Turnstile, data:) is not wired in `next.config.ts` (sentinel `/profile` only). Uncheck and add inline note pointing to S-033. (full-review 2026-10-30)
+- **P1** `lib/security/headers.ts:78,99` — `style-src 'self' 'unsafe-inline'` has no accepted assumption in the story. Audit whether inline styles are actually emitted; add an accepted assumption or remove `'unsafe-inline'` before S-130. (full-review 2026-10-30)
 
 ## After this merges, a user can:
 
