@@ -111,7 +111,7 @@ No DB migrations. No new types in `types/`.
 ## Evidence
 
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh   (after test-check gap fixes — 186 tests)
 
 ── ESLint ──
 ✓ ESLint passed
@@ -120,9 +120,9 @@ $ bash scripts/check.sh
 ✓ TypeScript passed
 
 ── Vitest (unit) ──
- Test Files  11 passed (11)
-      Tests  103 passed (103)   (41 new in lib/security/__tests__/headers.test.ts)
-   Duration  12.56s
+ Test Files  14 passed (14)
+      Tests  186 passed (186)
+   Duration  24.08s
 
 ── pgTAP / Types ──
 ⚠ Supabase not running — skipped (expected in local dev)
@@ -134,6 +134,28 @@ $ bash scripts/check.sh
   check.sh: 4 passed, 0 failed
 ════════════════════════════════
 ✅ All checks passed.
+```
+
+```
+$ npx next build   (AC6 build check)
+
+Route (app)                    Size     First Load JS
+○  /articles                   384 B        103 kB
+○  /documents                  384 B        103 kB
+○  /search                     384 B        103 kB
+○  /sign-in                    384 B        103 kB
+○  /sign-up                    384 B        103 kB
+○  /cart                       384 B        103 kB
+○  /checkout                   384 B        103 kB
+○  /checkout/success           384 B        103 kB
+○  /checkout/cancel            384 B        103 kB
+○  /profile                    384 B        103 kB
+...all public routes show ○ (Static); zero Dynamic markers on public pages.
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+AC6 CONFIRMED: security headers do not force dynamic rendering.
 ```
 
 ## Review notes

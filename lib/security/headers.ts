@@ -1,4 +1,23 @@
-import { publicConfig, cspConfig } from "@/lib/config";
+// headers.ts reads env vars directly so next.config.ts can import it without
+// pulling in lib/config.ts (which has `import "server-only"` — unavailable in
+// the jiti context used to load next.config.ts).
+
+function requireEnv(name: string): string {
+  const v = process.env[name]?.trim();
+  if (!v) throw new Error(`[headers] Missing required env var: ${name}`);
+  return v;
+}
+
+function optionalEnv(name: string, defaultVal: string): string {
+  return process.env[name]?.trim() || defaultVal;
+}
+
+function cspMode(): "report-only" | "enforce" {
+  const v = requireEnv("CSP_MODE");
+  if (v !== "report-only" && v !== "enforce")
+    throw new Error(`[headers] CSP_MODE must be "report-only" or "enforce", got: ${v}`);
+  return v;
+}
 
 // Routes that carry the Turnstile widget
 const TURNSTILE_PATHS = new Set([
@@ -27,7 +46,9 @@ const PRIVATE_PREFIXES = [
 ];
 
 function payhereHost(): string {
-  return cspConfig.payhereIsSandbox ? "sandbox.payhere.lk" : "www.payhere.lk";
+  return process.env["NEXT_PUBLIC_PAYHERE_SANDBOX"] === "true"
+    ? "sandbox.payhere.lk"
+    : "www.payhere.lk";
 }
 
 function isPrivate(path: string): boolean {
@@ -41,9 +62,11 @@ function hasTurnstile(path: string): boolean {
 }
 
 export function buildPublicCsp(): string {
-  const imageCdn = cspConfig.imageCdnUrl;
-  const supabaseUrl = publicConfig.supabaseUrl;
-  const { youtubeNocookieHost, googleAvatarHost, turnstileHost } = cspConfig;
+  const imageCdn = requireEnv("NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL");
+  const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const youtubeNocookieHost = optionalEnv("NEXT_PUBLIC_CSP_YOUTUBE_HOST", "https://www.youtube-nocookie.com");
+  const googleAvatarHost = optionalEnv("NEXT_PUBLIC_CSP_GOOGLE_AVATAR_HOST", "lh3.googleusercontent.com");
+  const turnstileHost = optionalEnv("NEXT_PUBLIC_CSP_TURNSTILE_HOST", "challenges.cloudflare.com");
 
   const directives: string[] = [
     `default-src 'self'`,
@@ -63,9 +86,10 @@ export function buildPublicCsp(): string {
 }
 
 export function buildPrivateCsp(path: string): string {
-  const imageCdn = cspConfig.imageCdnUrl;
-  const supabaseUrl = publicConfig.supabaseUrl;
-  const { googleAvatarHost, turnstileHost } = cspConfig;
+  const imageCdn = requireEnv("NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL");
+  const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const googleAvatarHost = optionalEnv("NEXT_PUBLIC_CSP_GOOGLE_AVATAR_HOST", "lh3.googleusercontent.com");
+  const turnstileHost = optionalEnv("NEXT_PUBLIC_CSP_TURNSTILE_HOST", "challenges.cloudflare.com");
 
   const imgSrcExtras = path === "/admin/security" ? " data:" : "";
 
@@ -94,7 +118,7 @@ export function buildPrivateCsp(path: string): string {
 }
 
 export function cspHeaderName(): string {
-  return cspConfig.mode === "report-only"
+  return cspMode() === "report-only"
     ? "Content-Security-Policy-Report-Only"
     : "Content-Security-Policy";
 }

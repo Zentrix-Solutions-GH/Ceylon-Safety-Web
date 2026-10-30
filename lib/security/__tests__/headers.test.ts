@@ -266,3 +266,74 @@ describe("EC1 — host list extensibility", () => {
     expect(csp).not.toContain("googlesyndication");
   });
 });
+
+describe("EC5 — /checkout/success and /checkout/cancel load normally", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    process.env = makeEnv() as unknown as NodeJS.ProcessEnv;
+  });
+
+  it("buildStaticHeaders returns no-store and noindex on /checkout/success", async () => {
+    const { buildStaticHeaders } = await import("../headers");
+    const headers = buildStaticHeaders("/checkout/success");
+    expect(headers.find((h) => h.key === "Cache-Control")?.value).toBe("no-store");
+    expect(headers.find((h) => h.key === "X-Robots-Tag")?.value).toContain("noindex");
+  });
+
+  it("buildStaticHeaders returns no-store and noindex on /checkout/cancel", async () => {
+    const { buildStaticHeaders } = await import("../headers");
+    const headers = buildStaticHeaders("/checkout/cancel");
+    expect(headers.find((h) => h.key === "Cache-Control")?.value).toBe("no-store");
+    expect(headers.find((h) => h.key === "X-Robots-Tag")?.value).toContain("noindex");
+  });
+
+  it("buildPrivateCsp returns a well-formed CSP on /checkout/success", async () => {
+    const { buildPrivateCsp } = await import("../headers");
+    const csp = buildPrivateCsp("/checkout/success");
+    // Page loads with private policy; includes frame-ancestors none and no ad hosts
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).not.toContain("googlesyndication");
+  });
+
+  it("buildPrivateCsp returns a well-formed CSP on /checkout/cancel", async () => {
+    const { buildPrivateCsp } = await import("../headers");
+    const csp = buildPrivateCsp("/checkout/cancel");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).not.toContain("googlesyndication");
+  });
+});
+
+describe("AC7 — env-var host overrides", () => {
+  it("respects NEXT_PUBLIC_CSP_GOOGLE_AVATAR_HOST override in public CSP", async () => {
+    vi.resetModules();
+    process.env = makeEnv({
+      NEXT_PUBLIC_CSP_GOOGLE_AVATAR_HOST: "https://custom-avatar.example.com",
+    }) as unknown as NodeJS.ProcessEnv;
+    const { buildPublicCsp } = await import("../headers");
+    const csp = buildPublicCsp();
+    expect(csp).toContain("https://custom-avatar.example.com");
+    expect(csp).not.toContain("lh3.googleusercontent.com");
+  });
+
+  it("respects NEXT_PUBLIC_CSP_YOUTUBE_HOST override in public CSP", async () => {
+    vi.resetModules();
+    process.env = makeEnv({
+      NEXT_PUBLIC_CSP_YOUTUBE_HOST: "https://custom-yt.example.com",
+    }) as unknown as NodeJS.ProcessEnv;
+    const { buildPublicCsp } = await import("../headers");
+    const csp = buildPublicCsp();
+    expect(csp).toContain("https://custom-yt.example.com");
+    expect(csp).not.toContain("youtube-nocookie.com");
+  });
+
+  it("respects NEXT_PUBLIC_CSP_TURNSTILE_HOST override in public CSP", async () => {
+    vi.resetModules();
+    process.env = makeEnv({
+      NEXT_PUBLIC_CSP_TURNSTILE_HOST: "https://custom-turnstile.example.com",
+    }) as unknown as NodeJS.ProcessEnv;
+    const { buildPublicCsp } = await import("../headers");
+    const csp = buildPublicCsp();
+    expect(csp).toContain("https://custom-turnstile.example.com");
+    expect(csp).not.toContain("challenges.cloudflare.com");
+  });
+});
