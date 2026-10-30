@@ -41,7 +41,7 @@ const FORBIDDEN: Array<{ pattern: RegExp; label: string }> = [
 ];
 
 describe("no-server-session-in-public", () => {
-  it("AC2: no file in app/(public)/ or components/layout/ uses server session APIs", () => {
+  it("AC2: no file in app/(public)/, components/layout/, or hooks/ uses server session APIs", () => {
     const violations: string[] = [];
     for (const dir of DIRS_TO_SCAN) {
       for (const file of collectTsFiles(dir)) {

@@ -295,6 +295,21 @@ describe("Header", () => {
       });
       expect(document.activeElement).toBe(accountBtn);
     });
+
+    it("Tab closes dropdown and returns focus to account button", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: mockSignOut });
+      render(<Header />);
+      const accountBtn = screen.getByRole("button", { name: "Kamal" });
+      await user.click(accountBtn);
+      const items = screen.getAllByRole("menuitem");
+      items[0].focus();
+      await user.keyboard("{Tab}");
+      await waitFor(() => {
+        expect(screen.queryByRole("menu")).toBeNull();
+      });
+      expect(document.activeElement).toBe(accountBtn);
+    });
   });
 
   describe("account dropdown: click-outside closes menu", () => {

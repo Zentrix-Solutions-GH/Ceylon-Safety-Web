@@ -48,14 +48,16 @@ export function HeaderPersonal() {
       e.preventDefault();
       setMenuOpen(false);
       menuButtonRef.current?.focus();
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      setMenuOpen(false);
+      menuButtonRef.current?.focus();
     }
   }
 
   function handleMenuToggle() {
-    setMenuOpen((prev) => {
-      if (!prev) setSignOutError(null);
-      return !prev;
-    });
+    if (!menuOpen) setSignOutError(null);
+    setMenuOpen((prev) => !prev);
   }
 
   async function handleSignOut() {

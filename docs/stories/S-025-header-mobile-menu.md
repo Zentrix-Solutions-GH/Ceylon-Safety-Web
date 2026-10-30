@@ -132,9 +132,9 @@ $ bash scripts/check.sh
 
 ── Vitest (unit) ──
  Test Files  12 passed (12)
-       Tests  85 passed (85)
-    Start at  21:01:18
-    Duration  73.43s
+       Tests  86 passed (86)
+    Start at  21:29:06
+    Duration  56.19s
 
 ════════════════════════════════
   check.sh: 3 passed, 0 failed
