@@ -173,6 +173,21 @@ describe("Header", () => {
         expect(screen.queryByRole("dialog")).toBeNull();
       });
     });
+
+    it("returns focus to the open menu button after Escape closes the sheet", async () => {
+      const user = userEvent.setup();
+      render(<Header />);
+      const openBtn = screen.getByRole("button", { name: /open menu/i });
+      await user.click(openBtn);
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      await user.keyboard("{Escape}");
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).toBeNull();
+      });
+      await waitFor(() => {
+        expect(document.activeElement).toBe(openBtn);
+      });
+    });
   });
 
   describe("EC2: user with no display name", () => {
@@ -247,6 +262,38 @@ describe("Header", () => {
       await waitFor(() => {
         expect(screen.getByRole("alert")).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("account dropdown: keyboard navigation", () => {
+    it("arrow keys cycle focus between menu items", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: mockSignOut });
+      render(<Header />);
+      await user.click(screen.getByRole("button", { name: "Kamal" }));
+      const items = screen.getAllByRole("menuitem");
+      items[0].focus();
+      await user.keyboard("{ArrowDown}");
+      expect(document.activeElement).toBe(items[1]);
+      await user.keyboard("{ArrowDown}");
+      expect(document.activeElement).toBe(items[2]);
+      await user.keyboard("{ArrowDown}");
+      expect(document.activeElement).toBe(items[0]);
+    });
+
+    it("Escape closes dropdown and returns focus to account button", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: mockSignOut });
+      render(<Header />);
+      const accountBtn = screen.getByRole("button", { name: "Kamal" });
+      await user.click(accountBtn);
+      const items = screen.getAllByRole("menuitem");
+      items[0].focus();
+      await user.keyboard("{Escape}");
+      await waitFor(() => {
+        expect(screen.queryByRole("menu")).toBeNull();
+      });
+      expect(document.activeElement).toBe(accountBtn);
     });
   });
 

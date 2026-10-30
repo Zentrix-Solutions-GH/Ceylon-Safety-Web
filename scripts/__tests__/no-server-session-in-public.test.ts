@@ -30,6 +30,7 @@ const ROOT = process.cwd();
 const DIRS_TO_SCAN = [
   join(ROOT, "app/(public)"),
   join(ROOT, "components/layout"),
+  join(ROOT, "hooks"),
 ];
 
 // Patterns that indicate a server-side session read.

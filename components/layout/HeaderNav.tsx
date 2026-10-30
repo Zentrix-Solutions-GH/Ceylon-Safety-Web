@@ -9,6 +9,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { NAV_ITEMS } from "@/config/navigation";
 import { t } from "@/messages/en";
@@ -46,20 +47,22 @@ export function HeaderNav() {
 
       {/* Mobile hamburger — visible below lg */}
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <button
-          type="button"
-          aria-label={t("nav.open_menu")}
-          aria-expanded={isOpen}
-          onClick={() => setIsOpen(true)}
-          className="lg:hidden flex items-center justify-center w-11 h-11 rounded-md hover:bg-accent"
-        >
-          <Menu className="h-5 w-5" aria-hidden="true" />
-        </button>
+        {/* AC5: SheetTrigger tracks this button so Radix returns focus to it on close. */}
+        <SheetTrigger asChild>
+          <button
+            type="button"
+            aria-label={t("nav.open_menu")}
+            aria-expanded={isOpen}
+            className="lg:hidden flex items-center justify-center w-11 h-11 rounded-md hover:bg-accent"
+          >
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </SheetTrigger>
 
         {/* AC5: SheetContent is a Radix Dialog — focus moves in, Escape closes, page is inert. */}
         <SheetContent side="left" className="w-72">
           <SheetHeader>
-            <SheetTitle className="sr-only">{t("nav.open_menu")}</SheetTitle>
+            <SheetTitle className="sr-only">{t("nav.mobile_nav_title")}</SheetTitle>
           </SheetHeader>
           <nav aria-label="Mobile navigation" className="flex flex-col gap-1 mt-6">
             {NAV_ITEMS.map((item) => (

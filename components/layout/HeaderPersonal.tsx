@@ -12,6 +12,8 @@ export function HeaderPersonal() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -23,6 +25,38 @@ export function HeaderPersonal() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
+
+  // Auto-focus first menuitem when dropdown opens (WAI-ARIA menu keyboard pattern).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const first = dropdownRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+    first?.focus();
+  }, [menuOpen]);
+
+  function handleMenuKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    const items = Array.from(
+      dropdownRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []
+    );
+    const idx = items.indexOf(document.activeElement as HTMLElement);
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      items[(idx + 1) % items.length]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      items[(idx - 1 + items.length) % items.length]?.focus();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setMenuOpen(false);
+      menuButtonRef.current?.focus();
+    }
+  }
+
+  function handleMenuToggle() {
+    setMenuOpen((prev) => {
+      if (!prev) setSignOutError(null);
+      return !prev;
+    });
+  }
 
   async function handleSignOut() {
     setSignOutError(null);
@@ -78,8 +112,9 @@ export function HeaderPersonal() {
       {!isLoading && user && (
         <div className="relative" ref={menuRef}>
           <button
+            ref={menuButtonRef}
             type="button"
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={handleMenuToggle}
             aria-expanded={menuOpen}
             aria-haspopup="menu"
             className="flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium hover:bg-accent"
@@ -90,7 +125,9 @@ export function HeaderPersonal() {
 
           {menuOpen && (
             <div
+              ref={dropdownRef}
               role="menu"
+              onKeyDown={handleMenuKeyDown}
               className="absolute right-0 mt-1 w-44 rounded-md border bg-popover shadow-md z-50 py-1"
             >
               <Link

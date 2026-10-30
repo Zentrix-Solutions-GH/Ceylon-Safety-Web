@@ -53,6 +53,7 @@ const en = {
   "nav.my_purchases": "My Purchases",
   "nav.sign_out": "Sign out",
   "nav.open_menu": "Open menu",
+  "nav.mobile_nav_title": "Navigation",
   "nav.loading_account": "Loading account",
   "nav.home_link_label": "CeylonSafety — home",
   "site.wordmark": "CeylonSafety",
