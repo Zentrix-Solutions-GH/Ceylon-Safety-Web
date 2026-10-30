@@ -27,7 +27,7 @@ Frontend architecture F8 (header CSP with host lists, no nonces on public pages)
 ## Acceptance criteria
 
 - [x] AC1: Public routes get a `Content-Security-Policy` header with host lists and no nonces: own host; the image subdomain (from config, not hardcoded); the Supabase address (from config); the YouTube no-cookie host for frames only; `challenges.cloudflare.com` (Turnstile, for the comment form on article pages); AdSense and analytics hosts listed (exact host list to verify) but loaded only by the script gate after consent.
-- [x] AC2: Private routes (`/sign-in`, `/sign-up`, `/forgot-password`, `/reset-password`, `/verify-email`, `/suspended`, `/admin/**`, `/cart`, `/checkout/**`, `/download/**`, `/purchases/**`, `/profile/**`) get a stricter policy: no ad or analytics hosts; Turnstile host only on pages with the widget; PayHere address in `form-action` on `/checkout/**` only.
+- [ ] AC2: Private routes (`/sign-in`, `/sign-up`, `/forgot-password`, `/reset-password`, `/verify-email`, `/suspended`, `/admin/**`, `/cart`, `/checkout/**`, `/download/**`, `/purchases/**`, `/profile/**`) get a stricter policy: no ad or analytics hosts; Turnstile host only on pages with the widget; PayHere address in `form-action` on `/checkout/**` only. <!-- baseline policy wired in next.config.ts; per-path Turnstile/PayHere/data: overrides delivered by S-033 middleware -->
 - [x] AC3: `frame-ancestors 'none'` on all pages. Frames are allowed only from the YouTube no-cookie host. Images only from the image subdomain and Google's avatar host.
 - [x] AC4: Private routes also send a referrer policy that sends no address to other sites, and `Cache-Control: no-store` plus `X-Robots-Tag: noindex` for `/admin`, `/cart`, `/checkout`, `/download`, `/purchases`, `/profile`, the sign-in pages and `/api/*` (set in `next.config.ts` route headers; the middleware sets them too, S-033).
 - [x] AC5: The policy mode comes from config (`report-only` or `enforce`) read through `lib/config.ts`, default `report-only`. Switching to `enforce` before launch is a launch-checklist task (S-130), not part of this story.
@@ -60,6 +60,7 @@ Frontend architecture F8 (header CSP with host lists, no nonces on public pages)
 - **F8 accepted (2026-10-30):** No nonces on public pages (host-list CSP only); stricter policy on private pages; report-only mode first. Static/cached build output is preserved.
 - **Referrer policy accepted (2026-10-30):** `same-origin` — sends no referrer to other sites.
 - **QR code / data URI gap accepted (2026-10-30):** Allow `data:` in `img-src` on `/admin/security` only. All other routes keep the stricter image policy (image subdomain + Google avatar host).
+- **`style-src 'unsafe-inline'` accepted (2026-10-30):** Next.js injects inline `<style>` tags at runtime for `next/font` (font-face declarations) and the `<Image>` component (layout styles). Removing `'unsafe-inline'` from `style-src` breaks font loading and image layout on all pages. Hash-based allowlisting is not feasible without nonces (deferred to post-S-130). Risk: CSS exfiltration via attribute selectors is mitigated by the strict `connect-src` and `img-src` allowlists on private routes.
 
 ## Test plan
 

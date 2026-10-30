@@ -63,6 +63,13 @@ describe("buildPublicCsp (AC1, AC3)", () => {
     expect(csp).toContain("challenges.cloudflare.com");
   });
 
+  it("includes Turnstile host in frame-src (widget renders in iframe)", async () => {
+    const { buildPublicCsp } = await import("../headers");
+    const csp = buildPublicCsp();
+    const frameSrcMatch = csp.match(/frame-src([^;]*)/);
+    expect(frameSrcMatch?.[1]).toContain("challenges.cloudflare.com");
+  });
+
   it("has frame-ancestors none", async () => {
     const { buildPublicCsp } = await import("../headers");
     const csp = buildPublicCsp();
@@ -97,6 +104,13 @@ describe("buildPrivateCsp (AC2, AC3, EC2)", () => {
     expect(csp).toContain("challenges.cloudflare.com");
   });
 
+  it("includes Turnstile host in frame-src on sign-in (widget renders in iframe)", async () => {
+    const { buildPrivateCsp } = await import("../headers");
+    const csp = buildPrivateCsp("/sign-in");
+    const frameSrcMatch = csp.match(/frame-src([^;]*)/);
+    expect(frameSrcMatch?.[1]).toContain("challenges.cloudflare.com");
+  });
+
   it("includes Turnstile host on sign-up", async () => {
     const { buildPrivateCsp } = await import("../headers");
     const csp = buildPrivateCsp("/sign-up");
@@ -107,6 +121,12 @@ describe("buildPrivateCsp (AC2, AC3, EC2)", () => {
     const { buildPrivateCsp } = await import("../headers");
     const csp = buildPrivateCsp("/profile");
     expect(csp).not.toContain("challenges.cloudflare.com");
+  });
+
+  it("frame-src is none on non-Turnstile private path", async () => {
+    const { buildPrivateCsp } = await import("../headers");
+    const csp = buildPrivateCsp("/profile");
+    expect(csp).toContain("frame-src 'none'");
   });
 
   it("includes PayHere in form-action on /checkout path", async () => {

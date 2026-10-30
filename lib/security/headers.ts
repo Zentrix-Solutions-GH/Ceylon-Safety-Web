@@ -75,7 +75,8 @@ export function buildPublicCsp(): string {
     `img-src 'self' ${imageCdn} ${googleAvatarHost}`,
     `font-src 'self'`,
     `connect-src 'self' ${supabaseUrl} ${turnstileHost}`,
-    `frame-src ${youtubeNocookieHost}`,
+    // Turnstile renders its challenge inside a sandboxed iframe
+    `frame-src ${youtubeNocookieHost} ${turnstileHost}`,
     `frame-ancestors 'none'`,
     `form-action 'self'`,
     `base-uri 'self'`,
@@ -95,6 +96,8 @@ export function buildPrivateCsp(path: string): string {
 
   const scriptExtras = hasTurnstile(path) ? ` ${turnstileHost}` : "";
   const connectExtras = hasTurnstile(path) ? ` ${turnstileHost}` : "";
+  // Turnstile renders its challenge in a sandboxed iframe on widget pages
+  const frameSrc = hasTurnstile(path) ? `frame-src ${turnstileHost}` : `frame-src 'none'`;
   const formAction =
     path === "/checkout" || path.startsWith("/checkout/")
       ? `form-action 'self' https://${payhereHost()}`
@@ -107,7 +110,7 @@ export function buildPrivateCsp(path: string): string {
     `img-src 'self' ${imageCdn} ${googleAvatarHost}${imgSrcExtras}`,
     `font-src 'self'`,
     `connect-src 'self' ${supabaseUrl}${connectExtras}`,
-    `frame-src 'none'`,
+    frameSrc,
     `frame-ancestors 'none'`,
     formAction,
     `base-uri 'self'`,
