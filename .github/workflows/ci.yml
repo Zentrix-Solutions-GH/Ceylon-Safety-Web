@@ -44,6 +44,9 @@ jobs:
           NEXT_PUBLIC_SENTRY_DSN: ""
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           CSP_MODE: report-only
+          SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key-for-ci-build-only
+          NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: 0000000000000000000000000000000000000000000000000000000000000000
+          CRON_SECRET: dummy-cron-secret-for-ci-build-only
 
   audit:
     name: audit

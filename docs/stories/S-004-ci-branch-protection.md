@@ -52,6 +52,7 @@ Types added or changed in `types/` by this story:
 - Deploy workflows (staging on merge to `main`, production on a release tag), the build zip named by commit, protected environments and rollback. Infrastructure design 17 allows 2 days for "CI build and deploy"; this story is the CI half only. A deploy story is needed and is not in the roster.
 - `backup.yml` (S-115), the keep-awake workflow (S-010), the RLS-enabled check and access-rule tests (S-021), the Playwright end-to-end job (S-120, S-121).
 - Claude Code hooks and skills (workflow design setup, not product code).
+- **AC4 (gitleaks) — scope cut:** `gitleaks-action` v3 moved to a paid-license model (error: "missing gitleaks license. Go grab one at gitleaks.io"). The gitleaks CI job was removed. The free `gitleaks` CLI (MIT) remains an option for a future story. AC4 is not implemented in this PR.
 
 ## Assumptions accepted
 
