@@ -17,11 +17,9 @@ function makeClient({
   const unsubscribe = vi.fn();
   const client = {
     auth: {
-      getSession: vi.fn().mockResolvedValue(
-        getSessionError
-          ? Promise.reject(getSessionError)
-          : { data: { session } }
-      ),
+      getSession: getSessionError
+        ? vi.fn().mockRejectedValue(getSessionError)
+        : vi.fn().mockResolvedValue({ data: { session } }),
       onAuthStateChange: vi.fn().mockImplementation((cb: unknown) => {
         onAuthStateChangeFn(cb);
         return { data: { subscription: { unsubscribe } } };

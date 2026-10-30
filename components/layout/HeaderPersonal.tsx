@@ -15,6 +15,11 @@ export function HeaderPersonal() {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const isSigningOut = useRef(false);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    return () => { isMounted.current = false; };
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -72,10 +77,10 @@ export function HeaderPersonal() {
     isSigningOut.current = true;
     try {
       await signOut();
-      setMenuOpen(false);
+      if (isMounted.current) setMenuOpen(false);
     } catch {
       // EC5: sign out fails — show error inside open menu; user stays signed in.
-      setSignOutError(errorMessage("unknown"));
+      if (isMounted.current) setSignOutError(errorMessage("unknown"));
     } finally {
       isSigningOut.current = false;
     }

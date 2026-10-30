@@ -409,6 +409,44 @@ describe("Header", () => {
     });
   });
 
+  describe("EC5: unmount during in-flight sign-out (isMounted guard)", () => {
+    it("unmounting while sign-out succeeds does not throw", async () => {
+      let resolveSignOut!: () => void;
+      const slowSignOut = vi.fn().mockImplementation(
+        () => new Promise<void>((resolve) => { resolveSignOut = resolve; })
+      );
+      mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: slowSignOut });
+      const { unmount } = render(<Header />);
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: "Kamal" }));
+      act(() => { screen.getByRole("menuitem", { name: /sign out/i }).click(); });
+
+      unmount();
+
+      // sign-out resolves after unmount — isMounted guard prevents setState crash
+      await act(async () => { resolveSignOut(); });
+    });
+
+    it("unmounting while sign-out fails does not throw", async () => {
+      let rejectSignOut!: (e: Error) => void;
+      const slowSignOut = vi.fn().mockImplementation(
+        () => new Promise<void>((_, reject) => { rejectSignOut = reject; })
+      );
+      mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: slowSignOut });
+      const { unmount } = render(<Header />);
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: "Kamal" }));
+      act(() => { screen.getByRole("menuitem", { name: /sign out/i }).click(); });
+
+      unmount();
+
+      // sign-out fails after unmount — isMounted guard prevents setState; no unhandled error
+      await act(async () => { rejectSignOut(new Error("offline")); });
+    });
+  });
+
   describe("account dropdown: click-outside closes menu", () => {
     it("closes the dropdown when clicking outside it", async () => {
       const user = userEvent.setup();

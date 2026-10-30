@@ -77,7 +77,7 @@ Prior art: searched `grep -ril "header\|navigation\|useAuth" docs/` — found: f
 |---|---|
 | `messages/en.ts` | Add `nav.*` and `site.*` keys |
 | `config/navigation.ts` | Fixed nav item list (id, href, labelKey) |
-| `lib/supabase/client.ts` | Backend-owned: `createSupabaseBrowserClient()` via `@supabase/ssr` (S-003 implementation, adopted in merge conflict resolution) |
+| `lib/supabase/client.ts` | Backend-owned (S-003): re-exports `createSupabaseBrowserClient()`; caching is handled internally by `@supabase/ssr` |
 | `hooks/useAuth.ts` | `"use client"` display-only hook: `{ user, isLoading, signOut }` |
 | `components/layout/HeaderNav.tsx` | `"use client"` — nav links, `aria-current`, mobile Sheet (Radix Dialog) |
 | `components/layout/HeaderPersonal.tsx` | `"use client"` — auth state, account menu, cart link |
@@ -95,7 +95,7 @@ Prior art: searched `grep -ril "header\|navigation\|useAuth" docs/` — found: f
 
 **useAuth.ts** — `"use client"`. `createSupabaseBrowserClient().auth.getSession()` for initial load + `onAuthStateChange` subscription. Returns `{ user: { name: string | null } | null, isLoading: boolean, signOut: () => Promise<void> }`. EC1: any error → `user=null`. EC2: `user_metadata.full_name` absent → `name: null` (component shows "Account").
 
-**lib/supabase/client.ts** — backend-owned scaffold. `createBrowserClient(url, key)` from `@supabase/ssr`. Singleton via module-level variable.
+**lib/supabase/client.ts** — backend-owned scaffold (S-003). Re-exports `createSupabaseBrowserClient()`; `@supabase/ssr` handles browser-client caching internally per URL — no module-level singleton is needed or used.
 
 ### Messages added
 
