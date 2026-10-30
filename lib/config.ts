@@ -53,6 +53,7 @@ const vals = collect([
   ["NEXT_PUBLIC_SUPABASE_ANON_KEY", string],
   ["SUPABASE_SERVICE_ROLE_KEY", string],
   ["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY", hex64],
+  ["CRON_SECRET", string],
 ]);
 
 // CSP config — validated separately so errors are specific
@@ -74,7 +75,20 @@ export const publicConfig = {
 export const serverConfig = {
   supabaseServiceRoleKey: vals["SUPABASE_SERVICE_ROLE_KEY"],
   encryptionKey: vals["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"],
+  cronSecret: vals["CRON_SECRET"],
 } as const;
+
+// Healthchecks config — optional; returns null when env vars are absent so the
+// caller skips the ping silently outside production.
+export function healthchecksConfig(
+  job: string
+): { baseUrl: string; checkId: string } | null {
+  const baseUrl = process.env["HEALTHCHECKS_BASE_URL"]?.trim();
+  const idKey = `HEALTHCHECKS_${job.toUpperCase().replace(/-/g, "_")}_ID`;
+  const checkId = process.env[idKey]?.trim();
+  if (!baseUrl || !checkId) return null;
+  return { baseUrl, checkId };
+}
 
 // CSP config — used in tests only. Production code (lib/security/headers.ts)
 // reads env vars directly to avoid importing server-only through next.config.ts.
