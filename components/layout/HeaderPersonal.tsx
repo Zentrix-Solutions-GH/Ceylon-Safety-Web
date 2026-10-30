@@ -149,7 +149,7 @@ export function HeaderPersonal() {
                 <Link
                   href="/profile"
                   role="menuitem"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={closeMenu}
                   className="block px-4 py-2 text-sm hover:bg-accent"
                 >
                   {t("nav.profile")}
@@ -157,7 +157,7 @@ export function HeaderPersonal() {
                 <Link
                   href="/purchases"
                   role="menuitem"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={closeMenu}
                   className="block px-4 py-2 text-sm hover:bg-accent"
                 >
                   {t("nav.my_purchases")}
