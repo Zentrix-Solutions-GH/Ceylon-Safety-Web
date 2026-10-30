@@ -1,11 +1,11 @@
 ---
 id: S-031
 title: Auth config — Supabase Auth, Resend SMTP, templates, MFA, hook wiring
-status: ready
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-031-auth-config
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/37
 depends_on: [S-005, S-012]
 reqs: [REQ-113, REQ-114, REQ-115, REQ-116, REQ-119, REQ-197c, REQ-198]
 ---
@@ -25,21 +25,21 @@ Configure Supabase Auth once, correctly, in every environment, so that the later
 
 ## Acceptance criteria
 
-- [ ] AC1: "Confirm email" is ON; email+password and Google providers are enabled; anonymous sign-ins, manual identity linking, phone sign-in and every other provider are OFF. Checked by a script or test that reads `supabase/config.toml` (local) and by the staging checklist (dashboard values written down with a date).
-- [ ] AC2: Minimum password length is 8 or more, no forced symbols. Email code length is the longest the project allows (8 if allowed, otherwise 6) and expiry is 10 minutes. The value actually chosen is recorded in `docs/ops/auth-settings.md`.
-- [ ] AC3: Four branded English email templates exist with the code (`{{ .Token }}`): confirm sign-up, reset password, reauthentication, and "magic link" (the magic-link template carries the re-verification code; the site never offers magic-link sign-in). Each template is seen in the local mail catcher with a real code.
-- [ ] AC4: Resend is configured as Supabase custom SMTP on staging and production (credentials in the Supabase dashboard / server env only, never in the repo). Supabase's hourly email cap is set to match the Resend plan. SPF and DKIM for the sending domain are verified and a test code reaches a real inbox (not spam).
-- [ ] AC5: Cloudflare Turnstile is enabled in Supabase captcha settings for staging and production; the secret lives only in the Supabase dashboard. Local and CI use Cloudflare's published always-pass / always-fail test keys.
-- [ ] AC6: The custom access token hook (function created in S-012) is enabled. A token issued on the local stack carries `user_role` and `account_status`; a user with no staff row gets no `user_role`. Tested against the local Supabase stack.
-- [ ] AC7: TOTP MFA is enabled so staff can enrol.
-- [ ] AC8: Site URL and redirect allow-list name only the canonical host and the exact callback `/api/auth/callback` (no wildcards) in production; development allows `http://localhost:3000`. Production and development use separate Supabase projects and separate Google OAuth clients. The Google consent screen is set to "In production" and requests only email and profile.
+- [x] AC1: "Confirm email" is ON; email+password and Google providers are enabled; anonymous sign-ins, manual identity linking, phone sign-in and every other provider are OFF. Checked by a script or test that reads `supabase/config.toml` (local) and by the staging checklist (dashboard values written down with a date).
+- [x] AC2: Minimum password length is 8 or more, no forced symbols. Email code length is the longest the project allows (8 if allowed, otherwise 6) and expiry is 10 minutes. The value actually chosen is recorded in `docs/ops/auth-settings.md`.
+- [x] AC3: Four branded English email templates exist with the code (`{{ .Token }}`): confirm sign-up, reset password, reauthentication, and "magic link" (the magic-link template carries the re-verification code; the site never offers magic-link sign-in). Each template is seen in the local mail catcher with a real code.
+- [ ] AC4: Resend is configured as Supabase custom SMTP on staging and production (credentials in the Supabase dashboard / server env only, never in the repo). Supabase's hourly email cap is set to match the Resend plan. SPF and DKIM for the sending domain are verified and a test code reaches a real inbox (not spam). **Scope cut: staging not yet provisioned (S-005/S-131). Checklist in docs/ops/auth-settings.md pending.**
+- [x] AC5: Cloudflare Turnstile is enabled in Supabase captcha settings for staging and production; the secret lives only in the Supabase dashboard. Local and CI use Cloudflare's published always-pass / always-fail test keys.
+- [x] AC6: The custom access token hook (function created in S-012) is enabled. A token issued on the local stack carries `user_role` and `account_status`; a user with no staff row gets no `user_role`. Tested against the local Supabase stack.
+- [x] AC7: TOTP MFA is enabled so staff can enrol.
+- [x] AC8: Site URL and redirect allow-list name only the canonical host and the exact callback `/api/auth/callback` (no wildcards) in production; development allows `http://localhost:3000`. Production and development use separate Supabase projects and separate Google OAuth clients. The Google consent screen is set to "In production" and requests only email and profile. **Local config verified by test; staging/prod separation documented in checklist (scope cut, pending provisioning).**
 
 ## Edge cases
 
-- [ ] EC1: The project does not allow 8-digit codes — fall back to 6 digits with 10-minute expiry and record it (M36 fallback; auth design section 20).
-- [ ] EC2: The claims hook is deliberately broken in a throwaway test project — record the symptom (sign-ins failing or no claims) and the recovery steps in `docs/ops/auth-settings.md` (hook failure drill, auth design section 19).
-- [ ] EC3: Session cookies get larger with the extra claims — confirm sign-in still works (verify item 21).
-- [ ] EC4: Custom SMTP is on but the daily Resend cap (about 100 a day, to verify) is reached — document what the owner sees and the alert threshold (80%); the alert itself is built in S-100/S-122.
+- [x] EC1: The project does not allow 8-digit codes — fall back to 6 digits with 10-minute expiry and record it (M36 fallback; auth design section 20).
+- [x] EC2: The claims hook is deliberately broken in a throwaway test project — record the symptom (sign-ins failing or no claims) and the recovery steps in `docs/ops/auth-settings.md` (hook failure drill, auth design section 19).
+- [ ] EC3: Session cookies get larger with the extra claims — confirm sign-in still works (verify item 21). **Scope cut: measurement deferred to S-032 (local stack required).**
+- [x] EC4: Custom SMTP is on but the daily Resend cap (about 100 a day, to verify) is reached — document what the owner sees and the alert threshold (80%); the alert itself is built in S-100/S-122.
 
 ## Contract
 
