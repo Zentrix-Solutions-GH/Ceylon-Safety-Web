@@ -1,7 +1,7 @@
 ---
 id: S-030
 title: Security headers / CSP
-status: merged
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-030-security-headers-csp

@@ -2,7 +2,7 @@
 id: S-013
 title: Schema 3: categories, authors, site_settings, pages, page_revisions, slug_redirects
 phase: MS1
-status: merged
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-013-schema-foundation-pages-settings

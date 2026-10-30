@@ -2,7 +2,7 @@
 id: S-020
 title: Seed migrations: categories, settings, six pages, trainers, courses, dev seed
 phase: MS1
-status: merged
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-020-seed-migrations

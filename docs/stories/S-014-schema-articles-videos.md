@@ -2,7 +2,7 @@
 id: S-014
 title: Schema 4: articles, likes, comments, videos, search vectors, comment limits
 phase: MS1
-status: merged
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-014-schema-articles-videos

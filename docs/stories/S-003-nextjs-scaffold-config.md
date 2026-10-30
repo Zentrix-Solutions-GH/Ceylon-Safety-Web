@@ -1,7 +1,7 @@
 ---
 id: S-003
 title: Next.js scaffold, lib/config.ts, Supabase clients
-status: merged
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-003-nextjs-scaffold-config

@@ -2,7 +2,7 @@
 id: S-012
 title: Schema 2: permission functions, claims hook, Super Admin protection, role seed
 phase: MS1
-status: merged
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-012-permissions-super-admin

@@ -1,7 +1,7 @@
 ---
 id: S-028
 title: Consent store (lib/consent)
-status: merged
+status: ready
 owner: backend
 risk: normal
 branch: feature/S-028-consent-store

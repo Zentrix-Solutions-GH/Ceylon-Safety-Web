@@ -2,7 +2,7 @@
 id: S-018
 title: Schema 8: courses, trainers, activity images, banners
 phase: MS1
-status: merged
+status: pr-open
 owner: backend
 risk: normal
 branch: worktree-feature+S-018-schema-courses-trainers-banners

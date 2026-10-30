@@ -2,7 +2,7 @@
 id: S-015
 title: Schema 5: documents and document files
 phase: MS1
-status: merged
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-015-schema-documents

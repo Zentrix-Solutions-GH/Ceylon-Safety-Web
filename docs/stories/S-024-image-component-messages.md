@@ -1,7 +1,7 @@
 ---
 id: S-024
 title: Image component (two widths), messages/en.ts, t()
-status: merged
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-024-image-component-messages

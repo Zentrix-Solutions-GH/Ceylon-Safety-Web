@@ -2,7 +2,7 @@
 id: S-017
 title: Schema 7: payment events, entitlements, download requests/logs, claim_download, bank slips, invoices, email logs
 phase: MS1
-status: merged
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-017-schema-payments-downloads
