@@ -82,13 +82,22 @@ describe("AC1: secret header validation", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 200 when x-cron-secret matches CRON_SECRET", async () => {
-    const { POST } = await importRoute();
+  it("returns 200 with { ok: true } body and logs duration when secret matches", async () => {
+    vi.resetModules();
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    setEnv();
+    const { POST } = await import(`../app/api/cron/[job]/route?t=${Date.now()}`);
     const res: Response = await POST(
       makeRequest("POST", { "x-cron-secret": VALID_SECRET }),
       { params: Promise.resolve({ job: "test" }) }
     );
     expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    // EC5: framework must log duration
+    const logLine = logSpy.mock.calls.flat().join(" ");
+    expect(logLine).toMatch(/duration=\d+ms/);
+    expect(logLine).not.toContain(VALID_SECRET);
+    logSpy.mockRestore();
   });
 
   it("does not reveal details in 401 body", async () => {
@@ -184,8 +193,9 @@ describe("AC2: handler error returns 500", () => {
   beforeEach(() => setEnv());
   afterEach(() => clearEnv());
 
-  it("returns 500 when a job handler throws", async () => {
+  it("returns 500 when a job handler throws, logs duration, never logs the secret", async () => {
     vi.resetModules();
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     // Register a failing job by mocking the jobs module
     vi.doMock("../lib/jobs/index", async (importOriginal) => {
       const original = await importOriginal<typeof import("../lib/jobs/index")>();
@@ -203,6 +213,12 @@ describe("AC2: handler error returns 500", () => {
       { params: Promise.resolve({ job: "fail-job" }) }
     );
     expect(res.status).toBe(500);
+    // EC5: duration logged on error path
+    const errLine = errSpy.mock.calls.flat().join(" ");
+    expect(errLine).toMatch(/duration=\d+ms/);
+    // EC1: secret never appears in the error log
+    expect(errLine).not.toContain(VALID_SECRET);
+    errSpy.mockRestore();
   });
 });
 
