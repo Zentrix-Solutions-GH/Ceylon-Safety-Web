@@ -26,10 +26,10 @@ Build the site header: logo, the fixed menu, sign-in state and cart link, and a 
 - [x] AC1: `components/layout/Header.tsx` shows the logo (links to Home) and the menu in this order: Home, Articles, Documents, Courses, Jobs, Contact Coach, Sign In / Sign Up, Cart. The links are fixed in code (`config/navigation.ts`); the current page link has `aria-current="page"`. There is no search box in the header.
 - [x] AC2: Personal parts (sign-in state, account link, cart slot) are a small client component. The header and its layout never call `cookies()`, `headers()` or the server Supabase client. Until the browser knows the session, a fixed-size placeholder is shown: no "Sign In" flash and no layout jump.
 - [x] AC3: Signed out: "Sign In" (`/sign-in`) and "Sign Up" (`/sign-up`). Signed in: the person's name or "Account" with links to Profile (`/profile`) and My Purchases (`/purchases`) and a Sign out button that ends this device's session through the browser Supabase client.
-- [x] AC4: Cart link has a fixed-width badge slot; the count itself is filled in S-091 (Backend cart count read, S-075). Signed out, the Cart link sends the visitor to sign in (REQ-044d).
+- [ ] AC4: Cart link has a fixed-width badge slot; the count itself is filled in S-091 (Backend cart count read, S-075). Signed out, the Cart link sends the visitor to sign in (REQ-044d). <!-- redirect implemented by S-033 middleware (not yet merged); link renders correctly, redirect not yet active -->
 - [x] AC5: Below the mobile breakpoint the menu is a button that opens a side sheet. Focus moves into the sheet and stays inside; Escape or a second press closes it; focus returns to the button; the page behind is inert; tap targets are at least 44 px.
 - [x] AC6: `hooks/useAuth.ts` is display only (name, signed-in or not); it is never used for any access decision.
-- [x] AC7: All text comes from `messages/` through `t()`. No raw colour codes. Works at 375 px and 1280 px (screenshots in Evidence).
+- [ ] AC7: All text comes from `messages/` through `t()`. No raw colour codes. Works at 375 px and 1280 px (screenshots in Evidence). <!-- text and colours verified; 375px/1280px screenshots pending reviewer after S-027 mounts the header -->
 
 ## Edge cases
 
