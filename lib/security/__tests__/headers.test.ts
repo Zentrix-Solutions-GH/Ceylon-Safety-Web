@@ -17,6 +17,8 @@ function makeEnv(extra: Record<string, string> = {}) {
     // Required by cspConfig
     NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL: IMAGE_CDN,
     CSP_MODE: "report-only",
+    // S-010: required server setting
+    CRON_SECRET: "test-cron-secret",
     ...extra,
   };
 }

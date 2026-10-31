@@ -14,6 +14,8 @@ const VALID_ENV = {
   // S-030: required by cspConfig
   CSP_MODE: "report-only",
   NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL: "https://cdn.ceylonsafety.com",
+  // S-010: cron secret
+  CRON_SECRET: "cron-secret-value",
 };
 
 function setEnv(overrides: Record<string, string | undefined> = {}) {
@@ -42,6 +44,11 @@ describe("lib/config — AC2: happy path", () => {
     const { serverConfig } = await importFresh("../lib/config");
     expect(serverConfig.supabaseServiceRoleKey).toBe("service-role-key-value");
     expect(serverConfig.encryptionKey).toBe("a".repeat(64));
+  });
+
+  it("returns serverConfig.cronSecret (S-010: CRON_SECRET required)", async () => {
+    const { serverConfig } = await importFresh("../lib/config");
+    expect(serverConfig.cronSecret).toBe("cron-secret-value");
   });
 });
 
@@ -74,6 +81,11 @@ describe("lib/config — AC3: missing / invalid settings — all names reported 
     await expect(importFresh("../lib/config")).rejects.toThrow(
       "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"
     );
+  });
+
+  it("throws when CRON_SECRET is missing (S-010 AC1)", async () => {
+    setEnv({ CRON_SECRET: undefined });
+    await expect(importFresh("../lib/config")).rejects.toThrow("CRON_SECRET");
   });
 
   it("treats whitespace-only value as missing (EC1)", async () => {
