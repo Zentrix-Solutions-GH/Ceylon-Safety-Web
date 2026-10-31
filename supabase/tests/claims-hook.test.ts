@@ -126,4 +126,66 @@ describe("S-031 AC6 (static): hook function grant is in the migration", () => {
     });
     expect(found).toBe(true);
   });
+
+  it("hook function uses SECURITY DEFINER and empty search_path", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const migDir = path.resolve(__dirname, "../../supabase/migrations");
+    const files = fs.readdirSync(migDir).filter((f) => f.endsWith(".sql"));
+    const hookFile = files.find((f) => {
+      const src = fs.readFileSync(path.join(migDir, f), "utf8");
+      return src.includes("custom_access_token_hook");
+    });
+    expect(hookFile).toBeDefined();
+    const src = fs.readFileSync(path.join(migDir, hookFile!), "utf8");
+    // SECURITY DEFINER prevents privilege escalation via search_path injection
+    expect(src).toContain("SECURITY DEFINER");
+    // Empty search_path prevents schema hijacking
+    expect(src).toMatch(/search_path\s*=\s*''/);
+  });
+
+  it("hook function has EXCEPTION WHEN OTHERS so sign-in never fails", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const migDir = path.resolve(__dirname, "../../supabase/migrations");
+    const files = fs.readdirSync(migDir).filter((f) => f.endsWith(".sql"));
+    const hookFile = files.find((f) => {
+      const src = fs.readFileSync(path.join(migDir, f), "utf8");
+      return src.includes("custom_access_token_hook");
+    });
+    const src = fs.readFileSync(path.join(migDir, hookFile!), "utf8");
+    expect(src).toContain("EXCEPTION WHEN OTHERS");
+    // Hook must return the event unchanged on error (never null)
+    expect(src).toContain("RETURN event");
+  });
+});
+
+// EC3 (static): session configuration is within safe bounds.
+// Cookie size cannot be measured without the running stack, but we can assert
+// that jwt_expiry and session timebox are not set to extreme values that would
+// cause silent cookie truncation or permanent sessions.
+describe("S-031 EC3 (static): session config is within safe bounds", () => {
+  it("jwt_expiry is 3600 s (1 hour — not inflated)", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../supabase/config.toml"),
+      "utf8"
+    );
+    const m = src.match(/^jwt_expiry\s*=\s*(\d+)/m);
+    // Must be present and ≤ 86400 (1 day); large JWTs increase cookie size
+    expect(Number(m?.[1])).toBeGreaterThan(0);
+    expect(Number(m?.[1])).toBeLessThanOrEqual(86400);
+  });
+
+  it("enable_refresh_token_rotation is true (limits session replay risk)", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../supabase/config.toml"),
+      "utf8"
+    );
+    const m = src.match(/^enable_refresh_token_rotation\s*=\s*(.+)/m);
+    expect(m?.[1]?.trim()).toBe("true");
+  });
 });

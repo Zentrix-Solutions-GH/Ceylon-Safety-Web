@@ -180,4 +180,55 @@ describe("S-031 AC8: site_url is localhost in local config (no wildcards)", () =
       expect(m[1]).not.toContain("*");
     }
   });
+
+  it("[auth.external.google] redirect_uri is an exact path (no wildcards)", () => {
+    const src = readConfig();
+    const section = src.match(/\[auth\.external\.google\][^\[]+/)?.[0] ?? "";
+    const m = section.match(/redirect_uri\s*=\s*"(.+)"/m);
+    expect(m?.[1]).not.toContain("*");
+    expect(m?.[1]).toContain("/api/auth/callback");
+  });
+});
+
+// AC1 (extension): no other external provider is enabled.
+// Supabase defaults absent sections to disabled, but an accidental addition
+// would not be caught without this assertion.
+describe("S-031 AC1 (extension): no other external providers enabled", () => {
+  const KNOWN_DISABLED = [
+    "apple",
+    "azure",
+    "bitbucket",
+    "discord",
+    "facebook",
+    "figma",
+    "github",
+    "gitlab",
+    "kakao",
+    "keycloak",
+    "linkedin_oidc",
+    "notion",
+    "slack_oidc",
+    "spotify",
+    "twitch",
+    "twitter",
+    "workos",
+    "zoom",
+  ];
+
+  for (const provider of KNOWN_DISABLED) {
+    it(`[auth.external.${provider}] is NOT enabled`, () => {
+      const src = readConfig();
+      const section =
+        src.match(
+          new RegExp(`\\[auth\\.external\\.${provider}\\][^\\[]+`, "m")
+        )?.[0] ?? "";
+      if (section === "") {
+        // Section absent → Supabase defaults it to disabled. Pass.
+        return;
+      }
+      const m = section.match(/enabled\s*=\s*(.+)/m);
+      // If the section is present, enabled must not be true
+      expect(m?.[1]?.trim()).not.toBe("true");
+    });
+  }
 });
