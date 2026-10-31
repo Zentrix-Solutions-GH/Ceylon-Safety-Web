@@ -73,7 +73,7 @@ password_requirements = ""
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
-secure_password_change = false
+secure_password_change = true
 max_frequency = "1s"
 # EC1: Supabase local stack caps OTP length at 6; production dashboard allows 8.
 # 6 digits with 10-minute expiry is the fallback recorded in docs/ops/auth-settings.md.

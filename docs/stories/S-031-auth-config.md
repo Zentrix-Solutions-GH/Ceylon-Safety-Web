@@ -30,7 +30,7 @@ Configure Supabase Auth once, correctly, in every environment, so that the later
 - [x] AC3: Four branded English email templates exist with the code (`{{ .Token }}`): confirm sign-up, reset password, reauthentication, and "magic link" (the magic-link template carries the re-verification code; the site never offers magic-link sign-in). Each template is seen in the local mail catcher with a real code.
 - [ ] AC4: Resend is configured as Supabase custom SMTP on staging and production (credentials in the Supabase dashboard / server env only, never in the repo). Supabase's hourly email cap is set to match the Resend plan. SPF and DKIM for the sending domain are verified and a test code reaches a real inbox (not spam). **Scope cut: staging not yet provisioned (S-005/S-131). Checklist in docs/ops/auth-settings.md pending.**
 - [x] AC5: Cloudflare Turnstile is enabled in Supabase captcha settings for staging and production; the secret lives only in the Supabase dashboard. Local and CI use Cloudflare's published always-pass / always-fail test keys.
-- [x] AC6: The custom access token hook (function created in S-012) is enabled. A token issued on the local stack carries `user_role` and `account_status`; a user with no staff row gets no `user_role`. Tested against the local Supabase stack.
+- [ ] AC6: The custom access token hook (function created in S-012) is enabled. A token issued on the local stack carries `user_role` and `account_status`; a user with no staff row gets no `user_role`. Tested against the local Supabase stack. **Partially done: hook wired in config.toml, static migration checks pass. Integration tests (claims-hook.test.ts) require `supabase start` and were not run; a developer must run them and paste evidence before this AC is ticked.**
 - [x] AC7: TOTP MFA is enabled so staff can enrol.
 - [x] AC8: Site URL and redirect allow-list name only the canonical host and the exact callback `/api/auth/callback` (no wildcards) in production; development allows `http://localhost:3000`. Production and development use separate Supabase projects and separate Google OAuth clients. The Google consent screen is set to "In production" and requests only email and profile. **Local config verified by test; staging/prod separation documented in checklist (scope cut, pending provisioning).**
 
@@ -139,7 +139,11 @@ $ bash scripts/check.sh
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `supabase/tests/auth-config.test.ts:118` — Turnstile regex `/^(1x0+AA?|1x00000000000000000000AA)$/i` does not match the committed key `1x0000000000000000000000000000000AA`; test passes vacuously. Fix to `/^1x0{33}AA$/i` or an exact string assertion. (full-review 2026-11-01)
+- **P1** `supabase/config.toml` — `secure_password_change` is unset (defaults false); a hijacked session can replace the password silently. Set `secure_password_change = true`. (full-review 2026-11-01)
+- **P1** `supabase/tests/auth-templates.test.ts:64–80` — config.toml path assertions cover only `confirm-signup` and `reset-password`; add assertions for `reauthentication` and `magic-link` paths. (full-review 2026-11-01)
+- **P1** `supabase/tests/auth-config.test.ts` — no assertion that `enable_manual_linking = false`. Add it. (full-review 2026-11-01)
+- **P1** AC6 integration tests were never executed against the local stack; AC6 checkbox should be unticked until a developer runs `supabase start` and provides evidence. (full-review 2026-11-01)
 
 ## After this merges, a user can:
 

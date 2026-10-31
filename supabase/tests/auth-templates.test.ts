@@ -77,4 +77,20 @@ describe("S-031 AC3: config.toml wires template paths", () => {
     );
     expect(src).toContain("reset-password");
   });
+
+  it("config.toml references reauthentication template", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../supabase/config.toml"),
+      "utf8"
+    );
+    expect(src).toContain("reauthentication");
+  });
+
+  it("config.toml references magic-link template", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../supabase/config.toml"),
+      "utf8"
+    );
+    expect(src).toContain("magic-link");
+  });
 });

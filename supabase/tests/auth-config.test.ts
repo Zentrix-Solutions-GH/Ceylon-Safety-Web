@@ -37,7 +37,7 @@ describe("S-031 AC1: email+password and Google enabled; all others off", () => {
     expect(getValue(src, "enable_anonymous_sign_ins")).toBe("false");
   });
 
-  it("enable_manual_linking is false", () => {
+  it("enable_manual_linking is false (AC1: no identity merging without explicit re-auth)", () => {
     const src = readConfig();
     expect(getValue(src, "enable_manual_linking")).toBe("false");
   });
@@ -114,8 +114,8 @@ describe("S-031 AC5: Turnstile captcha — test keys in local config", () => {
     const src = readConfig();
     const section = src.match(/\[auth\.captcha\][^\[]+/)?.[0] ?? "";
     const m = section.match(/secret\s*=\s*"(.+)"/m);
-    // Cloudflare published always-pass key: 1x0000000000000000000000000000000AA
-    expect(m?.[1]).toMatch(/^(1x0+AA?|1x00000000000000000000AA)$/i);
+    // Cloudflare published always-pass key: exactly 1x + 33 zeros + AA
+    expect(m?.[1]).toBe("1x0000000000000000000000000000000AA");
   });
 });
 
