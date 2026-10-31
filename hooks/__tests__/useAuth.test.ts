@@ -9,17 +9,12 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 const mockCreateClient = vi.mocked(createSupabaseBrowserClient);
 
 function makeClient({
-  session = null as unknown,
-  getSessionError = null as unknown,
   signOutError = null as unknown,
   onAuthStateChangeFn = (() => {}) as (cb: unknown) => void,
 } = {}) {
   const unsubscribe = vi.fn();
   const client = {
     auth: {
-      getSession: getSessionError
-        ? vi.fn().mockRejectedValue(getSessionError)
-        : vi.fn().mockResolvedValue({ data: { session } }),
       onAuthStateChange: vi.fn().mockImplementation((cb: unknown) => {
         onAuthStateChangeFn(cb);
         return { data: { subscription: { unsubscribe } } };
@@ -41,37 +36,57 @@ describe("useAuth", () => {
     expect(result.current.user).toBeNull();
   });
 
-  it("sets user from getSession when session exists", async () => {
+  it("sets user from INITIAL_SESSION", async () => {
+    let authCallback: ((event: string, session: unknown) => void) | null = null;
     const session = { user: { user_metadata: { full_name: "Kamal" } } };
-    const { client } = makeClient({ session });
+    const { client } = makeClient({
+      onAuthStateChangeFn: (cb) => { authCallback = cb as typeof authCallback; },
+    });
     mockCreateClient.mockReturnValue(client as never);
     const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(authCallback).not.toBeNull());
+    await act(async () => { authCallback!("INITIAL_SESSION", session); });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.user).toEqual({ name: "Kamal" });
   });
 
-  it("EC1: getSession error → user=null, isLoading=false", async () => {
-    const { client } = makeClient({ getSessionError: new Error("network") });
+  it("EC1: INITIAL_SESSION with null (no/invalid session) → user=null, isLoading=false, silent", async () => {
+    let authCallback: ((event: string, session: unknown) => void) | null = null;
+    const { client } = makeClient({
+      onAuthStateChangeFn: (cb) => { authCallback = cb as typeof authCallback; },
+    });
     mockCreateClient.mockReturnValue(client as never);
     const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(authCallback).not.toBeNull());
+    await act(async () => { authCallback!("INITIAL_SESSION", null); });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.user).toBeNull();
   });
 
   it("EC2: user_metadata has no name → name=null", async () => {
+    let authCallback: ((event: string, session: unknown) => void) | null = null;
     const session = { user: { user_metadata: {} } };
-    const { client } = makeClient({ session });
+    const { client } = makeClient({
+      onAuthStateChangeFn: (cb) => { authCallback = cb as typeof authCallback; },
+    });
     mockCreateClient.mockReturnValue(client as never);
     const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(authCallback).not.toBeNull());
+    await act(async () => { authCallback!("INITIAL_SESSION", session); });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.user).toEqual({ name: null });
   });
 
   it("falls back to user_metadata.name when full_name is absent", async () => {
+    let authCallback: ((event: string, session: unknown) => void) | null = null;
     const session = { user: { user_metadata: { name: "Nimal" } } };
-    const { client } = makeClient({ session });
+    const { client } = makeClient({
+      onAuthStateChangeFn: (cb) => { authCallback = cb as typeof authCallback; },
+    });
     mockCreateClient.mockReturnValue(client as never);
     const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(authCallback).not.toBeNull());
+    await act(async () => { authCallback!("INITIAL_SESSION", session); });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.user).toEqual({ name: "Nimal" });
   });

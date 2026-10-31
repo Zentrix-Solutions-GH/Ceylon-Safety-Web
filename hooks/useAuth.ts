@@ -22,15 +22,8 @@ export function useAuth(): UseAuthResult {
     let mounted = true;
     const supabase = createSupabaseBrowserClient();
 
-    // EC1: any error → treat as signed out.
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
-        if (mounted) setUser(session ? extractUser(session.user) : null);
-      })
-      .catch(() => { if (mounted) setUser(null); })
-      .finally(() => { if (mounted) setIsLoading(false); });
-
+    // onAuthStateChange always fires INITIAL_SESSION with the current session (or null when
+    // signed out or when the stored session is expired/invalid — EC1: treated as signed-out).
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
       setUser(session ? extractUser(session.user) : null);

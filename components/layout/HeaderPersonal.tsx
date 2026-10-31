@@ -73,6 +73,7 @@ export function HeaderPersonal() {
   }
 
   async function handleSignOut() {
+    if (isSigningOut.current) return;
     setSignOutError(null);
     isSigningOut.current = true;
     try {
@@ -96,6 +97,7 @@ export function HeaderPersonal() {
       >
         <ShoppingCart className="h-5 w-5" aria-hidden="true" />
         {/* Fixed-width badge slot — count filled by S-091. */}
+        <span className="absolute top-1 right-1 w-4 h-4 shrink-0" aria-hidden="true" />
       </Link>
 
       {/* AC2: fixed-size placeholder while the session is not yet known. */}
@@ -134,7 +136,7 @@ export function HeaderPersonal() {
             onClick={handleMenuToggle}
             aria-expanded={menuOpen}
             aria-haspopup="menu"
-            aria-controls={menuOpen ? "account-menu" : undefined}
+            aria-controls="account-menu"
             className="flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium hover:bg-accent"
           >
             {/* EC3: truncate long names so they never break the header layout at 375 px. */}
