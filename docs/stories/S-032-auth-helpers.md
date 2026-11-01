@@ -1,7 +1,7 @@
 ---
 id: S-032
 title: Auth helpers (lib/auth) — getCurrentUser, requireUser, requireStaff, safeNext
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-032-auth-helpers
@@ -76,16 +76,84 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+Prior art: read auth design sections 7, 9, 11, 17, 18, 19 and admin panel design sections 4.1–4.5; found the helper table (section 9), file layout (`lib/auth/server.ts`, `permissions.ts`, `claims.ts`, `redirect.ts`, `ensure-profile.ts`) and the shared error list; this story implements them and supersedes nothing.
 
-Prior art: read auth design sections 7, 9, 11, 17, 18, 19 and admin panel design sections 4.1–4.5; found the helper table (section 9), file layout (`lib/auth/server.ts`, `permissions.ts`, `claims.ts`, `redirect.ts`, `ensure-profile.ts`) and the shared error list; this story implements them and supersedes nothing. Re-confirm at /story-run.
+S-012 dependency (AC8): migration `20261028000002_permissions_super_admin.sql` is present and seeds `role_permissions` for Admin. The integration test `supabase/tests/permission-map.test.ts` will compare the server map against the seeded rows — depends_on should include S-012 but the migration is already merged to dev.
+
+Error code for signed-out caller (AC2 precision): auth design section 9 says `requireUser()` redirects (pages) or returns typed error (actions/API). The design does not name `not_allowed` — the most natural code for "no session at all" is `reauth_required` (the person must sign in again). This story uses `reauth_required` for a missing session and `not_allowed` only for a role or permission denial.
+
+### Files to create
+
+1. `types/auth.ts` — extend existing scaffold with `SessionUser`, `UserRoleClaim`, `AccountStatusClaim`, `ActionResult<T>`, `ErrorCode`, `AuthErrorCode` (AC10).
+2. `lib/auth/claims.ts` — claim helpers: `getSessionUser(session)`, type guards for role and status claims.
+3. `lib/auth/redirect.ts` — `safeNext(url)` (AC9).
+4. `lib/auth/ensure-profile.ts` — `ensureProfile(supabase, userId)` — calls `private.create_profile_for` via service role RPC (AC2).
+5. `lib/auth/permissions.ts` — permission map constant and `matchesPermission(map, role, action)` with prefix match (AC4, AC8).
+6. `lib/auth/server.ts` — `getCurrentUser()`, `requireUser()`, `requireActiveAccount()`, `requireStaff(permission)`, `requireSuperAdmin()`, and lower-level `requireStaffNoMfa(permission)` variant (AC1–AC7). `server-only`.
+
+### Test files to create
+
+7. `__tests__/lib/auth/redirect.test.ts` — AC9, EC3 (safeNext hostile inputs).
+8. `__tests__/lib/auth/server.test.ts` — AC1/AC2 happy path, missing profile created, AC3 suspended user refused.
+9. `__tests__/lib/auth/require-staff.test.ts` — AC4, AC5, AC6, EC1, plus prefix-match cases.
+10. `__tests__/lib/auth/target-check.test.ts` — AC7.
+11. `supabase/tests/permission-map.test.ts` — AC8 (integration, local DB).
+12. `scripts/check-public-pages.ts` — AC11 build check.
+
+### Step order
+
+1. `types/auth.ts` — types first so everything else can import.
+2. `lib/auth/claims.ts` and `lib/auth/redirect.ts` — no Supabase dependency.
+3. `lib/auth/permissions.ts` — no Supabase dependency.
+4. `lib/auth/ensure-profile.ts` — calls DB.
+5. `lib/auth/server.ts` — composes all of the above.
+6. All test files (write failing first, then implement).
+7. `scripts/check-public-pages.ts`.
+
+### Risk: SENSITIVE — full review mode (reviewer + security-reviewer + contract-checker) at Step 8.
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  24 passed (24)
+ Tests  319 passed | 2 skipped (321)
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+All tests successful. Files=1, Tests=96
+✓ pgTAP RLS suite passed
+
+── pgTAP seed suite ──
+All tests successful. Files=1, Tests=67
+✓ pgTAP seed suite passed
+
+── pgTAP dev seed suite ──
+All tests successful. Files=1, Tests=38
+✓ pgTAP dev seed suite passed
+
+── EC3 dev seed guard (execution) ──
+✓ EC3 dev seed guard (execution) passed
+
+── Types file freshness ──
+✓ Types file freshness passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 9 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
 
 ## Review notes

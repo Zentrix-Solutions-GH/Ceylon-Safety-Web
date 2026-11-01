@@ -1124,6 +1124,9 @@ isOneToOne: false
             "create_profile_for":
 { Args: { "p_user": unknown }; Returns: undefined
                            },
+"ensure_profile_for_user":
+{ Args: { "p_app_meta"?: Json,"p_email": string,"p_user_id": string,"p_user_meta"?: Json }; Returns: undefined
+                           },
 "has_permission":
 { Args: { "p_action": string }; Returns: boolean
                            },
