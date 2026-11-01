@@ -149,7 +149,8 @@ Review notes:
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `lib/auth/middleware.ts:182-191` — Suspended `maintainer` not signed out: `hasStaffAccess()` returns false for maintainer so the suspended-staff guard is never reached; maintainer gets 404 but session cookie stays valid (~1 h). Fix before admin pages go live: add `claimedStatus === "suspended"` check before `hasStaffAccess` so signOut fires unconditionally for any suspended authenticated user. (full-review 2026-11-01)
+- **P1** `lib/auth/middleware.ts:165,189` — `signOut()` return value ignored on both suspended paths; if signOut fails the session stays valid with no server-side log. Fix: destructure `{ error }` and log on failure (no personal data). (full-review 2026-11-01)
 
 ## After this merges, a user can:
 
