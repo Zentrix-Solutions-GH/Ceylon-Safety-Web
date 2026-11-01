@@ -1,4 +1,5 @@
 // Backend-owned. Auth design §9, §17 (M19).
+// S-034 additions: SignUpInput, VerifyEmailInput, ResendCodeInput, ResendCodeResult, RateLimitReason.
 
 export const AUTH_ERROR_CODES = [
   "invalid_credentials",
@@ -50,6 +51,37 @@ export interface UserRoleClaim {
 export interface AccountStatusClaim {
   account_status?: AccountStatus;
 }
+
+// ─── S-034 action input / output types ───────────────────────────────────────
+
+export interface SignUpInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  termsAccepted: boolean;
+  captchaToken: string;
+  next?: string;
+}
+
+export interface VerifyEmailInput {
+  email: string;
+  code: string;
+}
+
+export interface ResendCodeInput {
+  email: string;
+  captchaToken: string;
+}
+
+/** Disambiguates which rate-limit window triggered `rate_limited` on resendCode. */
+export type RateLimitReason = "cooldown" | "hourly";
+
+export type SignUpResult = ActionResult<{ redirect: string }>;
+export type VerifyEmailResult = ActionResult<{ redirect: string }>;
+export type ResendCodeResult =
+  | { ok: true }
+  | { ok: false; code: ErrorCode; retryAfterSeconds?: number; reason?: RateLimitReason };
 
 // ─── Session user (what auth helpers return) ──────────────────────────────────
 
