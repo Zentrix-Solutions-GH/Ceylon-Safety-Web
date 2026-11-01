@@ -1,11 +1,11 @@
 ---
 id: S-007
 title: Upstash rate-limit lib + Turnstile verify lib
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-007-rate-limit-lib
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/41
 depends_on: [S-003]
 reqs: []
 ---
