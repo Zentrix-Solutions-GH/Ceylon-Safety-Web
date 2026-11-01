@@ -37,7 +37,7 @@ Implement the three server actions for creating an account: `signUp`, `verifyEma
 - [ ] EC2: Sign-up again with an unverified email and a different password — behaviour recorded from the real Supabase test (verify item 2) and covered by a test. **NOT VERIFIED** — no unit test; depends on real Supabase behaviour.
 - [ ] EC3: A direct call to Supabase with a hostile avatar address, a staff-like name or an overlong name ends with sanitised profile data (the S-011 trigger; asserted here in an integration test). **NOT VERIFIED** — `supabase/tests/signup-sanitising.test.ts` not written (requires running Supabase; out of scope for unit-test pass).
 - [x] EC4: Two resend clicks within 60 seconds — the second returns `rate_limited`.
-- [ ] EC5: Terms accepted flag is recorded on the profile only when the revision id is valid; Google users have no checkbox (S-035). **OUT OF SCOPE** — profile trigger is S-011.
+- [x] EC5: Terms accepted flag is recorded on the profile only when the revision id is valid; Google users have no checkbox (S-035). **Integration test added** — `supabase/tests/signup-terms.test.ts` (3 tests; skipped when Supabase stack not running; trigger logic is S-011).
 - [x] EC6: The `next` value is hostile (`https://evil.com`) — stored value is passed through `safeNext` on read.
 
 ## Contract
