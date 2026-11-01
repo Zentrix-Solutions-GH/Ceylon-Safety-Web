@@ -1,11 +1,11 @@
 ---
 id: S-035
 title: signIn, signOut, Google sign-in and callback
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-035-signin-signout-google
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/43"
 depends_on: [S-034]
 reqs: [REQ-112, REQ-114, REQ-119]
 ---
