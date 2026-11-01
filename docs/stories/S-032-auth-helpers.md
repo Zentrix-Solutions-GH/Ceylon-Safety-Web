@@ -90,7 +90,11 @@ $ bash scripts/check.sh
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `lib/auth/claims.ts:13–15` — `claimedRole` first-leg `userAsAny["user_role"]` is dead code; Supabase `auth.getUser()` returns DB-row fields only, not raw JWT top-level claims. The claim lives in `app_metadata.user_role` (the fallback). Remove the dead first leg. (full-review 2026-11-01)
+- **P1** `lib/auth/claims.ts:17–18` — `claimedStatus` `userAsAny["account_status"]` is equally dead for the same reason; `SessionUser.claimedStatus` is always `undefined`. Fix alongside the above. (full-review 2026-11-01)
+- **P1** `lib/auth/server.ts:238–270` — `assertNotSuperAdminTarget` calls `requireActiveAccount()` not `requireStaff()`; a staff user with an expired 12-hour window or without TOTP can call it if not gated upstream. Either enforce the window/MFA internally or rename with a clear "call after requireStaff only" contract. (full-review 2026-11-01)
+- **P1** `supabase/tests/permission-map.test.ts:15,47` — AC8 integration test always skips in CI (`it.skipIf(!supabaseServiceKey)`); add a CI step or record a local run in Evidence. (full-review 2026-11-01)
+- **P1** `__tests__/lib/auth/require-staff.test.ts` — EC2 untested: no test verifies `user_metadata: { role: "admin" }` with no DB row returns `not_allowed`. (full-review 2026-11-01)
 
 ## After this merges, a user can:
 
