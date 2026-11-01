@@ -39,6 +39,21 @@ export const resendCodeSchema = z.object({
   captchaToken: z.string().min(1),
 });
 
+export const signInSchema = z.object({
+  email: emailField,
+  password: z.string().min(1).max(512),
+  captchaToken: z.string().min(1),
+  next: z.string().max(2048).optional(),
+});
+
+export const signOutSchema = z.object({
+  scope: z.enum(["this", "all"]),
+});
+
+export const startGoogleSignInSchema = z.object({
+  next: z.string().max(2048).optional(),
+});
+
 export type SignUpFormValues = z.infer<typeof signUpSchema>;
 export type VerifyEmailFormValues = z.infer<typeof verifyEmailSchema>;
 export type ResendCodeFormValues = z.infer<typeof resendCodeSchema>;

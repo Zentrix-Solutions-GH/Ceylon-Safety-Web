@@ -12,6 +12,7 @@ function makeEnv(extra: Record<string, string> = {}) {
     // Required by lib/config.ts collect()
     NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon",
+    NEXT_PUBLIC_APP_URL: "https://ceylonsafety.com",
     SUPABASE_SERVICE_ROLE_KEY: "srk",
     NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: HEX64,
     // Required by cspConfig

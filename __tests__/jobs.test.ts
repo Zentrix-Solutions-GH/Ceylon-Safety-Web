@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const BASE_ENV = {
   NEXT_PUBLIC_SUPABASE_URL: "https://abc.supabase.co",
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+  NEXT_PUBLIC_APP_URL: "https://ceylonsafety.com",
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: "a".repeat(64),
   CSP_MODE: "report-only",

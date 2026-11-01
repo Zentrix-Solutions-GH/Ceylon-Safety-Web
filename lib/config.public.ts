@@ -26,4 +26,5 @@ function requiredUrl(name: string): string {
 export const publicConfig = {
   supabaseUrl: requiredUrl("NEXT_PUBLIC_SUPABASE_URL"),
   supabaseAnonKey: requiredString("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+  appUrl: requiredUrl("NEXT_PUBLIC_APP_URL"),
 } as const;

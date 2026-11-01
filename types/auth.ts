@@ -52,6 +52,33 @@ export interface AccountStatusClaim {
   account_status?: AccountStatus;
 }
 
+// ─── S-035 action input / output types ───────────────────────────────────────
+
+export interface SignInInput {
+  email: string;
+  password: string;
+  captchaToken: string;
+  next?: string;
+}
+
+export type SignInResult =
+  | { ok: true; redirectTo: string }
+  | { ok: false; code: ErrorCode; retryAfterSeconds?: number };
+
+export interface SignOutInput {
+  scope: "this" | "all";
+}
+
+export type SignOutResult = ActionResult;
+
+export interface StartGoogleSignInInput {
+  next?: string;
+}
+
+export type StartGoogleSignInResult =
+  | { ok: true; url: string }
+  | { ok: false; code: ErrorCode };
+
 // ─── S-034 action input / output types ───────────────────────────────────────
 
 export interface SignUpInput {

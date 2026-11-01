@@ -99,6 +99,7 @@ beforeEach(() => {
   mockGetAAL.mockResolvedValue({ data: { currentLevel: "aal2" }, error: null });
   process.env["NEXT_PUBLIC_SUPABASE_URL"] = "https://test.supabase.co";
   process.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"] = "anon";
+  process.env["NEXT_PUBLIC_APP_URL"] = "https://ceylonsafety.com";
 });
 
 // ── AC5: Admin routes ─────────────────────────────────────────────────────────
