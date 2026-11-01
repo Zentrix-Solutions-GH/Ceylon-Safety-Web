@@ -233,13 +233,28 @@ export async function requireStaffNoMfa(): Promise<AuthResult> {
 
 /**
  * Refuse any action whose target is a Super Admin when the caller is not a Super Admin.
- * The caller must already be authenticated staff. This function re-verifies caller role.
+ * Safe to call standalone — enforces the full staff gate (active account, 12-hour window,
+ * TOTP enrolled, authenticator level, DB role) before the target check.
+ * Call this alongside requireStaff(specificPermission), not instead of it.
  */
 export async function assertNotSuperAdminTarget(
   targetUserId: string
 ): Promise<AuthResult> {
-  const callerResult = await requireActiveAccount();
-  if (!callerResult.ok) return callerResult;
+  const accountResult = await requireActiveAccount();
+  if (!accountResult.ok) return accountResult;
+
+  const { user } = accountResult;
+
+  // Full staff gate — same checks as requireStaff minus the permission lookup.
+  if (!isWithinStaffWindow(user.lastFullSignIn)) {
+    return { ok: false, code: "reauth_required" };
+  }
+  if (!user.hasTotpEnrolled) {
+    return { ok: false, code: "mfa_required" };
+  }
+  if (!user.hasAuthenticatorLevel) {
+    return { ok: false, code: "mfa_required" };
+  }
 
   const supabase = await createSupabaseServerClient();
 
@@ -247,12 +262,11 @@ export async function assertNotSuperAdminTarget(
   const { data: callerRow } = await supabase
     .from("user_roles")
     .select("role")
-    .eq("user_id", callerResult.user.id)
+    .eq("user_id", user.id)
     .single();
 
   const callerRole = callerRow?.role as UserRole | undefined;
 
-  // Reject non-staff callers (no DB role row) — safe to call without prior requireStaff gate
   if (!callerRole) {
     return { ok: false, code: "not_allowed" };
   }
@@ -266,5 +280,5 @@ export async function assertNotSuperAdminTarget(
     return { ok: false, code: "not_allowed" };
   }
 
-  return { ok: true, user: callerResult.user };
+  return { ok: true, user: accountResult.user };
 }

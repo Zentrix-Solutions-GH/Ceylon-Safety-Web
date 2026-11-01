@@ -42,6 +42,37 @@ beforeEach(() => {
 });
 
 describe("assertNotSuperAdminTarget (AC7)", () => {
+  it("returns mfa_required when caller has no TOTP in AMR (standalone gate enforcement)", async () => {
+    mockGetUser.mockResolvedValue({
+      data: {
+        user: {
+          ...makeStaffUser("admin"),
+          factors: [],
+          amr: [{ method: "password", timestamp: Math.floor(Date.now() / 1000) - 1800 }],
+        },
+      },
+      error: null,
+    });
+    mockFrom.mockImplementation(
+      vi.fn((table: string) => {
+        if (table === "profiles") {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                single: vi.fn().mockResolvedValue({ data: { status: "active" }, error: null }),
+              })),
+            })),
+          };
+        }
+        return { select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn() })) })) };
+      })
+    );
+
+    const result = await assertNotSuperAdminTarget("some-uuid");
+
+    expect(result).toEqual({ ok: false, code: "mfa_required" });
+  });
+
   it("returns not_allowed when caller has no staff role", async () => {
     mockGetUser.mockResolvedValue({
       data: { user: makeStaffUser("admin") },

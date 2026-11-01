@@ -241,3 +241,22 @@ describe("requireStaffNoMfa (AC6 — lower-level variant)", () => {
     expect(result).toEqual({ ok: false, code: "not_allowed" });
   });
 });
+
+describe("requireStaff — EC2: role in user_metadata grants nothing", () => {
+  it("returns not_allowed when user_metadata has a role claim but no user_roles DB row", async () => {
+    mockGetUser.mockResolvedValue({
+      data: {
+        user: makeUser({
+          user_metadata: { role: "admin" }, // should be ignored
+        }),
+      },
+      error: null,
+    });
+    // No DB row for user_roles
+    mockFrom.mockImplementation(makeFromMock("active", null));
+
+    const result = await requireStaff("articles.publish");
+
+    expect(result).toEqual({ ok: false, code: "not_allowed" });
+  });
+});

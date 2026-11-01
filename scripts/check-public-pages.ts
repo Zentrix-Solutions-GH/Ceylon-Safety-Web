@@ -12,6 +12,8 @@ const PUBLIC_DIR = join(process.cwd(), "app", "(public)");
 
 const BANNED_PATTERNS = [
   /\bcookies\(\)/,
+  /\bheaders\(\)/,
+  /from\s+['"]next\/headers['"]/,
   /\bgetCurrentUser\(\)/,
   /from\("@\/lib\/auth\/server"\)/,
   /require\("@\/lib\/auth\/server"\)/,

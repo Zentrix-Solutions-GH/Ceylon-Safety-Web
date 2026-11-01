@@ -9,12 +9,11 @@ const STAFF_WINDOW_HOURS = 12;
  * Falls back to last_sign_in_at when AMR is absent.
  */
 export function buildSessionUser(user: User): SessionUser {
-  const userAsAny = user as unknown as Record<string, unknown>;
-  const claimedRole =
-    (userAsAny["user_role"] as UserRole | undefined) ??
-    ((user.app_metadata as Record<string, unknown> | undefined)?.["user_role"] as UserRole | undefined);
-
-  const claimedStatus = userAsAny["account_status"] as AccountStatus | undefined;
+  // Hook-injected claims live in app_metadata (auth design §12 / S-012).
+  // auth.getUser() returns the DB auth.users row — not raw JWT top-level fields.
+  const appMeta = (user.app_metadata as Record<string, unknown> | undefined) ?? {};
+  const claimedRole = appMeta["user_role"] as UserRole | undefined;
+  const claimedStatus = appMeta["account_status"] as AccountStatus | undefined;
 
   // AMR: authentication method references — array of { method, timestamp } from JWT.
   // EC4: use the most recent full-auth timestamp from AMR, fall back to last_sign_in_at.
