@@ -1,11 +1,11 @@
 ---
 id: S-034
 title: signUp, verifyEmail, resendCode actions
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-034-signup-verify-resend
-pr: ~
+pr: 42
 depends_on: [S-007, S-032]
 reqs: [REQ-113, REQ-116, REQ-198]
 ---
