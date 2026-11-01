@@ -152,4 +152,15 @@ describe("resendCode — neutral result for unknown email", () => {
     const result = await resendCode(VALID_INPUT);
     expect(result.ok).toBe(true);
   });
+
+  it("returns ok:true when Supabase resend fails with a provider/SMTP error", async () => {
+    // Email delivery error must not surface to the caller — neutral-message pattern (AC5)
+    mockResend.mockResolvedValue({
+      data: {},
+      error: { message: "Email provider rate limit exceeded", status: 429 },
+    });
+
+    const result = await resendCode(VALID_INPUT);
+    expect(result.ok).toBe(true);
+  });
 });
