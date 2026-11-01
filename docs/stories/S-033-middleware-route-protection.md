@@ -151,6 +151,8 @@ Review notes:
 
 - **P1** `lib/auth/middleware.ts:182-191` — Suspended `maintainer` not signed out: `hasStaffAccess()` returns false for maintainer so the suspended-staff guard is never reached; maintainer gets 404 but session cookie stays valid (~1 h). Fix before admin pages go live: add `claimedStatus === "suspended"` check before `hasStaffAccess` so signOut fires unconditionally for any suspended authenticated user. (full-review 2026-11-01) **FIXED a5beccf**
 - **P1** `lib/auth/middleware.ts:165,189` — `signOut()` return value ignored on both suspended paths; if signOut fails the session stays valid with no server-side log. Fix: destructure `{ error }` and log on failure (no personal data). (full-review 2026-11-01) **FIXED a5beccf**
+- **P1** `lib/auth/middleware.ts:164-169,187-193` — signOut Set-Cookie clearing headers dropped: `signOut()` writes onto `response` (NextResponse.next()) but both suspended paths returned a new `NextResponse.redirect()` that never carried those headers; browser retained auth cookies ~1 hr. (external review lahiruabeywickrama 2026-11-01) **FIXED dbbf8d0** — `forwardCookies()` helper copies all Set-Cookie values from `response` onto the redirect.
+- **P1** Story AC4 checkbox — `safeNext` is never called in this PR; checkbox was ticked prematurely. Write side (pathname-only cookie) is complete; read-back wires up in S-035. (external review lahiruabeywickrama 2026-11-01) **FIXED dbbf8d0** — AC4 reverted to `[ ]` with inline note.
 
 ## After this merges, a user can:
 
