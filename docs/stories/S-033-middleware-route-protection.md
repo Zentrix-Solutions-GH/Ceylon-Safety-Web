@@ -1,11 +1,11 @@
 ---
 id: S-033
 title: Middleware and route protection
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-033-middleware-route-protection
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/40
 depends_on: [S-032]
 reqs: [REQ-044d, REQ-111, REQ-112, REQ-150]
 ---
@@ -121,7 +121,7 @@ $ bash scripts/check.sh
 
 ── Vitest (unit) ──
 Test Files  33 passed | 1 skipped (34)
-Tests       484 passed | 4 skipped (488)
+Tests       487 passed | 4 skipped (491)
 
 ✓ Vitest (unit) passed
 

@@ -145,6 +145,7 @@ describe("AC2 — rate limit", () => {
     mockCheckRateLimit.mockResolvedValue({ limited: true });
     const res = await middleware(makeRequest("/api/feed"));
     expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("60");
   });
 
   it("does not apply the rate limit to /api/payhere/notify", async () => {

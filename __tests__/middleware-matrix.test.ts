@@ -234,6 +234,33 @@ describe("AC5 — /admin/system/** super_admin only", () => {
   });
 });
 
+// ── AC4/AC5: next cookie set on admin redirect ────────────────────────────────
+
+describe("AC5 — next cookie on admin redirect", () => {
+  it("sets the next cookie when redirecting an unauthenticated request to /admin/dashboard", async () => {
+    noUser();
+    const res = await middleware(req("/admin/dashboard"));
+    expect(res.status).toBe(307);
+    const cookie = res.cookies.get("next");
+    expect(cookie).toBeDefined();
+    expect(cookie?.value).toBe("/admin/dashboard");
+  });
+
+  it("next cookie is HttpOnly on admin redirect", async () => {
+    noUser();
+    const res = await middleware(req("/admin/dashboard"));
+    const setCookieHeader = res.headers.get("set-cookie") ?? "";
+    expect(setCookieHeader.toLowerCase()).toContain("httponly");
+  });
+
+  it("next cookie is SameSite=Lax on admin redirect", async () => {
+    noUser();
+    const res = await middleware(req("/admin/dashboard"));
+    const setCookieHeader = res.headers.get("set-cookie") ?? "";
+    expect(setCookieHeader.toLowerCase()).toContain("samesite=lax");
+  });
+});
+
 // ── EC5: /api/payhere/notify repeated retries never rate limited ──────────────
 
 describe("EC5 — /api/payhere/notify never rate limited", () => {
