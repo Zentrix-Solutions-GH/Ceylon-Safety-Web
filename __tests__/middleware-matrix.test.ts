@@ -23,7 +23,11 @@ vi.mock("@supabase/ssr", () => ({
 }));
 
 vi.mock("@/lib/ratelimit", () => ({
-  checkRateLimit: vi.fn().mockResolvedValue({ limited: false }),
+  checkRateLimit: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
+vi.mock("@/lib/ratelimit/client-ip", () => ({
+  getClientIp: vi.fn().mockReturnValue("1.2.3.4"),
 }));
 
 import middleware from "../middleware";
@@ -288,7 +292,7 @@ describe("EC5 — /api/payhere/notify never rate limited", () => {
   it("does not call checkRateLimit for /api/payhere/notify", async () => {
     const { checkRateLimit } = await import("@/lib/ratelimit");
     const spy = vi.mocked(checkRateLimit);
-    spy.mockResolvedValue({ limited: true }); // would rate-limit if called
+    spy.mockResolvedValue({ ok: false, reason: "rate_limited" as const }); // would rate-limit if called
     const res = await middleware(req("/api/payhere/notify"));
     expect(spy).not.toHaveBeenCalled();
     expect(res.status).not.toBe(429);

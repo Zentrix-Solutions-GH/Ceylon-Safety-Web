@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { checkRateLimit } from "@/lib/ratelimit";
+import { getClientIp } from "@/lib/ratelimit/client-ip";
 import type { UserRole, AccountStatus } from "@/types/auth";
 
 // ── Private response headers (AC6) ───────────────────────────────────────────
@@ -31,16 +32,6 @@ function isRateLimitExempt(pathname: string): boolean {
   return false;
 }
 
-// EC7: IP header is unreliable; treat coarse limit as best-effort.
-// "unknown" falls back to a shared rate-limit bucket — acceptable until S-002
-// confirms the correct header name per hosting environment.
-function getClientIp(req: NextRequest): string {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown"
-  );
-}
 
 // Copy Set-Cookie headers from a NextResponse.next() onto a redirect response
 // so that auth cookie clearing (written by supabase.auth.signOut via the setAll
@@ -112,9 +103,19 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
   // ── Step 2: Coarse rate limit for /api/* (AC2, AC7) ──────────────────────────
   if (pathname.startsWith("/api/")) {
     if (!isRateLimitExempt(pathname)) {
-      const ip = getClientIp(req);
-      const { limited } = await checkRateLimit(`api:${ip}`);
-      if (limited) {
+      // NextRequest in Next.js 15 does not expose the socket-level remote address.
+      // Without it, CF-Connecting-IP cannot be verified against CF ranges.
+      // Passing undefined makes getClientIp return undefined, falling back to "unknown".
+      // S-002 hosting test will determine the correct header; until then this is best-effort.
+      const ip = getClientIp(req.headers, undefined) ?? "unknown";
+      const rl = await checkRateLimit({
+        limitName: "api_coarse",
+        key: ip,
+        maxCount: 60,
+        windowSeconds: 60,
+        mode: "open",
+      });
+      if (!rl.ok) {
         return new NextResponse(null, {
           status: 429,
           headers: { "Retry-After": "60" },
