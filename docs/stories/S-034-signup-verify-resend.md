@@ -168,6 +168,8 @@ Test Files  41 passed | 1 skipped (42)
 - **P2 (open)** `supabase/tests/signup-sanitising.test.ts` — EC3 staff-role test depends on S-011 trigger; add note that this requires S-011 deployed.
 - Recommendation: **APPROVE WITH FOLLOW-UPS** (88/100). Fix P1s before merge.
 
+**Full-mode re-review run 3 — 2026-11-01 (after round-2 fixes):** All P1/P2 findings resolved. Score 99/100. **APPROVE**.
+
 ## After this merges, a user can:
 
 - Nothing in the browser yet. A developer can call `signUp`, `verifyEmail` and `resendCode` from a test and receive a code in the local mail catcher. The screens come in S-041.

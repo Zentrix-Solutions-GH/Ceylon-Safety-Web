@@ -72,6 +72,12 @@ beforeEach(() => {
   mockCheckRateLimit.mockResolvedValue({ ok: true });
   mockSignUp.mockResolvedValue({ data: { user: { id: "uid-1" } }, error: null });
   mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
+  // Prevent real HIBP network calls in CI — return a response with no matching suffix.
+  // AC8 tests override this per-test via their own beforeEach/afterEach.
+  globalThis.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    text: async () => "AAAAABBBBB00000:5\nCCCCCDDDDD11111:2",
+  } as Response);
 });
 
 // ---------------------------------------------------------------------------

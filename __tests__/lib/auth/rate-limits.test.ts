@@ -40,6 +40,11 @@ const VALID_INPUT = {
 beforeEach(() => {
   vi.clearAllMocks();
   mockSignUp.mockResolvedValue({ data: { user: { id: "uid-1" } }, error: null });
+  // Prevent real HIBP network calls in CI — return a response with no matching suffix
+  globalThis.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    text: async () => "AAAAABBBBB00000:5\nCCCCCDDDDD11111:2",
+  } as Response);
 });
 
 describe("signUp rate limiting (AC1 / auth design §15)", () => {
