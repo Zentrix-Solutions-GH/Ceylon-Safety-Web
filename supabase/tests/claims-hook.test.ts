@@ -59,12 +59,14 @@ describe.skipIf(!STACK_AVAILABLE)(
       expect(error).toBeNull();
       userId = data.user!.id;
 
-      // Sign in as the customer
+      // Sign in as the customer — pass Cloudflare Turnstile always-pass token
+      // (local stack has captcha enabled with the always-pass secret)
       const client = createClient(SUPABASE_URL, ANON_KEY);
       const { data: signInData, error: signInError } =
         await client.auth.signInWithPassword({
           email: testEmail,
           password: testPassword,
+          options: { captchaToken: "1x00000000000000000000AA" },
         });
       expect(signInError).toBeNull();
 
@@ -97,6 +99,7 @@ describe.skipIf(!STACK_AVAILABLE)(
         await client.auth.signInWithPassword({
           email: testEmail,
           password: testPassword,
+          options: { captchaToken: "1x00000000000000000000AA" },
         });
       expect(signInError).toBeNull();
 

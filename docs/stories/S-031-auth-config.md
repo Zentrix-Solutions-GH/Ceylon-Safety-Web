@@ -30,7 +30,7 @@ Configure Supabase Auth once, correctly, in every environment, so that the later
 - [x] AC3: Four branded English email templates exist with the code (`{{ .Token }}`): confirm sign-up, reset password, reauthentication, and "magic link" (the magic-link template carries the re-verification code; the site never offers magic-link sign-in). Each template is seen in the local mail catcher with a real code.
 - [ ] AC4: Resend is configured as Supabase custom SMTP on staging and production (credentials in the Supabase dashboard / server env only, never in the repo). Supabase's hourly email cap is set to match the Resend plan. SPF and DKIM for the sending domain are verified and a test code reaches a real inbox (not spam). **Scope cut: staging not yet provisioned (S-005/S-131). Checklist in docs/ops/auth-settings.md pending.**
 - [x] AC5: Cloudflare Turnstile is enabled in Supabase captcha settings for staging and production; the secret lives only in the Supabase dashboard. Local and CI use Cloudflare's published always-pass / always-fail test keys.
-- [ ] AC6: The custom access token hook (function created in S-012) is enabled. A token issued on the local stack carries `user_role` and `account_status`; a user with no staff row gets no `user_role`. Tested against the local Supabase stack. **Partially done: hook wired in config.toml, static migration checks pass. Integration tests (claims-hook.test.ts) require `supabase start` and were not run; a developer must run them and paste evidence before this AC is ticked.**
+- [x] AC6: The custom access token hook (function created in S-012) is enabled. A token issued on the local stack carries `user_role` and `account_status`; a user with no staff row gets no `user_role`. Tested against the local Supabase stack. **Integration tests run 2026-11-01 — 7/7 passed (see Evidence).**
 - [x] AC7: TOTP MFA is enabled so staff can enrol.
 - [x] AC8: Site URL and redirect allow-list name only the canonical host and the exact callback `/api/auth/callback` (no wildcards) in production; development allows `http://localhost:3000`. Production and development use separate Supabase projects and separate Google OAuth clients. The Google consent screen is set to "In production" and requests only email and profile. **Local config verified by test; staging/prod separation documented in checklist (scope cut, pending provisioning).**
 
@@ -111,7 +111,7 @@ Prior art: `grep -ril "custom access token" docs/` returns auth-design.md, datab
 ## Evidence
 
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh   # 2026-11-01, supabase start running
 
 ── ESLint ──
 ✓ ESLint passed
@@ -121,20 +121,46 @@ $ bash scripts/check.sh
 
 ── Vitest (unit) ──
  Test Files  19 passed (19)
-      Tests  241 passed | 2 skipped (243)
- (2 skipped = AC6 claims-hook integration tests; require local Supabase stack)
+      Tests  282 passed | 0 skipped (282)
 
 ── pgTAP RLS suite ──
-⚠ Supabase not running — skipping (run supabase start first)
+✓ pgTAP RLS suite passed
+
+── pgTAP seed suite ──
+✓ pgTAP seed suite passed
+
+── pgTAP dev seed suite ──
+✓ pgTAP dev seed suite passed
+
+── Types file freshness ──
+✓ Types file freshness passed
 
 ── Dev seed guard ──
 ✓ Dev seed guard passed
 
 ════════════════════════════════
-  check.sh: 4 passed, 0 failed
+  check.sh: 9 passed, 0 failed
 ════════════════════════════════
 
 ✅ All checks passed.
+```
+
+```
+$ SUPABASE_URL=http://127.0.0.1:54321 \
+  SUPABASE_ANON_KEY=<anon key> \
+  SUPABASE_SERVICE_ROLE_KEY=<service-role key> \
+  npx vitest run supabase/tests/claims-hook.test.ts   # 2026-11-01
+
+ ✓ supabase/tests/claims-hook.test.ts (7 tests) 1466ms
+   ✓ AC6: customer token has no user_role claim
+   ✓ AC6: staff token carries the correct user_role
+   ✓ AC6 (static): migration grants EXECUTE to supabase_auth_admin
+   ✓ AC6 (static): SECURITY DEFINER and empty search_path
+   ✓ AC6 (static): EXCEPTION WHEN OTHERS guard present
+   ✓ EC3 (static): jwt_expiry ≤ 86400
+   ✓ EC3 (static): enable_refresh_token_rotation = true
+
+ Tests  7 passed (7)
 ```
 
 ## Review notes
@@ -143,7 +169,8 @@ $ bash scripts/check.sh
 - **P1** `supabase/config.toml` — `secure_password_change` is unset (defaults false); a hijacked session can replace the password silently. Set `secure_password_change = true`. (full-review 2026-11-01)
 - **P1** `supabase/tests/auth-templates.test.ts:64–80` — config.toml path assertions cover only `confirm-signup` and `reset-password`; add assertions for `reauthentication` and `magic-link` paths. (full-review 2026-11-01)
 - **P1** `supabase/tests/auth-config.test.ts` — no assertion that `enable_manual_linking = false`. Add it. (full-review 2026-11-01)
-- **P1** AC6 integration tests were never executed against the local stack; AC6 checkbox should be unticked until a developer runs `supabase start` and provides evidence. (full-review 2026-11-01)
+- **P1** AC6 integration tests were never executed against the local stack; AC6 checkbox should be unticked until a developer runs `supabase start` and provides evidence. (full-review 2026-11-01) → **Fixed 2026-11-01**: tests run, 7/7 passed.
+- **P1** `supabase/migrations/20261028000002_permissions_super_admin.sql:366` — missing `GRANT USAGE ON SCHEMA private TO supabase_auth_admin`; EXECUTE was granted but schema access was not, causing `permission denied for schema private` at runtime. Added grant. (2026-11-01)
 
 ## After this merges, a user can:
 
