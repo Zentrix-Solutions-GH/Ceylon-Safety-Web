@@ -38,6 +38,11 @@ const FORBIDDEN: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /from\s+['"]next\/headers['"]/, label: "imports from next/headers" },
   { pattern: /from\s+['"][^'"]*lib\/supabase\/server['"]/, label: "imports server Supabase client" },
   { pattern: /createServerClient\b/, label: "calls createServerClient" },
+  // Direct call-site checks (defence-in-depth: catches calls via re-export barrels
+  // where the import line may not reference next/headers directly).
+  // Strip single-line comments before matching so comment-only mentions are ignored.
+  { pattern: /(?<!\/\/.*)\bcookies\s*\(\s*\)/, label: "calls cookies() directly" },
+  { pattern: /(?<!\/\/.*)\bheaders\s*\(\s*\)/, label: "calls headers() directly" },
 ];
 
 describe("no-server-session-in-public", () => {
@@ -45,7 +50,10 @@ describe("no-server-session-in-public", () => {
     const violations: string[] = [];
     for (const dir of DIRS_TO_SCAN) {
       for (const file of collectTsFiles(dir)) {
-        const content = readFileSync(file, "utf-8");
+        const raw = readFileSync(file, "utf-8");
+        // Strip single-line comments before scanning so patterns in comments
+        // like "// never calls cookies()" don't produce false positives.
+        const content = raw.replace(/\/\/[^\n]*/g, "");
         for (const { pattern, label } of FORBIDDEN) {
           if (pattern.test(content)) {
             violations.push(`${file}: ${label}`);

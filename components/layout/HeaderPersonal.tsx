@@ -156,6 +156,7 @@ export function HeaderPersonal() {
                 <Link
                   href="/profile"
                   role="menuitem"
+                  tabIndex={-1}
                   onClick={closeMenu}
                   className="block px-4 py-2 text-sm hover:bg-accent"
                 >
@@ -164,6 +165,7 @@ export function HeaderPersonal() {
                 <Link
                   href="/purchases"
                   role="menuitem"
+                  tabIndex={-1}
                   onClick={closeMenu}
                   className="block px-4 py-2 text-sm hover:bg-accent"
                 >
@@ -173,6 +175,7 @@ export function HeaderPersonal() {
                 <button
                   type="button"
                   role="menuitem"
+                  tabIndex={-1}
                   onClick={handleSignOut}
                   className="w-full text-left px-4 py-2 text-sm hover:bg-accent"
                 >
