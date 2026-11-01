@@ -79,11 +79,17 @@ max_frequency = "1s"
 # 6 digits with 10-minute expiry is the fallback recorded in docs/ops/auth-settings.md.
 otp_length = 6
 otp_expiry = 600
-# Template paths (relative to supabase/ directory)
-template.confirm_signup = "./templates/confirm-signup.html"
-template.recovery = "./templates/reset-password.html"
-template.reauthentication = "./templates/reauthentication.html"
-template.magic_link = "./templates/magic-link.html"
+[auth.email.template.confirm_signup]
+content_path = "./templates/confirm-signup.html"
+
+[auth.email.template.recovery]
+content_path = "./templates/reset-password.html"
+
+[auth.email.template.reauthentication]
+content_path = "./templates/reauthentication.html"
+
+[auth.email.template.magic_link]
+content_path = "./templates/magic-link.html"
 
 [auth.sms]
 enable_signup = false
