@@ -149,6 +149,14 @@ Tests  518 passed | 4 skipped (522)
 
 **EC6 test added:** confirmed different `RATELIMIT_HASH_SECRET` values produce different hashed keys.
 
+### Round 2 findings (2026-11-01) — full-review / both agents
+
+**P0 (open):**
+- `lib/ratelimit/index.ts:122–128` — EXPIRE pipeline failure leaves the Redis key with no TTL. INCR and EXPIRE are separate pipeline calls. If EXPIRE times out or errors, its exception is caught by `checkRateLimit`'s catch block (correct outage behaviour for the current request), but the key now has count=1 and no TTL. Subsequent requests increment to 2, 3, … — `count === 1` is never true again, EXPIRE is never called. Once count > maxCount the key stays blocked permanently until manually deleted. Fix: wrap the EXPIRE pipeline in its own try/catch; on failure, call onOutage and continue. Also add a test that simulates INCR success + EXPIRE timeout and asserts the next request is still handled (not permanently blocked).
+
+**P1 (open):**
+- `lib/auth/middleware.ts:110` — "unknown" shared bucket risk. `getClientIp` always returns `undefined` in middleware (Next.js 15 exposes no socket address), so all non-CF API traffic shares one `"unknown"` Redis key. 60 req/min exhausts the key for all users simultaneously. Acknowledged pending S-002; risk must be recorded in the story's Spec gaps so S-002 is not skipped.
+
 ## After this merges, a user can:
 
 Nothing visible to site users. This PR is infrastructure: later action stories can limit abuse with one call, and keys held in Upstash are not readable personal data.
@@ -165,6 +173,7 @@ Any actual rate limit on a real action, Turnstile, the middleware limit, Sentry 
 
 - The design does not say which algorithm (fixed or sliding window) to use; the Upstash library default is used.
 - How Next.js exposes the socket address under Passenger or a VPS web server is decided by the T13 result in S-002; until then `remoteAddress` is an input to the helper.
+- **Risk (P1 from Round 2):** Until S-002 determines the correct socket-address header, `getClientIp` always returns `undefined` in middleware, meaning all non-CF-proxied API traffic shares one `"unknown"` rate-limit bucket. An attacker making 60 req/min can exhaust this bucket and trigger 429s for all other users. S-002 must address this or the middleware limit must fail-open when IP is unknown.
 - The way the Cloudflare ranges are refreshed is not specified; they are kept in one file updated by hand.
 
 ## Re-baseline note

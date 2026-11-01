@@ -6,18 +6,22 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 type FakeRedisCall = { cmd: string; args: unknown[] };
 
-function makeFakeRedis(scenario: "ok" | "over" | "timeout" | "error" = "ok") {
+function makeFakeRedis(scenario: "ok" | "over" | "timeout" | "error" | "expire_timeout" = "ok") {
   const calls: FakeRedisCall[] = [];
   let counter = 0;
+  let pipelineCallCount = 0;
 
   return {
     calls,
     reset() {
       calls.length = 0;
       counter = 0;
+      pipelineCallCount = 0;
     },
     // @upstash/redis pipeline mock
     pipeline() {
+      pipelineCallCount += 1;
+      const thisCall = pipelineCallCount;
       const ops: Array<() => Promise<unknown>> = [];
       const pipe = {
         incr(key: string) {
@@ -35,12 +39,22 @@ function makeFakeRedis(scenario: "ok" | "over" | "timeout" | "error" = "ok") {
           ops.push(async () => ttl);
           return pipe;
         },
+        del(key: string) {
+          calls.push({ cmd: "del", args: [key] });
+          ops.push(async () => 1);
+          return pipe;
+        },
         async exec() {
           if (scenario === "timeout") {
             await new Promise((_, rej) => setTimeout(() => rej(new Error("fetch timeout")), 10));
           }
           if (scenario === "error") {
             throw Object.assign(new Error("status 503"), { status: 503 });
+          }
+          // expire_timeout: INCR pipeline (call 1) succeeds; EXPIRE pipeline (call 2) times out;
+          // DEL pipeline (call 3) succeeds — simulates partial Upstash failure.
+          if (scenario === "expire_timeout" && thisCall === 2) {
+            await new Promise((_, rej) => setTimeout(() => rej(new Error("fetch timeout")), 10));
           }
           return Promise.all(ops.map((fn) => fn()));
         },
@@ -56,7 +70,7 @@ function makeFakeRedis(scenario: "ok" | "over" | "timeout" | "error" = "ok") {
 
 async function importRateLimit(
   env: Record<string, string | undefined>,
-  redisScenario: "ok" | "over" | "timeout" | "error" = "ok"
+  redisScenario: "ok" | "over" | "timeout" | "error" | "expire_timeout" = "ok"
 ) {
   // Patch env
   const original = { ...process.env };
@@ -322,24 +336,32 @@ describe("EC1: boundary exactness", () => {
   beforeEach(() => vi.resetModules());
   afterEach(() => vi.restoreAllMocks());
 
-  it("exactly maxCount requests succeed, the next one is refused", async () => {
+  it("exactly maxCount requests succeed, the next one is refused (sequential)", async () => {
     const { mod } = await importRateLimit(devEnv, "ok");
     const N = 4;
-    const results = await Promise.all(
-      Array.from({ length: N + 1 }, (_, i) =>
-        mod.checkRateLimit({ limitName: "boundary", key: `ec1_${i}`, maxCount: N, windowSeconds: 60, mode: "open" })
-      )
-    );
-    // Each key is unique so all succeed — test shared key instead
-    const sharedResults: Awaited<ReturnType<typeof mod.checkRateLimit>>[] = [];
+    const results: Awaited<ReturnType<typeof mod.checkRateLimit>>[] = [];
     for (let i = 0; i < N + 1; i++) {
-      sharedResults.push(
-        await mod.checkRateLimit({ limitName: "boundary_shared", key: "shared", maxCount: N, windowSeconds: 60, mode: "open" })
+      results.push(
+        await mod.checkRateLimit({ limitName: "boundary_seq", key: "shared_seq", maxCount: N, windowSeconds: 60, mode: "open" })
       );
     }
-    expect(sharedResults.slice(0, N).every((r) => r.ok)).toBe(true);
-    expect(sharedResults[N].ok).toBe(false);
-    void results; // used
+    expect(results.slice(0, N).every((r) => r.ok)).toBe(true);
+    expect(results[N].ok).toBe(false);
+  });
+
+  it("exactly maxCount concurrent requests to the same key succeed, the (N+1)th is refused", async () => {
+    const { mod } = await importRateLimit(devEnv, "ok");
+    const N = 4;
+    // Dispatch N+1 concurrent calls to the same key
+    const concurrent = await Promise.all(
+      Array.from({ length: N + 1 }, () =>
+        mod.checkRateLimit({ limitName: "boundary_concurrent", key: "shared_concurrent", maxCount: N, windowSeconds: 60, mode: "open" })
+      )
+    );
+    const passed = concurrent.filter((r) => r.ok).length;
+    const refused = concurrent.filter((r) => !r.ok).length;
+    expect(passed).toBe(N);
+    expect(refused).toBe(1);
   });
 });
 
@@ -382,6 +404,54 @@ describe("EC5: error status as outage", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("unavailable");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P0 fix — EXPIRE pipeline failure: key is deleted so next request starts fresh
+// ---------------------------------------------------------------------------
+
+describe("P0: EXPIRE failure deletes key to prevent permanent block", () => {
+  beforeEach(() => vi.resetModules());
+  afterEach(() => vi.restoreAllMocks());
+
+  it("deletes the key when EXPIRE pipeline times out (open mode allows current request)", async () => {
+    const { fakeRedis } = await importRateLimit(prodEnv, "expire_timeout");
+    const { checkRateLimit } = await import("../lib/ratelimit/index");
+
+    const result = await checkRateLimit({
+      limitName: "signin",
+      key: "u@e.com",
+      maxCount: 5,
+      windowSeconds: 60,
+      mode: "open",
+    });
+
+    // Current request is allowed (INCR succeeded, count=1 ≤ maxCount=5)
+    expect(result.ok).toBe(true);
+
+    // INCR was called, then EXPIRE (which timed out), then DEL (cleanup)
+    const cmds = fakeRedis.calls.map((c) => c.cmd);
+    expect(cmds).toContain("incr");
+    expect(cmds).toContain("expire");
+    expect(cmds).toContain("del"); // DEL must be called to reset the no-TTL key
+  });
+
+  it("deletes the same key that was INCRed", async () => {
+    const { fakeRedis } = await importRateLimit(prodEnv, "expire_timeout");
+    const { checkRateLimit } = await import("../lib/ratelimit/index");
+
+    await checkRateLimit({
+      limitName: "signin",
+      key: "u@e.com",
+      maxCount: 5,
+      windowSeconds: 60,
+      mode: "open",
+    });
+
+    const incrKey = fakeRedis.calls.find((c) => c.cmd === "incr")!.args[0] as string;
+    const delKey = fakeRedis.calls.find((c) => c.cmd === "del")!.args[0] as string;
+    expect(delKey).toBe(incrKey);
   });
 });
 

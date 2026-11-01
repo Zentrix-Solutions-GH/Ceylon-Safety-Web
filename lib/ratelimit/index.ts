@@ -86,9 +86,12 @@ function getRedis(url: string, token: string): Redis {
 const TIMEOUT_MS = 500;
 
 function makeTimeout(): Promise<never> {
-  return new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error("upstash_timeout")), TIMEOUT_MS)
-  );
+  return new Promise<never>((_, reject) => {
+    const t = setTimeout(() => reject(new Error("upstash_timeout")), TIMEOUT_MS);
+    // Prevent the timer from holding the Node.js event loop open when the race
+    // resolves on the Upstash side before the timeout fires.
+    if (typeof t === "object" && t !== null && "unref" in t) (t as NodeJS.Timeout).unref();
+  });
 }
 
 async function checkUpstash(
@@ -107,7 +110,22 @@ async function checkUpstash(
   if (count === 1) {
     const expPipe = redis.pipeline();
     expPipe.expire(hashedKey, windowSeconds);
-    await Promise.race([expPipe.exec(), makeTimeout()]);
+    try {
+      await Promise.race([expPipe.exec(), makeTimeout()]);
+    } catch (expireError) {
+      // EXPIRE failed — the key has no TTL and would permanently block the user/IP
+      // once count exceeds maxCount (EXPIRE is only attempted when count === 1).
+      // Delete the key so the next request starts a fresh window instead.
+      try {
+        const delPipe = redis.pipeline();
+        delPipe.del(hashedKey);
+        await Promise.race([delPipe.exec(), makeTimeout()]);
+      } catch {
+        // DEL also failed — deep outage; propagate the original error so the
+        // caller's catch block fires onOutage and returns the correct outage result.
+        throw expireError;
+      }
+    }
   }
 
   return { count };
@@ -119,6 +137,21 @@ async function checkUpstash(
 
 type MemWindow = { count: number; expiresAt: number };
 const _memStore = new Map<string, MemWindow>();
+
+// Sweep expired in-memory windows every 5 minutes so the Map does not grow
+// indefinitely in a dev server. Runs only in non-production (production uses
+// Upstash). The interval is unref'd so it never prevents process exit.
+if (process.env["NODE_ENV"] !== "production") {
+  const sweep = setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of _memStore) {
+      if (v.expiresAt <= now) _memStore.delete(k);
+    }
+  }, 5 * 60 * 1000);
+  if (typeof sweep === "object" && sweep !== null && "unref" in sweep) {
+    (sweep as NodeJS.Timeout).unref();
+  }
+}
 
 async function digestKey(key: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key));
