@@ -263,6 +263,15 @@ describe("signUp — AC6: validation error codes", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("captcha_failed");
   });
+
+  it("does NOT set the pending cookie when captcha_failed is returned", async () => {
+    mockSignUp.mockResolvedValue({
+      data: { user: null },
+      error: { message: "captcha verification process failed", status: 422 },
+    });
+    await signUp(VALID_INPUT);
+    expect(mockCookiesSet).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------

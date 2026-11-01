@@ -9,6 +9,10 @@ import type { VerifyEmailInput, VerifyEmailResult } from "@/types/auth";
 
 const MAX_ATTEMPTS = 5;
 
+// Supabase returns this exact phrase for a truly expired OTP (vs "Token has expired or is invalid"
+// for a wrong code). Extract so it is easy to update after a Supabase Auth upgrade.
+const SUPABASE_OTP_EXPIRED_MSG = "invalid or has expired";
+
 export async function verifyEmail(input: VerifyEmailInput): Promise<VerifyEmailResult> {
   // 1. Validate input
   const parsed = verifyEmailSchema.safeParse(input);
@@ -36,13 +40,12 @@ export async function verifyEmail(input: VerifyEmailInput): Promise<VerifyEmailR
     const msg = error.message.toLowerCase();
     // Supabase returns "Email link is invalid or has expired" for a truly expired OTP,
     // vs "Token has expired or is invalid" for a wrong code. The phrase order differs.
-    if (msg.includes("invalid or has expired")) {
+    if (msg.includes(SUPABASE_OTP_EXPIRED_MSG)) {
       return { ok: false, code: "code_expired" };
     }
 
-    // Wrong code — increment attempt counter
-    await incAttempts(email);
-    const newAttempts = attempts + 1;
+    // Wrong code — increment attempt counter; use Redis INCR return value (not stale local read)
+    const newAttempts = await incAttempts(email);
     if (newAttempts >= MAX_ATTEMPTS) {
       return { ok: false, code: "code_attempts_exceeded" };
     }

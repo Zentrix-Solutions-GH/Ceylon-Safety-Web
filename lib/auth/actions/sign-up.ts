@@ -59,13 +59,7 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
     return { ok: false, code: "validation_failed", field: "password" };
   }
 
-  // 3. Breached-password check (AC8, M36)
-  const isBreached = await checkBreachedPassword(password);
-  if (isBreached) {
-    return { ok: false, code: "weak_password", field: "password" };
-  }
-
-  // 4. Rate limit: 5 / hour / IP, open mode (auth design §15)
+  // 3. Rate limit: 5 / hour / IP, open mode (auth design §15) — checked before HIBP
   const reqHeaders = await headers();
   const ip = getClientIp(reqHeaders, undefined) ?? "unknown";
   const rl = await checkRateLimit({
@@ -77,6 +71,12 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
   });
   if (!rl.ok && rl.reason === "rate_limited") {
     return { ok: false, code: "rate_limited", field: undefined };
+  }
+
+  // 4. Breached-password check (AC8, M36) — after rate limit so attackers can't probe freely
+  const isBreached = await checkBreachedPassword(password);
+  if (isBreached) {
+    return { ok: false, code: "weak_password", field: "password" };
   }
 
   // 5. Call Supabase — neutral result for both new and existing emails (AC3)

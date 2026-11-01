@@ -136,6 +136,16 @@ describe("verifyEmail — AC4: wrong code", () => {
     if (!result.ok) expect(result.code).toBe("code_invalid");
   });
 
+  it("does NOT clear the pending cookie on code_invalid", async () => {
+    mockVerifyOtp.mockResolvedValue({
+      data: { session: null },
+      error: { message: "Token has expired or is invalid", status: 403 },
+    });
+
+    await verifyEmail(VALID_INPUT);
+    expect(mockCookiesDelete).not.toHaveBeenCalled();
+  });
+
   it("increments attempt counter on wrong code", async () => {
     mockVerifyOtp.mockResolvedValue({
       data: { session: null },
@@ -171,6 +181,16 @@ describe("verifyEmail — AC4: expired code", () => {
 
     await verifyEmail(VALID_INPUT);
     expect(mockIncAttempts).not.toHaveBeenCalled();
+  });
+
+  it("does NOT clear the pending cookie on code_expired", async () => {
+    mockVerifyOtp.mockResolvedValue({
+      data: { session: null },
+      error: { message: "Email link is invalid or has expired", status: 403 },
+    });
+
+    await verifyEmail(VALID_INPUT);
+    expect(mockCookiesDelete).not.toHaveBeenCalled();
   });
 });
 

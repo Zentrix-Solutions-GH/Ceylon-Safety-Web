@@ -1,6 +1,10 @@
 // @vitest-environment node
 // S-034 EC3 — Direct Supabase sign-up with hostile / overlong metadata should
 // result in sanitised profile data written by the S-011 trigger.
+//
+// DEPENDENCY: These tests require the S-011 migration (create_profile_for trigger)
+// to be applied. They will fail against a Supabase instance without S-011.
+//
 // Requires the local Supabase stack to be running:
 //   npx supabase start
 //   npx vitest run supabase/tests/signup-sanitising.test.ts

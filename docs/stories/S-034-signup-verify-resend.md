@@ -159,6 +159,15 @@ Test Files  41 passed | 1 skipped (42)
 - **P2 (accepted)** Redis singleton — serverless concern noted; no change (pattern matches S-007 ratelimit lib).
 - **P2 (accepted)** Zod version — project uses Zod v4 (`z.literal(true, { error: "required" })` compiles cleanly).
 
+**Full-mode review run 2 — 2026-11-01 (re-review after EC5 test addition):**
+
+- **P1 (open)** `lib/auth/actions/verify-email.ts:44-45` — Stale local counter: `const newAttempts = attempts + 1` uses pre-read value; concurrent calls can show an apparent one-try grace window. Fix: `const newAttempts = await incAttempts(email)`.
+- **P1 (open)** `lib/auth/actions/verify-email.ts:39` — Fragile Supabase error-string match (`"Email link is invalid or has expired"`) to distinguish expired from wrong code; Supabase has changed these strings before. Extract to a named constant and add a re-test note for Supabase upgrades.
+- **P2 (open)** `lib/auth/cookies.ts` — `getPendingSignup` casts `JSON.parse` result without runtime shape check; add Zod validation or `typeof` guard.
+- **P2 (open)** `lib/auth/actions/sign-up.ts` — HIBP check runs before rate-limit check; auth design §15 intends rate-limit first.
+- **P2 (open)** `supabase/tests/signup-sanitising.test.ts` — EC3 staff-role test depends on S-011 trigger; add note that this requires S-011 deployed.
+- Recommendation: **APPROVE WITH FOLLOW-UPS** (88/100). Fix P1s before merge.
+
 ## After this merges, a user can:
 
 - Nothing in the browser yet. A developer can call `signUp`, `verifyEmail` and `resendCode` from a test and receive a code in the local mail catcher. The screens come in S-041.

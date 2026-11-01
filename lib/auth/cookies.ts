@@ -26,7 +26,15 @@ export async function getPendingSignup(): Promise<PendingSignup | null> {
   const raw = jar.get(COOKIE_NAME)?.value;
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as PendingSignup;
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof (parsed as Record<string, unknown>).email !== "string"
+    ) {
+      return null;
+    }
+    return parsed as PendingSignup;
   } catch {
     return null;
   }
