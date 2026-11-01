@@ -40,6 +40,10 @@
 }
 
 @layer base {
+  /* WCAG 2.4.11: sticky header (h-16 = 4rem) must not hide anchor-linked headings. */
+  html {
+    scroll-padding-top: 4rem;
+  }
   * {
     @apply border-border;
   }
