@@ -22,7 +22,11 @@ vi.mock("@supabase/ssr", () => ({
 }));
 
 vi.mock("@/lib/ratelimit", () => ({
-  checkRateLimit: vi.fn().mockResolvedValue({ limited: false }),
+  checkRateLimit: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
+vi.mock("@/lib/ratelimit/client-ip", () => ({
+  getClientIp: vi.fn().mockReturnValue("1.2.3.4"),
 }));
 
 // Import after mocks
@@ -93,7 +97,7 @@ function suspendedUser() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockCheckRateLimit.mockResolvedValue({ limited: false });
+  mockCheckRateLimit.mockResolvedValue({ ok: true });
   mockSignOut.mockResolvedValue({ error: null });
   mockGetAAL.mockResolvedValue({ data: { currentLevel: "aal2" }, error: null });
   process.env["NEXT_PUBLIC_SUPABASE_URL"] = "https://test.supabase.co";
@@ -137,12 +141,14 @@ describe("AC2 — rate limit", () => {
   it("applies the rate limit to /api/feed", async () => {
     noUser();
     await middleware(makeRequest("/api/feed", { ip: "1.2.3.4" }));
-    expect(mockCheckRateLimit).toHaveBeenCalledWith(expect.stringContaining("1.2.3.4"));
+    expect(mockCheckRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "1.2.3.4", limitName: "api_coarse" })
+    );
   });
 
   it("returns 429 when limited", async () => {
     noUser();
-    mockCheckRateLimit.mockResolvedValue({ limited: true });
+    mockCheckRateLimit.mockResolvedValue({ ok: false, reason: "rate_limited" as const });
     const res = await middleware(makeRequest("/api/feed"));
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).toBe("60");
