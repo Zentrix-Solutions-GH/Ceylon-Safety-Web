@@ -18,6 +18,7 @@ import "server-only";
 // Key rotation (hashing secret changes): all counters reset — accepted per infra design 10.
 
 import { Redis } from "@upstash/redis";
+import { upstashConfig } from "@/lib/config.upstash";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,22 +50,6 @@ export type RateLimitResult =
 // ---------------------------------------------------------------------------
 
 const _envPrefix = process.env["NODE_ENV"] === "production" ? "prod" : "stg";
-
-function requireUpstashConfig(): { url: string; token: string; hashSecret: string } | null {
-  const url = process.env["UPSTASH_REDIS_REST_URL"]?.trim();
-  const token = process.env["UPSTASH_REDIS_REST_TOKEN"]?.trim();
-  const hashSecret = process.env["RATELIMIT_HASH_SECRET"]?.trim();
-
-  if (process.env["NODE_ENV"] === "production") {
-    if (!url) throw new Error("[config] Missing required env var: UPSTASH_REDIS_REST_URL");
-    if (!token) throw new Error("[config] Missing required env var: UPSTASH_REDIS_REST_TOKEN");
-    if (!hashSecret) throw new Error("[config] Missing required env var: RATELIMIT_HASH_SECRET");
-    return { url, token, hashSecret };
-  }
-
-  if (url && token && hashSecret) return { url, token, hashSecret };
-  return null; // use in-memory fallback
-}
 
 // ---------------------------------------------------------------------------
 // HMAC-SHA256 key hashing — email and IP never stored in clear
@@ -161,7 +146,7 @@ function checkMemory(key: string, maxCount: number, windowSeconds: number): Rate
 // Public API
 // ---------------------------------------------------------------------------
 
-const _config = requireUpstashConfig();
+const _config = upstashConfig();
 
 export async function checkRateLimit(opts: RateLimitOptions): Promise<RateLimitResult> {
   const { limitName, key, maxCount, windowSeconds, mode, onOutage } = opts;
