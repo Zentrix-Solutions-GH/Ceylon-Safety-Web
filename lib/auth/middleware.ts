@@ -32,12 +32,25 @@ function isRateLimitExempt(pathname: string): boolean {
 }
 
 // EC7: IP header is unreliable; treat coarse limit as best-effort.
+// "unknown" falls back to a shared rate-limit bucket — acceptable until S-002
+// confirms the correct header name per hosting environment.
 function getClientIp(req: NextRequest): string {
   return (
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     req.headers.get("x-real-ip") ??
     "unknown"
   );
+}
+
+// Copy Set-Cookie headers from a NextResponse.next() onto a redirect response
+// so that auth cookie clearing (written by supabase.auth.signOut via the setAll
+// callback) reaches the browser even though signOut runs before we decide to
+// return a different NextResponse object.
+function forwardCookies(from: NextResponse, to: NextResponse): NextResponse {
+  for (const cookie of from.cookies.getAll()) {
+    to.cookies.set(cookie.name, cookie.value, cookie);
+  }
+  return to;
 }
 
 // ── Route classification ───────────────────────────────────────────────────────
@@ -164,9 +177,10 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
     if (claimedStatus === "suspended") {
       const { error } = await supabase.auth.signOut();
       if (error) console.error("[middleware] signOut failed:", error.message);
-      return applyPrivateHeaders(
+      const redirect = applyPrivateHeaders(
         NextResponse.redirect(new URL("/suspended", req.url))
       );
+      return forwardCookies(response, redirect);
     }
     return applyPrivateHeaders(response);
   }
@@ -183,9 +197,10 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
     if (claimedStatus === "suspended") {
       const { error } = await supabase.auth.signOut();
       if (error) console.error("[middleware] signOut failed:", error.message);
-      return applyPrivateHeaders(
+      const redirect = applyPrivateHeaders(
         NextResponse.redirect(new URL("/suspended", req.url))
       );
+      return forwardCookies(response, redirect);
     }
 
     // No/maintainer claim → not found (do not reveal the admin area exists, REQ-150)
@@ -204,7 +219,9 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
     }
 
     // All other admin pages — check TOTP enrollment and authenticator assurance level
-    // user.factors is on the User type; no cast needed
+    // user.factors comes from the JWT and can be up to ~1 hr stale. It is used
+    // only as a fast pre-check to route the user to /admin/security. The
+    // authoritative real-time guard is getAuthenticatorAssuranceLevel() below.
     const hasTotpEnrolled = user.factors?.some(
       (f) => f.factor_type === "totp" && f.status === "verified"
     ) ?? false;

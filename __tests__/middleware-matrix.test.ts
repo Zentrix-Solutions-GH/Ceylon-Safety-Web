@@ -128,6 +128,24 @@ describe("AC5 — /admin/** route matrix", () => {
     expect(mockSignOut).toHaveBeenCalled();
   });
 
+  it("suspended user (maintainer) → signOut + redirect /suspended (not 404)", async () => {
+    mockGetUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "m1",
+          email: "m@example.com",
+          app_metadata: { user_role: "maintainer", account_status: "suspended" },
+          factors: [],
+        },
+      },
+      error: null,
+    });
+    const res = await middleware(req("/admin/dashboard"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/suspended");
+    expect(mockSignOut).toHaveBeenCalled();
+  });
+
   it("suspended staff → sign out and redirect to /suspended", async () => {
     // A staff user whose account_status is suspended in JWT claims
     mockGetUser.mockResolvedValue({
