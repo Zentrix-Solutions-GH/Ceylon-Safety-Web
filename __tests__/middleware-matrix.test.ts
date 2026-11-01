@@ -119,11 +119,13 @@ describe("AC5 — /admin/** route matrix", () => {
     expect(res.status).toBe(404);
   });
 
-  it("suspended user (no staff claim) → 404", async () => {
+  it("suspended user (no staff claim) → signOut + redirect /suspended", async () => {
     suspended();
     const res = await middleware(req("/admin/dashboard"));
-    // Suspended has no staff claim → 404
-    expect(res.status).toBe(404);
+    // Suspended check fires before role check now (P1 fix)
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/suspended");
+    expect(mockSignOut).toHaveBeenCalled();
   });
 
   it("suspended staff → sign out and redirect to /suspended", async () => {
@@ -237,13 +239,14 @@ describe("AC5 — /admin/system/** super_admin only", () => {
 // ── AC4/AC5: next cookie set on admin redirect ────────────────────────────────
 
 describe("AC5 — next cookie on admin redirect", () => {
-  it("sets the next cookie when redirecting an unauthenticated request to /admin/dashboard", async () => {
+  it("sets the next cookie (pathname only) when redirecting an unauthenticated request to /admin/dashboard", async () => {
     noUser();
-    const res = await middleware(req("/admin/dashboard"));
+    const res = await middleware(req("/admin/dashboard?ref=email"));
     expect(res.status).toBe(307);
     const cookie = res.cookies.get("next");
     expect(cookie).toBeDefined();
     expect(cookie?.value).toBe("/admin/dashboard");
+    expect(cookie?.value).not.toContain("?");
   });
 
   it("next cookie is HttpOnly on admin redirect", async () => {

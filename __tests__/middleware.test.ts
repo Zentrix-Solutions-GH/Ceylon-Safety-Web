@@ -205,9 +205,11 @@ describe("AC3 — guest-only redirect", () => {
 describe("AC4 — customer route protection", () => {
   const CUSTOMER_PATHS = [
     "/cart",
+    "/checkout",
     "/checkout/payment",
     "/purchases",
     "/profile",
+    "/download",
     "/download/abc123",
   ];
 
@@ -265,15 +267,14 @@ describe("AC4 — customer route protection", () => {
 // ── EC2: Hostile next cookie ──────────────────────────────────────────────────
 
 describe("EC2 — hostile next cookie value", () => {
-  it("stores only the request pathname in the next cookie (not external URLs)", async () => {
+  it("stores only the request pathname in the next cookie (no query string)", async () => {
     noUser();
-    // Simulate someone passing an absolute URL in the next query param — shouldn't matter
-    // because we store req.pathname, not user-supplied input
-    const res = await middleware(makeRequest("/cart"));
+    const res = await middleware(makeRequest("/cart?foo=bar"));
     const cookie = res.cookies.get("next");
     expect(cookie?.value).toBe("/cart");
-    // Must be a relative path
+    // Must be a relative path without query string
     expect(cookie?.value).not.toMatch(/^https?:\/\//);
+    expect(cookie?.value).not.toContain("?");
   });
 });
 
@@ -305,6 +306,14 @@ describe("AC6 — Cache-Control and X-Robots-Tag headers", () => {
       expect(res.headers.get("X-Robots-Tag")).toMatch(/noindex/);
     });
   }
+
+  it("sets Cache-Control: no-store on the redirect response for an unauthenticated customer", async () => {
+    noUser();
+    const res = await middleware(makeRequest("/cart"));
+    // Redirect response (307) must still carry the header
+    expect(res.status).toBe(307);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
 
   it("does not set Cache-Control on an API route", async () => {
     noUser();

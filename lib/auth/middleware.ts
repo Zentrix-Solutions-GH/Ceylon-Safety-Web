@@ -81,7 +81,7 @@ function hasStaffAccess(role: UserRole | undefined): boolean {
 // ── next cookie (AC4) ─────────────────────────────────────────────────────────
 
 function setNextCookie(res: NextResponse, req: NextRequest): void {
-  const nextUrl = req.nextUrl.pathname + req.nextUrl.search;
+  const nextUrl = req.nextUrl.pathname;
   res.cookies.set("next", nextUrl, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -162,7 +162,8 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
       return applyPrivateHeaders(res);
     }
     if (claimedStatus === "suspended") {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) console.error("[middleware] signOut failed:", error.message);
       return applyPrivateHeaders(
         NextResponse.redirect(new URL("/suspended", req.url))
       );
@@ -178,17 +179,18 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
       return applyPrivateHeaders(res);
     }
 
-    // No/maintainer claim → not found (do not reveal the admin area exists, REQ-150)
-    if (!hasStaffAccess(claimedRole)) {
-      return new NextResponse(null, { status: 404 });
-    }
-
-    // Suspended staff → sign out and redirect (mirrors the customer-path check)
+    // Suspended → sign out unconditionally regardless of role (P1 fix: covers maintainer)
     if (claimedStatus === "suspended") {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) console.error("[middleware] signOut failed:", error.message);
       return applyPrivateHeaders(
         NextResponse.redirect(new URL("/suspended", req.url))
       );
+    }
+
+    // No/maintainer claim → not found (do not reveal the admin area exists, REQ-150)
+    if (!hasStaffAccess(claimedRole)) {
+      return new NextResponse(null, { status: 404 });
     }
 
     // /admin/system/** — super_admin only (AC5)
