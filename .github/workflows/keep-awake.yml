@@ -1,0 +1,32 @@
+name: Keep staging Supabase awake
+
+# AC7: runs every 3 days (ASSUMPTION — infrastructure design section 4).
+# Also supports manual dispatch for testing.
+# Must NOT be triggered by pull requests.
+on:
+  schedule:
+    - cron: "0 6 */3 * *"   # every 3 days at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping staging Supabase
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST health endpoint
+        # Makes one read to the staging project through the Supabase API.
+        # Fails visibly if the project is paused (non-200 response).
+        # STAGING_SUPABASE_URL and STAGING_SUPABASE_ANON_KEY must be set as
+        # repository secrets (created when S-005 delivers the staging project).
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.STAGING_SUPABASE_ANON_KEY }}" \
+            "${{ secrets.STAGING_SUPABASE_URL }}/rest/v1/")
+          echo "Supabase REST response: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "ERROR: staging Supabase returned $HTTP_STATUS — project may be paused."
+            echo "Restore from the Supabase dashboard before the next release check."
+            exit 1
+          fi
+          echo "Staging Supabase is alive."

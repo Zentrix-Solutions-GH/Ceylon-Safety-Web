@@ -26,6 +26,8 @@ const VALID_ENV = {
   // S-030: required by cspConfig (lib/config.ts imports it at module level)
   CSP_MODE: "report-only",
   NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL: "https://cdn.ceylonsafety.com",
+  // S-010: required server setting
+  CRON_SECRET: "test-cron-secret",
 };
 
 beforeEach(() => {
