@@ -23,7 +23,7 @@ No REQ id: this is infrastructure required by the workflow (CLAUDE.md process ru
 
 ## Acceptance criteria
 
-- [ ] AC1: `.github/workflows/ci.yml` runs on pull requests to `dev` and `main`: install with `npm ci` (cached), then `scripts/check.sh` (lint, type check, unit tests), then `next build` (standalone), then `gitleaks`, then `npm audit --audit-level=high`, then the check that no production code imports `mocks/`. The first failing step fails the run.
+- [ ] AC1: `.github/workflows/ci.yml` runs on pull requests to `dev` and `main`: install with `npm ci` (cached), then `scripts/check.sh` (lint, type check, unit tests), then `next build` (standalone), then `npm audit --audit-level=high`, then the check that no production code imports `mocks/`. The first failing step fails the run. **Note: `gitleaks` step removed — scope cut (see Out of scope); AC4 is not implemented.**
 - [ ] AC2: every third-party Action is pinned to a full commit SHA (with the version in a comment). The workflow has `permissions: contents: read` and references no repository secrets; a pull request from a branch or fork receives none.
 - [ ] AC3: the Node version and install steps use the version pinned in S-003 (`.nvmrc` or `engines`), not a floating tag.
 - [ ] AC4: `gitleaks` fails the run when a secret-like string is committed; `.env.example` (names only) does not trigger it.
