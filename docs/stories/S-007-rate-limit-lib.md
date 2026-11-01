@@ -111,11 +111,11 @@ Fixed window using `INCR` + `EXPIRE` on Upstash Redis (the `@upstash/redis` SDK 
 <!-- Paste scripts/check.sh output here after Step 7 -->
 
 ```
-$ bash scripts/check.sh   # after all review fixes applied
+$ bash scripts/check.sh   # HEAD 31ee03a — after all round-2 review fixes applied
 ✓ ESLint passed
 ✓ TypeScript passed
-Test Files  35 passed | 1 skipped (36)
-Tests  518 passed | 4 skipped (522)
+Test Files  36 passed | 1 skipped (37)
+Tests  523 passed | 4 skipped (527)
 ✓ Vitest (unit) passed
 ✓ pgTAP RLS suite passed
 ✓ pgTAP seed suite passed
