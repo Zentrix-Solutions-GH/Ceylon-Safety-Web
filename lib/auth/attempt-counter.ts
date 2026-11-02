@@ -7,7 +7,6 @@ import { upstashConfig } from "@/lib/config.upstash";
 import { Redis } from "@upstash/redis";
 
 const WINDOW_SECONDS = 3600; // 1 hour — matches OTP lifetime
-const KEY_PREFIX = "attempts:email:";
 
 // In-memory fallback for non-production (mirrors the pattern in lib/ratelimit)
 const _mem = new Map<string, { count: number; expiresAt: number }>();
@@ -19,13 +18,13 @@ function getRedis(url: string, token: string): Redis {
   return _redis;
 }
 
-function memKey(email: string): string {
-  return `${KEY_PREFIX}${email.trim().toLowerCase()}`;
+function memKey(value: string, namespace: string): string {
+  return `attempts:${namespace}:${value.trim().toLowerCase()}`;
 }
 
-async function redisKey(email: string, hashSecret: string): Promise<string> {
-  const normalised = email.trim().toLowerCase();
-  const input = `attempts:${normalised}`;
+async function redisKey(value: string, namespace: string, hashSecret: string): Promise<string> {
+  const normalised = value.trim().toLowerCase();
+  const input = `attempts:${namespace}:${normalised}`;
   const keyData = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(hashSecret),
@@ -40,17 +39,18 @@ async function redisKey(email: string, hashSecret: string): Promise<string> {
   return `attempts:${hex}`;
 }
 
-export async function getAttempts(email: string): Promise<number> {
+/** namespace="email" is the default bucket used by verifyEmail (S-034). */
+export async function getAttempts(value: string, namespace = "email"): Promise<number> {
   const cfg = upstashConfig();
   if (!cfg) {
-    const k = memKey(email);
+    const k = memKey(value, namespace);
     const w = _mem.get(k);
     if (!w || w.expiresAt <= Date.now()) return 0;
     return w.count;
   }
   try {
     const redis = getRedis(cfg.url, cfg.token);
-    const key = await redisKey(email, cfg.hashSecret);
+    const key = await redisKey(value, namespace, cfg.hashSecret);
     const val = await redis.get<number>(key);
     return val ?? 0;
   } catch {
@@ -58,10 +58,10 @@ export async function getAttempts(email: string): Promise<number> {
   }
 }
 
-export async function incAttempts(email: string): Promise<number> {
+export async function incAttempts(value: string, namespace = "email"): Promise<number> {
   const cfg = upstashConfig();
   if (!cfg) {
-    const k = memKey(email);
+    const k = memKey(value, namespace);
     const now = Date.now();
     const w = _mem.get(k);
     if (!w || w.expiresAt <= now) {
@@ -73,7 +73,7 @@ export async function incAttempts(email: string): Promise<number> {
   }
   try {
     const redis = getRedis(cfg.url, cfg.token);
-    const key = await redisKey(email, cfg.hashSecret);
+    const key = await redisKey(value, namespace, cfg.hashSecret);
     const pipe = redis.pipeline();
     pipe.incr(key);
     pipe.expire(key, WINDOW_SECONDS);
@@ -84,15 +84,15 @@ export async function incAttempts(email: string): Promise<number> {
   }
 }
 
-export async function resetAttempts(email: string): Promise<void> {
+export async function resetAttempts(value: string, namespace = "email"): Promise<void> {
   const cfg = upstashConfig();
   if (!cfg) {
-    _mem.delete(memKey(email));
+    _mem.delete(memKey(value, namespace));
     return;
   }
   try {
     const redis = getRedis(cfg.url, cfg.token);
-    const key = await redisKey(email, cfg.hashSecret);
+    const key = await redisKey(value, namespace, cfg.hashSecret);
     await redis.del(key);
   } catch {
     // fail open — a stuck counter is handled by the 1-hour TTL

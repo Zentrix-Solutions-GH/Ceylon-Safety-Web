@@ -54,6 +54,34 @@ export const startGoogleSignInSchema = z.object({
   next: z.string().max(2048).optional(),
 });
 
+// ─── S-036 schemas ────────────────────────────────────────────────────────────
+
+export const requestPasswordResetSchema = z.object({
+  email: emailField,
+  captchaToken: z.string().min(1),
+});
+
+export const resetPasswordSchema = z.object({
+  email: emailField,
+  code: z.string().trim().min(1),
+  newPassword: passwordField,
+  authenticatorCode: z.string().trim().optional(),
+});
+
+export const changePasswordSchema = z.object({
+  code: z.string().trim().min(1),
+  newPassword: passwordField,
+});
+
+export const requestReverificationSchema = z.object({
+  captchaToken: z.string().min(1),
+});
+
+export const confirmReverificationSchema = z.object({
+  code: z.string().trim().min(1),
+  authenticatorCode: z.string().trim().optional(),
+});
+
 export type SignUpFormValues = z.infer<typeof signUpSchema>;
 export type VerifyEmailFormValues = z.infer<typeof verifyEmailSchema>;
 export type ResendCodeFormValues = z.infer<typeof resendCodeSchema>;

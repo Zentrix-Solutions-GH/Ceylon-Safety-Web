@@ -1,7 +1,7 @@
 ---
 id: S-036
 title: Password reset, change password, re-verification actions
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-036-password-reset-change-reverify
@@ -67,16 +67,86 @@ Types added or changed in `types/` by this story:
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+Prior art: searched docs/ for "password reset", "changePassword", "requestReverification", "reauthentication". Found: auth design §6, §12, §15, §17 (actions table), §19 (testing). This story implements those sections; supersedes nothing.
 
-Prior art: read auth design sections 6, 12, 14, 15, 17, 19, 21 (items 4, 6, 16, 22, 26). Implements section 6 and the re-verification and change-password rows of section 17; supersedes nothing.
+### Verify-item findings (recorded before coding)
+
+- **Item 16** (higher auth level for staff reset): Auth design §6 confirms — the emailed code starts a lower-level session; staff must also pass the TOTP authenticator code before the password is set. The extra step is built regardless (EC5 says "record the finding"). Finding: YES, a higher auth level is required for staff.
+- **Item 22** (secure password change mechanics): Auth design §17 says `changePassword` uses "Supabase's reauthentication code (the 'reauthentication' email template) together with the new password". The frontend calls Supabase's own `reauthenticate()` client-side (which sends the email); our `changePassword({ code, newPassword })` server action then calls `supabase.auth.updateUser({ password: newPassword, nonce: code })`. **No separate `requestChangePasswordCode` server action is needed in this story.** The frontend Supabase client manages the code request; rate limiting for that call is on Supabase's side. S-043 owns the UI.
+
+### Gap fixes applied in this plan
+
+1. `RequestReverificationInput` includes `captchaToken` (design §17 explicitly lists `requestReverification` in the captcha-required set).
+2. AC7 error code `code_attempts_exceeded` added to implementation (maps attempt > 5 to this code).
+3. Wrong authenticator code during `confirmReverification` → `code_invalid` (same as wrong emailed code).
+4. `changePassword` Google-only check: user has no password identity (not: "signed in with Google this session") so a user who added a password after Google sign-in is correctly allowed.
+
+### Files to create / edit
+
+| File | Action |
+|---|---|
+| `types/auth.ts` | Add 5 input/output types for new actions |
+| `lib/validation/auth.ts` | Add 5 Zod schemas |
+| `lib/auth/cookies.ts` | Add `setPendingReset` / `getPendingReset` / `clearPendingReset` (AC3) |
+| `lib/auth/actions/request-password-reset.ts` | New |
+| `lib/auth/actions/reset-password.ts` | New |
+| `lib/auth/actions/change-password.ts` | New |
+| `lib/auth/actions/request-reverification.ts` | New |
+| `lib/auth/actions/confirm-reverification.ts` | New |
+| `lib/auth/actions/index.ts` | Export 5 new actions |
+| `__tests__/lib/auth/password-reset.test.ts` | New (AC1, AC2, AC7, EC1–EC3) |
+| `__tests__/lib/auth/change-password.test.ts` | New (AC5) |
+| `__tests__/lib/auth/reverification.test.ts` | New (AC6, AC7) |
+
+### Step order
+
+1. Types → validation schemas → cookies.ts additions (no deps)
+2. Tests (red) — all three test files
+3. `requestPasswordReset` (simplest: rate limit + neutral reply)
+4. `resetPassword` (complex: 2-step staff flow, attempt counter, sign-out all)
+5. `changePassword` (medium: identity check, reauthentication nonce)
+6. `requestReverification` + `confirmReverification` (medium: OTP + staff TOTP)
+7. `index.ts` exports → make tests green → `scripts/check.sh`
+
+### Sensitive story — AC4 note
+
+Verify item 6 (whether Supabase sends its own password-changed notice): Supabase Auth's "Secure password change" setting (Dashboard → Auth → Email) controls a security notice email sent on `updateUser({ password })`. This setting is **separate from** the password-reset confirmation email. During development setup the backend developer must check the Supabase dashboard and record one of:
+- "Supabase security notice is ON → we send nothing extra (no double-send)"
+- "Supabase security notice is OFF → enable `lib/resend/templates/password-changed.ts` send in `reset-password.ts`"
+
+Until that check is done the `TODO(verify-6)` comment in `reset-password.ts` gates the send. No email template is created in this story; it is an Out of scope item noted above.
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  49 passed | 5 skipped (54)
+      Tests  643 passed | 15 skipped (658)
+   Duration  25.25s
+
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 5 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
 
 ## Review notes
