@@ -81,7 +81,7 @@ describe("GET /api/auth/callback — AC6 happy path", () => {
 });
 
 describe("GET /api/auth/callback — EC2 double callback", () => {
-  it("second exchange returns session already exists error — still redirects safely", async () => {
+  it("second exchange returns session already exists error — still redirects safely to localhost", async () => {
     // Supabase may return an error on second code exchange; the route should not crash
     mockExchangeCodeForSession.mockResolvedValueOnce({
       data: { session: null },
@@ -94,7 +94,10 @@ describe("GET /api/auth/callback — EC2 double callback", () => {
     const res = await GET(req);
 
     expect(res.status).toBe(307);
-    expect(res.headers.get("Location")).toBeDefined();
+    // Must redirect to the same origin (safeNext enforces this)
+    const location = res.headers.get("Location") ?? "";
+    expect(location).toMatch(/^http:\/\/localhost/);
+    expect(location).not.toMatch(/^https?:\/\/(?!localhost)/);
   });
 });
 

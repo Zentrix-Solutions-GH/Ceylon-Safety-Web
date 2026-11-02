@@ -200,6 +200,25 @@ describe("signIn — AC4 suspended account", () => {
 });
 
 // ---------------------------------------------------------------------------
+// EC4 — Google-only user attempts password sign-in
+// ---------------------------------------------------------------------------
+
+describe("signIn — EC4 Google-only user", () => {
+  it("returns invalid_credentials when a Google-only account has no password", async () => {
+    // Supabase returns the same generic error for accounts with no password set.
+    // This covers a user who registered via Google and never set a password.
+    mockSignInWithPassword.mockResolvedValue({
+      data: { user: null, session: null },
+      error: { message: "Invalid login credentials", status: 400 },
+    });
+
+    const result = await signIn(VALID_INPUT);
+
+    expect(result).toEqual({ ok: false, code: "invalid_credentials" });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // AC2 — rate limits
 // ---------------------------------------------------------------------------
 
