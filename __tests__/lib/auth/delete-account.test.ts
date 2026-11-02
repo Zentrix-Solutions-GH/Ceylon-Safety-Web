@@ -77,14 +77,15 @@ async function getDeleteAccount() {
 }
 
 describe("deleteAccount — happy path (AC6)", () => {
-  it("AC6: calls confirmReverification, anonymise_user, deletes auth user, signs out", async () => {
+  it("AC6: calls confirmReverification, anonymise_user, deletes auth user", async () => {
     const deleteAccount = await getDeleteAccount();
     const result = await deleteAccount({ code: "123456" });
     expect(result.ok).toBe(true);
     expect(mockConfirmReverification).toHaveBeenCalledWith({ code: "123456", authenticatorCode: undefined });
     expect(mockServiceRpc).toHaveBeenCalledWith("private.anonymise_user", { p_user_id: "uid-1" });
     expect(mockAdminDeleteUser).toHaveBeenCalledWith("uid-1");
-    expect(mockSignOut).toHaveBeenCalledWith({ scope: "global" });
+    // signOut is not called — adminDeleteUser already revokes all sessions
+    expect(mockSignOut).not.toHaveBeenCalled();
   });
 });
 
@@ -192,6 +193,50 @@ describe("deleteAccount — AC5: refusal conditions", () => {
     const result = await deleteAccount({ code: "123456" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("validation_failed");
+  });
+});
+
+describe("deleteAccount — AC5: blocker query DB errors abort deletion", () => {
+  function makeErrorFrom(pgError: Record<string, unknown>) {
+    return vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      or: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: pgError }),
+    });
+  }
+
+  it("returns unknown when the orders blocker query fails (DB transient error)", async () => {
+    mockFrom.mockImplementation(makeErrorFrom({ message: "connection reset", code: "08006" }));
+    const deleteAccount = await getDeleteAccount();
+    const result = await deleteAccount({ code: "123456" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("unknown");
+    expect(mockServiceRpc).not.toHaveBeenCalled();
+  });
+
+  it("returns unknown when the download_requests blocker query fails", async () => {
+    let callIndex = 0;
+    mockFrom.mockImplementation(() => {
+      if (callIndex++ === 0) {
+        // orders: no blocker
+        return makeNoBlockerFrom()();
+      }
+      // download_requests: DB error
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: { message: "timeout", code: "57014" } }),
+      };
+    });
+    const deleteAccount = await getDeleteAccount();
+    const result = await deleteAccount({ code: "123456" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("unknown");
+    expect(mockServiceRpc).not.toHaveBeenCalled();
   });
 });
 

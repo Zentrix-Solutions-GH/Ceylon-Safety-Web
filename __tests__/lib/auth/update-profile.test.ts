@@ -33,7 +33,8 @@ const ACTIVE_USER = {
 };
 
 const mockUpdateSingle = vi.fn();
-const mockEqChain = { eq: vi.fn().mockReturnThis(), single: mockUpdateSingle };
+const mockSelectChain = { single: mockUpdateSingle };
+const mockEqChain = { eq: vi.fn().mockReturnThis(), select: vi.fn().mockReturnValue(mockSelectChain) };
 const mockUpdateChain = { update: vi.fn().mockReturnValue(mockEqChain) };
 
 beforeEach(() => {
@@ -41,7 +42,8 @@ beforeEach(() => {
   vi.resetModules();
   mockRequireActiveAccount.mockResolvedValue({ ok: true, user: ACTIVE_USER });
   mockFrom.mockReturnValue(mockUpdateChain);
-  mockEqChain.eq.mockReturnValue({ single: mockUpdateSingle });
+  mockEqChain.eq.mockReturnValue(mockEqChain);
+  mockEqChain.select.mockReturnValue(mockSelectChain);
   mockUpdateChain.update.mockReturnValue(mockEqChain);
   mockUpdateSingle.mockResolvedValue({ error: null });
 });
@@ -94,10 +96,21 @@ describe("updateProfile", () => {
 
   it("AC3: does not update email even if a raw object with email is passed", async () => {
     const { updateProfile } = await import("@/lib/auth/actions/update-profile");
-    const result = await updateProfile({ firstName: "Jane" });
+    // Cast to bypass TypeScript — simulates a caller injecting an email field
+    const result = await updateProfile({ firstName: "Jane", ...({ email: "hack@evil.com" } as object) } as Parameters<typeof updateProfile>[0]);
     expect(result.ok).toBe(true);
     const updateArg = mockUpdateChain.update.mock.calls[0][0];
     expect(updateArg).not.toHaveProperty("email");
+  });
+
+  it("AC2: updateProfile passes display_name to DB (trigger sanitises — not bypassed)", async () => {
+    const { updateProfile } = await import("@/lib/auth/actions/update-profile");
+    // Action must write whatever displayName it receives to the DB payload;
+    // the sanitise_profile trigger then rewrites staff-like values to "Member".
+    // This confirms the action does not strip or bypass the trigger.
+    await updateProfile({ displayName: "Jane D" });
+    const updateArg = mockUpdateChain.update.mock.calls[0][0];
+    expect(updateArg).toHaveProperty("display_name", "Jane D");
   });
 
   it("AC8: returns not_allowed when requireActiveAccount fails (no session)", async () => {

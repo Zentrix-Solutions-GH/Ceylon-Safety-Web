@@ -40,7 +40,7 @@ export async function deleteAccount(input: DeleteAccountInput): Promise<DeleteAc
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 
   // Block if: pending card order, pending_verification bank order, or any order in last 2 hours
-  const { data: blockingOrder } = await supabase
+  const { data: blockingOrder, error: orderErr } = await supabase
     .from("orders")
     .select("id")
     .eq("user_id", userId)
@@ -48,12 +48,11 @@ export async function deleteAccount(input: DeleteAccountInput): Promise<DeleteAc
     .limit(1)
     .maybeSingle();
 
-  if (blockingOrder) {
-    return { ok: false, code: "validation_failed" };
-  }
+  if (orderErr) return { ok: false, code: "unknown" };
+  if (blockingOrder) return { ok: false, code: "validation_failed" };
 
   // Block if: open download request
-  const { data: blockingDownload } = await supabase
+  const { data: blockingDownload, error: downloadErr } = await supabase
     .from("download_requests")
     .select("id")
     .eq("user_id", userId)
@@ -61,9 +60,8 @@ export async function deleteAccount(input: DeleteAccountInput): Promise<DeleteAc
     .limit(1)
     .maybeSingle();
 
-  if (blockingDownload) {
-    return { ok: false, code: "validation_failed" };
-  }
+  if (downloadErr) return { ok: false, code: "unknown" };
+  if (blockingDownload) return { ok: false, code: "validation_failed" };
 
   // AC6: anonymise the user (clears PII, removes cart, cancels pending card orders).
   // Idempotent — second call is a no-op. Does NOT remove auth.users (we do that below).
@@ -91,8 +89,7 @@ export async function deleteAccount(input: DeleteAccountInput): Promise<DeleteAc
     return { ok: false, code: "unknown" };
   }
 
-  // AC6: sign out all sessions (best-effort — user is already deleted from auth)
-  await supabase.auth.signOut({ scope: "global" });
+  // auth.admin.deleteUser revokes all sessions for the user — no separate signOut needed.
 
   return { ok: true };
 }

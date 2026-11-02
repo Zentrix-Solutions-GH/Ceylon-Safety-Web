@@ -43,6 +43,7 @@ export async function updateProfile(input: UpdateProfileInput): Promise<UpdatePr
     .from("profiles")
     .update(updatePayload)
     .eq("id", userId)
+    .select("id")
     .single();
 
   if (error) {

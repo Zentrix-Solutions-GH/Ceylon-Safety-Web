@@ -117,8 +117,6 @@ If `anonymise_user` succeeds but `auth.admin.deleteUser` throws: return `{ ok: f
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
 ── ESLint ──
@@ -146,6 +144,16 @@ $ bash scripts/check.sh
 ════════════════════════════════
 ✅ All checks passed.
 ```
+
+**AC2 manual verification required** — `supabase/tests/profile-sanitising.test.ts` contains 4 integration tests for the S-011 `sanitise_profile` trigger that rewrites staff-like display names to "Member". These tests skip automatically when Supabase is not running. Before merging, the reviewer or author must run:
+
+```bash
+npx supabase start
+npx vitest run supabase/tests/profile-sanitising.test.ts
+npx supabase stop
+```
+
+All 4 tests must pass. A unit-level test (`update-profile.test.ts` — "AC2: updateProfile passes display_name to DB") confirms the action does not bypass the trigger by omitting `display_name` from the update payload.
 
 ## Review notes
 
