@@ -157,9 +157,11 @@ pgTAP: Supabase not running — skipped
 
 ## Review notes
 
-- **P1** `lib/auth/actions/sign-in.ts:28-68` — Rate-limit counters increment before authentication; successful sign-ins also consume the "failures" quota. AC2 says "5 failures per 15 minutes". Fix: increment only on failed Supabase auth. (full-review 2026-11-02)
-- **P1** `app/api/auth/callback/route.ts:24-27` — Returned `{ data, error }` from `exchangeCodeForSession` not inspected; on a Supabase error the user is silently redirected without a session and the `auth_next` cookie is cleared (no retry possible). Fix: inspect return value; on error redirect to `/?error=auth_failed` and do not clear the cookie. (full-review 2026-11-02)
-- **P1** `lib/auth/actions/sign-out.ts:8-18` — App-managed cookies `pending_signup` and `auth_next` not cleared on sign-out. Fix: call `clearPendingSignup()` and `clearNextCookie()` inside `signOut`. (full-review 2026-11-02)
+- **P1 (fixed)** `lib/auth/actions/sign-in.ts:28-68` — Rate-limit counters increment before authentication; successful sign-ins also consume the "failures" quota. AC2 says "5 failures per 15 minutes". Fix: increment only on failed Supabase auth. (full-review 2026-11-02)
+- **P1 (fixed)** `app/api/auth/callback/route.ts:24-27` — Returned `{ data, error }` from `exchangeCodeForSession` not inspected; on a Supabase error the user is silently redirected without a session and the `auth_next` cookie is cleared (no retry possible). Fix: inspect return value; on error redirect to `/?error=auth_failed` and do not clear the cookie. (full-review 2026-11-02)
+- **P1 (fixed)** `lib/auth/actions/sign-out.ts:8-18` — App-managed cookies `pending_signup` and `auth_next` not cleared on sign-out. Fix: call `clearPendingSignup()` and `clearNextCookie()` inside `signOut`. (full-review 2026-11-02)
+
+**Re-review 2026-11-02 (HEAD 86adb6df):** All three P1 findings resolved. No new P0/P1. Score 96/100. **APPROVE**.
 
 ## After this merges, a user can:
 
