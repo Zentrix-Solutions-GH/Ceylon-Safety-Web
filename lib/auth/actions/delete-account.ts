@@ -76,6 +76,11 @@ export async function deleteAccount(input: DeleteAccountInput): Promise<DeleteAc
   });
 
   if (anonymiseError) {
+    // restrict_violation means the DB refused to anonymise a staff account
+    // (JWT claim may have been stale — the DB is authoritative).
+    if (anonymiseError.code === "23001" || anonymiseError.message?.includes("restrict_violation")) {
+      return { ok: false, code: "not_allowed" };
+    }
     return { ok: false, code: "unknown" };
   }
 

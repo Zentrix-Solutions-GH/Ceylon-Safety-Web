@@ -207,15 +207,36 @@ describe("deleteAccount — EC2: approved download does not block", () => {
 
 describe("deleteAccount — AC7: orders remain after deletion", () => {
   it("AC7: does not delete orders rows — anonymise_user is called but from('orders').delete is never called", async () => {
+    const mockDelete = vi.fn();
+    // Intercept the from() calls: orders chain gets a spy on delete; other calls return the no-blocker chain
+    let callIndex = 0;
+    mockFrom.mockImplementation((table: string) => {
+      const noBlocker = makeNoBlockerFrom()();
+      if (table === "orders") {
+        callIndex++;
+        return { ...noBlocker, delete: mockDelete };
+      }
+      return noBlocker;
+    });
+
     const deleteAccount = await getDeleteAccount();
     await deleteAccount({ code: "123456" });
+
     // Confirm the service RPC (anonymise) was called — it owns order anonymisation
     expect(mockServiceRpc).toHaveBeenCalledWith("private.anonymise_user", { p_user_id: "uid-1" });
-    // Confirm no direct delete was issued via the server client's from("orders") chain
-    const ordersCalls = mockFrom.mock.calls.filter((args: unknown[]) => args[0] === "orders");
-    for (const [, chain] of ordersCalls.entries()) {
-      expect(chain).not.toHaveProperty("delete");
-    }
+    // Confirm no direct delete was issued on the orders table via the server client
+    expect(mockDelete).not.toHaveBeenCalled();
+    expect(callIndex).toBeGreaterThan(0); // orders table was queried (AC5 check), proving the spy was active
+  });
+});
+
+describe("deleteAccount — staff DB-level refusal (restrict_violation)", () => {
+  it("returns not_allowed when anonymise_user raises restrict_violation (stale JWT, staff in DB)", async () => {
+    mockServiceRpc.mockResolvedValue({ error: { code: "23001", message: "restrict_violation" } });
+    const deleteAccount = await getDeleteAccount();
+    const result = await deleteAccount({ code: "123456" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_allowed");
   });
 });
 

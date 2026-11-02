@@ -17,10 +17,9 @@ const billingAddressSchema = z.object({
 export const updateProfileSchema = z.object({
   firstName: nameField.optional(),
   lastName: nameField.optional(),
-  // displayName has no min length constraint — empty string clears it (DB trigger resets to default).
-  displayName: z.string().trim().max(50, "too_long").optional(),
+  displayName: z.string().trim().min(2, "too_short").max(40, "too_long").optional(),
   phone: z.string().trim().max(30, "too_long").optional().or(z.literal("")),
-  companyName: z.string().trim().max(100, "too_long").optional().or(z.literal("")),
+  companyName: z.string().trim().max(120, "too_long").optional().or(z.literal("")),
   taxId: z.string().trim().max(50, "too_long").optional().or(z.literal("")),
   billingAddress: billingAddressSchema.optional().nullable(),
 });

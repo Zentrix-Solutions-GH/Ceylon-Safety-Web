@@ -149,7 +149,10 @@ $ bash scripts/check.sh
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `lib/validation/user.ts:22` — `displayName` Zod max is 50; DB `CHECK` enforces max 40. 41–50 char values pass Zod but return `{ ok: false, code: "unknown" }` instead of `validation_failed`. Fix: `max(40)`. (full-review 2026-11-02)
+- **P1** `lib/validation/user.ts:22` — `displayName` has no `min(2)`. Single-char values pass Zod but fail DB constraint → `unknown`. Fix: add `.min(2)`. (full-review 2026-11-02)
+- **P1** `lib/validation/user.ts:24` — `companyName` Zod max 100; DB allows 120. Over-restrictive. Fix: `max(120)`. (full-review 2026-11-02)
+- **P1** `lib/auth/actions/delete-account.ts:28` — staff check uses JWT `claimedRole` only. A newly-granted staff member passes the check; `anonymise_user` then raises `restrict_violation` which maps to `unknown` not `not_allowed`. Fix: map `restrict_violation` → `not_allowed`. (full-review 2026-11-02)
 
 ## After this merges, a user can:
 

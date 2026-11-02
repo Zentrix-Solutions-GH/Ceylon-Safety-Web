@@ -116,6 +116,32 @@ describe("updateProfile", () => {
     if (!result.ok) expect(result.code).toBe("not_allowed");
   });
 
+  it("AC1: returns validation_failed with field 'displayName' when too short (1 char)", async () => {
+    const { updateProfile } = await import("@/lib/auth/actions/update-profile");
+    const result = await updateProfile({ displayName: "X" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation_failed");
+      expect(result.field).toBe("displayName");
+    }
+  });
+
+  it("AC1: returns validation_failed with field 'displayName' when too long (41 chars)", async () => {
+    const { updateProfile } = await import("@/lib/auth/actions/update-profile");
+    const result = await updateProfile({ displayName: "A".repeat(41) });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation_failed");
+      expect(result.field).toBe("displayName");
+    }
+  });
+
+  it("AC1: accepts displayName at max boundary (40 chars)", async () => {
+    const { updateProfile } = await import("@/lib/auth/actions/update-profile");
+    const result = await updateProfile({ displayName: "A".repeat(40) });
+    expect(result.ok).toBe(true);
+  });
+
   it("AC1: returns unknown when the DB update fails", async () => {
     mockUpdateSingle.mockResolvedValue({ error: { message: "db error" } });
     const { updateProfile } = await import("@/lib/auth/actions/update-profile");
