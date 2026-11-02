@@ -56,7 +56,10 @@ export async function resetPassword(input: ResetPasswordInput): Promise<ResetPas
     if (!authenticatorCode) {
       return { ok: false, code: "mfa_required" };
     }
-    const verifiedFactor = factorsData!.totp.find((f) => f.status === "verified")!;
+    const verifiedFactor = (factorsData?.totp ?? []).find((f) => f.status === "verified");
+    if (!verifiedFactor) {
+      return { ok: false, code: "unknown" };
+    }
     const { error: mfaError } = await supabase.auth.mfa.challengeAndVerify({
       factorId: verifiedFactor.id,
       code: authenticatorCode,
@@ -75,6 +78,7 @@ export async function resetPassword(input: ResetPasswordInput): Promise<ResetPas
     if (msg.includes("password") && (msg.includes("weak") || msg.includes("8 character"))) {
       return { ok: false, code: "weak_password" };
     }
+    await incAttempts(email, "reset");
     return { ok: false, code: "unknown" };
   }
 
