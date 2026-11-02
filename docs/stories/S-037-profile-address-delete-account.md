@@ -71,9 +71,48 @@ Types added or changed in `types/` by this story:
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+Prior art: searched `docs/` for "updateProfile", "deleteAccount", "billing_address", "anonymise_user". Found auth design §12/16/17 and schema §8 (S-019 migration `20261029000001_schema_audit_views_anonymise.sql`). This story implements the server action layer for those designs; supersedes nothing.
 
-Prior art: read auth design sections 12, 16, 17 and schema sections on `anonymise_user` and profile triggers; requirements REQ-117/118/118b, Q34, Q35. Implements the deletion and profile rows of the action contract; supersedes nothing. The "7-year" retention figure appears only for audit rows (admin panel A8), not for customer deletion — do not use it here.
+### Key design facts
+- `private.anonymise_user(p_user_id)`: idempotent, refuses staff (raises `restrict_violation`), clears PII, removes cart, cancels pending card orders. Does NOT remove `auth.users` — that is this story's job via `createSupabaseServiceRoleClient().auth.admin.deleteUser(userId)`.
+- `profiles.billing_address` is `jsonb` — the saved address.
+- Profile sanitising trigger (`is_staff_like_name`) fires on INSERT/UPDATE of `display_name` and converts it to "Member" for staff-like names.
+- `confirmReverification` (S-036) handles the OTP check, MFA, and attempt counting — deleteAccount calls this function then acts on its result.
+- `requireActiveAccount()` is the session gate for both actions.
+
+### Files to create
+1. `lib/validation/user.ts` — Zod schemas: `updateProfileSchema`, `deleteAccountSchema`
+2. `types/user.ts` — `UpdateProfileInput`, `UpdateProfileResult`, `DeleteAccountInput`, `DeleteAccountResult`
+3. `lib/auth/actions/update-profile.ts` — `updateProfile` server action
+4. `lib/auth/actions/delete-account.ts` — `deleteAccount` server action
+
+### Files to edit
+5. `lib/auth/actions/index.ts` — export both new actions
+6. `types/auth.ts` — add comment noting S-037 additions
+
+### Test files to create
+7. `__tests__/lib/auth/update-profile.test.ts` — unit tests (AC1, AC3, AC8, validation failures)
+8. `__tests__/lib/auth/delete-account.test.ts` — unit/integration tests (AC4–AC7, EC1–EC5)
+9. `supabase/tests/profile-sanitising.test.ts` — pgTAP test (AC2: staff-like name → "Member", NFKC/zero-width)
+
+### Implementation order
+1. Write types in `types/user.ts`
+2. Write Zod schemas in `lib/validation/user.ts`
+3. Write failing tests (Step 4)
+4. Implement `update-profile.ts`
+5. Implement `delete-account.ts`
+6. Export from `index.ts`
+7. Run tests green, then `check.sh`
+
+### Deletion safety checklist (AC5)
+Block if any of these is true for the calling user:
+- `orders.status = 'pending'` (card, in-flight)
+- `orders.status = 'pending_verification'` (bank transfer — never silently cancel)
+- An order with `created_at > now() - interval '2 hours'` (any status)
+- `download_requests.status = 'open'`
+
+### EC4 strategy
+If `anonymise_user` succeeds but `auth.admin.deleteUser` throws: return `{ ok: false, code: 'unknown' }`. The profile is already anonymised (idempotent), so the user cannot sign in with PII intact; a retry by support will call `auth.admin.deleteUser` again on the now-anonymised account.
 
 ## Evidence
 

@@ -11,3 +11,5 @@ export { resetPassword, markResetPending } from "./reset-password";
 export { changePassword } from "./change-password";
 export { requestReverification } from "./request-reverification";
 export { confirmReverification } from "./confirm-reverification";
+export { updateProfile } from "./update-profile";
+export { deleteAccount } from "./delete-account";
