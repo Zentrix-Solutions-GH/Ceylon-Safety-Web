@@ -228,12 +228,12 @@ Numbering rules (to avoid the confusion seen earlier):
 
 | ID | Requirement | Status | Source and notes |
 |---|---|---|---|
-| REQ-130 | Three staff roles exist: Super Admin, Admin, Maintainer. Visitors and customers are separate (REQ-111, REQ-112) | CONFIRMED | C |
+| REQ-130 | Three staff roles exist: Super Admin, Admin, Editor (formerly called Maintainer). Visitors and customers are separate (REQ-111, REQ-112) | CONFIRMED | C. Owner confirmed 2026-11-03: third role renamed to Editor |
 | REQ-130b | The Super Admin account is controlled by our development team, not by the client | CONFIRMED | C |
-| REQ-130c | Super Admin powers: create and remove Admin and Maintainer accounts, change roles, do everything an Admin can do, and reach technical settings. The Super Admin account is not shown to Admins and cannot be changed or removed by them | CONFIRMED | C (owner confirmed our earlier assumption) |
+| REQ-130c | Super Admin powers: create and remove Admin and Editor accounts, change roles, do everything an Admin can do, and reach technical settings. The Super Admin account is not shown to Admins and cannot be changed or removed by them | CONFIRMED | C (owner confirmed our earlier assumption) |
 | REQ-130d | Admin: the client's staff who run the website day to day. Admins do the work listed in REQ-131 to REQ-150b | CONFIRMED | C |
-| REQ-130e | Maintainer: a third role below the Super Admin. What a Maintainer may do is not defined | OPEN | C. Two common meanings: (1) a content helper who writes articles and manages videos but sees no orders or money, or (2) a technical caretaker who checks the site and backups but does not edit content. Q62 asks |
-| REQ-130f | A permission table: which of the three roles may do each admin action (content, documents and prices, coupons, banners, orders and refunds, users and roles, settings) | OPEN | Extends REQ-145. Needed before the admin panel and database role checks are designed |
+| REQ-130e | Editor (formerly Maintainer): a role below Admin. An Editor may do everything an Admin can do except manage User Roles and change Settings | CONFIRMED | Owner confirmed 2026-11-03: role renamed to Editor; restricted to no User Roles and no Settings (Q62 answered) |
+| REQ-130f | Permission table (confirmed 2026-11-03, Q63 answered): Super Admin — full access to all areas. Admin — full access except User Roles (cannot grant/remove roles). Editor — full access except User Roles and Settings. | CONFIRMED | Owner confirmed 2026-11-03 |
 | REQ-130g | Our team holds the Super Admin account, so it can see the client's customer and payment data. The client should agree to this support access in writing, with terms for when it is used | OPEN | A. Related to ownership and handover (Q50, Q65). Not legal advice; the client should take legal advice |
 | REQ-131 | Admin manages users (which user actions an Admin may do, such as disabling an account or creating staff accounts, depends on REQ-130f) | CONFIRMED | P |
 | REQ-132 | Admin creates and manages articles | CONFIRMED | P |
@@ -250,7 +250,7 @@ Numbering rules (to avoid the confusion seen earlier):
 | REQ-142 | Admin cannot add or delete categories; the category list is fixed | NOT IN V1 | P budget table |
 | REQ-143 | How many Admin and Maintainer accounts are needed (the Super Admin is ours and is not counted) | OPEN | |
 | REQ-144 | Admin can inspect orders, payment details, and customer information | CONFIRMED | P p11 |
-| REQ-145 | Permissions to cancel orders, disable accounts, change roles, per role (Super Admin, Admin, Maintainer). Refunds are not in v1 (REQ-052) | OPEN | Proposal says this must be specified separately. See REQ-130f |
+| REQ-145 | Permissions to cancel orders, disable accounts, change roles, per role (Super Admin, Admin, Editor). Refunds are not in v1 (REQ-052). Role changes: Super Admin only. Order cancellation and account disable: Super Admin and Admin only. | CONFIRMED | Owner confirmed 2026-11-03 via REQ-130f answer |
 | REQ-146 | Admin configures document previews | CONFIRMED | P p11 |
 | REQ-146b | Admin sees download requests (who, which document, when it was last downloaded), approves or rejects each; approval creates one new one-time link and tells the buyer by email | ASSUMED | Follows REQ-053b. Open: who is notified of a new request, how fast, whether a reason is needed (Q77) |
 | REQ-147 | Dashboard charts, date filters, financial figures | OPEN | Proposal says to be agreed |
@@ -580,8 +580,8 @@ Answered questions stay in place and are marked ANSWERED so the numbers do not c
 ### M. Staff roles (v7)
 | # | Question | Ref | Priority |
 |---|---|---|---|
-| Q62 | What is the Maintainer role for, and what may a Maintainer do and not do? | REQ-130e | |
-| Q63 | Which of the three roles may do each admin action? Please fill the permission table in REQ-130f | REQ-130f, REQ-145 | |
+| Q62 | ANSWERED 2026-11-03: Editor (formerly Maintainer) may do everything an Admin can do except User Roles and Settings | REQ-130e | |
+| Q63 | ANSWERED 2026-11-03: Super Admin = full access. Admin = full access except User Roles. Editor = full access except User Roles and Settings | REQ-130f, REQ-145 | |
 | Q64 | ANSWERED: the Super Admin creates and removes Admin and Maintainer accounts (REQ-130c) | REQ-130c | |
 | Q65 | Does the client agree that our team's Super Admin account can see customer and payment data for support, and under what terms? | REQ-130g | |
 
@@ -634,7 +634,7 @@ Rule agreed with the project owner: technical and design questions are not sent 
 |---|---|---|
 | Section 11 scope and delivery plan | Q1 to Q5 follow-through, Q25 (course cards) | Before any build starts |
 | Section 10 infrastructure | Q46 (the hosting test result), Q48 (cookie notice and analytics), Q57 (backups), Q58 (other emails), Q51 (legal pages editing) | Hosting test in the first week |
-| Section 8 admin panel and roles | Q36, Q37, Q38, Q39, Q40, Q41, Q62, Q63, Q77, Q81 | Before the admin panel and role checks are built |
+| Section 8 admin panel and roles | Q36, Q37, Q38, Q39, Q40, Q41, Q77, Q81 | Before the admin panel and role checks are built |
 | Commerce (revisit section 4) | Q17 (coupon rules), Q60 (failed payments), Q70 (preview method), Q76 (first-download page), Q80 (download count) | Before checkout and downloads are built |
 | Accounts (revisit section 3) | Q34 (idle deletion rules), Q35 (saved address) | Before the profile and deletion screens |
 | Section 5 content system | Q10 (fonts), Q11 (links in articles), Q6 (home banner) | Before the article editor and feed |
