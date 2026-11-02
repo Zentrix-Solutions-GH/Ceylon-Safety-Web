@@ -6,13 +6,14 @@ import Link from "next/link";
 import { t } from "@/messages/en";
 
 export const metadata: Metadata = {
-  robots: { index: false, follow: false },
+  robots: { index: false },
 };
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <main
       id="main-content"
+      tabIndex={-1}
       className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-12"
     >
       <div className="w-full max-w-sm space-y-6">

@@ -40,7 +40,7 @@ export default function GlobalError({ reset }: { reset: () => void }) {
             alignItems: "center",
             justifyContent: "center",
             minHeight: "100vh",
-            padding: "80px 16px 16px",
+            padding: "80px 16px 48px",
             textAlign: "center",
             gap: "16px",
           }}

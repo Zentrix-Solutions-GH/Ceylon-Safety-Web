@@ -16,7 +16,7 @@ export default function PublicLayout({
     <>
       <Header />
       {/* AC1/AC9: id="main-content" is the skip-link target */}
-      <main id="main-content">{children}</main>
+      <main id="main-content" tabIndex={-1}>{children}</main>
       {modal}
       <Footer />
       {/* AC2: stub until S-028 (consent) and S-113 (ads) provide work */}

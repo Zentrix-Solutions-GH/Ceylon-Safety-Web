@@ -5,14 +5,14 @@ import type { Metadata } from "next";
 import { CustomerHeader } from "@/components/layout/CustomerHeader";
 
 export const metadata: Metadata = {
-  robots: { index: false, follow: false },
+  robots: { index: false },
 };
 
 export default function CustomerLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <CustomerHeader />
-      <main id="main-content">{children}</main>
+      <main id="main-content" tabIndex={-1}>{children}</main>
     </>
   );
 }

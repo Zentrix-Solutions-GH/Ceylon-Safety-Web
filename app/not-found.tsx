@@ -5,7 +5,7 @@ import Link from "next/link";
 import { t } from "@/messages/en";
 
 export const metadata: Metadata = {
-  robots: { index: false, follow: false },
+  robots: { index: false },
 };
 
 export default function NotFoundPage() {
