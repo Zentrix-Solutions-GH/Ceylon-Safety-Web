@@ -57,6 +57,23 @@ const en = {
   "nav.loading_account": "Loading account",
   "nav.home_link_label": "CeylonSafety — home",
   "site.wordmark": "CeylonSafety",
+
+  // --- layout chrome (S-027) ---
+  "layout.skip_to_main": "Skip to main content",
+
+  // --- error pages (S-027) ---
+  "error.heading": "Something went wrong",
+  "error.try_again": "Try again",
+  "global_error.heading": "CeylonSafety",
+  "global_error.message": "Something went wrong. Please reload the page.",
+  "global_error.reload": "Reload",
+
+  // --- not-found page (S-027) ---
+  "not_found.heading": "Page not found",
+  "not_found.description": "We couldn't find that page.",
+
+  // --- customer area (S-027) ---
+  "customer.header_label": "Customer navigation",
 } as const;
 
 export type MessageKey = keyof typeof en;

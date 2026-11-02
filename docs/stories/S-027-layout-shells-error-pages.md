@@ -1,7 +1,7 @@
 ---
 id: S-027
 title: Layout shells + loading/error/not-found
-status: ready
+status: in-progress
 owner: frontend
 risk: normal
 branch: feature/S-027-layout-shells-error-pages
@@ -70,8 +70,34 @@ Create the layout files for the root, public, auth, customer and admin areas, wi
 
 ## Plan
 
-Prior art: designer pass 2026-10-25 read frontend architecture 3, 7, 7.3, file structure tree, trainer/public pages 3.6. Extends them. `/story-run` re-runs `grep -ril "layout\|not-found" docs/`.
-<!-- Rest filled by /story-run at Step 3. -->
+Prior art: `grep -ril "layout\|not-found\|error\|loading" docs/` — found frontend architecture §3, 7, 7.3, file structure §3, trainer/public pages §3.6. Extends those decisions. S-022 (fonts/tokens) blocked on Q47 — not a blocker here; globals.css already has CSS vars; layout uses font-sans. S-026 (footer) is draft — Footer.tsx stub already exists and will render nothing until S-026 lands; layout is set up correctly now.
+
+**Files to create (new):**
+- `components/layout/ScriptGate.tsx` — stub, renders null, ready for S-028/S-113
+- `components/ui/toaster.tsx` — Toaster wrapper using existing toast.tsx primitives
+- `app/(customer)/loading.tsx` — page-size skeleton
+- `app/admin/loading.tsx` — page-size skeleton
+- `app/(public)/error.tsx` — friendly error page
+- `app/(customer)/error.tsx` — friendly error page
+- `app/__tests__/layouts.test.tsx` — component tests (AC3 auth no Header/Footer, AC4 customer header items, AC5 admin noindex metadata)
+- `app/__tests__/error-pages.test.tsx` — component tests (AC7/AC8 text, links, no tech detail)
+
+**Files to update:**
+- `messages/en.ts` — add skip link, error, not-found, and customer header keys
+- `app/layout.tsx` — skip-to-content link, ToastProvider+Viewport, CookieConsentBanner mount; no fonts class (S-022 adds font var to globals.css later)
+- `app/(public)/layout.tsx` — Header, `<main id="main-content">`, Footer, ScriptGate; no session reads
+- `app/(auth)/layout.tsx` — centred card, logo wordmark, noindex metadata export
+- `app/(customer)/layout.tsx` — CustomerHeader (reuses HeaderPersonal), noindex metadata export
+- `app/admin/layout.tsx` — plain shell, noindex metadata export
+- `app/(public)/loading.tsx` — page-height skeleton (already exists as stub)
+- `app/error.tsx` — friendly text, Try again, Home link
+- `app/admin/error.tsx` — same pattern
+- `app/global-error.tsx` — expand to plain HTML with fixed header+footer text and Try again
+- `app/not-found.tsx` — real 404 status, noindex, links to Home/Articles/Courses/Contact Coach
+
+**Scroll padding (AC9):** globals.css already sets `scroll-padding-top: 4rem` (sticky header height). Cookie banner mounts at bottom of viewport — no top scroll impact in v1. No change needed.
+
+**Not in plan:** e2e/smoke.spec.ts (Playwright, out of scope for Step 4/5), build static check (CI/Evidence only).
 
 ## Evidence
 
