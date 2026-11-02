@@ -1,11 +1,11 @@
 ---
 id: S-038
 title: Audit helper and step-up helper
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-038-audit-and-step-up-helpers
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/46
 depends_on: [S-019, S-032]
 reqs: [REQ-130c, REQ-130g, REQ-150]
 ---
@@ -23,20 +23,20 @@ Give every admin action two shared helpers: one that writes exactly one `admin_a
 
 ## Acceptance criteria
 
-- [ ] AC1: `lib/audit/` exports a function that writes exactly one `admin_audit_log` row: time, actor, action name (two-part `area.action` from admin panel design section 10.2), item type, item id, short summary, before and after values. No secrets, tokens or full bank numbers in any field. It is called from admin actions; it is the only way admin code writes the audit table.
-- [ ] AC2: `admin.session_start` is written once the first time each session reaches an admin page, not on every page.
-- [ ] AC3: `support.read` is written once per item per session when a Super Admin reads customer or payment data (the helper provides the once-per-session guarantee).
-- [ ] AC4: A refused action against a Super Admin target writes `permission.denied`.
-- [ ] AC5: The step-up helper asks for a fresh authenticator code before: approve a bank slip, manual grant, bank details change, any price change. Without a valid code it returns `mfa_required`. A correct code is valid for 5 minutes for further money actions.
-- [ ] AC6: Staff action limits via `lib/ratelimit/`: 60 writes a minute per staff member in general; 10 a minute for deletes, approvals and suspensions (`rate_limited`).
-- [ ] AC7: Rows that name a Super Admin are visible only to Super Admins (enforced by the S-019 database rules; asserted here with a test).
+- [x] AC1: `lib/audit/` exports a function that writes exactly one `admin_audit_log` row: time, actor, action name (two-part `area.action` from admin panel design section 10.2), item type, item id, short summary, before and after values. No secrets, tokens or full bank numbers in any field. It is called from admin actions; it is the only way admin code writes the audit table.
+- [x] AC2: `admin.session_start` is written once the first time each session reaches an admin page, not on every page.
+- [x] AC3: `support.read` is written once per item per session when a Super Admin reads customer or payment data (the helper provides the once-per-session guarantee).
+- [x] AC4: A refused action against a Super Admin target writes `permission.denied`.
+- [x] AC5: The step-up helper asks for a fresh authenticator code before: approve a bank slip, manual grant, bank details change, any price change. Without a valid code it returns `mfa_required`. A correct code is valid for 5 minutes for further money actions.
+- [x] AC6: Staff action limits via `lib/ratelimit/`: 60 writes a minute per staff member in general; 10 a minute for deletes, approvals and suspensions (`rate_limited`).
+- [x] AC7: Rows that name a Super Admin are visible only to Super Admins (enforced by the S-019 database rules; asserted here with a test).
 
 ## Edge cases
 
-- [ ] EC1: The audit insert fails — the admin action must not report success silently; the helper's failure behaviour (fail the action, or alert) must be decided and written in the plan. Spec gap: the design does not say.
-- [ ] EC2: Two tabs, same session, both reach an admin page at once — still only one `admin.session_start` row.
-- [ ] EC3: The step-up code is valid for 5 minutes — a code used 6 minutes ago is refused.
-- [ ] EC4: A before/after value contains a bank account number — it is masked before writing.
+- [x] EC1: The audit insert fails — the admin action must not report success silently; the helper's failure behaviour (fail the action, or alert) must be decided and written in the plan. Spec gap: the design does not say.
+- [x] EC2: Two tabs, same session, both reach an admin page at once — still only one `admin.session_start` row.
+- [x] EC3: The step-up code is valid for 5 minutes — a code used 6 minutes ago is refused.
+- [x] EC4: A before/after value contains a bank account number — it is masked before writing.
 - [ ] EC5: A deletion of a customer later removes personal data from their audit rows except money rows (S10, needs legal advice) — not built here; noted for the anonymise work.
 
 ## Contract
