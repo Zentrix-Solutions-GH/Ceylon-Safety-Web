@@ -1,6 +1,7 @@
 'use server';
 
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { requireActiveAccount } from "@/lib/auth/server";
 import { deleteAccountSchema } from "@/lib/validation/user";
 import { confirmReverification } from "@/lib/auth/actions/confirm-reverification";
 import type { DeleteAccountInput, DeleteAccountResult } from "@/types/user";
@@ -13,25 +14,17 @@ export async function deleteAccount(input: DeleteAccountInput): Promise<DeleteAc
   }
   const { code, authenticatorCode } = parsed.data;
 
-  const supabase = await createSupabaseServerClient();
-
-  // AC8: require active session
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData?.user) {
+  // AC8: require active (non-suspended) account via shared helper
+  const authResult = await requireActiveAccount();
+  if (!authResult.ok) {
     return { ok: false, code: "not_allowed" };
   }
-
-  const user = userData.user;
-
-  // Reject suspended accounts
-  const bannedUntil = (user as { banned_until?: string }).banned_until;
-  if (bannedUntil && new Date(bannedUntil) > new Date()) {
-    return { ok: false, code: "not_allowed" };
-  }
+  const userId = authResult.user.id;
 
   // AC4: staff accounts cannot self-delete
-  const userRole = (user.app_metadata as { user_role?: UserRole })?.user_role;
-  if (userRole) {
+  // claimedRole from the JWT is sufficient here — staff role is set at auth time
+  const claimedRole = authResult.user.claimedRole as UserRole | undefined;
+  if (claimedRole) {
     return { ok: false, code: "not_allowed" };
   }
 
@@ -41,7 +34,7 @@ export async function deleteAccount(input: DeleteAccountInput): Promise<DeleteAc
     return verifyResult;
   }
 
-  const userId = user.id;
+  const supabase = await createSupabaseServerClient();
 
   // AC5: check for blocking conditions
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
@@ -93,7 +86,7 @@ export async function deleteAccount(input: DeleteAccountInput): Promise<DeleteAc
     return { ok: false, code: "unknown" };
   }
 
-  // AC6: sign out all sessions
+  // AC6: sign out all sessions (best-effort — user is already deleted from auth)
   await supabase.auth.signOut({ scope: "global" });
 
   return { ok: true };

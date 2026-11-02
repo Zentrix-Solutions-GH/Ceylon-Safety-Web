@@ -1,6 +1,7 @@
 'use server';
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireActiveAccount } from "@/lib/auth/server";
 import { updateProfileSchema } from "@/lib/validation/user";
 import type { UpdateProfileInput, UpdateProfileResult } from "@/types/user";
 import type { TablesUpdate } from "@/types/database";
@@ -14,21 +15,14 @@ export async function updateProfile(input: UpdateProfileInput): Promise<UpdatePr
   }
   const data = parsed.data;
 
+  // AC8: require active (non-suspended) account via shared helper
+  const authResult = await requireActiveAccount();
+  if (!authResult.ok) {
+    return { ok: false, code: "not_allowed" };
+  }
+  const userId = authResult.user.id;
+
   const supabase = await createSupabaseServerClient();
-
-  // AC8: require an active session
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData?.user) {
-    return { ok: false, code: "not_allowed" };
-  }
-
-  // Reject suspended accounts within their live JWT window
-  const bannedUntil = (userData.user as { banned_until?: string }).banned_until;
-  if (bannedUntil && new Date(bannedUntil) > new Date()) {
-    return { ok: false, code: "not_allowed" };
-  }
-
-  const userId = userData.user.id;
 
   // Map camelCase input to snake_case DB columns.
   // AC3: email is never included — not self-service in v1.

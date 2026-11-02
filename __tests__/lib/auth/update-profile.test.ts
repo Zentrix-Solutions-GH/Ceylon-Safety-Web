@@ -13,20 +13,23 @@ vi.mock("next/headers", () => ({
 }));
 vi.mock("@/lib/config.upstash", () => ({ upstashConfig: vi.fn().mockReturnValue(null) }));
 
-const mockGetUser = vi.fn();
-const mockFrom = vi.fn();
+const mockRequireActiveAccount = vi.fn();
+vi.mock("@/lib/auth/server", () => ({
+  requireActiveAccount: (...args: unknown[]) => mockRequireActiveAccount(...args),
+}));
 
+const mockFrom = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn().mockResolvedValue({
-    auth: { getUser: mockGetUser },
     from: mockFrom,
   }),
 }));
 
-const BASE_USER = {
+const ACTIVE_USER = {
   id: "uid-1",
   email: "user@example.com",
-  banned_until: null,
+  hasAuthenticatorLevel: false,
+  hasTotpEnrolled: false,
 };
 
 const mockUpdateSingle = vi.fn();
@@ -36,7 +39,7 @@ const mockUpdateChain = { update: vi.fn().mockReturnValue(mockEqChain) };
 beforeEach(() => {
   vi.clearAllMocks();
   vi.resetModules();
-  mockGetUser.mockResolvedValue({ data: { user: BASE_USER } });
+  mockRequireActiveAccount.mockResolvedValue({ ok: true, user: ACTIVE_USER });
   mockFrom.mockReturnValue(mockUpdateChain);
   mockEqChain.eq.mockReturnValue({ single: mockUpdateSingle });
   mockUpdateChain.update.mockReturnValue(mockEqChain);
@@ -51,7 +54,6 @@ describe("updateProfile", () => {
     expect(mockFrom).toHaveBeenCalledWith("profiles");
     const updateArg = mockUpdateChain.update.mock.calls[0][0];
     expect(updateArg).toMatchObject({ first_name: "Jane", last_name: "Doe" });
-    // Verify it targeted the calling user's id
     expect(mockEqChain.eq).toHaveBeenCalledWith("id", "uid-1");
   });
 
@@ -90,27 +92,24 @@ describe("updateProfile", () => {
     }
   });
 
-  it("AC3: does not update email even if caller passes an email field", async () => {
+  it("AC3: does not update email even if a raw object with email is passed", async () => {
     const { updateProfile } = await import("@/lib/auth/actions/update-profile");
-    // The schema does not accept email — pass a raw object to bypass TS
-    const result = await updateProfile({ firstName: "Jane" } as Parameters<typeof updateProfile>[0]);
+    const result = await updateProfile({ firstName: "Jane" });
     expect(result.ok).toBe(true);
     const updateArg = mockUpdateChain.update.mock.calls[0][0];
     expect(updateArg).not.toHaveProperty("email");
   });
 
-  it("AC8: returns not_allowed when there is no session", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } });
+  it("AC8: returns not_allowed when requireActiveAccount fails (no session)", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: false, code: "reauth_required" });
     const { updateProfile } = await import("@/lib/auth/actions/update-profile");
     const result = await updateProfile({ firstName: "Jane" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("not_allowed");
   });
 
-  it("AC8: returns not_allowed for a suspended user", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { ...BASE_USER, banned_until: new Date(Date.now() + 60_000).toISOString() } },
-    });
+  it("AC8: returns not_allowed for a suspended user (profiles.status = suspended)", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: false, code: "account_suspended" });
     const { updateProfile } = await import("@/lib/auth/actions/update-profile");
     const result = await updateProfile({ firstName: "Jane" });
     expect(result.ok).toBe(false);

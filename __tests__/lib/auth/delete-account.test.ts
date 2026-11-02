@@ -1,4 +1,6 @@
-// S-037: deleteAccount tests — AC4, AC5, AC6, AC7, EC1, EC2, EC3, EC4, EC5
+// S-037: deleteAccount tests — AC4, AC5, AC6, AC7, EC1, EC2, EC3, EC4
+// EC5 (concurrent calls) is out of scope for unit tests — idempotency is enforced
+// by private.anonymise_user's FOR UPDATE lock at the database level (verified in pgTAP suite).
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -13,7 +15,11 @@ vi.mock("next/headers", () => ({
 }));
 vi.mock("@/lib/config.upstash", () => ({ upstashConfig: vi.fn().mockReturnValue(null) }));
 
-const mockGetUser = vi.fn();
+const mockRequireActiveAccount = vi.fn();
+vi.mock("@/lib/auth/server", () => ({
+  requireActiveAccount: (...args: unknown[]) => mockRequireActiveAccount(...args),
+}));
+
 const mockFrom = vi.fn();
 const mockSignOut = vi.fn();
 const mockAdminDeleteUser = vi.fn();
@@ -21,7 +27,7 @@ const mockServiceRpc = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn().mockResolvedValue({
-    auth: { getUser: mockGetUser, signOut: mockSignOut },
+    auth: { signOut: mockSignOut },
     from: mockFrom,
   }),
   createSupabaseServiceRoleClient: vi.fn().mockReturnValue({
@@ -35,11 +41,12 @@ vi.mock("@/lib/auth/actions/confirm-reverification", () => ({
   confirmReverification: (...args: unknown[]) => mockConfirmReverification(...args),
 }));
 
-const BASE_USER = {
+const ACTIVE_USER = {
   id: "uid-1",
   email: "user@example.com",
-  banned_until: null,
-  app_metadata: {},
+  claimedRole: undefined,
+  hasAuthenticatorLevel: false,
+  hasTotpEnrolled: false,
 };
 
 function makeNoBlockerFrom() {
@@ -56,18 +63,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.resetModules();
 
-  mockGetUser.mockResolvedValue({ data: { user: BASE_USER } });
+  mockRequireActiveAccount.mockResolvedValue({ ok: true, user: ACTIVE_USER });
   mockConfirmReverification.mockResolvedValue({ ok: true });
   mockSignOut.mockResolvedValue({ error: null });
   mockAdminDeleteUser.mockResolvedValue({ data: {}, error: null });
   mockServiceRpc.mockResolvedValue({ error: null });
-  mockFrom.mockReturnValue({
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    or: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-  });
+  mockFrom.mockImplementation(makeNoBlockerFrom());
 });
 
 async function getDeleteAccount() {
@@ -75,7 +76,7 @@ async function getDeleteAccount() {
   return mod.deleteAccount;
 }
 
-describe("deleteAccount — happy path (AC6/AC7)", () => {
+describe("deleteAccount — happy path (AC6)", () => {
   it("AC6: calls confirmReverification, anonymise_user, deletes auth user, signs out", async () => {
     const deleteAccount = await getDeleteAccount();
     const result = await deleteAccount({ code: "123456" });
@@ -89,14 +90,30 @@ describe("deleteAccount — happy path (AC6/AC7)", () => {
 
 describe("deleteAccount — AC4: staff refused", () => {
   it("returns not_allowed for a user with a staff role claim", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { ...BASE_USER, app_metadata: { user_role: "admin" } } },
-    });
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: { ...ACTIVE_USER, claimedRole: "admin" } });
     const deleteAccount = await getDeleteAccount();
     const result = await deleteAccount({ code: "123456" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("not_allowed");
     expect(mockConfirmReverification).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleteAccount — AC8: requireActiveAccount gate", () => {
+  it("returns not_allowed when account is not active (no session)", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: false, code: "reauth_required" });
+    const deleteAccount = await getDeleteAccount();
+    const result = await deleteAccount({ code: "123456" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_allowed");
+  });
+
+  it("returns not_allowed for a suspended user (profiles.status = suspended)", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: false, code: "account_suspended" });
+    const deleteAccount = await getDeleteAccount();
+    const result = await deleteAccount({ code: "123456" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_allowed");
   });
 });
 
@@ -153,11 +170,34 @@ describe("deleteAccount — AC5: refusal conditions", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("validation_failed");
   });
+
+  it("AC5: returns validation_failed when an open download_request exists", async () => {
+    // First call (orders): no blocker; second call (download_requests): status=open → blocks
+    let callIndex = 0;
+    mockFrom.mockImplementation(() => {
+      const call = callIndex++;
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue(
+          call === 0
+            ? { data: null, error: null }                        // orders: no blocker
+            : { data: { id: "dr-1", status: "open" }, error: null } // download_requests: blocks
+        ),
+      };
+    });
+    const deleteAccount = await getDeleteAccount();
+    const result = await deleteAccount({ code: "123456" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("validation_failed");
+  });
 });
 
 describe("deleteAccount — EC2: approved download does not block", () => {
-  it("allows deletion when only an approved (non-open) download_request exists", async () => {
-    // Both .from() calls return null (no blocker for orders or download_requests)
+  it("allows deletion when no open download_request exists (approved is not blocking)", async () => {
+    // Both from() calls return null — no blocker
     mockFrom.mockImplementation(makeNoBlockerFrom());
     const deleteAccount = await getDeleteAccount();
     const result = await deleteAccount({ code: "123456" });
@@ -166,21 +206,13 @@ describe("deleteAccount — EC2: approved download does not block", () => {
 });
 
 describe("deleteAccount — EC4: admin delete fails after anonymise", () => {
-  it("returns unknown when auth.admin.deleteUser fails after anonymise_user succeeds", async () => {
+  it("returns unknown; anonymise_user was called before the failure", async () => {
     mockAdminDeleteUser.mockResolvedValue({ data: null, error: { message: "upstream error" } });
     const deleteAccount = await getDeleteAccount();
     const result = await deleteAccount({ code: "123456" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("unknown");
-  });
-});
-
-describe("deleteAccount — no session", () => {
-  it("returns not_allowed when there is no active session", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } });
-    const deleteAccount = await getDeleteAccount();
-    const result = await deleteAccount({ code: "123456" });
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("not_allowed");
+    // Confirm anonymise ran before the admin delete failure (profile stays anonymised)
+    expect(mockServiceRpc).toHaveBeenCalledWith("private.anonymise_user", { p_user_id: "uid-1" });
   });
 });

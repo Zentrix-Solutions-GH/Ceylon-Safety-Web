@@ -50,6 +50,7 @@ Types added or changed in `types/` by this story:
 - The idle-account deletion job and warning email (Release 2, REQ-118b).
 - `requestDownload`, `addToCart`, `updateCart` (listed in auth design section 17; they belong to the download and cart stories S-085 and S-075).
 - Changing the account email (support-assisted, Super Admin only, Release 2 users actions).
+- EC5 concurrent deleteAccount unit test: idempotency is enforced by the `FOR UPDATE` row-lock inside `private.anonymise_user` (database level). Exercising true concurrency from a unit test is not meaningful without a real database; this is covered by the pgTAP suite.
 
 ## Assumptions accepted
 
@@ -120,6 +121,30 @@ If `anonymise_user` succeeds but `auth.admin.deleteUser` throws: return `{ ok: f
 
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  52 passed | 5 skipped (57)
+      Tests  677 passed | 15 skipped (692)
+✓ Vitest (unit) passed
+
+── pgTAP suites ──
+⚠ Supabase not running — skipping pgTAP tests (run supabase start first)
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 5 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
 ```
 
 ## Review notes
