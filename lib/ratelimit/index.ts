@@ -208,3 +208,30 @@ export async function checkRateLimit(opts: RateLimitOptions): Promise<RateLimitR
     return { ok: false, reason: "unavailable" };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Admin action limits (S-038, admin panel design section 9, PROPOSED — team decision)
+// 60 writes/min per staff member (general); 10/min for deletes, approvals, suspensions.
+// Mode: open — Upstash outage allows the action through; Sentry alert deferred to S-008.
+// TODO S-008: switch admin limits to blocking mode once outage monitoring is live.
+// ---------------------------------------------------------------------------
+
+export function checkAdminWriteLimit(actorId: string): Promise<RateLimitResult> {
+  return checkRateLimit({
+    limitName: "admin-write",
+    key: actorId,
+    maxCount: 60,
+    windowSeconds: 60,
+    mode: "open",
+  });
+}
+
+export function checkAdminDestructiveLimit(actorId: string): Promise<RateLimitResult> {
+  return checkRateLimit({
+    limitName: "admin-destructive",
+    key: actorId,
+    maxCount: 10,
+    windowSeconds: 60,
+    mode: "open",
+  });
+}
