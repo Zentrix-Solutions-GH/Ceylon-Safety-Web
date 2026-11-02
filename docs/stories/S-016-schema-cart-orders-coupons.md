@@ -2,7 +2,7 @@
 id: S-016
 title: Schema 6: carts, orders, order items, coupons
 phase: MS1
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-016-schema-cart-orders-coupons

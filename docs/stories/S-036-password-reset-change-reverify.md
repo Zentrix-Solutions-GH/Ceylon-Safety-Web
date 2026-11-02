@@ -1,7 +1,7 @@
 ---
 id: S-036
 title: Password reset, change password, re-verification actions
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-036-password-reset-change-reverify
