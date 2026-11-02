@@ -1,7 +1,7 @@
 ---
 id: S-035
 title: signIn, signOut, Google sign-in and callback
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-035-signin-signout-google

@@ -1,7 +1,7 @@
 ---
 id: S-037
 title: updateProfile, saved address, deleteAccount actions
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-037-profile-address-delete-account

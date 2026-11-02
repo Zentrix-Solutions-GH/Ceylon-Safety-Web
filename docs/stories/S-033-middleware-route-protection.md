@@ -1,7 +1,7 @@
 ---
 id: S-033
 title: Middleware and route protection
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-033-middleware-route-protection

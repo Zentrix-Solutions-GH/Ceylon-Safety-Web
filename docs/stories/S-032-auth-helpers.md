@@ -1,7 +1,7 @@
 ---
 id: S-032
 title: Auth helpers (lib/auth) — getCurrentUser, requireUser, requireStaff, safeNext
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-032-auth-helpers

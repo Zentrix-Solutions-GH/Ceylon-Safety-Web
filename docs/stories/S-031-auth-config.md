@@ -1,7 +1,7 @@
 ---
 id: S-031
 title: Auth config — Supabase Auth, Resend SMTP, templates, MFA, hook wiring
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-031-auth-config

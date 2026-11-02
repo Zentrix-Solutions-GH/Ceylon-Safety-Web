@@ -1,7 +1,7 @@
 ---
 id: S-010
 title: Cron route framework + scheduler wiring + keep-awake
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-010-cron-framework
