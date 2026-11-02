@@ -84,7 +84,8 @@ export async function resetPassword(input: ResetPasswordInput): Promise<ResetPas
     if (msg.includes("password") && (msg.includes("weak") || msg.includes("8 character"))) {
       return { ok: false, code: "weak_password" };
     }
-    await incAttempts(email, "reset");
+    // P1: do NOT increment the attempt counter here — a transient service error is not a wrong code.
+    // The counter was already incremented (if needed) at the verifyOtp / mfa steps above.
     return { ok: false, code: "unknown" };
   }
 

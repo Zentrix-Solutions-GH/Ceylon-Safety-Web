@@ -99,6 +99,21 @@ describe("requestReverification", () => {
     if (!result.ok) expect(result.code).toBe("not_allowed");
   });
 
+  it("P1: suspended user gets not_allowed", async () => {
+    const future = new Date(Date.now() + 86_400_000).toISOString();
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "uid-banned", email: "banned@example.com", banned_until: future } },
+      error: null,
+    });
+    const { requestReverification } = await import(
+      "@/lib/auth/actions/request-reverification"
+    );
+    const result = await requestReverification({ captchaToken: "tok" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_allowed");
+    expect(mockSignInWithOtp).not.toHaveBeenCalled();
+  });
+
   it("validation: rejects empty captchaToken", async () => {
     const { requestReverification } = await import(
       "@/lib/auth/actions/request-reverification"
@@ -219,6 +234,20 @@ describe("confirmReverification", () => {
 
   it("AC6: not_allowed when no session", async () => {
     mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
+    const { confirmReverification } = await import(
+      "@/lib/auth/actions/confirm-reverification"
+    );
+    const result = await confirmReverification({ code: "12345678" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_allowed");
+  });
+
+  it("P1: suspended user gets not_allowed in confirmReverification", async () => {
+    const future = new Date(Date.now() + 86_400_000).toISOString();
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "uid-banned", email: "banned@example.com", banned_until: future } },
+      error: null,
+    });
     const { confirmReverification } = await import(
       "@/lib/auth/actions/confirm-reverification"
     );

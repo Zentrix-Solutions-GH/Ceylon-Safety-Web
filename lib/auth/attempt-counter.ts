@@ -24,7 +24,8 @@ function memKey(value: string, namespace: string): string {
 
 async function redisKey(value: string, namespace: string, hashSecret: string): Promise<string> {
   const normalised = value.trim().toLowerCase();
-  const input = `attempts:${namespace}:${normalised}`;
+  // Preserve legacy hash input for "email" namespace to avoid orphaning existing S-034 counters in Redis.
+  const input = namespace === "email" ? `attempts:${normalised}` : `attempts:${namespace}:${normalised}`;
   const keyData = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(hashSecret),

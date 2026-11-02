@@ -150,4 +150,24 @@ describe("changePassword", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("code_attempts_exceeded");
   });
+
+  it("P1: suspended (banned) user gets not_allowed", async () => {
+    const future = new Date(Date.now() + 86_400_000).toISOString();
+    mockGetUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "uid-banned",
+          email: "banned@example.com",
+          banned_until: future,
+          identities: [{ provider: "email", id: "uid-banned" }],
+        },
+      },
+      error: null,
+    });
+    const { changePassword } = await import("@/lib/auth/actions/change-password");
+    const result = await changePassword({ code: "reauthcode", newPassword: "newpass123" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_allowed");
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+  });
 });

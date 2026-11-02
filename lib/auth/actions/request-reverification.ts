@@ -23,6 +23,12 @@ export async function requestReverification(
     return { ok: false, code: "not_allowed" };
   }
 
+  // P1: reject suspended accounts within their live JWT window
+  const bannedUntil = (userData.user as { banned_until?: string }).banned_until;
+  if (bannedUntil && new Date(bannedUntil) > new Date()) {
+    return { ok: false, code: "not_allowed" };
+  }
+
   // AC6: 3 requests per hour per signed-in user
   const limit = await checkRateLimit({
     limitName: "reverification-request",

@@ -24,6 +24,12 @@ export async function confirmReverification(
     return { ok: false, code: "not_allowed" };
   }
 
+  // P1: reject suspended accounts within their live JWT window
+  const bannedUntil = (userData.user as { banned_until?: string }).banned_until;
+  if (bannedUntil && new Date(bannedUntil) > new Date()) {
+    return { ok: false, code: "not_allowed" };
+  }
+
   const email = userData.user.email!;
 
   // AC7: attempt counter keyed on email, "reverify" namespace (avoids collision with "reset" bucket)

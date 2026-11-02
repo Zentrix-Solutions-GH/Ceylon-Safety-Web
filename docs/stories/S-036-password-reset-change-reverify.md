@@ -153,6 +153,14 @@ $ bash scripts/check.sh
 
 <!-- Filled in by reviewer/security-reviewer agents and /full-review -->
 
+### full-review 2026-11-02 (PR #44, HEAD c11ffe74)
+
+- **P0** `lib/auth/attempt-counter.ts` — Redis HMAC key derivation changed from `attempts:${normalised}` to `attempts:${namespace}:${normalised}`. Live S-034 verifyEmail counters in Redis are orphaned on deploy; users mid-lockout are reset to 0 attempts. In-memory path is unaffected. Fix: preserve old hash input for the legacy `"email"` namespace, or accept the reset and document it.
+- **P1** `lib/auth/actions/change-password.ts` — Suspended user can change password within ~1 h JWT window. Uses bare `getUser()` with no `profiles.status` check. Fix: add `requireActiveAccount()` guard.
+- **P1** `lib/auth/actions/request-reverification.ts` / `confirm-reverification.ts` — Same suspended-user gap for re-verification. Fix: same.
+- **P1** `lib/auth/actions/reset-password.ts` — `incAttempts` called on transient `updateUser` failures (network/service errors). After 5 transient failures user is locked out despite no wrong code. Fix: only increment on credential errors, not all errors.
+- **P1** `lib/auth/actions/request-password-reset.ts` — IP rate-limit key reads `x-real-ip`, which is client-controllable. Fix: use `cf-connecting-ip` only, or fall back to `"unknown"`.
+
 ## After this merges, a user can:
 
 - Nothing in the browser yet. Reset and re-verification actions work through tests and the local mail catcher. Screens come in S-042 and S-043.

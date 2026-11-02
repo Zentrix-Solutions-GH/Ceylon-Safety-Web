@@ -29,6 +29,12 @@ export async function changePassword(input: ChangePasswordInput): Promise<Change
     return { ok: false, code: "not_allowed" };
   }
 
+  // P1: reject suspended accounts within their live JWT window
+  const bannedUntil = (userData.user as { banned_until?: string }).banned_until;
+  if (bannedUntil && new Date(bannedUntil) > new Date()) {
+    return { ok: false, code: "not_allowed" };
+  }
+
   // AC5: Google-only accounts get not_allowed — they use "Forgot password" to add a password.
   // Detection: user has no identity with provider "email".
   const hasPasswordIdentity = (userData.user.identities ?? []).some(

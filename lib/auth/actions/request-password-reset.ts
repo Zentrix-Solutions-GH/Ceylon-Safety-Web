@@ -17,10 +17,8 @@ export async function requestPasswordReset(
   const { email, captchaToken } = parsed.data;
 
   const reqHeaders = await headers();
-  const ip =
-    reqHeaders.get("cf-connecting-ip") ??
-    reqHeaders.get("x-real-ip") ??
-    "unknown";
+  // Use only the Cloudflare-controlled header; x-real-ip is client-settable and must not be trusted.
+  const ip = reqHeaders.get("cf-connecting-ip") ?? "unknown";
 
   // AC1: 3 per hour per email
   const emailLimit = await checkRateLimit({
