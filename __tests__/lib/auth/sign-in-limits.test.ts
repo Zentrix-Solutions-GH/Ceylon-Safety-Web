@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Tests for AC2: the three rate-limit tiers on signIn.
-// These are unit tests of the limit-key construction and tier ordering.
-// They mock checkRateLimit to verify the action calls it with the right keys and order.
+// Rate limits are checked AFTER a Supabase auth failure so that successful
+// sign-ins do not consume the "failures" quota (AC2: "5 failures per 15 min").
 
 const mockCheckRateLimit = vi.fn();
 const mockSignInWithPassword = vi.fn();
@@ -30,17 +30,20 @@ import { signIn } from "@/lib/auth/actions/sign-in";
 
 const INPUT = { email: "a@b.com", password: "pw", captchaToken: "t" };
 
+const AUTH_ERROR = {
+  data: { user: null, session: null },
+  error: { message: "Invalid login credentials", status: 400 },
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
-  mockSignInWithPassword.mockResolvedValue({
-    data: { user: { id: "u1", email: "a@b.com" }, session: {} },
-    error: null,
-  });
+  // Default: all rate-limit checks pass
+  mockCheckRateLimit.mockResolvedValue({ ok: true });
 });
 
 describe("signIn rate-limit tiers — AC2", () => {
-  it("calls checkRateLimit three times in the correct order on happy path", async () => {
-    mockCheckRateLimit.mockResolvedValue({ ok: true });
+  it("calls checkRateLimit three times in the correct order on auth failure", async () => {
+    mockSignInWithPassword.mockResolvedValue(AUTH_ERROR);
     await signIn(INPUT);
     expect(mockCheckRateLimit).toHaveBeenCalledTimes(3);
     // First call: composite email+IP (5/15 min, closed)
@@ -60,27 +63,33 @@ describe("signIn rate-limit tiers — AC2", () => {
     );
   });
 
-  it("stops after tier 1 and does not call Supabase", async () => {
+  it("does not call checkRateLimit on successful sign-in", async () => {
+    mockSignInWithPassword.mockResolvedValue({
+      data: { user: { id: "u1" }, session: {} },
+      error: null,
+    });
+    await signIn(INPUT);
+    expect(mockCheckRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("stops after tier 1 and returns rate_limited without checking tiers 2 or 3", async () => {
+    mockSignInWithPassword.mockResolvedValue(AUTH_ERROR);
     mockCheckRateLimit.mockResolvedValueOnce({ ok: false, reason: "rate_limited", retryAfterSeconds: 60 });
     const result = await signIn(INPUT);
     expect(result).toMatchObject({ ok: false, code: "rate_limited" });
     expect(mockCheckRateLimit).toHaveBeenCalledTimes(1);
-    expect(mockSignInWithPassword).not.toHaveBeenCalled();
   });
 
   it("cannot lock another user out: composite key includes both email AND ip", async () => {
-    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockSignInWithPassword.mockResolvedValue(AUTH_ERROR);
     await signIn({ ...INPUT, email: "victim@example.com" });
     const compositeCall = mockCheckRateLimit.mock.calls[0]?.[0];
-    // The key must include the email portion; a different email makes a different key
     expect(compositeCall).toMatchObject({ limitName: "signin-composite" });
-    // Key is hashed so we can't inspect the value, but the limitName + the different email
-    // will produce a different hash. This test verifies the function is called with the
-    // right limitName so the caller constructs the composite correctly.
     expect(compositeCall.key).toBeDefined();
   });
 
   it("tier 3 (per-email) returns captcha_failed, not rate_limited", async () => {
+    mockSignInWithPassword.mockResolvedValue(AUTH_ERROR);
     mockCheckRateLimit
       .mockResolvedValueOnce({ ok: true })
       .mockResolvedValueOnce({ ok: true })
@@ -91,6 +100,7 @@ describe("signIn rate-limit tiers — AC2", () => {
   });
 
   it("tier 2 (per-IP) returns rate_limited with retryAfterSeconds", async () => {
+    mockSignInWithPassword.mockResolvedValue(AUTH_ERROR);
     mockCheckRateLimit
       .mockResolvedValueOnce({ ok: true })
       .mockResolvedValueOnce({ ok: false, reason: "rate_limited", retryAfterSeconds: 599 });

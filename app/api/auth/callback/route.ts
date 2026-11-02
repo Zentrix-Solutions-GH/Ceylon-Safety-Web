@@ -17,13 +17,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const supabase = await createSupabaseServerClient();
 
   // Exchange the one-time code for a session (PKCE flow).
-  // On a second call with the same code Supabase will return an error; we still
-  // redirect the user safely rather than crashing (EC2).
   // Network errors are caught so the handler always redirects rather than throws.
+  let exchangeError = false;
   try {
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      // Supabase returned an error (e.g. code already used, token expired).
+      // Do NOT clear auth_next so the user can retry the Google flow.
+      exchangeError = true;
+    }
   } catch {
-    // Supabase unreachable or returned a malformed response; fall through to safeNext redirect.
+    // Supabase unreachable or malformed response.
+    exchangeError = true;
+  }
+
+  if (exchangeError) {
+    return NextResponse.redirect(new URL("/?error=auth_failed", request.url), { status: 307 });
   }
 
   // Read and clear the return-address cookie set by startGoogleSignIn (AC5).

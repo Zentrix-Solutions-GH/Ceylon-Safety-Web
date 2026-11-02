@@ -24,51 +24,6 @@ export async function signIn(input: SignInInput): Promise<SignInResult> {
     reqHeaders.get("x-real-ip") ??
     "unknown";
 
-  // Composite email+IP key: 5 / 15 min, closed (auth design §15)
-  const compositeKey = `${email.trim().toLowerCase()}:${ip}`;
-  const tier1 = await checkRateLimit({
-    limitName: "signin-composite",
-    key: compositeKey,
-    maxCount: 5,
-    windowSeconds: 900,
-    mode: "closed",
-  });
-  if (!tier1.ok) {
-    return {
-      ok: false,
-      code: "rate_limited",
-      retryAfterSeconds: tier1.reason === "rate_limited" ? tier1.retryAfterSeconds : undefined,
-    };
-  }
-
-  // Per-IP: 20 / hr, closed (auth design §15)
-  const tier2 = await checkRateLimit({
-    limitName: "signin-ip",
-    key: ip,
-    maxCount: 20,
-    windowSeconds: 3600,
-    mode: "closed",
-  });
-  if (!tier2.ok) {
-    return {
-      ok: false,
-      code: "rate_limited",
-      retryAfterSeconds: tier2.reason === "rate_limited" ? tier2.retryAfterSeconds : undefined,
-    };
-  }
-
-  // Per-email: 30 / hr, open — triggers captcha challenge, not a hard block (auth design §15)
-  const tier3 = await checkRateLimit({
-    limitName: "signin-email",
-    key: email.trim().toLowerCase(),
-    maxCount: 30,
-    windowSeconds: 3600,
-    mode: "open",
-  });
-  if (!tier3.ok) {
-    return { ok: false, code: "captcha_failed" };
-  }
-
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -78,6 +33,50 @@ export async function signIn(input: SignInInput): Promise<SignInResult> {
 
   if (error) {
     const msg = error.message.toLowerCase();
+
+    // Only count failures toward the rate-limit quota (AC2: "5 failures per 15 min").
+    // All three tiers are checked; the first breach returns immediately.
+    const compositeKey = `${email.trim().toLowerCase()}:${ip}`;
+    const tier1 = await checkRateLimit({
+      limitName: "signin-composite",
+      key: compositeKey,
+      maxCount: 5,
+      windowSeconds: 900,
+      mode: "closed",
+    });
+    if (!tier1.ok) {
+      return {
+        ok: false,
+        code: "rate_limited",
+        retryAfterSeconds: tier1.reason === "rate_limited" ? tier1.retryAfterSeconds : undefined,
+      };
+    }
+
+    const tier2 = await checkRateLimit({
+      limitName: "signin-ip",
+      key: ip,
+      maxCount: 20,
+      windowSeconds: 3600,
+      mode: "closed",
+    });
+    if (!tier2.ok) {
+      return {
+        ok: false,
+        code: "rate_limited",
+        retryAfterSeconds: tier2.reason === "rate_limited" ? tier2.retryAfterSeconds : undefined,
+      };
+    }
+
+    const tier3 = await checkRateLimit({
+      limitName: "signin-email",
+      key: email.trim().toLowerCase(),
+      maxCount: 30,
+      windowSeconds: 3600,
+      mode: "open",
+    });
+    if (!tier3.ok) {
+      return { ok: false, code: "captcha_failed" };
+    }
 
     if (msg.includes("banned") || msg.includes("suspended")) {
       return { ok: false, code: "account_suspended" };

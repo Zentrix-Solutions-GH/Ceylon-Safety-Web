@@ -222,7 +222,17 @@ describe("signIn — EC4 Google-only user", () => {
 // AC2 — rate limits
 // ---------------------------------------------------------------------------
 
+// Rate limits are checked after a Supabase auth failure (AC2: "5 failures per 15 min").
+// Each test must make signInWithPassword return an error first, then configure the tier.
+
 describe("signIn — AC2 rate limits", () => {
+  beforeEach(() => {
+    mockSignInWithPassword.mockResolvedValue({
+      data: { user: null, session: null },
+      error: { message: "Invalid login credentials", status: 400 },
+    });
+  });
+
   it("returns rate_limited with retryAfterSeconds when composite email+IP limit hit", async () => {
     mockCheckRateLimit
       .mockResolvedValueOnce({ ok: false, reason: "rate_limited", retryAfterSeconds: 120 });
@@ -230,8 +240,7 @@ describe("signIn — AC2 rate limits", () => {
     const result = await signIn(VALID_INPUT);
 
     expect(result).toEqual({ ok: false, code: "rate_limited", retryAfterSeconds: 120 });
-    // Supabase must NOT be called when rate-limited
-    expect(mockSignInWithPassword).not.toHaveBeenCalled();
+    expect(mockSignInWithPassword).toHaveBeenCalled();
   });
 
   it("returns rate_limited when per-IP hourly limit hit", async () => {
@@ -242,7 +251,6 @@ describe("signIn — AC2 rate limits", () => {
     const result = await signIn(VALID_INPUT);
 
     expect(result).toEqual({ ok: false, code: "rate_limited", retryAfterSeconds: 300 });
-    expect(mockSignInWithPassword).not.toHaveBeenCalled();
   });
 
   it("returns captcha_failed when per-email 30/hr tier is hit", async () => {
@@ -254,6 +262,5 @@ describe("signIn — AC2 rate limits", () => {
     const result = await signIn(VALID_INPUT);
 
     expect(result).toEqual({ ok: false, code: "captcha_failed" });
-    expect(mockSignInWithPassword).not.toHaveBeenCalled();
   });
 });

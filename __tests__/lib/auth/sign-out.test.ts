@@ -42,6 +42,13 @@ describe("signOut — AC7", () => {
     expect(mockSignOut).toHaveBeenCalledWith({ scope: "global" });
   });
 
+  it("clears app-managed cookies (pending_signup and auth_next) on success", async () => {
+    await signOut({ scope: "this" });
+    // clearPendingSignup deletes "pending_signup"; clearNextCookie deletes "auth_next"
+    expect(mockCookiesDelete).toHaveBeenCalledWith("pending_signup");
+    expect(mockCookiesDelete).toHaveBeenCalledWith("auth_next");
+  });
+
   it("returns ok:false on Supabase error", async () => {
     mockSignOut.mockResolvedValue({ error: { message: "Server error" } });
     const result = await signOut({ scope: "this" });

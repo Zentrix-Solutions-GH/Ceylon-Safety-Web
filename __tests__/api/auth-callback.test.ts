@@ -81,37 +81,32 @@ describe("GET /api/auth/callback — AC6 happy path", () => {
 });
 
 describe("GET /api/auth/callback — EC2 double callback", () => {
-  it("second exchange returns session already exists error — still redirects safely to localhost", async () => {
-    // Supabase may return an error on second code exchange; the route should not crash
+  it("second exchange returns Supabase error — redirects to /?error=auth_failed without clearing next cookie", async () => {
     mockExchangeCodeForSession.mockResolvedValueOnce({
       data: { session: null },
       error: { message: "Code already used", status: 400 },
     });
-    // User may still be logged in from first callback
-    mockGetUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
 
     const req = makeRequest("abc123");
     const res = await GET(req);
 
     expect(res.status).toBe(307);
-    // Must redirect to the same origin (safeNext enforces this)
-    const location = res.headers.get("Location") ?? "";
-    expect(location).toMatch(/^http:\/\/localhost/);
-    expect(location).not.toMatch(/^https?:\/\/(?!localhost)/);
+    expect(res.headers.get("Location")).toBe("http://localhost/?error=auth_failed");
+    // auth_next cookie must NOT be cleared so the user can retry the Google flow
+    expect(mockCookiesDelete).not.toHaveBeenCalledWith("auth_next");
   });
 });
 
 describe("GET /api/auth/callback — network error", () => {
-  it("redirects safely when exchangeCodeForSession throws (network timeout)", async () => {
+  it("redirects to /?error=auth_failed when exchangeCodeForSession throws (network timeout)", async () => {
     mockExchangeCodeForSession.mockRejectedValueOnce(new Error("Network timeout"));
     const req = makeRequest("abc123");
     const res = await GET(req);
 
     expect(res.status).toBe(307);
-    // Must redirect to the same origin, not propagate a 500
-    const location = res.headers.get("Location") ?? "";
-    expect(location).toMatch(/^http:\/\/localhost/);
-    expect(location).not.toMatch(/^https?:\/\/(?!localhost)/);
+    expect(res.headers.get("Location")).toBe("http://localhost/?error=auth_failed");
+    // auth_next cookie must NOT be cleared so the user can retry
+    expect(mockCookiesDelete).not.toHaveBeenCalledWith("auth_next");
   });
 });
 
