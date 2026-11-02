@@ -15,6 +15,7 @@ const VALID_ENV = {
   CRON_SECRET: VALID_SECRET,
   NEXT_PUBLIC_SUPABASE_URL: "https://abc.supabase.co",
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+  NEXT_PUBLIC_APP_URL: "https://ceylonsafety.com",
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: "a".repeat(64),
   CSP_MODE: "report-only",

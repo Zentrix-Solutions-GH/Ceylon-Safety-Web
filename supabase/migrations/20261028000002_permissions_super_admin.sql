@@ -363,6 +363,9 @@ $$;
 -- but object-level EXECUTE is a separate privilege axis — an explicit REVOKE ensures
 -- a future GRANT USAGE ON SCHEMA private to any role does not leak the hook.
 REVOKE ALL ON FUNCTION private.custom_access_token_hook(jsonb) FROM PUBLIC;
+-- supabase_auth_admin needs USAGE on the private schema to call the function,
+-- in addition to the EXECUTE privilege on the function itself.
+GRANT USAGE ON SCHEMA private TO supabase_auth_admin;
 GRANT EXECUTE ON FUNCTION private.custom_access_token_hook(jsonb)
   TO supabase_auth_admin;
 

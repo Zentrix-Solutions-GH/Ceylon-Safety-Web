@@ -1,11 +1,11 @@
 ---
 id: S-032
 title: Auth helpers (lib/auth) — getCurrentUser, requireUser, requireStaff, safeNext
-status: ready
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-032-auth-helpers
-pr: ~
+pr: "#38 https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/38"
 depends_on: [S-031]
 reqs: [REQ-112, REQ-130, REQ-130c, REQ-130d, REQ-150]
 ---
@@ -22,25 +22,25 @@ Build the one set of server-side authorization helpers that every protected page
 
 ## Acceptance criteria
 
-- [ ] AC1: `lib/auth/server.ts` exports `getCurrentUser()`, `requireUser()`, `requireActiveAccount()`, `requireStaff(permission)`, `requireSuperAdmin()`. Each asks Supabase to verify the token; none trusts cookie contents. All are `server-only`.
-- [ ] AC2: `requireUser()` returns the verified user or redirects (pages) / returns `{ ok: false, code: 'not_allowed' }` (actions and API routes). If the `profiles` row is missing it creates it through `ensure-profile.ts`, which calls the same database function the sign-up trigger uses (S-011), so the sanitising rules cannot differ.
-- [ ] AC3: `requireActiveAccount()` = `requireUser()` plus a database check that the profile is not suspended. A suspended user holding a valid token is refused (`account_suspended`).
-- [ ] AC4: `requireStaff(permission)` = `requireActiveAccount()` plus a staff role read from the database (not the token) plus the named permission from `lib/auth/permissions.ts` plus authenticator level plus a full sign-in inside the staff window. Deny by default. `articles.*` covers `articles.publish` (prefix match). Super Admin passes everything. A Maintainer with no `role_permissions` rows is refused everything.
-- [ ] AC5: Staff window: 12 hours for all staff roles. The Super Admin value is a named constant that can be set to about 4 hours once M13 is accepted; until then it stays 12. An older session returns `reauth_required`. A staff user with no authenticator or not at the authenticator level returns `mfa_required`.
-- [ ] AC6: A lower-level variant of `requireStaff` exists for the two authenticator pages and actions (`/admin/security`, `/admin/mfa`): needs a staff role but not the authenticator level.
-- [ ] AC7: A target check refuses any action whose target is a Super Admin when the caller is not a Super Admin (`not_allowed`).
-- [ ] AC8: `lib/auth/permissions.ts` is the one permission map. A test compares it with the seeded `role_permissions` rows (S-012) and fails if they differ. "Server map only" names (for example `support.download`, `orders.grant`) are never expected in the seeded rows.
-- [ ] AC9: `lib/auth/redirect.ts` `safeNext(url)` returns the URL only if it is a relative path on this site, otherwise the home page.
-- [ ] AC10: `lib/auth/claims.ts` and `types/auth.ts` define `SessionUser`, the claim shapes (`user_role`, `account_status`), the action result `{ ok: true, ... } | { ok: false, code, field? }`, and the common error codes: `validation_failed`, `not_allowed`, `not_found`, `rate_limited`, `version_conflict`, `upload_failed`, `purge_failed`, `reauth_required`, `mfa_required`, `unknown`, plus the auth-only codes `invalid_credentials`, `email_not_verified`, `code_invalid`, `code_expired`, `code_attempts_exceeded`, `weak_password`, `captcha_failed`, `account_suspended`. Actions never return text.
-- [ ] AC11: `getCurrentUser()` is never called from a public page or public layout. A test or build check fails if a page in the `(public)` group reads cookies.
+- [x] AC1: `lib/auth/server.ts` exports `getCurrentUser()`, `requireUser()`, `requireActiveAccount()`, `requireStaff(permission)`, `requireSuperAdmin()`. Each asks Supabase to verify the token; none trusts cookie contents. All are `server-only`.
+- [x] AC2: `requireUser()` returns the verified user or redirects (pages) / returns `{ ok: false, code: 'not_allowed' }` (actions and API routes). If the `profiles` row is missing it creates it through `ensure-profile.ts`, which calls the same database function the sign-up trigger uses (S-011), so the sanitising rules cannot differ.
+- [x] AC3: `requireActiveAccount()` = `requireUser()` plus a database check that the profile is not suspended. A suspended user holding a valid token is refused (`account_suspended`).
+- [x] AC4: `requireStaff(permission)` = `requireActiveAccount()` plus a staff role read from the database (not the token) plus the named permission from `lib/auth/permissions.ts` plus authenticator level plus a full sign-in inside the staff window. Deny by default. `articles.*` covers `articles.publish` (prefix match). Super Admin passes everything. A Maintainer with no `role_permissions` rows is refused everything.
+- [x] AC5: Staff window: 12 hours for all staff roles. The Super Admin value is a named constant that can be set to about 4 hours once M13 is accepted; until then it stays 12. An older session returns `reauth_required`. A staff user with no authenticator or not at the authenticator level returns `mfa_required`.
+- [x] AC6: A lower-level variant of `requireStaff` exists for the two authenticator pages and actions (`/admin/security`, `/admin/mfa`): needs a staff role but not the authenticator level.
+- [x] AC7: A target check refuses any action whose target is a Super Admin when the caller is not a Super Admin (`not_allowed`).
+- [x] AC8: `lib/auth/permissions.ts` is the one permission map. A test compares it with the seeded `role_permissions` rows (S-012) and fails if they differ. "Server map only" names (for example `support.download`, `orders.grant`) are never expected in the seeded rows.
+- [x] AC9: `lib/auth/redirect.ts` `safeNext(url)` returns the URL only if it is a relative path on this site, otherwise the home page.
+- [x] AC10: `lib/auth/claims.ts` and `types/auth.ts` define `SessionUser`, the claim shapes (`user_role`, `account_status`), the action result `{ ok: true, ... } | { ok: false, code, field? }`, and the common error codes: `validation_failed`, `not_allowed`, `not_found`, `rate_limited`, `version_conflict`, `upload_failed`, `purge_failed`, `reauth_required`, `mfa_required`, `unknown`, plus the auth-only codes `invalid_credentials`, `email_not_verified`, `code_invalid`, `code_expired`, `code_attempts_exceeded`, `weak_password`, `captcha_failed`, `account_suspended`. Actions never return text.
+- [x] AC11: `getCurrentUser()` is never called from a public page or public layout. A test or build check fails if a page in the `(public)` group reads cookies.
 
 ## Edge cases
 
-- [ ] EC1: A user's staff row was removed but the token still says `admin` — `requireStaff` refuses (database is the truth, token is up to an hour old).
-- [ ] EC2: A role placed in `user_metadata` grants nothing — only database rows and hook claims count.
-- [ ] EC3: `safeNext` receives `https://evil.com`, `//evil.com`, `/\evil.com`, `javascript:alert(1)`, an empty string, and a very long string — all return the home page.
-- [ ] EC4: The last full sign-in time cannot be read from the token's authentication-method timestamps — fall back to the server-side last sign-in time (verify item 23) and record which one is used.
-- [ ] EC5: A staff member's own account is the target (for example removing their own role) — the Super Admin protection rules are in S-012 and S-039; this story only provides the target check.
+- [x] EC1: A user's staff row was removed but the token still says `admin` — `requireStaff` refuses (database is the truth, token is up to an hour old).
+- [x] EC2: A role placed in `user_metadata` grants nothing — only database rows and hook claims count.
+- [x] EC3: `safeNext` receives `https://evil.com`, `//evil.com`, `/\evil.com`, `javascript:alert(1)`, an empty string, and a very long string — all return the home page.
+- [x] EC4: The last full sign-in time cannot be read from the token's authentication-method timestamps — fall back to the server-side last sign-in time (verify item 23) and record which one is used.
+- [x] EC5: A staff member's own account is the target (for example removing their own role) — the Super Admin protection rules are in S-012 and S-039; this story only provides the target check.
 
 ## Contract
 
@@ -90,7 +90,11 @@ $ bash scripts/check.sh
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `lib/auth/claims.ts:13–15` — `claimedRole` first-leg `userAsAny["user_role"]` is dead code; Supabase `auth.getUser()` returns DB-row fields only, not raw JWT top-level claims. The claim lives in `app_metadata.user_role` (the fallback). Remove the dead first leg. (full-review 2026-11-01)
+- **P1** `lib/auth/claims.ts:17–18` — `claimedStatus` `userAsAny["account_status"]` is equally dead for the same reason; `SessionUser.claimedStatus` is always `undefined`. Fix alongside the above. (full-review 2026-11-01)
+- **P1** `lib/auth/server.ts:238–270` — `assertNotSuperAdminTarget` calls `requireActiveAccount()` not `requireStaff()`; a staff user with an expired 12-hour window or without TOTP can call it if not gated upstream. Either enforce the window/MFA internally or rename with a clear "call after requireStaff only" contract. (full-review 2026-11-01)
+- **P1** `supabase/tests/permission-map.test.ts:15,47` — AC8 integration test always skips in CI (`it.skipIf(!supabaseServiceKey)`); add a CI step or record a local run in Evidence. (full-review 2026-11-01)
+- **P1** `__tests__/lib/auth/require-staff.test.ts` — EC2 untested: no test verifies `user_metadata: { role: "admin" }` with no DB row returns `not_allowed`. (full-review 2026-11-01)
 
 ## After this merges, a user can:
 

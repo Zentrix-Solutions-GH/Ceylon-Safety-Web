@@ -87,7 +87,10 @@ else
   printf '⚠ Supabase not running — skipping types check (run supabase start first)\n'
 fi
 
-# 6. Dev seed guard (EC3): verify the guard pattern exists in seed.dev.sql
+# 6. AC11: no server session reads in public pages
+run "Public pages session check (AC11)" npx tsx scripts/check-public-pages.ts
+
+# 7. Dev seed guard (EC3): verify the guard pattern exists in seed.dev.sql
 printf '\n── Dev seed guard ──\n'
 if grep -q "current_setting('app.environment', true)" supabase/seed.dev.sql; then
   printf '✓ Dev seed guard passed\n'

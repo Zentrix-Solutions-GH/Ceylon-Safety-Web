@@ -51,6 +51,7 @@ function optional(name: string, defaultVal: string): string {
 const vals = collect([
   ["NEXT_PUBLIC_SUPABASE_URL", url],
   ["NEXT_PUBLIC_SUPABASE_ANON_KEY", string],
+  ["NEXT_PUBLIC_APP_URL", url],
   ["SUPABASE_SERVICE_ROLE_KEY", string],
   ["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY", hex64],
   ["CRON_SECRET", string],
@@ -69,6 +70,7 @@ const cspModeRaw = (() => {
 export const publicConfig = {
   supabaseUrl: vals["NEXT_PUBLIC_SUPABASE_URL"],
   supabaseAnonKey: vals["NEXT_PUBLIC_SUPABASE_ANON_KEY"],
+  appUrl: vals["NEXT_PUBLIC_APP_URL"],
 } as const;
 
 // Server-only secrets — protected by server-only import above
