@@ -1,7 +1,7 @@
 ---
 id: S-039
 title: Staff role actions — grantRole, removeRole, removeAuthenticator, listStaff
-status: draft
+status: ready
 owner: backend
 risk: sensitive
 branch: feature/S-039-staff-role-actions
@@ -12,22 +12,22 @@ reqs: [REQ-130, REQ-130b, REQ-130c, REQ-130d, REQ-130e, REQ-130f, REQ-131]
 
 ## Goal
 
-Let the Super Admin create and remove Admin and Maintainer accounts and recover a locked-out staff member. Staff register as normal customers first; the Super Admin then grants the role. No invite email and no "deactivate" action exist in the design. Status is `draft`: REQ-130e (what a Maintainer may do) and REQ-130f (permission table) are OPEN (Q62, Q63), M18 and M13 are pending. This story builds only the role value and the safe behaviour "Maintainer has no access". Estimate: 1 day.
+Let the Super Admin create and remove Admin and Editor accounts (formerly called Maintainer — renamed 2026-11-03) and recover a locked-out staff member. Staff register as normal customers first; the Super Admin then grants the role. No invite email and no "deactivate" action exist in the design. Q62 and Q63 answered 2026-11-03: Editor = full admin access except User Roles and Settings. Admin = full access except User Roles. Estimate: 1 day.
 
 ## Requirements covered
 
 - REQ-130 / REQ-130b / REQ-130c / REQ-130d: three roles, Super Admin held by our team, only the Super Admin creates and removes staff (CONFIRMED; Q64 answered)
-- REQ-130e: Maintainer role undefined (OPEN, Q62)
-- REQ-130f: permission table (OPEN, Q63)
+- REQ-130e: Editor role = content helper (CONFIRMED 2026-11-03, Q62 answered)
+- REQ-130f: permission table (CONFIRMED 2026-11-03, Q63 answered)
 - REQ-131: admin manages users (CONFIRMED; exact actions depend on REQ-130f)
 
 ## Acceptance criteria
 
-- [ ] AC1: `lib/admin/actions/grantRole({ userId, role })` — `requireSuperAdmin()`, role must be `admin` or `maintainer` (never `super_admin`), fresh authenticator code (step-up from S-038), writes the `user_roles` row and one `role.change` audit row.
+- [ ] AC1: `lib/admin/actions/grantRole({ userId, role })` — `requireSuperAdmin()`, role must be `admin` or `editor` (never `super_admin`), fresh authenticator code (step-up from S-038), writes the `user_roles` row and one `role.change` audit row.
 - [ ] AC2: `removeRole({ userId })` — same guards; deletes the `user_roles` row (there is no soft delete); effective at the person's next call; writes `role.change`.
 - [ ] AC3: The last Super Admin cannot remove their own role (`not_allowed`); any action against a Super Admin target by a non-Super-Admin is refused by the action AND by the database trigger from S-012 (both tested).
 - [ ] AC4: A `super_admin` row is written only by the service role (our script) or by a Super Admin. A request to grant `super_admin` through the action is refused.
-- [ ] AC5: `removeAuthenticator({ userId, reason })` (lockout recovery) — Super Admin removes an Admin or Maintainer's authenticator through the Supabase admin API; audit-logged `user.remove_mfa`; refused for a Super Admin target.
+- [ ] AC5: `removeAuthenticator({ userId, reason })` (lockout recovery) — Super Admin removes an Admin or Editor's authenticator through the Supabase admin API; audit-logged `user.remove_mfa`; refused for a Super Admin target.
 - [ ] AC6: `listStaff()` — `requireSuperAdmin()`; returns Admin and Maintainer accounts with last sign-in and whether an authenticator is enrolled. Admins and Maintainers calling it get `not_allowed`.
 - [ ] AC7: No sign-up path produces any staff role; there is no invite email and no `staff_invites` table.
 - [ ] AC8: A staff member cannot delete their own account from the profile (S-037 refuses); the Super Admin removes the role first.
@@ -35,7 +35,7 @@ Let the Super Admin create and remove Admin and Maintainer accounts and recover 
 ## Edge cases
 
 - [ ] EC1: Granting a role to a user who has not verified their email or does not exist — `not_found` / `validation_failed`.
-- [ ] EC2: A Maintainer is granted — they get "not found" on every admin page and are refused every action (no `role_permissions` rows).
+- [ ] EC2: An Editor is granted — they may access all admin areas except User Roles and Settings; those return "not found".
 - [ ] EC3: The role of a person who is signed in is removed — their next call is refused (database truth, token up to an hour old).
 - [ ] EC4: An Admin tries `grantRole` directly — `not_allowed` and a `permission.denied` audit row.
 - [ ] EC5: Two Super Admins remove each other at the same moment — the last-Super-Admin rule still holds.
@@ -43,7 +43,7 @@ Let the Super Admin create and remove Admin and Maintainer accounts and recover 
 ## Contract
 
 Types added or changed in `types/` by this story:
-- `types/role.ts`: `StaffRole`, `StaffListItem`.
+- `types/role.ts`: `StaffRole` (`'admin' | 'editor' | 'super_admin'`), `StaffListItem`.
 - `types/auth.ts`: input/output types for the four actions.
 
 ## Out of scope
@@ -57,7 +57,7 @@ Types added or changed in `types/` by this story:
 ## Assumptions accepted
 
 - ASSUMPTION (auth design section 11, Q64 answered): only the Super Admin changes roles; no deputy.
-- ASSUMPTION (M18 option a, A9): a Maintainer with no permissions gets "not found".
+- CONFIRMED (2026-11-03, Q62/Q63): Editor accesses all admin areas except User Roles and Settings.
 - ASSUMPTION: the person registers like a customer first (no invite flow).
 - PROPOSED (S8, M13): second team member alerted on every role change — implemented in S-100, not here.
 
