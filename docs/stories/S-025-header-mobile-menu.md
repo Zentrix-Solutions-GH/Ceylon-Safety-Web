@@ -1,7 +1,7 @@
 ---
 id: S-025
 title: Header + mobile menu
-status: pr-open
+status: merged
 owner: frontend
 risk: normal
 branch: feature/S-025-header-mobile-menu

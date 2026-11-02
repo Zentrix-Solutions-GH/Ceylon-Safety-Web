@@ -1,7 +1,7 @@
 ---
 id: S-004
 title: CI workflow + branch protection
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-004-ci-branch-protection

@@ -1,7 +1,7 @@
 ---
 id: S-034
 title: signUp, verifyEmail, resendCode actions
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-034-signup-verify-resend

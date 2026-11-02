@@ -2,7 +2,7 @@
 id: S-019
 title: Schema 9: audit log, anonymise_user, views, append-only triggers
 phase: MS1
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-019-schema-audit-views-anonymise
