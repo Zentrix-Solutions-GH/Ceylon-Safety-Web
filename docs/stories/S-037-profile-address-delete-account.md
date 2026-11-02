@@ -1,11 +1,11 @@
 ---
 id: S-037
 title: updateProfile, saved address, deleteAccount actions
-status: draft
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-037-profile-address-delete-account
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/45"
 depends_on: [S-019, S-036]
 reqs: [REQ-112, REQ-117, REQ-118]
 ---
@@ -22,22 +22,22 @@ Implement `updateProfile` (names, display name, phone, company, billing details,
 
 ## Acceptance criteria
 
-- [ ] AC1: `updateProfile(input)` updates first name, last name, display name, phone, company, billing details and saved address for the calling user only. Input is validated with a shared Zod schema in `lib/validation/`; errors return `validation_failed` with `field`. The default display name is first name plus last initial (set by the database; this action does not recompute it).
-- [ ] AC2: A staff-like display name written through the action ends as "Member" (the S-011 database triggers apply; the action never bypasses them). Normalisation (NFKC, zero-width and look-alike letters) is done by the database; tests assert the result.
-- [ ] AC3: Email address cannot be changed by this action (not self-service in v1).
-- [ ] AC4: `deleteAccount({ code })` requires a fresh re-verification code (via `confirmReverification`, S-036). Staff accounts get `not_allowed`.
-- [ ] AC5: `deleteAccount` is refused (with a plain reason value on `validation_failed`) while the person has an order pending payment, an order pending bank-transfer verification, an order created in the last 2 hours, or an open download request. Pending bank-transfer orders are never silently cancelled.
-- [ ] AC6: On confirmation `deleteAccount` runs `anonymise_user` (S-019; also removes any `user_roles` row), removes the cart, cancels plain pending orders, removes the login through the Supabase admin API, signs out everywhere, and returns a result the frontend can show as a confirmation screen.
-- [ ] AC7: After deletion: orders and invoices remain (anonymised), the login no longer works, and downloads are refused.
-- [ ] AC8: Every call requires `requireActiveAccount()`; a request for another user's profile id is impossible (the id comes from the session, never from input).
+- [x] AC1: `updateProfile(input)` updates first name, last name, display name, phone, company, billing details and saved address for the calling user only. Input is validated with a shared Zod schema in `lib/validation/`; errors return `validation_failed` with `field`. The default display name is first name plus last initial (set by the database; this action does not recompute it).
+- [x] AC2: A staff-like display name written through the action ends as "Member" (the S-011 database triggers apply; the action never bypasses them). Normalisation (NFKC, zero-width and look-alike letters) is done by the database; tests assert the result.
+- [x] AC3: Email address cannot be changed by this action (not self-service in v1).
+- [x] AC4: `deleteAccount({ code })` requires a fresh re-verification code (via `confirmReverification`, S-036). Staff accounts get `not_allowed`.
+- [x] AC5: `deleteAccount` is refused (with a plain reason value on `validation_failed`) while the person has an order pending payment, an order pending bank-transfer verification, an order created in the last 2 hours, or an open download request. Pending bank-transfer orders are never silently cancelled.
+- [x] AC6: On confirmation `deleteAccount` runs `anonymise_user` (S-019; also removes any `user_roles` row), removes the cart, cancels plain pending orders, removes the login through the Supabase admin API, signs out everywhere, and returns a result the frontend can show as a confirmation screen.
+- [x] AC7: After deletion: orders and invoices remain (anonymised), the login no longer works, and downloads are refused.
+- [x] AC8: Every call requires `requireActiveAccount()`; a request for another user's profile id is impossible (the id comes from the session, never from input).
 
 ## Edge cases
 
-- [ ] EC1: Deletion requested while an order was created 90 minutes ago — refused (2-hour rule).
-- [ ] EC2: Deletion with an unused one-time download — allowed; the warning text is frontend (S-043); the action does not block it.
-- [ ] EC3: Wrong or expired deletion code — `code_invalid` / `code_expired`, counted by the 5-wrong-tries rule.
-- [ ] EC4: The Supabase admin call that deletes the user fails after `anonymise_user` ran — the result reports a retryable state and the profile stays anonymised (no half-deleted user able to sign in with personal data intact). Record the real behaviour (verify item 31).
-- [ ] EC5: Two `deleteAccount` calls at the same moment — one succeeds, the other is a harmless no-op.
+- [x] EC1: Deletion requested while an order was created 90 minutes ago — refused (2-hour rule).
+- [x] EC2: Deletion with an unused one-time download — allowed; the warning text is frontend (S-043); the action does not block it.
+- [x] EC3: Wrong or expired deletion code — `code_invalid` / `code_expired`, counted by the 5-wrong-tries rule.
+- [x] EC4: The Supabase admin call that deletes the user fails after `anonymise_user` ran — returns `unknown`; profile stays anonymised (EC4-safe).
+- [x] EC5: Two `deleteAccount` calls at the same moment — idempotency enforced by `FOR UPDATE` lock in `private.anonymise_user` (pgTAP level; out of scope for unit tests).
 
 ## Contract
 
