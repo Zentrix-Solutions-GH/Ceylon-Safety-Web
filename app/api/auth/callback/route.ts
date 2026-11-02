@@ -19,7 +19,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // Exchange the one-time code for a session (PKCE flow).
   // On a second call with the same code Supabase will return an error; we still
   // redirect the user safely rather than crashing (EC2).
-  await supabase.auth.exchangeCodeForSession(code);
+  // Network errors are caught so the handler always redirects rather than throws.
+  try {
+    await supabase.auth.exchangeCodeForSession(code);
+  } catch {
+    // Supabase unreachable or returned a malformed response; fall through to safeNext redirect.
+  }
 
   // Read and clear the return-address cookie set by startGoogleSignIn (AC5).
   const rawNext = await getNextCookie();
