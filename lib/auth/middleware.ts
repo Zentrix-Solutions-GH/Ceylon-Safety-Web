@@ -194,7 +194,7 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
       return applyPrivateHeaders(res);
     }
 
-    // Suspended → sign out unconditionally regardless of role (P1 fix: covers maintainer)
+    // Suspended → sign out unconditionally regardless of role (P1 fix: covers editor)
     if (claimedStatus === "suspended") {
       const { error } = await supabase.auth.signOut();
       if (error) console.error("[middleware] signOut failed:", error.message);
@@ -204,7 +204,7 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
       return forwardCookies(response, redirect);
     }
 
-    // No/maintainer claim → not found (do not reveal the admin area exists, REQ-150)
+    // No staff claim → not found (do not reveal the admin area exists, REQ-150)
     if (!hasStaffAccess(claimedRole)) {
       return new NextResponse(null, { status: 404 });
     }

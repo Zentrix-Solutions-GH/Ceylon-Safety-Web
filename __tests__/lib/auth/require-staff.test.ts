@@ -109,7 +109,7 @@ describe("requireStaff", () => {
       data: { user: makeUser() },
       error: null,
     });
-    mockFrom.mockImplementation(makeFromMock("active", "maintainer"));
+    mockFrom.mockImplementation(makeFromMock("active", "editor"));
     mockRpc.mockResolvedValue({ data: false, error: null });
 
     const result = await requireStaff("articles.publish");

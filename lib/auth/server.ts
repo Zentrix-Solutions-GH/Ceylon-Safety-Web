@@ -198,6 +198,8 @@ export async function requireSuperAdmin(): Promise<AuthResult> {
 
   const role = await getStaffRole(user.id);
   if (role !== "super_admin") {
+    const { writeDenied } = await import("@/lib/audit");
+    await writeDenied(user.id, "staff_action", "super_admin_required").catch(() => undefined);
     return { ok: false, code: "not_allowed" };
   }
 

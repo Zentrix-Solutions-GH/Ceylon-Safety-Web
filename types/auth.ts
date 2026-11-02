@@ -43,7 +43,7 @@ export type ActionResult<T = undefined> =
 
 // ─── JWT claim shapes (added by the custom_access_token hook, S-012) ─────────
 
-export type UserRole = "super_admin" | "admin" | "maintainer";
+export type UserRole = "super_admin" | "admin" | "editor";
 export type AccountStatus = "active" | "suspended";
 
 export interface UserRoleClaim {
@@ -153,6 +153,32 @@ export interface ConfirmReverificationInput {
 }
 
 export type ConfirmReverificationResult = ActionResult;
+
+// ─── S-039: Staff role action input / output types ───────────────────────────
+
+import type { StaffRole, StaffListItem } from "@/types/role";
+
+export interface GrantRoleInput {
+  userId: string;
+  role: StaffRole;
+  totpCode: string;
+}
+
+export interface RemoveRoleInput {
+  userId: string;
+  totpCode: string;
+}
+
+export interface RemoveAuthenticatorInput {
+  userId: string;
+  reason: string;
+  totpCode: string;
+}
+
+export type GrantRoleResult = ActionResult;
+export type RemoveRoleResult = ActionResult;
+export type RemoveAuthenticatorResult = ActionResult;
+export type ListStaffResult = ActionResult<{ staff: StaffListItem[] }>;
 
 // ─── Session user (what auth helpers return) ──────────────────────────────────
 
