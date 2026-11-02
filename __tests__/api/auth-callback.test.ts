@@ -101,6 +101,20 @@ describe("GET /api/auth/callback — EC2 double callback", () => {
   });
 });
 
+describe("GET /api/auth/callback — network error", () => {
+  it("redirects safely when exchangeCodeForSession throws (network timeout)", async () => {
+    mockExchangeCodeForSession.mockRejectedValueOnce(new Error("Network timeout"));
+    const req = makeRequest("abc123");
+    const res = await GET(req);
+
+    expect(res.status).toBe(307);
+    // Must redirect to the same origin, not propagate a 500
+    const location = res.headers.get("Location") ?? "";
+    expect(location).toMatch(/^http:\/\/localhost/);
+    expect(location).not.toMatch(/^https?:\/\/(?!localhost)/);
+  });
+});
+
 describe("GET /api/auth/callback — missing code", () => {
   it("redirects to / when no code query param present", async () => {
     const req = makeRequest();
