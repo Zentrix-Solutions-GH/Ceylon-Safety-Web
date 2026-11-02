@@ -155,6 +155,22 @@ npx supabase stop
 
 All 4 tests must pass. A unit-level test (`update-profile.test.ts` — "AC2: updateProfile passes display_name to DB") confirms the action does not bypass the trigger by omitting `display_name` from the update payload.
 
+**AC2 manual verification — PASSED (2026-11-02)**
+
+```
+$ SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_ANON_KEY=<anon> SUPABASE_SERVICE_ROLE_KEY=<service> \
+    npx vitest run supabase/tests/profile-sanitising.test.ts
+
+ ✓ supabase/tests/profile-sanitising.test.ts (4 tests) 796ms
+   ✓ plain staff keyword 'admin' becomes 'Member' (or 'Member <suffix>') 331ms
+   ✓ word containing staff keyword 'support' becomes 'Member'
+   ✓ zero-width character injected into staff keyword is still caught ('a​dmin')
+   ✓ ordinary non-staff display name is stored unchanged
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+```
+
 ## Review notes
 
 - **P0** `lib/validation/user.ts:22` — `displayName` Zod max is 50; DB `CHECK` enforces max 40. 41–50 char values pass Zod but return `{ ok: false, code: "unknown" }` instead of `validation_failed`. Fix: `max(40)`. (full-review 2026-11-02)
