@@ -1,11 +1,11 @@
 ---
 id: S-036
 title: Password reset, change password, re-verification actions
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-036-password-reset-change-reverify
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/44
 depends_on: [S-035]
 reqs: [REQ-115, REQ-117, REQ-118]
 ---
@@ -22,21 +22,21 @@ Implement `requestPasswordReset`, `resetPassword`, `changePassword`, `requestRev
 
 ## Acceptance criteria
 
-- [ ] AC1: `requestPasswordReset({ email, captchaToken })` always returns the same neutral result whether or not the email exists. Limits: 3 per hour per email, 10 per hour per IP (`rate_limited`).
-- [ ] AC2: `resetPassword({ email, code, newPassword, authenticatorCode? })` verifies the emailed code and sets the password. If the account has an authenticator enrolled (all staff), the authenticator code is required as well, otherwise `mfa_required`; the emailed code alone must never change a staff password. On success all other devices are signed out and the person is signed in. Weak password → `weak_password`.
-- [ ] AC3: The pending-reset state between the code check and the password change is a short-lived cookie with the same settings as the pending-email cookie, so `/reset-password` can show the right step while a lower-level session exists.
-- [ ] AC4: A "your password was changed" email is sent by us after a reset or change, unless Supabase already sends its own notice — never both (verify item 6; record which is enabled).
-- [ ] AC5: `changePassword({ code, newPassword })` is for a signed-in person who has a password. It uses Supabase's reauthentication code together with the new password. A Google-only account gets `not_allowed` (they use "Forgot password" to add a password).
-- [ ] AC6: `requestReverification()` sends a fresh code (the "magic link" template carrying a code, `shouldCreateUser` off) to the signed-in person; `confirmReverification({ code, authenticatorCode? })` checks it. Limit: 3 requests per hour per signed-in user (`rate_limited`). For staff the authenticator code is a separate input.
-- [ ] AC7: Wrong or expired codes map to `code_invalid` / `code_expired`; attempt limits follow S-034 (5 wrong tries per code).
+- [x] AC1: `requestPasswordReset({ email, captchaToken })` always returns the same neutral result whether or not the email exists. Limits: 3 per hour per email, 10 per hour per IP (`rate_limited`).
+- [x] AC2: `resetPassword({ email, code, newPassword, authenticatorCode? })` verifies the emailed code and sets the password. If the account has an authenticator enrolled (all staff), the authenticator code is required as well, otherwise `mfa_required`; the emailed code alone must never change a staff password. On success all other devices are signed out and the person is signed in. Weak password → `weak_password`.
+- [x] AC3: The pending-reset state between the code check and the password change is a short-lived cookie with the same settings as the pending-email cookie, so `/reset-password` can show the right step while a lower-level session exists.
+- [ ] AC4: A "your password was changed" email is sent by us after a reset or change, unless Supabase already sends its own notice — never both (verify item 6; record which is enabled). **PENDING verify item 6 — see TODO(verify-6) in reset-password.ts.**
+- [x] AC5: `changePassword({ code, newPassword })` is for a signed-in person who has a password. It uses Supabase's reauthentication code together with the new password. A Google-only account gets `not_allowed` (they use "Forgot password" to add a password).
+- [x] AC6: `requestReverification()` sends a fresh code (the "magic link" template carrying a code, `shouldCreateUser` off) to the signed-in person; `confirmReverification({ code, authenticatorCode? })` checks it. Limit: 3 requests per hour per signed-in user (`rate_limited`). For staff the authenticator code is a separate input.
+- [x] AC7: Wrong or expired codes map to `code_invalid` / `code_expired`; attempt limits follow S-034 (5 wrong tries per code).
 
 ## Edge cases
 
-- [ ] EC1: Reset for an account with an authenticator completes without a redirect home in the middle (the lower-level session exists after the emailed code check — verify item 26).
-- [ ] EC2: Reset requested for an unknown email — same neutral response and the same timing class (no account enumeration beyond small timing differences, accepted in the threat model).
-- [ ] EC3: A reset code is reused after the password changed — refused.
-- [ ] EC4: A Google-only user uses "Forgot password" — a password is added and password sign-in works (verify item 4; recorded by a real test).
-- [ ] EC5: Does updating the password of a user with an enrolled authenticator need the higher authentication level? (verify item 16) — the extra authenticator step is built either way; record the finding.
+- [x] EC1: Reset for an account with an authenticator completes without a redirect home in the middle (the lower-level session exists after the emailed code check — verify item 26).
+- [x] EC2: Reset requested for an unknown email — same neutral response and the same timing class (no account enumeration beyond small timing differences, accepted in the threat model).
+- [x] EC3: A reset code is reused after the password changed — refused.
+- [x] EC4: A Google-only user uses "Forgot password" — a password is added and password sign-in works (verify item 4; recorded by a real test).
+- [x] EC5: Does updating the password of a user with an enrolled authenticator need the higher authentication level? (verify item 16) — the extra authenticator step is built either way; record the finding. **Finding: YES — verified TOTP step required; built and tested.**
 
 ## Contract
 
