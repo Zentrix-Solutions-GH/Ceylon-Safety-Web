@@ -1,7 +1,7 @@
 ---
 id: S-038
 title: Audit helper and step-up helper
-status: draft
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-038-audit-and-step-up-helpers
@@ -71,16 +71,98 @@ Types added or changed in `types/` by this story:
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
-
 Prior art: read admin panel design sections 2, 4, 9, 10, 12, 16, 20.1 and auth design sections 11, 15; schema notes on `admin_audit_log` append-only and `purge_old_audit_rows`. Implements the "audit-row helper" and "step-up code helper" lines of admin section 20.1; supersedes nothing.
+
+### Design decisions (gaps resolved before coding)
+
+**EC1 — audit insert failure:** Fail the admin action. The helper throws; the caller maps to `unknown`. Silent success on a failed audit row is a security regression.
+
+**AC1 — `summary` field:** The `admin_audit_log` schema has no `summary` column. Summary is stored inside the `after` JSONB as `after._summary` (a reserved key). No migration needed. The type definition documents this convention.
+
+**AC2 / EC2 — session tracking:** No `session_id` column in `admin_audit_log`. Use Upstash: key `admin-session-start:{actor_id}:{supabase_session_id}` with TTL 12 h (staff session window). `SET NX` atomically — concurrent tabs only write one row. `supabase_session_id` read from the JWT `session_id` claim via `getCurrentUser()`.
+
+**AC3 — `support.read`:** Event name is PROPOSED (M16 pending) but team decision (Q65 resolved internally) is to log it now. Add `support.read` and `support.download` to the CHECK constraint via migration. Same Upstash once-per-item-per-session pattern: key `support-read:{actor_id}:{session_id}:{entity_type}:{entity_id}`, TTL 12 h.
+
+**EC4 — bank number masking:** `maskSensitive(value: string): string` — replaces digit runs of 8+ chars with `***`. Applied to all `before`/`after` fields before insert. Pattern covers account numbers, card numbers.
+
+**AC6 — test file location:** `__tests__/lib/ratelimit/admin-action-limits.test.ts` (not under `audit/`).
+
+### Files to create / edit
+
+**Migration (new):**
+- `supabase/migrations/20261102000001_audit_support_events.sql`
+  - Add `support.read` and `support.download` to the `admin_audit_log_action_check` CHECK constraint (ALTER TABLE … DROP CONSTRAINT … ADD CONSTRAINT with expanded list).
+
+**Types (new):**
+- `types/audit.ts` — `AuditEventName` union (full list from schema v15 + `support.read`, `support.download`); `AuditEvent` object shape.
+
+**Audit helper (implement existing stub):**
+- `lib/audit/index.ts`
+  - `writeAuditRow(event: AuditEvent): Promise<void>` — inserts one row via service-role Supabase client; throws on failure; masks sensitive fields; stores summary in `after._summary`.
+  - `writeSessionStart(actorId: string, sessionId: string): Promise<void>` — Upstash NX guard, then `writeAuditRow`.
+  - `writeSupportRead(actorId: string, sessionId: string, entityType: string, entityId: string): Promise<void>` — Upstash NX guard per item, then `writeAuditRow`.
+  - `writeDenied(actorId: string, entityType: string, entityId: string): Promise<void>` — direct `writeAuditRow` with `permission.denied`.
+  - `maskSensitive(val: unknown): unknown` — internal; walks jsonb recursively.
+
+**Step-up helper (new file):**
+- `lib/auth/step-up.ts`
+  - `verifyStepUp(actorId: string, totpCode: string): Promise<{ ok: true } | { ok: false; code: 'mfa_required' }>` — calls Supabase MFA challenge + verify; on success writes Upstash key `step-up:{actorId}` TTL 300 s.
+  - `requireStepUp(actorId: string, totpCode: string | undefined): Promise<void>` — checks Upstash first (5-min cache hit → pass); if miss, calls `verifyStepUp`; throws `{ code: 'mfa_required' }` if no code or wrong code.
+
+**Rate-limit additions:**
+- `lib/ratelimit/index.ts` — add `checkAdminWriteLimit` and `checkAdminDestructiveLimit` exports (thin wrappers around `checkRateLimit`; 60/min and 10/min; mode `open` — outage allows the action through; onOutage logs to Sentry).
+
+**Tests:**
+- `__tests__/lib/audit/write.test.ts`
+- `__tests__/lib/audit/session-start.test.ts`
+- `__tests__/lib/audit/support-read.test.ts`
+- `__tests__/lib/audit/denied.test.ts`
+- `__tests__/lib/auth/step-up.test.ts`
+- `__tests__/lib/ratelimit/admin-action-limits.test.ts`
+- `supabase/tests/audit-visibility.test.ts`
+
+### Step order
+
+1. Migration — add `support.read`, `support.download` to CHECK constraint.
+2. `types/audit.ts` — full event list + `AuditEvent` shape.
+3. `lib/audit/index.ts` — `writeAuditRow` + masking + session/support/denied wrappers.
+4. `lib/auth/step-up.ts` — `requireStepUp` + `verifyStepUp`.
+5. `lib/ratelimit/index.ts` — `checkAdminWriteLimit`, `checkAdminDestructiveLimit`.
+6. Tests (TDD — write red tests first, then implement, then green).
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  58 passed | 7 skipped (65)
+      Tests  718 passed | 21 skipped (739)
+   Duration  25.79s
+(After P0/P1 fixes: factorId resolved via listFactors, Upstash dedup paths added,
+writeSupportRead mutex added, new no-enrolled-factor test case.)
+
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests (run supabase start first)
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 5 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
 
 ## Review notes
