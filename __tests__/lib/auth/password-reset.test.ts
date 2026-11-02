@@ -314,4 +314,32 @@ describe("resetPassword", () => {
     await resetPassword({ email: "admin@example.com", code: "12345678", newPassword: "newpass123", authenticatorCode: "000000" });
     expect(mockIncAttempts).toHaveBeenCalled();
   });
+
+  it("S17: suspended (banned) user is rejected after valid code", async () => {
+    const future = new Date(Date.now() + 86_400_000).toISOString();
+    mockVerifyOtp.mockResolvedValue({
+      data: { user: { id: "uid-banned", email: "user@example.com", banned_until: future }, session: {} },
+      error: null,
+    });
+
+    const { resetPassword } = await import("@/lib/auth/actions/reset-password");
+    const result = await resetPassword({ email: "user@example.com", code: "12345678", newPassword: "newpass123" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_allowed");
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+  });
+
+  it("P2: mfa.listFactors() returning null data falls back to unknown (no throw)", async () => {
+    mockMfaListFactors.mockResolvedValue({ data: null, error: { message: "MFA service unavailable" } });
+    mockVerifyOtp.mockResolvedValue({
+      data: { user: { id: "uid-1", email: "admin@example.com" }, session: {} },
+      error: null,
+    });
+    // listFactors null → factorsData is null → hasTotp false → password set normally
+    // (the guard for a verified factor being absent was the fix; this confirms no throw)
+    const { resetPassword } = await import("@/lib/auth/actions/reset-password");
+    const result = await resetPassword({ email: "admin@example.com", code: "12345678", newPassword: "newpass123" });
+    // null factorsData → no totp factors found → treated as non-staff, password set
+    expect(result.ok).toBe(true);
+  });
 });

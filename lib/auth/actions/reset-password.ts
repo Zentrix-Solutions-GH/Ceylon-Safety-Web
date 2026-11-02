@@ -46,6 +46,12 @@ export async function resetPassword(input: ResetPasswordInput): Promise<ResetPas
     return { ok: false, code: "code_invalid" };
   }
 
+  // S17: reject suspended / banned accounts even when the code is valid.
+  const bannedUntil = (otpData.user as { banned_until?: string }).banned_until;
+  if (bannedUntil && new Date(bannedUntil) > new Date()) {
+    return { ok: false, code: "not_allowed" };
+  }
+
   // AC2/EC1 (verify item 16): check if the account has a verified TOTP factor.
   // Finding: YES — the emailed code alone must not change a staff password. The TOTP step
   // is required whenever a verified factor exists, regardless of whether the caller is "staff".
