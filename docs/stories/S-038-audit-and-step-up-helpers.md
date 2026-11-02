@@ -171,7 +171,10 @@ writeSupportRead mutex added, new no-enrolled-factor test case.)
 - **P1** `lib/auth/step-up.ts` — `requireStepUp(actorId, …)` has no in-code enforcement that `actorId` comes from `session.user.id`. Add a JSDoc `@param actorId` note before first caller lands. (full-review 2026-11-02) → **Resolved** (re-review 2026-11-02)
 - **P1** `docs/stories/S-038-audit-and-step-up-helpers.md` AC7 checkbox — ticked without evidence the Supabase stack was running. Uncheck and re-verify, or note it was verified via S-019 run. (full-review 2026-11-02) → **Resolved** (re-review 2026-11-02)
 - **P2** `lib/audit/index.ts:30` — `/\d{8,}/` masks any 8+ digit substring, including compact dates like `"20261102"`. Anchor to `^…$` or raise to 12+ digits. (full-review 2026-11-02) → **Resolved** (re-review 2026-11-02)
-- **P2** `lib/audit/index.ts` + `__tests__/lib/audit/` — `writeSupportRead` has no Upstash NX path test (correct key/TTL, duplicate skip, rollback on failure). Pattern identical to `writeSessionStart`; not a blocker. (re-review 2026-11-02)
+- **P2** `lib/audit/index.ts` + `__tests__/lib/audit/` — `writeSupportRead` has no Upstash NX path test (correct key/TTL, duplicate skip, rollback on failure). Pattern identical to `writeSessionStart`; not a blocker. (re-review 2026-11-02) → **Resolved** (pass 4)
+- **P1** `supabase/tests/audit-visibility.test.ts` — double `createUser` for same email; both AC7 tests always failed on live stack. (abevicrama review 2026-11-02) → **Resolved** (pass 4)
+- **P1** `__tests__/lib/auth/step-up.test.ts` — `_memCache` not reset between tests; `listFactors` network error undocumented. (abevicrama review 2026-11-02) → **Resolved** (pass 4)
+- **P2** `lib/auth/step-up.ts` — plain-object throw; `maskValue` only matched whole-string digits; reason assertion conditional in rate-limit tests. (abevicrama review 2026-11-02) → **Resolved** (pass 4)
 
 ## After this merges, a user can:
 
