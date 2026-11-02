@@ -51,4 +51,16 @@ describe("writeSupportRead", () => {
     await writeSupportRead("sa-5", "sess-5", "profile", "shared-id");
     expect(mockInsert).toHaveBeenCalledTimes(2);
   });
+
+  it("P2: concurrent reads of different items in same session each write exactly one row", async () => {
+    // Two distinct items read concurrently — each must produce one row, not zero or two.
+    await Promise.all([
+      writeSupportRead("sa-6", "sess-6", "order", "item-A"),
+      writeSupportRead("sa-6", "sess-6", "order", "item-B"),
+      // Duplicate calls for the same items must not produce extra rows.
+      writeSupportRead("sa-6", "sess-6", "order", "item-A"),
+      writeSupportRead("sa-6", "sess-6", "order", "item-B"),
+    ]);
+    expect(mockInsert).toHaveBeenCalledTimes(2);
+  });
 });
