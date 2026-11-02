@@ -2,7 +2,7 @@
 id: S-011
 title: Schema 1: profiles, roles, role_permissions, triggers
 phase: MS1
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-011-schema-users-roles

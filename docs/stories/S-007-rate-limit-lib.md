@@ -1,7 +1,7 @@
 ---
 id: S-007
 title: Upstash rate-limit lib + Turnstile verify lib
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-007-rate-limit-lib

@@ -1,7 +1,7 @@
 ---
 id: S-005
 title: Supabase projects (local, staging, prod) + migration flow
-status: pr-open
+status: merged
 owner: backend
 risk: normal
 branch: feature/S-005-supabase-projects-migrations

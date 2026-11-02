@@ -85,7 +85,8 @@ $ bash scripts/check.sh
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `lib/audit/index.ts` — mutex lock always resolves even on writer failure; concurrent waiter silently drops audit row. (pass 5 2026-11-02) → **Resolved** (pass 5)
+- **P1** `lib/auth/step-up.ts` — `listFactors()` return-value errors (JWT expiry) silently became `mfa_required`. (pass 5 2026-11-02) → **Resolved** (pass 5)
 
 ## After this merges, a user can:
 

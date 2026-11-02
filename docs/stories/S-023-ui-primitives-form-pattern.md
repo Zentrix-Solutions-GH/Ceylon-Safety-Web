@@ -1,7 +1,7 @@
 ---
 id: S-023
 title: shadcn/ui primitives + form pattern
-status: pr-open
+status: merged
 owner: frontend
 risk: normal
 branch: feature/S-023-ui-primitives-form-pattern
