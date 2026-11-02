@@ -1,11 +1,11 @@
 ---
 id: S-039
 title: Staff role actions — grantRole, removeRole, removeAuthenticator, listStaff
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-039-staff-role-actions
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/49
 depends_on: [S-038]
 reqs: [REQ-130, REQ-130b, REQ-130c, REQ-130d, REQ-130e, REQ-130f, REQ-131]
 ---
