@@ -4,6 +4,8 @@
 -- These event names appear in admin panel design section 10.2 and were PROPOSED
 -- pending M16; the decision is now made.
 
+BEGIN;
+
 ALTER TABLE public.admin_audit_log
   DROP CONSTRAINT admin_audit_log_action_check;
 
@@ -25,3 +27,5 @@ ALTER TABLE public.admin_audit_log
     'purge.failed',
     'support.read',             'support.download'
   ));
+
+COMMIT;

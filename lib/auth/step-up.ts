@@ -46,7 +46,12 @@ async function setCache(actorId: string): Promise<void> {
   _memCache.set(actorId, { expiresAt: Date.now() + STEP_UP_TTL_MS });
 }
 
-/** @internal Reset the in-memory cache between tests. Never call in production. */
+/**
+ * @internal Reset the in-memory cache between tests. Never call in production.
+ * No NODE_ENV guard is needed: this module uses `import "server-only"` which
+ * already prevents it from loading in browser/edge contexts, and test files
+ * import it directly — the export does not execute at module load time.
+ */
 export function _resetCacheForTest(): void {
   _memCache.clear();
 }
