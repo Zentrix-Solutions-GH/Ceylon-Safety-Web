@@ -128,8 +128,8 @@ $ bash scripts/check.sh
 ✓ TypeScript passed
 
 ── Vitest (unit) ──
- Test Files  52 passed | 5 skipped (57)
-      Tests  677 passed | 15 skipped (692)
+ Test Files  52 passed | 6 skipped (58)
+      Tests  679 passed | 19 skipped (698)
 ✓ Vitest (unit) passed
 
 ── pgTAP suites ──
