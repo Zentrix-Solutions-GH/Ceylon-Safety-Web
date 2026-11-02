@@ -21,6 +21,7 @@ vi.mock("next/headers", () => ({
 const VALID_ENV = {
   NEXT_PUBLIC_SUPABASE_URL: "https://abc.supabase.co",
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key-value",
+  NEXT_PUBLIC_APP_URL: "https://ceylonsafety.com",
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key-value",
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: "a".repeat(64),
   // S-030: required by cspConfig (lib/config.ts imports it at module level)

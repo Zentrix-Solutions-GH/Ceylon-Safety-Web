@@ -44,3 +44,30 @@ export async function clearPendingSignup(): Promise<void> {
   const jar = await cookies();
   jar.delete(COOKIE_NAME);
 }
+
+// ─── Google sign-in "next" cookie (S-035, auth design §5.2) ──────────────────
+
+const NEXT_COOKIE_NAME = "auth_next";
+// 15 minutes — long enough for the OAuth round-trip; auth design §5.2 + §19
+const NEXT_MAX_AGE = 60 * 15;
+
+export async function setNextCookie(next: string): Promise<void> {
+  const jar = await cookies();
+  jar.set(NEXT_COOKIE_NAME, next, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: NEXT_MAX_AGE,
+    path: "/",
+  });
+}
+
+export async function getNextCookie(): Promise<string | null> {
+  const jar = await cookies();
+  return jar.get(NEXT_COOKIE_NAME)?.value ?? null;
+}
+
+export async function clearNextCookie(): Promise<void> {
+  const jar = await cookies();
+  jar.delete(NEXT_COOKIE_NAME);
+}
