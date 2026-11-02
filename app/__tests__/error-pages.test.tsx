@@ -10,6 +10,7 @@ import ErrorPage from "@/app/error";
 import NotFoundPage from "@/app/not-found";
 
 const mockReset = vi.fn();
+beforeEach(() => mockReset.mockReset());
 
 // ─── AC7: root error page ────────────────────────────────────────────────────
 
