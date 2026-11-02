@@ -4,7 +4,13 @@
 // Must not import globals.css or any component that might fail during a root-layout error.
 import { t } from "@/messages/en";
 
-export default function GlobalError({ reset }: { reset: () => void }) {
+export default function GlobalError({
+  error: _error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
     <html lang="en">
       <body
@@ -50,6 +56,7 @@ export default function GlobalError({ reset }: { reset: () => void }) {
           </h1>
           <p style={{ color: "#6b7280" }}>{t("global_error.message")}</p>
           <button
+            type="button"
             onClick={reset}
             style={{
               padding: "8px 16px",
