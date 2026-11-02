@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireStepUp } from "@/lib/auth/step-up";
+import { requireStepUp, _resetCacheForTest } from "@/lib/auth/step-up";
 
 const mockListFactors = vi.fn();
 const mockChallenge = vi.fn();
@@ -21,6 +21,8 @@ const mockVerify = vi.fn();
 describe("requireStepUp", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset module-level _memCache so actor IDs don't carry state between tests.
+    _resetCacheForTest();
     vi.mocked(createSupabaseServerClient).mockResolvedValue({
       auth: {
         mfa: {
@@ -94,6 +96,11 @@ describe("requireStepUp", () => {
     });
 
     vi.useRealTimers();
+  });
+
+  it("P1: listFactors network error propagates (not converted to mfa_required)", async () => {
+    mockListFactors.mockRejectedValue(new Error("network error"));
+    await expect(requireStepUp("actor-network-err", "123456")).rejects.toThrow("network error");
   });
 
   it("AC5: cache is per-actor (different actors don't share)", async () => {

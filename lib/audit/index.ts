@@ -28,7 +28,7 @@ function getAuditRedis(): Redis {
 
 function maskValue(val: unknown): unknown {
   if (typeof val === "string") {
-    return /^\d{8,}$/.test(val) ? "***" : val;
+    return val.replace(/\b\d{8,}\b/g, "***");
   }
   if (Array.isArray(val)) {
     return val.map(maskValue);

@@ -33,24 +33,6 @@ afterAll(async () => {
   }
 });
 
-async function signUpAndGetToken(
-  admin: ReturnType<typeof createClient>,
-  email: string,
-  password: string
-): Promise<string> {
-  const { data, error } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
-  if (error || !data.user) throw new Error(`createUser failed: ${error?.message}`);
-  createdUserIds.push(data.user.id);
-
-  const { data: session, error: signInErr } = await createClient(SUPABASE_URL, ANON_KEY)
-    .auth.signInWithPassword({ email, password });
-  if (signInErr || !session.session) throw new Error(`signIn failed: ${signInErr?.message}`);
-  return session.session.access_token;
-}
 
 describe("audit_visibility RLS (AC7)", () => {
   it.skipIf(!STACK_AVAILABLE)("non-Super-Admin cannot read rows where actor is a Super Admin", async () => {
@@ -86,8 +68,12 @@ describe("audit_visibility RLS (AC7)", () => {
     });
     expect(insertErr).toBeNull();
 
-    // The Admin user should NOT see this row (SA as actor)
-    const adminToken = await signUpAndGetToken(adminClient as ReturnType<typeof createClient>, adminEmail, "Test1234!");
+    // The Admin user should NOT see this row (SA as actor).
+    // Sign in directly — the user was already created above; a second createUser
+    // call with the same email would fail with a duplicate-email error.
+    const { data: adminSession } = await createClient(SUPABASE_URL, ANON_KEY)
+      .auth.signInWithPassword({ email: adminEmail, password: "Test1234!" });
+    const adminToken = adminSession.session!.access_token;
     const adminAnon = createClient(SUPABASE_URL, ANON_KEY, {
       global: { headers: { Authorization: `Bearer ${adminToken}` } },
     });
@@ -138,7 +124,10 @@ describe("audit_visibility RLS (AC7)", () => {
       entity_id: saId,
     });
 
-    const adminToken = await signUpAndGetToken(adminClient as ReturnType<typeof createClient>, adminEmail, "Test1234!");
+    // Sign in directly — adminEmail was already created above.
+    const { data: adminSession2 } = await createClient(SUPABASE_URL, ANON_KEY)
+      .auth.signInWithPassword({ email: adminEmail, password: "Test1234!" });
+    const adminToken = adminSession2.session!.access_token;
     const adminAnon = createClient(SUPABASE_URL, ANON_KEY, {
       global: { headers: { Authorization: `Bearer ${adminToken}` } },
     });

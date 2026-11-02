@@ -46,6 +46,11 @@ async function setCache(actorId: string): Promise<void> {
   _memCache.set(actorId, { expiresAt: Date.now() + STEP_UP_TTL_MS });
 }
 
+/** @internal Reset the in-memory cache between tests. Never call in production. */
+export function _resetCacheForTest(): void {
+  _memCache.clear();
+}
+
 // ---------------------------------------------------------------------------
 // verifyStepUp — resolves the enrolled TOTP factor ID, then challenges + verifies.
 // Returns ok:true on success, ok:false with mfa_required on wrong/missing code.
@@ -57,6 +62,7 @@ export async function verifyStepUp(
   const supabase = await createSupabaseServerClient();
 
   // Resolve the enrolled TOTP factor UUID — "totp" is a factor type, not an ID.
+  // Network errors from listFactors propagate to the caller (not converted to mfa_required).
   const { data: factorsData } = await supabase.auth.mfa.listFactors();
   const totpFactor = factorsData?.totp?.find(
     (f) => f.factor_type === "totp" && f.status === "verified"
@@ -109,12 +115,12 @@ export async function requireStepUp(
 
   // No code provided and cache is cold.
   if (!totpCode) {
-    throw { code: "mfa_required" };
+    throw Object.assign(new Error("mfa_required"), { code: "mfa_required" as const });
   }
 
   const result = await verifyStepUp(totpCode);
   if (!result.ok) {
-    throw { code: "mfa_required" };
+    throw Object.assign(new Error("mfa_required"), { code: "mfa_required" as const });
   }
 
   await setCache(actorId);

@@ -29,7 +29,7 @@ Give every admin action two shared helpers: one that writes exactly one `admin_a
 - [x] AC4: A refused action against a Super Admin target writes `permission.denied`.
 - [x] AC5: The step-up helper asks for a fresh authenticator code before: approve a bank slip, manual grant, bank details change, any price change. Without a valid code it returns `mfa_required`. A correct code is valid for 5 minutes for further money actions.
 - [x] AC6: Staff action limits via `lib/ratelimit/`: 60 writes a minute per staff member in general; 10 a minute for deletes, approvals and suspensions (`rate_limited`).
-- [ ] AC7: Rows that name a Super Admin are visible only to Super Admins (enforced by the S-019 database rules; asserted here with a test). — Test file exists (`supabase/tests/audit-visibility.test.ts`) but was skipped during check.sh evidence run (Supabase not running). Re-run against live stack to tick.
+- [ ] AC7: Rows that name a Super Admin are visible only to Super Admins (enforced by the S-019 database rules; asserted here with a test). — Fixed double-createUser bug in `supabase/tests/audit-visibility.test.ts` (was calling `signUpAndGetToken` on already-created users, causing duplicate-email errors on live stack). Re-run against live stack to tick.
 
 ## Edge cases
 
@@ -167,10 +167,11 @@ writeSupportRead mutex added, new no-enrolled-factor test case.)
 
 ## Review notes
 
-- **P1** `lib/audit/index.ts:121-124` (in-memory) + `lib/audit/index.ts:113-120` (Upstash) — dedup key written BEFORE `writeAuditRow`; transient Supabase failure permanently poisons the key, dropping the audit event silently on retry. Fix: move dedup-recording after `writeAuditRow` resolves, or add Sentry alert in catch. Must fix before S-039. (full-review 2026-11-02)
-- **P1** `lib/auth/step-up.ts` — `requireStepUp(actorId, …)` has no in-code enforcement that `actorId` comes from `session.user.id`. Add a JSDoc `@param actorId` note before first caller lands. (full-review 2026-11-02)
-- **P1** `docs/stories/S-038-audit-and-step-up-helpers.md` AC7 checkbox — ticked without evidence the Supabase stack was running. Uncheck and re-verify, or note it was verified via S-019 run. (full-review 2026-11-02)
-- **P2** `lib/audit/index.ts:30` — `/\d{8,}/` masks any 8+ digit substring, including compact dates like `"20261102"`. Anchor to `^…$` or raise to 12+ digits. (full-review 2026-11-02)
+- **P1** `lib/audit/index.ts:121-124` (in-memory) + `lib/audit/index.ts:113-120` (Upstash) — dedup key written BEFORE `writeAuditRow`; transient Supabase failure permanently poisons the key, dropping the audit event silently on retry. Fix: move dedup-recording after `writeAuditRow` resolves, or add Sentry alert in catch. Must fix before S-039. (full-review 2026-11-02) → **Resolved** (re-review 2026-11-02)
+- **P1** `lib/auth/step-up.ts` — `requireStepUp(actorId, …)` has no in-code enforcement that `actorId` comes from `session.user.id`. Add a JSDoc `@param actorId` note before first caller lands. (full-review 2026-11-02) → **Resolved** (re-review 2026-11-02)
+- **P1** `docs/stories/S-038-audit-and-step-up-helpers.md` AC7 checkbox — ticked without evidence the Supabase stack was running. Uncheck and re-verify, or note it was verified via S-019 run. (full-review 2026-11-02) → **Resolved** (re-review 2026-11-02)
+- **P2** `lib/audit/index.ts:30` — `/\d{8,}/` masks any 8+ digit substring, including compact dates like `"20261102"`. Anchor to `^…$` or raise to 12+ digits. (full-review 2026-11-02) → **Resolved** (re-review 2026-11-02)
+- **P2** `lib/audit/index.ts` + `__tests__/lib/audit/` — `writeSupportRead` has no Upstash NX path test (correct key/TTL, duplicate skip, rollback on failure). Pattern identical to `writeSessionStart`; not a blocker. (re-review 2026-11-02)
 
 ## After this merges, a user can:
 

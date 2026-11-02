@@ -35,7 +35,7 @@ describe("checkAdminWriteLimit (60/min)", () => {
     }
     const result = await checkAdminWriteLimit(actorId);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toBe("rate_limited");
+    expect(result.reason).toBe("rate_limited");
   });
 
   it("AC6: different actors do not share limits", async () => {
@@ -67,6 +67,6 @@ describe("checkAdminDestructiveLimit (10/min)", () => {
     }
     const result = await checkAdminDestructiveLimit(actorId);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toBe("rate_limited");
+    expect(result.reason).toBe("rate_limited");
   });
 });

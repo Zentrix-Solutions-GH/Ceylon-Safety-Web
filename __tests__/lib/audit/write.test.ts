@@ -77,6 +77,27 @@ describe("writeAuditRow", () => {
     expect(row.after.bank.branch).toBe("Colombo");
   });
 
+  it("P2: numeric values in before/after are not masked (only strings are checked)", async () => {
+    await writeAuditRow({
+      action: "price.change",
+      actorId: "actor-uuid",
+      after: { price: 123456789, label: "new price" },
+    });
+    const [row] = mockInsert.mock.calls[0];
+    expect(row.after.price).toBe(123456789);
+    expect(row.after.label).toBe("new price");
+  });
+
+  it("P2: 8+ digit run embedded in a labeled string is masked", async () => {
+    await writeAuditRow({
+      action: "bank_transfer.approve",
+      actorId: "actor-uuid",
+      after: { note: "account 12345678901234 approved" },
+    });
+    const [row] = mockInsert.mock.calls[0];
+    expect(row.after.note).toBe("account *** approved");
+  });
+
   it("EC1: throws when insert fails — action must not silently succeed", async () => {
     mockInsert.mockResolvedValue({ error: { message: "db error" } });
 
