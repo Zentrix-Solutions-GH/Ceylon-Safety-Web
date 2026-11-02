@@ -45,6 +45,51 @@ export async function clearPendingSignup(): Promise<void> {
   jar.delete(COOKIE_NAME);
 }
 
+// ─── Pending-reset cookie (S-036, auth design §6 + §8) ───────────────────────
+// Signals which step of /reset-password the user is on.
+// Same settings as pending_signup: httpOnly, SameSite=Lax, 15 minutes.
+
+const RESET_COOKIE_NAME = "pending_reset";
+
+interface PendingReset {
+  email: string;
+}
+
+export async function setPendingReset(data: PendingReset): Promise<void> {
+  const jar = await cookies();
+  jar.set(RESET_COOKIE_NAME, JSON.stringify(data), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: MAX_AGE,
+    path: "/",
+  });
+}
+
+export async function getPendingReset(): Promise<PendingReset | null> {
+  const jar = await cookies();
+  const raw = jar.get(RESET_COOKIE_NAME)?.value;
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof (parsed as Record<string, unknown>).email !== "string"
+    ) {
+      return null;
+    }
+    return parsed as PendingReset;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearPendingReset(): Promise<void> {
+  const jar = await cookies();
+  jar.delete(RESET_COOKIE_NAME);
+}
+
 // ─── Google sign-in "next" cookie (S-035, auth design §5.2) ──────────────────
 
 const NEXT_COOKIE_NAME = "auth_next";

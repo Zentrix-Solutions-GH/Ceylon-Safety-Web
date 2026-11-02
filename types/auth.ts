@@ -1,5 +1,7 @@
 // Backend-owned. Auth design §9, §17 (M19).
 // S-034 additions: SignUpInput, VerifyEmailInput, ResendCodeInput, ResendCodeResult, RateLimitReason.
+// S-036 additions: RequestPasswordResetInput, ResetPasswordInput, ChangePasswordInput,
+//   RequestReverificationInput, ConfirmReverificationInput and their result types.
 
 export const AUTH_ERROR_CODES = [
   "invalid_credentials",
@@ -109,6 +111,48 @@ export type VerifyEmailResult = ActionResult<{ redirect: string }>;
 export type ResendCodeResult =
   | { ok: true }
   | { ok: false; code: ErrorCode; retryAfterSeconds?: number; reason?: RateLimitReason };
+
+// ─── S-036 action input / output types ───────────────────────────────────────
+
+export interface RequestPasswordResetInput {
+  email: string;
+  captchaToken: string;
+}
+
+export type RequestPasswordResetResult = ActionResult;
+
+export interface ResetPasswordInput {
+  email: string;
+  code: string;
+  newPassword: string;
+  /** Required when the account has a verified TOTP factor enrolled (all staff). */
+  authenticatorCode?: string;
+}
+
+export type ResetPasswordResult = ActionResult<{ redirectTo: string }>;
+
+export interface ChangePasswordInput {
+  /** Supabase reauthentication nonce — obtained by the frontend calling supabase.auth.reauthenticate(). */
+  code: string;
+  newPassword: string;
+}
+
+export type ChangePasswordResult = ActionResult;
+
+export interface RequestReverificationInput {
+  /** Turnstile token — design §17: requestReverification is in the captcha-required set. */
+  captchaToken: string;
+}
+
+export type RequestReverificationResult = ActionResult;
+
+export interface ConfirmReverificationInput {
+  code: string;
+  /** Required when the signed-in user has a verified TOTP factor (all staff). */
+  authenticatorCode?: string;
+}
+
+export type ConfirmReverificationResult = ActionResult;
 
 // ─── Session user (what auth helpers return) ──────────────────────────────────
 
