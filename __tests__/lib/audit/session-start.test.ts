@@ -57,6 +57,19 @@ describe("writeSessionStart", () => {
     expect(mockInsert).toHaveBeenCalledTimes(2);
   });
 
+  it("P1: concurrent call where first writer fails — waiter also throws (no silent drop)", async () => {
+    // First insert fails; second concurrent call must not silently return.
+    mockInsert.mockResolvedValueOnce({ error: { message: "transient error" } });
+    const [r1, r2] = await Promise.allSettled([
+      writeSessionStart("actor-cf", "sess-cf"),
+      writeSessionStart("actor-cf", "sess-cf"),
+    ]);
+    expect(r1.status).toBe("rejected");
+    expect(r2.status).toBe("rejected");
+    // Only the first writer attempted an insert; the waiter did not.
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+  });
+
   it("P1: retry after transient insert failure writes the row (no poisoned dedup key)", async () => {
     // First call fails (transient DB error).
     mockInsert.mockResolvedValueOnce({ error: { message: "transient error" } });

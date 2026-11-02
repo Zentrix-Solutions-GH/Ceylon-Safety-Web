@@ -62,8 +62,10 @@ export async function verifyStepUp(
   const supabase = await createSupabaseServerClient();
 
   // Resolve the enrolled TOTP factor UUID — "totp" is a factor type, not an ID.
-  // Network errors from listFactors propagate to the caller (not converted to mfa_required).
-  const { data: factorsData } = await supabase.auth.mfa.listFactors();
+  // Thrown rejections AND return-value errors (JWT expiry, quota) both propagate
+  // to the caller rather than being silently converted to mfa_required.
+  const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
+  if (factorsError) throw factorsError;
   const totpFactor = factorsData?.totp?.find(
     (f) => f.factor_type === "totp" && f.status === "verified"
   );

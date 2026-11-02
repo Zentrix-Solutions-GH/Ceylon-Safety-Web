@@ -107,7 +107,12 @@ export async function writeSessionStart(
   if (!_auditConfig && _sessionStarted.has(key)) return;
 
   let resolve!: () => void;
-  const lock = new Promise<void>((r) => { resolve = r; });
+  let reject!: (err: unknown) => void;
+  // Waiters await this lock. It resolves on success and REJECTS on failure so
+  // concurrent waiters do not silently return when the first writer threw.
+  // The no-op .catch suppresses unhandled-rejection warnings when no waiter exists.
+  const lock = new Promise<void>((res, rej) => { resolve = res; reject = rej; });
+  lock.catch(() => {});
   _sessionLocks.set(key, lock);
 
   try {
@@ -115,7 +120,7 @@ export async function writeSessionStart(
       // Upstash SET NX — atomic across all instances; 12-hour TTL.
       const redisKey = `admin-session-start:${actorId}:${sessionId}`;
       const nx = await getAuditRedis().set(redisKey, "1", { nx: true, ex: 43200 });
-      if (nx === null) return; // Another instance already wrote it.
+      if (nx === null) { resolve(); return; } // Another instance already wrote it.
       // Write audit row AFTER acquiring the NX key. On insert failure, roll back
       // the NX key so a future retry can attempt the insert again.
       try {
@@ -126,13 +131,16 @@ export async function writeSessionStart(
       }
     } else {
       // In-memory double-check after acquiring the lock.
-      if (_sessionStarted.has(key)) return;
+      if (_sessionStarted.has(key)) { resolve(); return; }
       // Write BEFORE marking done so a retry is possible if writeAuditRow throws.
       await writeAuditRow({ action: "admin.session_start" as AuditEventName, actorId });
       _sessionStarted.add(key);
     }
-  } finally {
     resolve();
+  } catch (err) {
+    reject(err);
+    throw err;
+  } finally {
     _sessionLocks.delete(key);
   }
 }
@@ -163,14 +171,16 @@ export async function writeSupportRead(
   if (!_auditConfig && _supportRead.has(key)) return;
 
   let resolve!: () => void;
-  const lock = new Promise<void>((r) => { resolve = r; });
+  let reject!: (err: unknown) => void;
+  const lock = new Promise<void>((res, rej) => { resolve = res; reject = rej; });
+  lock.catch(() => {});
   _supportLocks.set(key, lock);
 
   try {
     if (_auditConfig) {
       const redisKey = `support-read:${actorId}:${sessionId}:${entityType}:${entityId}`;
       const nx = await getAuditRedis().set(redisKey, "1", { nx: true, ex: 86400 });
-      if (nx === null) return;
+      if (nx === null) { resolve(); return; }
       try {
         await writeAuditRow({ action: "support.read" as AuditEventName, actorId, entityType, entityId });
       } catch (err) {
@@ -178,12 +188,15 @@ export async function writeSupportRead(
         throw err;
       }
     } else {
-      if (_supportRead.has(key)) return;
+      if (_supportRead.has(key)) { resolve(); return; }
       await writeAuditRow({ action: "support.read" as AuditEventName, actorId, entityType, entityId });
       _supportRead.add(key);
     }
-  } finally {
     resolve();
+  } catch (err) {
+    reject(err);
+    throw err;
+  } finally {
     _supportLocks.delete(key);
   }
 }

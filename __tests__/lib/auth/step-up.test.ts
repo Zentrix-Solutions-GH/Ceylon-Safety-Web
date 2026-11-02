@@ -103,6 +103,11 @@ describe("requireStepUp", () => {
     await expect(requireStepUp("actor-network-err", "123456")).rejects.toThrow("network error");
   });
 
+  it("P1: listFactors return-value error propagates (JWT expiry not silently mfa_required)", async () => {
+    mockListFactors.mockResolvedValue({ data: null, error: { message: "JWT expired" } });
+    await expect(requireStepUp("actor-jwt-err", "123456")).rejects.toMatchObject({ message: "JWT expired" });
+  });
+
   it("AC5: cache is per-actor (different actors don't share)", async () => {
     await requireStepUp("actor-A", "111111");
     vi.clearAllMocks();
