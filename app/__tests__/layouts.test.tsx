@@ -13,6 +13,16 @@ vi.mock("@/hooks/useAuth", () => ({
   useAuth: vi.fn(() => ({ user: null, isLoading: false, signOut: vi.fn() })),
 }));
 
+// Mocks for RootLayout and PublicLayout
+vi.mock("@/components/ui/toaster", () => ({ Toaster: () => null }));
+vi.mock("@/components/layout/CookieConsentBanner", () => ({ default: () => null }));
+vi.mock("@/components/layout/Header", () => ({
+  default: () => <header role="banner" />,
+}));
+vi.mock("@/components/layout/Footer", () => ({
+  default: () => <footer />,
+}));
+
 // jsdom stubs for Radix Sheet used by HeaderPersonal
 Object.defineProperty(window, "matchMedia", {
   writable: true,
@@ -36,6 +46,54 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
 import AuthLayout from "@/app/(auth)/layout";
 import CustomerLayout from "@/app/(customer)/layout";
 import AdminLayout from "@/app/admin/layout";
+import RootLayout from "@/app/layout";
+import PublicLayout from "@/app/(public)/layout";
+
+// ─── AC1: root layout ────────────────────────────────────────────────────────
+
+describe("RootLayout", () => {
+  it("has a skip link with href #main-content", () => {
+    render(<RootLayout><div /></RootLayout>);
+    const skipLink = screen.getByRole("link", { name: /skip to main/i });
+    expect(skipLink).toHaveAttribute("href", "#main-content");
+  });
+
+  it("skip link is the first link in the page", () => {
+    render(<RootLayout><div /></RootLayout>);
+    const allLinks = screen.getAllByRole("link");
+    expect(allLinks[0]).toHaveAttribute("href", "#main-content");
+  });
+
+  it("renders children", () => {
+    render(<RootLayout><div data-testid="child" /></RootLayout>);
+    expect(screen.getByTestId("child")).toBeInTheDocument();
+  });
+});
+
+// ─── AC2: public layout ───────────────────────────────────────────────────────
+
+describe("PublicLayout", () => {
+  it("renders main#main-content (skip-link target)", () => {
+    render(<PublicLayout modal={null}><div /></PublicLayout>);
+    expect(document.getElementById("main-content")).toBeInTheDocument();
+  });
+
+  it("renders children inside main#main-content", () => {
+    render(<PublicLayout modal={null}><div data-testid="child" /></PublicLayout>);
+    const main = document.getElementById("main-content")!;
+    expect(main).toContainElement(screen.getByTestId("child"));
+  });
+
+  it("has a header (banner role)", () => {
+    render(<PublicLayout modal={null}><div /></PublicLayout>);
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+  });
+
+  it("has a footer (contentinfo role)", () => {
+    render(<PublicLayout modal={null}><div /></PublicLayout>);
+    expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+  });
+});
 
 // ─── AC3: auth layout ─────────────────────────────────────────────────────────
 
