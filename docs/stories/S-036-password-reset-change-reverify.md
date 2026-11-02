@@ -161,6 +161,13 @@ $ bash scripts/check.sh
 - **P1** `lib/auth/actions/reset-password.ts` — `incAttempts` called on transient `updateUser` failures (network/service errors). After 5 transient failures user is locked out despite no wrong code. Fix: only increment on credential errors, not all errors.
 - **P1** `lib/auth/actions/request-password-reset.ts` — IP rate-limit key reads `x-real-ip`, which is client-controllable. Fix: use `cf-connecting-ip` only, or fall back to `"unknown"`.
 
+### full-review 2026-11-02 (PR #44, HEAD 6773d92 — abevicrama review)
+
+- **P0** `lib/auth/actions/reset-password.ts` + `confirm-reverification.ts` — `mfa.listFactors()` service error silently bypasses TOTP check. Destructured only `data`; when `error` is non-null `factorsData` is `null`, `hasTotp` is `false`, staff password changed with emailed code only. Fix: check `factorsError` and return `{ ok: false, code: "unknown" }` on error.
+- **P0** `__tests__/lib/auth/password-reset.test.ts` + `reverification.test.ts` — existing "null listFactors data" test expected `ok: true` (fail-open); must expect `ok: false, code: "unknown"` after the fail-safe fix.
+- **P1** `lib/auth/actions/reset-password.ts` + `confirm-reverification.ts` — `incAttempts` called on ALL `verifyOtp` errors including transient network failures. Fix: only increment when message includes "expired" or "invalid".
+- **P1** `lib/auth/actions/change-password.ts` — AC4 TODO(verify-6) guard missing (same requirement as resetPassword). Added comment.
+
 ## After this merges, a user can:
 
 - Nothing in the browser yet. Reset and re-verification actions work through tests and the local mail catcher. Screens come in S-042 and S-043.

@@ -256,6 +256,28 @@ describe("confirmReverification", () => {
     if (!result.ok) expect(result.code).toBe("not_allowed");
   });
 
+  it("P0: mfa.listFactors() service error blocks confirmReverification (fail-safe)", async () => {
+    mockMfaListFactors.mockResolvedValue({ data: null, error: { message: "MFA service unavailable" } });
+    const { confirmReverification } = await import(
+      "@/lib/auth/actions/confirm-reverification"
+    );
+    const result = await confirmReverification({ code: "12345678" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("unknown");
+  });
+
+  it("P1: transient verifyOtp network error does not increment attempt counter", async () => {
+    mockVerifyOtp.mockResolvedValue({
+      data: null,
+      error: { message: "network error", status: 503 },
+    });
+    const { confirmReverification } = await import(
+      "@/lib/auth/actions/confirm-reverification"
+    );
+    await confirmReverification({ code: "12345678" });
+    expect(mockIncAttempts).not.toHaveBeenCalled();
+  });
+
   it("P1 fix: wrong TOTP code increments the attempt counter", async () => {
     mockMfaListFactors.mockResolvedValue({
       data: { totp: [{ id: "factor-1", status: "verified" }] },

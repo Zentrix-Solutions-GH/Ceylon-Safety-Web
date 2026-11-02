@@ -68,5 +68,9 @@ export async function changePassword(input: ChangePasswordInput): Promise<Change
   }
 
   await resetAttempts(userData.user.id, "changepw");
+
+  // AC4: send a "password changed" security notice.
+  // TODO(verify-6): enable or disable once verify item 6 is resolved (same gate as resetPassword).
+
   return { ok: true };
 }

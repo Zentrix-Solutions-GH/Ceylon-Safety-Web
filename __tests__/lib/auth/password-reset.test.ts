@@ -329,17 +329,27 @@ describe("resetPassword", () => {
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 
-  it("P2: mfa.listFactors() returning null data falls back to unknown (no throw)", async () => {
+  it("P0: mfa.listFactors() service error blocks reset (fail-safe, not fail-open)", async () => {
     mockMfaListFactors.mockResolvedValue({ data: null, error: { message: "MFA service unavailable" } });
     mockVerifyOtp.mockResolvedValue({
       data: { user: { id: "uid-1", email: "admin@example.com" }, session: {} },
       error: null,
     });
-    // listFactors null → factorsData is null → hasTotp false → password set normally
-    // (the guard for a verified factor being absent was the fix; this confirms no throw)
     const { resetPassword } = await import("@/lib/auth/actions/reset-password");
     const result = await resetPassword({ email: "admin@example.com", code: "12345678", newPassword: "newpass123" });
-    // null factorsData → no totp factors found → treated as non-staff, password set
-    expect(result.ok).toBe(true);
+    // Cannot confirm no TOTP factor → must block, not allow through
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("unknown");
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+  });
+
+  it("P1: transient verifyOtp network error does not increment attempt counter", async () => {
+    mockVerifyOtp.mockResolvedValue({
+      data: null,
+      error: { message: "network error", status: 503 },
+    });
+    const { resetPassword } = await import("@/lib/auth/actions/reset-password");
+    await resetPassword({ email: "user@example.com", code: "12345678", newPassword: "newpass123" });
+    expect(mockIncAttempts).not.toHaveBeenCalled();
   });
 });

@@ -46,16 +46,24 @@ export async function confirmReverification(
   });
 
   if (otpError || !otpData?.user) {
-    await incAttempts(email, "reverify");
     const msg = otpError?.message?.toLowerCase() ?? "";
+    // Only count against the attempt bucket for actual wrong/expired token errors.
+    // Transient network or service errors (no message match) must not lock the user out.
+    if (msg.includes("expired") || msg.includes("invalid")) {
+      await incAttempts(email, "reverify");
+    }
     if (msg.includes("expired") && !msg.includes("invalid")) {
       return { ok: false, code: "code_expired" };
     }
     return { ok: false, code: "code_invalid" };
   }
 
-  // AC6: for accounts with a verified TOTP factor, also require the authenticator code
-  const { data: factorsData } = await supabase.auth.mfa.listFactors();
+  // AC6: for accounts with a verified TOTP factor, also require the authenticator code.
+  // Fail-safe: MFA service error → block, cannot confirm no factor is enrolled.
+  const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
+  if (factorsError) {
+    return { ok: false, code: "unknown" };
+  }
   const verifiedFactor = (factorsData?.totp ?? []).find((f) => f.status === "verified");
 
   if (verifiedFactor) {

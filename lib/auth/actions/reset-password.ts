@@ -36,8 +36,12 @@ export async function resetPassword(input: ResetPasswordInput): Promise<ResetPas
   });
 
   if (otpError || !otpData?.user) {
-    await incAttempts(email, "reset");
     const msg = otpError?.message?.toLowerCase() ?? "";
+    // Only count against the attempt bucket for actual wrong/expired token errors.
+    // Transient network or service errors (no message match) must not lock the user out.
+    if (msg.includes("expired") || msg.includes("invalid")) {
+      await incAttempts(email, "reset");
+    }
     // "Token has expired or is invalid" is Supabase's generic OTP failure message.
     // Only return code_expired when the message says purely "expired" (no "invalid").
     if (msg.includes("expired") && !msg.includes("invalid")) {
@@ -55,7 +59,12 @@ export async function resetPassword(input: ResetPasswordInput): Promise<ResetPas
   // AC2/EC1 (verify item 16): check if the account has a verified TOTP factor.
   // Finding: YES — the emailed code alone must not change a staff password. The TOTP step
   // is required whenever a verified factor exists, regardless of whether the caller is "staff".
-  const { data: factorsData } = await supabase.auth.mfa.listFactors();
+  // Fail-safe: if the MFA service is unavailable we cannot confirm no factor is enrolled,
+  // so we must block rather than allow the password change.
+  const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
+  if (factorsError) {
+    return { ok: false, code: "unknown" };
+  }
   const hasTotp = (factorsData?.totp ?? []).some((f) => f.status === "verified");
 
   if (hasTotp) {
