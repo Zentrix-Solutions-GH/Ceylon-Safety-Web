@@ -170,6 +170,14 @@ Test Files  41 passed | 1 skipped (42)
 
 **Full-mode re-review run 3 — 2026-11-01 (after round-2 fixes):** All P1/P2 findings resolved. Score 99/100. **APPROVE**.
 
+**Post-merge full-review — 2026-11-02:**
+
+- **P0 (open — hotfix required)** `lib/auth/actions/verify-email.ts:45` — `type: "email"` passed to `supabase.auth.verifyOtp`; email-confirmation OTPs use `type: "signup"`. Every real verification attempt will fail. Fix: change to `type: "signup"`. Unit tests pass because `verifyOtp` is mocked and the `type` field is not asserted.
+- **P1 (open)** `lib/validation/auth.ts:27` — OTP code field has no max length or digit constraint. Add `.max(8).regex(/^\d+$/)`.
+- **P1 (open)** `lib/auth/attempt-counter.ts:37-47` — If `UPSTASH_HASH_SECRET` env var is absent, HMAC key silently becomes the string `"undefined"`. Fix: assert non-empty string in `upstashConfig()` or throw in `redisKey`.
+- **P1 (open)** `lib/auth/actions/sign-up.ts:85-97` — Non-422 transport errors (timeout, Supabase 5xx) silently redirect to `/verify-email` with no code sent. Fix: differentiate error categories; keep 422 neutral, return `server_error` for transport failures.
+- **P1 (open)** `supabase/tests/signup-sanitising.test.ts:95-99` — Asserts `auth.users.role` (always `"authenticated"`); should query `user_roles` table to verify no escalation row exists.
+
 ## After this merges, a user can:
 
 - Nothing in the browser yet. A developer can call `signUp`, `verifyEmail` and `resendCode` from a test and receive a code in the local mail catcher. The screens come in S-041.
