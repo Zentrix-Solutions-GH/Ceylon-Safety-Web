@@ -205,6 +205,20 @@ describe("deleteAccount — EC2: approved download does not block", () => {
   });
 });
 
+describe("deleteAccount — AC7: orders remain after deletion", () => {
+  it("AC7: does not delete orders rows — anonymise_user is called but from('orders').delete is never called", async () => {
+    const deleteAccount = await getDeleteAccount();
+    await deleteAccount({ code: "123456" });
+    // Confirm the service RPC (anonymise) was called — it owns order anonymisation
+    expect(mockServiceRpc).toHaveBeenCalledWith("private.anonymise_user", { p_user_id: "uid-1" });
+    // Confirm no direct delete was issued via the server client's from("orders") chain
+    const ordersCalls = mockFrom.mock.calls.filter((args: unknown[]) => args[0] === "orders");
+    for (const [, chain] of ordersCalls.entries()) {
+      expect(chain).not.toHaveProperty("delete");
+    }
+  });
+});
+
 describe("deleteAccount — EC4: admin delete fails after anonymise", () => {
   it("returns unknown; anonymise_user was called before the failure", async () => {
     mockAdminDeleteUser.mockResolvedValue({ data: null, error: { message: "upstream error" } });
