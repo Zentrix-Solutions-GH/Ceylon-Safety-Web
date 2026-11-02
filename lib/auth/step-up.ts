@@ -25,7 +25,8 @@ const _memCache = new Map<string, StepUpCache>();
 let _redis: Redis | null = null;
 function getStepUpRedis(): Redis {
   if (!_redis && _config) _redis = new Redis({ url: _config.url, token: _config.token });
-  return _redis!;
+  if (!_redis) throw new Error("Upstash Redis not configured");
+  return _redis;
 }
 
 async function isCacheValid(actorId: string): Promise<boolean> {
@@ -86,11 +87,19 @@ export async function verifyStepUp(
 
 // ---------------------------------------------------------------------------
 // requireStepUp — the public API for money actions.
-// Pass `actorId` (sourced from session.user.id — never from request body) and
-// the TOTP code from the request.
 // Throws { code: "mfa_required" } when the code is absent, wrong, or expired.
 // ---------------------------------------------------------------------------
 
+/**
+ * Enforce a fresh TOTP step-up before a money action.
+ *
+ * @param actorId  The authenticated user's ID. **Must** be `session.user.id`
+ *   from a verified server-side session — never sourced from request body or
+ *   URL params. Passing a different UUID will warm the step-up cache for the
+ *   wrong actor and bypass the check.
+ * @param totpCode The 6-digit TOTP code from the request, or `undefined` to
+ *   rely on the 5-minute cache from a previous successful verification.
+ */
 export async function requireStepUp(
   actorId: string,
   totpCode: string | undefined

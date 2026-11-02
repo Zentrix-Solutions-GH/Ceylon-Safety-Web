@@ -1,6 +1,8 @@
-// Type declaration for @upstash/redis — package not installed; declaration satisfies
-// tsc when running lib/ratelimit and lib/auth which import it at module level.
+// Type declaration for @upstash/redis — package is installed at runtime but its
+// types were not resolving via tsc; this declaration satisfies the type checker.
 // Vitest resolves the actual stub via vitest.config.ts alias at test runtime.
+// TODO: remove this file once @upstash/redis ships its own bundled .d.ts and tsc
+// resolves it from node_modules automatically (check on each major version bump).
 declare module "@upstash/redis" {
   export class Redis {
     constructor(opts: { url: string; token: string });

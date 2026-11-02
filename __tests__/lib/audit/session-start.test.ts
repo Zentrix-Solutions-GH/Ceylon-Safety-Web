@@ -56,4 +56,15 @@ describe("writeSessionStart", () => {
     await writeSessionStart("actor-6", "sess-shared");
     expect(mockInsert).toHaveBeenCalledTimes(2);
   });
+
+  it("P1: retry after transient insert failure writes the row (no poisoned dedup key)", async () => {
+    // First call fails (transient DB error).
+    mockInsert.mockResolvedValueOnce({ error: { message: "transient error" } });
+    await expect(writeSessionStart("actor-retry", "sess-retry")).rejects.toThrow();
+
+    // Second call (retry) must succeed — the dedup key must not have been set.
+    mockInsert.mockResolvedValue({ error: null });
+    await writeSessionStart("actor-retry", "sess-retry");
+    expect(mockInsert).toHaveBeenCalledTimes(2);
+  });
 });

@@ -16,7 +16,8 @@ let _auditRedis: Redis | null = null;
 function getAuditRedis(): Redis {
   if (!_auditRedis && _auditConfig)
     _auditRedis = new Redis({ url: _auditConfig.url, token: _auditConfig.token });
-  return _auditRedis!;
+  if (!_auditRedis) throw new Error("Upstash Redis not configured");
+  return _auditRedis;
 }
 
 // ---------------------------------------------------------------------------
@@ -27,7 +28,7 @@ function getAuditRedis(): Redis {
 
 function maskValue(val: unknown): unknown {
   if (typeof val === "string") {
-    return /\d{8,}/.test(val) ? "***" : val;
+    return /^\d{8,}$/.test(val) ? "***" : val;
   }
   if (Array.isArray(val)) {
     return val.map(maskValue);
@@ -112,22 +113,24 @@ export async function writeSessionStart(
   try {
     if (_auditConfig) {
       // Upstash SET NX — atomic across all instances; 12-hour TTL.
-      const nx = await getAuditRedis().set(
-        `admin-session-start:${actorId}:${sessionId}`,
-        "1",
-        { nx: true, ex: 43200 }
-      );
+      const redisKey = `admin-session-start:${actorId}:${sessionId}`;
+      const nx = await getAuditRedis().set(redisKey, "1", { nx: true, ex: 43200 });
       if (nx === null) return; // Another instance already wrote it.
+      // Write audit row AFTER acquiring the NX key. On insert failure, roll back
+      // the NX key so a future retry can attempt the insert again.
+      try {
+        await writeAuditRow({ action: "admin.session_start" as AuditEventName, actorId });
+      } catch (err) {
+        await getAuditRedis().del(redisKey).catch(() => {});
+        throw err;
+      }
     } else {
       // In-memory double-check after acquiring the lock.
       if (_sessionStarted.has(key)) return;
+      // Write BEFORE marking done so a retry is possible if writeAuditRow throws.
+      await writeAuditRow({ action: "admin.session_start" as AuditEventName, actorId });
       _sessionStarted.add(key);
     }
-
-    await writeAuditRow({
-      action: "admin.session_start" as AuditEventName,
-      actorId,
-    });
   } finally {
     resolve();
     _sessionLocks.delete(key);
@@ -165,23 +168,20 @@ export async function writeSupportRead(
 
   try {
     if (_auditConfig) {
-      const nx = await getAuditRedis().set(
-        `support-read:${actorId}:${sessionId}:${entityType}:${entityId}`,
-        "1",
-        { nx: true, ex: 86400 }
-      );
+      const redisKey = `support-read:${actorId}:${sessionId}:${entityType}:${entityId}`;
+      const nx = await getAuditRedis().set(redisKey, "1", { nx: true, ex: 86400 });
       if (nx === null) return;
+      try {
+        await writeAuditRow({ action: "support.read" as AuditEventName, actorId, entityType, entityId });
+      } catch (err) {
+        await getAuditRedis().del(redisKey).catch(() => {});
+        throw err;
+      }
     } else {
       if (_supportRead.has(key)) return;
+      await writeAuditRow({ action: "support.read" as AuditEventName, actorId, entityType, entityId });
       _supportRead.add(key);
     }
-
-    await writeAuditRow({
-      action: "support.read" as AuditEventName,
-      actorId,
-      entityType,
-      entityId,
-    });
   } finally {
     resolve();
     _supportLocks.delete(key);
