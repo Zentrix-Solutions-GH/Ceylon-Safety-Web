@@ -149,7 +149,7 @@ describe("sendEmail", () => {
   });
 
   // EC2: bounced / sync rejection — logged as failed, not thrown
-  it("EC2: Resend sync rejection is logged as failed, not thrown", async () => {
+  it("EC2: Resend sync rejection (throw) is logged as failed, not thrown", async () => {
     const sb = makeSupabaseMock();
     vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(sb as never);
     vi.mocked(Resend).mockReturnValue(makeResendMock(new Error("validation_error")) as never);
@@ -157,6 +157,26 @@ describe("sendEmail", () => {
     await expect(sendEmail(SEND_OPTS)).resolves.not.toThrow();
     expect(sb.update).toHaveBeenCalledWith(
       expect.objectContaining({ status: "failed" })
+    );
+  });
+
+  // EC2: Resend returns error object (non-throw) — logged as failed, not thrown
+  it("EC2: Resend error-object response (non-throw) is logged as failed, not thrown", async () => {
+    const sb = makeSupabaseMock();
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(sb as never);
+    const errorObjectResend = {
+      emails: {
+        send: vi.fn().mockResolvedValue({
+          data: null,
+          error: { name: "validation_error", message: "Invalid address" },
+        }),
+      },
+    };
+    vi.mocked(Resend).mockReturnValue(errorObjectResend as never);
+
+    await expect(sendEmail(SEND_OPTS)).resolves.not.toThrow();
+    expect(sb.update).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "failed", error: "validation_error" })
     );
   });
 

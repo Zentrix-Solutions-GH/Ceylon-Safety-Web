@@ -22,7 +22,7 @@ Add the Resend send wrapper that writes `email_logs`, and use it for the welcome
 ## Acceptance criteria
 
 - [x] AC1: `lib/resend/client.ts` and a send helper that inserts the `email_logs` row first and sends only if the insert succeeded. For templates with a unique index (`welcome`, `receipt`, `bank_expiring`), a second attempt for the same related item sends nothing.
-- [x] AC2: `lib/resend/templates/welcome.tsx` renders a short branded English welcome email.
+- [x] AC2: `lib/resend/templates/welcome.ts` renders a short branded English welcome email.
 - [x] AC3: The welcome email is sent once, after the first successful `verifyEmail` (S-034) and after the first successful Google callback (S-035). Two callbacks for the same user send one email.
 - [x] AC4: A failed send updates the log with the failure type (not the full provider response) and never breaks sign-in or sign-up.
 - [x] AC5: No tokens, codes or passwords are written to `email_logs` or to any log.
@@ -76,7 +76,7 @@ Note from story-analyst: S-035 not in `depends_on` but Google callback route (`a
    - If insert throws any other error → throw so sign-in is not broken (caught upstream in AC4 wrapper).
    - On insert success: call Resend API. On success: update row `status='sent'`, `provider_message_id`. On failure: update row `status='failed'`, `error=<error class/code, no stack, no PII>`.
    - The update never throws — failure is logged, not re-thrown.
-3. **`lib/resend/templates/welcome.tsx`** — replace stub with a short branded React Email welcome template (English).
+3. **`lib/resend/templates/welcome.ts`** — replace stub with a short branded React Email welcome template (English).
 4. **`lib/auth/actions/verify-email.ts`** — on success (after `resetAttempts`), call `sendWelcomeEmail(email, userId)` in a try/catch that never breaks sign-in.
 5. **`app/api/auth/callback/route.ts`** — after successful `exchangeCodeForSession`, get the user and call `sendWelcomeEmail(email, userId)` in a try/catch.
 
@@ -91,7 +91,7 @@ None — `email_logs` table and its unique index already exist (schema v6).
 
 ### Step order
 
-1. `lib/config.ts` (env vars) → 2. `lib/resend/client.ts` (send helper) → 3. `lib/resend/templates/welcome.tsx` (template) → 4. Tests (red) → 5. Hook into `verifyEmail` + callback → 6. Tests green → 7. check.sh.
+1. `lib/config.ts` (env vars) → 2. `lib/resend/client.ts` (send helper) → 3. `lib/resend/templates/welcome.ts` (template) → 4. Tests (red) → 5. Hook into `verifyEmail` + callback → 6. Tests green → 7. check.sh.
 
 ## Evidence
 
@@ -136,7 +136,7 @@ $ RESEND_API_KEY=re_test EMAIL_FROM=noreply@ceylonsafety.com bash scripts/check.
 
 *(abevicrama review 2026-11-03 — resolved in commit 73bcc8a)*
 
-- **P1** `lib/resend/templates/welcome.tsx:22,36` — **Brand colour wrong**: `#16a34a` (green) used; S-022 specifies `#E30613` (red). Fixed.
+- **P1** `lib/resend/templates/welcome.ts:22,36` — **Brand colour wrong**: `#16a34a` (green) used; S-022 specifies `#E30613` (red). Fixed.
 - **P1** `__tests__/lib/auth/welcome-once.test.ts:69-80` — **Misleading dedup test**: test name claimed "unique-index prevents second Resend call" but asserted `toHaveBeenCalledTimes(2)` on a plain mock. Test name and comment corrected to state actual behaviour.
 - **P1** `lib/resend/client.ts:31` — **NULL relatedId bypasses unique index**: `opts.relatedId ?? null` stores SQL NULL when omitted; Postgres treats each NULL as distinct. Runtime guard added — throws if `relatedType` is set without `relatedId`.
 - **P1** `lib/resend/client.ts:53` — **BIGINT type assertion**: `{ id: number }` cast wrong at runtime (Supabase serializes BIGINT as string). Added comment; no arithmetic is performed on this value so runtime is safe.
