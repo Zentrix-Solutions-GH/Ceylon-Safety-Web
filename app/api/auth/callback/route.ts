@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getNextCookie, clearNextCookie } from "@/lib/auth/cookies";
 import { safeNext } from "@/lib/auth/redirect";
+import { sendWelcomeEmail } from "@/lib/resend/client";
 
 // Auth design §5.2: exchanges the one-time code Supabase sends back,
 // reads + clears the auth_next cookie, and redirects through safeNext.
@@ -33,6 +34,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (exchangeError) {
     return NextResponse.redirect(new URL("/?error=auth_failed", request.url), { status: 307 });
+  }
+
+  // Send welcome email once (auth design §14, §19); failure must not break sign-in.
+  try {
+    const supabase2 = await createSupabaseServerClient();
+    const { data: { user } } = await supabase2.auth.getUser();
+    if (user?.id && user?.email) {
+      sendWelcomeEmail(user.email, user.id).catch(() => undefined);
+    }
+  } catch {
+    // Never break redirect on welcome email errors
   }
 
   // Read and clear the return-address cookie set by startGoogleSignIn (AC5).

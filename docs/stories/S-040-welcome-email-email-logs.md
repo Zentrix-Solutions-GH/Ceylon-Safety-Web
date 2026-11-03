@@ -1,7 +1,7 @@
 ---
 id: S-040
 title: Welcome email and email_logs helper
-status: ready
+status: in-progress
 owner: backend
 risk: normal
 branch: feature/S-040-welcome-email-email-logs
@@ -63,16 +63,66 @@ Types added or changed in `types/` by this story:
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+Prior art: auth design §14, §4 step 6, §19 ("Two callbacks for the same user send one email"); schema `email_logs` table and unique index; file-structure `lib/resend/`. Implements those; supersedes nothing.
 
-Prior art: read auth design sections 4 (step 6), 14, 19 ("Welcome email: two callbacks send one") and schema index on `email_logs`; file-structure `lib/resend/`. Implements those; supersedes nothing.
+Note from story-analyst: S-035 not in `depends_on` but Google callback route (`app/api/auth/callback/route.ts`) exists and is where the welcome send hook is placed. Adding S-035 to the note for tracking.
+
+### Files to create / edit
+
+1. **`lib/config.ts`** — add `RESEND_API_KEY` and `EMAIL_FROM` env vars to `serverConfig` / `vals`.
+2. **`lib/resend/client.ts`** — implement the `sendEmail` helper:
+   - Insert `email_logs` row (`status: 'queued'`, `template`, `to_email`, `related_type`, `related_id`) first using service-role client.
+   - If insert throws a unique constraint error → return silently (already sent).
+   - If insert throws any other error → throw so sign-in is not broken (caught upstream in AC4 wrapper).
+   - On insert success: call Resend API. On success: update row `status='sent'`, `provider_message_id`. On failure: update row `status='failed'`, `error=<error class/code, no stack, no PII>`.
+   - The update never throws — failure is logged, not re-thrown.
+3. **`lib/resend/templates/welcome.tsx`** — replace stub with a short branded React Email welcome template (English).
+4. **`lib/auth/actions/verify-email.ts`** — on success (after `resetAttempts`), call `sendWelcomeEmail(email, userId)` in a try/catch that never breaks sign-in.
+5. **`app/api/auth/callback/route.ts`** — after successful `exchangeCodeForSession`, get the user and call `sendWelcomeEmail(email, userId)` in a try/catch.
+
+### Migrations
+
+None — `email_logs` table and its unique index already exist (schema v6).
+
+### Test files
+
+- `__tests__/lib/resend/send.test.ts` — covers AC1 (insert-first, unique prevents second send), AC4/EC1 (failure logged, no throw), AC5 (no secrets in log), EC1 (Resend unreachable).
+- `__tests__/lib/auth/welcome-once.test.ts` — covers AC3 (two callbacks → one email, email-verify then Google same account).
+
+### Step order
+
+1. `lib/config.ts` (env vars) → 2. `lib/resend/client.ts` (send helper) → 3. `lib/resend/templates/welcome.tsx` (template) → 4. Tests (red) → 5. Hook into `verifyEmail` + callback → 6. Tests green → 7. check.sh.
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
-$ bash scripts/check.sh
+$ RESEND_API_KEY=re_test EMAIL_FROM=noreply@ceylonsafety.com bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  68 passed | 9 skipped (77)
+      Tests  781 passed | 27 skipped (808)
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests (run supabase start first)
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 5 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
 
 ## Review notes

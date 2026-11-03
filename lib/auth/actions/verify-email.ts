@@ -6,6 +6,7 @@ import { getAttempts, incAttempts, resetAttempts } from "@/lib/auth/attempt-coun
 import { getPendingSignup, clearPendingSignup } from "@/lib/auth/cookies";
 import { safeNext } from "@/lib/auth/redirect";
 import type { VerifyEmailInput, VerifyEmailResult } from "@/types/auth";
+import { sendWelcomeEmail } from "@/lib/resend/client";
 
 const MAX_ATTEMPTS = 5;
 
@@ -34,7 +35,7 @@ export async function verifyEmail(input: VerifyEmailInput): Promise<VerifyEmailR
 
   // 4. Verify the OTP with Supabase
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
+  const { data: otpData, error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
 
   if (error) {
     const msg = error.message.toLowerCase();
@@ -55,6 +56,12 @@ export async function verifyEmail(input: VerifyEmailInput): Promise<VerifyEmailR
   // 5. Success — reset counter and clear cookie
   await resetAttempts(email);
   await clearPendingSignup();
+
+  // 6. Send welcome email once (AC3); failure must not break sign-in (AC4)
+  const userId = otpData?.user?.id ?? otpData?.session?.user?.id;
+  if (userId) {
+    sendWelcomeEmail(email, userId).catch(() => undefined);
+  }
 
   return { ok: true, redirect: nextPage };
 }

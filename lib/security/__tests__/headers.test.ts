@@ -20,6 +20,9 @@ function makeEnv(extra: Record<string, string> = {}) {
     CSP_MODE: "report-only",
     // S-010: required server setting
     CRON_SECRET: "test-cron-secret",
+    // S-040: Resend email config
+    RESEND_API_KEY: "re_test_key",
+    EMAIL_FROM: "noreply@ceylonsafety.com",
     ...extra,
   };
 }

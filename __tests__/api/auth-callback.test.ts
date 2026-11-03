@@ -3,6 +3,10 @@ import { NextRequest } from "next/server";
 
 // AC5/AC6/EC1/EC2: /api/auth/callback route
 
+vi.mock("@/lib/resend/client", () => ({
+  sendWelcomeEmail: vi.fn().mockResolvedValue(undefined),
+}));
+
 const mockExchangeCodeForSession = vi.fn();
 const mockGetUser = vi.fn();
 
