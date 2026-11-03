@@ -30,7 +30,7 @@ BEGIN
   INSERT INTO public.user_roles (user_id, role) VALUES
     (v_sa_id, 'super_admin'),
     (v_admin, 'admin'),
-    (v_maint, 'maintainer'),
+    (v_maint, 'editor'),
     (v_sa2,   'super_admin');
 
   -- Clear pre-seeded admin permissions so the test controls exactly which
@@ -481,8 +481,8 @@ BEGIN
     'claims',  '{}'::jsonb
   );
   v_result := private.custom_access_token_hook(v_event);
-  ASSERT v_result->'claims'->>'user_role' = 'maintainer',
-    format('AC6: expected maintainer, got %s', v_result->'claims'->>'user_role');
+  ASSERT v_result->'claims'->>'user_role' = 'editor',
+    format('AC6: expected editor, got %s', v_result->'claims'->>'user_role');
 END;
 $$;
 SELECT pass('AC6: maintainer hook returns user_role=maintainer');

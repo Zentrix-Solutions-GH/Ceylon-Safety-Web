@@ -551,7 +551,7 @@ BEGIN
   INSERT INTO public.profiles (id, display_name, email, status)
   VALUES (v_noperm, 'No Perm Staff', 'noperm_staff@test.com', 'active');
   INSERT INTO public.user_roles (user_id, role)
-  VALUES (v_noperm, 'maintainer');
+  VALUES (v_noperm, 'editor');
 END;
 $$;
 
