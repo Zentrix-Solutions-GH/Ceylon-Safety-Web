@@ -104,11 +104,9 @@ export async function removeRole(input: {
     return { ok: false, code: "not_allowed" };
   }
 
-  await requireStepUp(auth.user.id, totpCode);
-
   const serviceClient = createSupabaseServiceRoleClient();
 
-  // Fetch target's current role
+  // Fetch target's current role before consuming the TOTP window (step-up is irreversible)
   const { data: existing, error: fetchErr } = await serviceClient
     .from("user_roles")
     .select("role")
@@ -123,6 +121,8 @@ export async function removeRole(input: {
   if (existing.role === "super_admin") {
     return { ok: false, code: "not_allowed" };
   }
+
+  await requireStepUp(auth.user.id, totpCode);
 
   const previousRole = existing.role as StaffRole;
 
@@ -177,9 +177,9 @@ export async function listStaff(): Promise<ListStaffResult> {
       const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
 
       let hasTotpEnrolled = false;
-      const { data: { user: authUser } } = await serviceClient.auth.admin.getUserById(row.user_id);
-      if (authUser?.factors) {
-        hasTotpEnrolled = authUser.factors.some(
+      const { data: userData, error: userErr } = await serviceClient.auth.admin.getUserById(row.user_id);
+      if (!userErr && userData?.user?.factors) {
+        hasTotpEnrolled = userData.user.factors.some(
           (f) => f.factor_type === "totp" && f.status === "verified"
         );
       }

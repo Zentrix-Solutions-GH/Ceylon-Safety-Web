@@ -212,6 +212,24 @@ describe("removeRole", () => {
     expect((result as { ok: false; code: string }).code).toBe("not_found");
   });
 
+  it("AC3 (DB trigger simulation): delete returning trigger error propagates as unknown", async () => {
+    // Simulates the S-012 DB trigger blocking a delete that somehow bypassed the action-level
+    // super_admin check. The action maps DB errors to {ok:false,code:'unknown'}.
+    vi.mocked(requireSuperAdmin).mockResolvedValue({ ok: true, user: SUPER_ADMIN_USER });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeClient({
+        fromSingle: { data: { role: "admin" }, error: null },
+        deleteError: { message: "trigger: cannot delete super_admin row" },
+      }) as never
+    );
+
+    const result = await removeRole({ userId: TARGET_UUID, totpCode: "123456" });
+
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("unknown");
+    expect(writeAuditRow).not.toHaveBeenCalled();
+  });
+
   it("EC3 (stale JWT): after role is removed, requireStaff refuses the next DB call", async () => {
     // EC3: the removed user's JWT may still be valid for up to 1 hour, but every
     // server action calls requireStaff which reads user_roles from the DB.

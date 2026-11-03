@@ -83,13 +83,12 @@ describe("listStaff", () => {
     expect((result as { ok: false; code: string }).code).toBe("not_allowed");
   });
 
-  it("AC6: super_admin rows are not returned in list", async () => {
+  it("AC6: super_admin rows are not returned in list (role filter asserted)", async () => {
     vi.mocked(requireSuperAdmin).mockResolvedValue({ ok: true, user: SUPER_ADMIN_USER });
 
-    const mockFrom = vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      in: vi.fn().mockResolvedValue({ data: [], error: null }),
-    });
+    const mockIn = vi.fn().mockResolvedValue({ data: [], error: null });
+    const mockSelect = vi.fn().mockReturnValue({ in: mockIn });
+    const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
     vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({
       from: mockFrom,
       auth: { admin: { getUserById: vi.fn() } },
@@ -98,9 +97,7 @@ describe("listStaff", () => {
     const result = await listStaff();
 
     expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    // The query filters by ['admin', 'editor'] — super_admin rows excluded at DB level
-    const inCall = mockFrom().select().in;
-    expect(inCall).toHaveBeenCalledWith("role", ["admin", "editor"]);
+    // Assert the actual .in() call made during listStaff() filtered by admin+editor only
+    expect(mockIn).toHaveBeenCalledWith("role", ["admin", "editor"]);
   });
 });
