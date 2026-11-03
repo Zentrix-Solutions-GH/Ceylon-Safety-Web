@@ -155,6 +155,11 @@ $ bash scripts/check.sh
 - **P1** `__tests__/lib/admin/list-staff.test.ts:90` — assertion creates a fresh mock chain instead of inspecting the call made during `listStaff()`; always passes. Fix to assert on captured mock reference. (full-review 2026-11-03)
 - **P1** `__tests__/lib/admin/staff-roles.test.ts` — EC4 `permission.denied` audit row not tested; `writeDenied` mocked away via `vi.mock("@/lib/auth/server")`. Add test asserting `writeDenied` is called when non-SA attempts an action. (full-review 2026-11-03)
 - **P1** `supabase/tests/super-admin-protection.test.ts` — all four pgTAP tests skip in CI (no live stack). DB-trigger half of AC3 has zero actual coverage. (full-review 2026-11-03)
+- **P1** `supabase/tests/permissions.test.sql:488` — `pass()` description still says `'AC6: maintainer hook returns user_role=maintainer'` after rename to editor. Misleads future readers of test output. Fix: `'AC6: editor hook returns user_role=editor'`. (full-review 2026-11-03 re-review 6)
+- **P1** `supabase/tests/zz-schema-verification.test.sql:511,519,529,537` — `ok(COUNT(*) >= 0)` is tautologically true; passes even if RLS blocks all rows. For `document_files`, `bank_transfer_slips`, `download_requests` (fixture inserts known rows), change to `ok(COUNT(*) > 0)`. `coupons` depends on seed.dev.sql — keep `>= 0`. (full-review 2026-11-03 re-review 6) **FIXED** f01da4d
+- **P0** `supabase/migrations/20261103000001_rename_maintainer_to_editor.sql:7` — UPDATE ran before old CHECK constraint was dropped; 'editor' rejected on any env with existing 'maintainer' rows. Fixed: drop constraints first, then UPDATE. (abevicrama review 2026-11-03) **FIXED** 6e18ce6
+- **P0** `lib/admin/actions/staff-roles.ts:50` — nested destructure `data: { user }` in grantRole crashes with TypeError when Supabase returns `data:null`. Fixed: defensive `targetData?.user ?? null`. (abevicrama review 2026-11-03) **FIXED** 6e18ce6
+- **P1** `lib/auth/server.ts:202` — `writeDenied .catch(() => undefined)` silently swallowed audit failures. Fixed: logs error with console.error. (abevicrama review 2026-11-03) **FIXED** 6e18ce6
 
 ## After this merges, a user can:
 
