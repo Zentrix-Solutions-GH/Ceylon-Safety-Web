@@ -44,11 +44,9 @@ export async function grantRole(input: {
   const auth = await requireSuperAdmin();
   if (!auth.ok) return auth;
 
-  await requireStepUp(auth.user.id, totpCode);
-
   const serviceClient = createSupabaseServiceRoleClient();
 
-  // EC1: target must exist with verified email (checked via auth admin API)
+  // EC1: validate target before consuming the TOTP window (step-up is irreversible)
   const { data: { user: targetUser }, error: userErr } = await serviceClient.auth.admin.getUserById(userId);
 
   if (userErr || !targetUser) {
@@ -57,6 +55,8 @@ export async function grantRole(input: {
   if (!targetUser.email_confirmed_at) {
     return { ok: false, code: "validation_failed" };
   }
+
+  await requireStepUp(auth.user.id, totpCode);
 
   const { error: upsertErr } = await serviceClient
     .from("user_roles")

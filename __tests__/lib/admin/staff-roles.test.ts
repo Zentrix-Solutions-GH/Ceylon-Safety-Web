@@ -142,6 +142,8 @@ describe("grantRole", () => {
 
   it("mfa_required propagated when step-up fails", async () => {
     vi.mocked(requireSuperAdmin).mockResolvedValue({ ok: true, user: SUPER_ADMIN_USER });
+    // Target must exist and have verified email so we reach step-up (validation now runs first)
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeClient() as never);
     vi.mocked(requireStepUp).mockRejectedValue(
       Object.assign(new Error("mfa_required"), { code: "mfa_required" })
     );

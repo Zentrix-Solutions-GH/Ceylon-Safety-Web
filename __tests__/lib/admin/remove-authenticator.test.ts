@@ -36,14 +36,12 @@ const TARGET_UUID = "a0000000-0000-4000-8000-000000000002";
 
 function makeClient(opts: {
   roleRow?: { data: unknown; error: unknown };
-  authUser?: { id: string; factors?: { id: string; factor_type: string; status: string }[] } | null;
+  factors?: { id: string; factor_type: string; status: string }[];
+  listFactorsError?: unknown;
   deleteFactor?: { error: unknown };
 } = {}) {
   const roleRow = opts.roleRow ?? { data: { role: "admin" }, error: null };
-  const authUser = opts.authUser !== undefined ? opts.authUser : {
-    id: TARGET_UUID,
-    factors: [{ id: "factor-1", factor_type: "totp", status: "verified" }],
-  };
+  const factors = opts.factors ?? [{ id: "factor-1", factor_type: "totp", status: "verified" }];
   const deleteFactorErr = opts.deleteFactor?.error ?? null;
 
   return {
@@ -54,8 +52,11 @@ function makeClient(opts: {
     }),
     auth: {
       admin: {
-        getUserById: vi.fn().mockResolvedValue({ data: { user: authUser }, error: null }),
         mfa: {
+          listFactors: vi.fn().mockResolvedValue({
+            data: { factors },
+            error: opts.listFactorsError ?? null,
+          }),
           deleteFactor: vi.fn().mockResolvedValue({ error: deleteFactorErr }),
         },
       },

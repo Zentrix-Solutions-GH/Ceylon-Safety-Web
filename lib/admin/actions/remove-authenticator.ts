@@ -52,14 +52,16 @@ export async function removeAuthenticator(input: {
     return { ok: false, code: "not_allowed" };
   }
 
-  // List and delete each verified TOTP factor individually
-  const { data: { user: targetUser }, error: userErr } = await serviceClient.auth.admin.getUserById(userId);
+  // Use mfa.listFactors to capture both verified and pending TOTP enrollments.
+  // getUserById only returns verified factors; a pending factor would survive
+  // the cleanup and could be confirmed later to regain MFA access.
+  const { data: factorData, error: listErr } = await serviceClient.auth.admin.mfa.listFactors({ userId });
 
-  if (userErr || !targetUser) {
+  if (listErr) {
     return { ok: false, code: "not_found" };
   }
 
-  const totpFactors = (targetUser.factors ?? []).filter(
+  const totpFactors = (factorData?.factors ?? []).filter(
     (f) => f.factor_type === "totp"
   );
 
