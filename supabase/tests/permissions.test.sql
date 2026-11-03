@@ -485,7 +485,7 @@ BEGIN
     format('AC6: expected editor, got %s', v_result->'claims'->>'user_role');
 END;
 $$;
-SELECT pass('AC6: maintainer hook returns user_role=maintainer');
+SELECT pass('AC6: editor hook returns user_role=editor');
 
 -- customer gets no user_role claim, but account_status=active
 DO $$

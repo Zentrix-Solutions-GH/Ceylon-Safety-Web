@@ -518,9 +518,9 @@ SELECT is(
   (SELECT COUNT(*)::int FROM public.payment_events),
   0, 'AC3: editor (no orders.*) gets 0 rows from payment_events'
 );
--- Editor has documents.* → RLS passes
+-- Editor has documents.* → RLS passes (fixture inserts 1 row)
 SELECT ok(
-  (SELECT COUNT(*)::int FROM public.document_files) >= 0,
+  (SELECT COUNT(*)::int FROM public.document_files) > 0,
   'AC3: editor (has documents.*) can query document_files'
 );
 -- Editor has no orders.* → blocked
@@ -528,9 +528,9 @@ SELECT is(
   (SELECT COUNT(*)::int FROM public.email_logs),
   0, 'AC3: editor (no orders.*) gets 0 rows from email_logs'
 );
--- Editor has bank_transfers.review → RLS passes
+-- Editor has bank_transfers.review → RLS passes (fixture inserts 1 row)
 SELECT ok(
-  (SELECT COUNT(*)::int FROM public.bank_transfer_slips) >= 0,
+  (SELECT COUNT(*)::int FROM public.bank_transfer_slips) > 0,
   'AC3: editor (has bank_transfers.review) can query bank_transfer_slips'
 );
 -- Editor has no orders.* → blocked
@@ -542,9 +542,9 @@ SELECT is(
   (SELECT COUNT(*)::int FROM public.download_logs),
   0, 'AC3: editor (no orders.*) gets 0 rows from download_logs'
 );
--- Editor has download_requests.review → RLS passes
+-- Editor has download_requests.review → RLS passes (fixture inserts 1 row)
 SELECT ok(
-  (SELECT COUNT(*)::int FROM public.download_requests) >= 0,
+  (SELECT COUNT(*)::int FROM public.download_requests) > 0,
   'AC3: editor (has download_requests.review) can query download_requests'
 );
 -- Editor has no orders.* → blocked
