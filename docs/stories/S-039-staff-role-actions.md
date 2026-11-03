@@ -149,7 +149,12 @@ $ bash scripts/check.sh
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `lib/admin/actions/staff-roles.ts:107` — `removeRole` calls `requireStepUp` before checking `existing.role === "super_admin"`. TOTP window consumed on Super Admin target. Fix: fetch role → check super_admin → step-up. (full-review 2026-11-03)
+- **P1** `lib/admin/actions/staff-roles.ts:180` — `listStaff` unchecked destructuring of `data.user` from `getUserById`; `data` can be `null` on error, causing `TypeError` in `Promise.all`. Add error guard before destructuring. (full-review 2026-11-03)
+- **P1** `lib/auth/server.ts:199` — dynamic `import("@/lib/audit")` inside `requireSuperAdmin` on every non-SA rejection. Move to static import at file top. (full-review 2026-11-03)
+- **P1** `__tests__/lib/admin/list-staff.test.ts:90` — assertion creates a fresh mock chain instead of inspecting the call made during `listStaff()`; always passes. Fix to assert on captured mock reference. (full-review 2026-11-03)
+- **P1** `__tests__/lib/admin/staff-roles.test.ts` — EC4 `permission.denied` audit row not tested; `writeDenied` mocked away via `vi.mock("@/lib/auth/server")`. Add test asserting `writeDenied` is called when non-SA attempts an action. (full-review 2026-11-03)
+- **P1** `supabase/tests/super-admin-protection.test.ts` — all four pgTAP tests skip in CI (no live stack). DB-trigger half of AC3 has zero actual coverage. (full-review 2026-11-03)
 
 ## After this merges, a user can:
 
