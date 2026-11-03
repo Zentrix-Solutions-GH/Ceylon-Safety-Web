@@ -1,11 +1,11 @@
 ---
 id: S-040
 title: Welcome email and email_logs helper
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-040-welcome-email-email-logs
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/51
 depends_on: [S-017, S-034]
 reqs: [REQ-198]
 ---
@@ -21,19 +21,19 @@ Add the Resend send wrapper that writes `email_logs`, and use it for the welcome
 
 ## Acceptance criteria
 
-- [ ] AC1: `lib/resend/client.ts` and a send helper that inserts the `email_logs` row first and sends only if the insert succeeded. For templates with a unique index (`welcome`, `receipt`, `bank_expiring`), a second attempt for the same related item sends nothing.
-- [ ] AC2: `lib/resend/templates/welcome.tsx` renders a short branded English welcome email.
-- [ ] AC3: The welcome email is sent once, after the first successful `verifyEmail` (S-034) and after the first successful Google callback (S-035). Two callbacks for the same user send one email.
-- [ ] AC4: A failed send updates the log with the failure type (not the full provider response) and never breaks sign-in or sign-up.
-- [ ] AC5: No tokens, codes or passwords are written to `email_logs` or to any log.
-- [ ] AC6: The sender address is configured through `lib/config.ts`; the Resend API key is read from the server environment only.
+- [x] AC1: `lib/resend/client.ts` and a send helper that inserts the `email_logs` row first and sends only if the insert succeeded. For templates with a unique index (`welcome`, `receipt`, `bank_expiring`), a second attempt for the same related item sends nothing.
+- [x] AC2: `lib/resend/templates/welcome.tsx` renders a short branded English welcome email.
+- [x] AC3: The welcome email is sent once, after the first successful `verifyEmail` (S-034) and after the first successful Google callback (S-035). Two callbacks for the same user send one email.
+- [x] AC4: A failed send updates the log with the failure type (not the full provider response) and never breaks sign-in or sign-up.
+- [x] AC5: No tokens, codes or passwords are written to `email_logs` or to any log.
+- [x] AC6: The sender address is configured through `lib/config.ts`; the Resend API key is read from the server environment only.
 
 ## Edge cases
 
-- [ ] EC1: Resend is unreachable — the user still signs in; the log row shows failure; no retry storm.
-- [ ] EC2: A bounced address — recorded by type only.
-- [ ] EC3: The daily cap (about 100 a day on the free plan, to verify) is reached — the send fails cleanly and is logged; the 80% alert is built in S-100/S-122.
-- [ ] EC4: Existing users (created before this story) — no backfill welcome email.
+- [x] EC1: Resend is unreachable — the user still signs in; the log row shows failure; no retry storm.
+- [x] EC2: A bounced address — recorded by type only.
+- [x] EC3: The daily cap (about 100 a day on the free plan, to verify) is reached — the send fails cleanly and is logged; the 80% alert is built in S-100/S-122.
+- [x] EC4: Existing users (created before this story) — no backfill welcome email.
 
 ## Contract
 
@@ -127,7 +127,10 @@ $ RESEND_API_KEY=re_test EMAIL_FROM=noreply@ceylonsafety.com bash scripts/check.
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `app/api/auth/callback/route.ts:41` — Extra `getUser()` RPC after `exchangeCodeForSession`; session already in memory after exchange. Fix: destructure `data.session?.user` from the `exchangeCodeForSession` return instead. (full-review 2026-11-03)
+- **P1** `lib/resend/client.ts:48–50` — Non-23505 DB insert errors are re-thrown and then silently swallowed by `.catch(() => undefined)` at both call sites with no logging. Add a sanitised `console.error` (class + code, no PII) in each catch. (full-review 2026-11-03)
+- **P1** `__tests__/api/auth-callback.test.ts` — `sendWelcomeEmail` mocked but never asserted in happy-path test; Google-callback half of AC3 has zero assertion coverage. Add `expect(mockSendWelcomeEmail).toHaveBeenCalledWith(user.email, user.id)`. (full-review 2026-11-03)
+- **P1** `__tests__/lib/auth/welcome-once.test.ts` — "two callbacks → one email" only calls `verifyEmail` twice; missing cross-path test (verifyEmail + Google callback for same userId → one Resend call). (full-review 2026-11-03)
 
 ## After this merges, a user can:
 

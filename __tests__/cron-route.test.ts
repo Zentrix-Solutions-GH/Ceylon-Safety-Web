@@ -20,6 +20,9 @@ const VALID_ENV = {
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: "a".repeat(64),
   CSP_MODE: "report-only",
   NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL: "https://cdn.ceylonsafety.com",
+  // S-040: email sender
+  RESEND_API_KEY: "re_test_key",
+  EMAIL_FROM: "noreply@ceylonsafety.com",
 };
 
 function setEnv(overrides: Record<string, string | undefined> = {}) {

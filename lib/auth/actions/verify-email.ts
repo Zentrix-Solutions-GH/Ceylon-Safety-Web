@@ -60,7 +60,10 @@ export async function verifyEmail(input: VerifyEmailInput): Promise<VerifyEmailR
   // 6. Send welcome email once (AC3); failure must not break sign-in (AC4)
   const userId = otpData?.user?.id ?? otpData?.session?.user?.id;
   if (userId) {
-    sendWelcomeEmail(email, userId).catch(() => undefined);
+    sendWelcomeEmail(email, userId).catch((err: unknown) => {
+      const name = err instanceof Error ? err.constructor.name : "UnknownError";
+      console.error("[welcome-email] verify send failed:", name);
+    });
   }
 
   return { ok: true, redirect: nextPage };

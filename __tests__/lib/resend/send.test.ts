@@ -160,6 +160,25 @@ describe("sendEmail", () => {
     );
   });
 
+  // AC3: cross-path deduplication — simulates verifyEmail + Google callback for same user
+  it("AC3: second sendEmail call for same (template, relatedType, relatedId) does not reach Resend", async () => {
+    // First call: insert succeeds → Resend called once
+    const sb1 = makeSupabaseMock();
+    const sb2 = makeSupabaseMock({ code: "23505", message: "duplicate key" }, null);
+    let callCount = 0;
+    vi.mocked(createSupabaseServiceRoleClient)
+      .mockImplementationOnce(() => { callCount++; return sb1 as never; })
+      .mockImplementationOnce(() => { callCount++; return sb2 as never; });
+    const resendMock = makeResendMock();
+    vi.mocked(Resend).mockReturnValue(resendMock as never);
+
+    await sendEmail(SEND_OPTS);          // email verify path
+    await sendEmail(SEND_OPTS);          // Google callback path (same user)
+
+    expect(resendMock.emails.send).toHaveBeenCalledTimes(1); // unique index blocked the second
+    expect(callCount).toBe(2);           // both call sites ran
+  });
+
   // EC3: daily cap / rate-limit error — fails cleanly and is logged
   it("EC3: rate-limit error from Resend is logged as failed, does not throw", async () => {
     const sb = makeSupabaseMock();
