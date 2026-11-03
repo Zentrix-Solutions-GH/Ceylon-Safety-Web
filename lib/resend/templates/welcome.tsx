@@ -19,7 +19,7 @@ export function renderWelcomeEmail(): { subject: string; html: string } {
       <td align="center">
         <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;max-width:560px;">
           <tr>
-            <td style="background:#16a34a;padding:28px 32px;">
+            <td style="background:#E30613;padding:28px 32px;">
               <span style="color:#ffffff;font-size:22px;font-weight:bold;letter-spacing:-0.5px;">Ceylon Safety</span>
             </td>
           </tr>
@@ -33,7 +33,7 @@ export function renderWelcomeEmail(): { subject: string; html: string } {
                 You now have access to free articles, safety videos, and a growing library of professional safety documents including checklists, safety signs, and toolbox talks.
               </p>
               <a href="${appUrl}"
-                 style="display:inline-block;background:#16a34a;color:#ffffff;font-size:15px;font-weight:600;padding:12px 24px;border-radius:6px;text-decoration:none;">
+                 style="display:inline-block;background:#E30613;color:#ffffff;font-size:15px;font-weight:600;padding:12px 24px;border-radius:6px;text-decoration:none;">
                 Browse resources
               </a>
             </td>

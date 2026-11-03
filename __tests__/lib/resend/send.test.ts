@@ -160,6 +160,13 @@ describe("sendEmail", () => {
     );
   });
 
+  // Guard: relatedType without relatedId throws instead of silently bypassing the unique index
+  it("throws if relatedType is set but relatedId is omitted", async () => {
+    await expect(
+      sendEmail({ ...SEND_OPTS, relatedType: "user", relatedId: undefined })
+    ).rejects.toThrow(/relatedId is required when relatedType is set/);
+  });
+
   // AC3: cross-path deduplication — simulates verifyEmail + Google callback for same user
   it("AC3: second sendEmail call for same (template, relatedType, relatedId) does not reach Resend", async () => {
     // First call: insert succeeds → Resend called once

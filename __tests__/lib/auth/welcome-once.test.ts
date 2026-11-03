@@ -66,15 +66,15 @@ describe("Welcome email — sent exactly once via verifyEmail (AC3)", () => {
     expect(mockSendWelcomeEmail).toHaveBeenCalledWith(USER.email, USER.id);
   });
 
-  it("AC3: two successive verifyEmail calls both invoke sendWelcomeEmail (unique-index guard in sendEmail prevents duplicate send)", async () => {
+  it("AC3: two verifyEmail calls both invoke sendWelcomeEmail — dedup is enforced inside sendEmail via unique index (see send.test.ts AC3)", async () => {
     mockVerifyOtp.mockResolvedValue(OTP_SUCCESS);
 
     await verifyEmail(VALID_INPUT);
     await verifyEmail(VALID_INPUT);
     await new Promise((r) => setTimeout(r, 0));
 
-    // Both call sites fire; the unique index in sendEmail (tested in send.test.ts) prevents
-    // the second Resend API call from going out.
+    // verifyEmail correctly propagates each invocation to sendWelcomeEmail.
+    // The unique-index dedup (at-most-one Resend call) is exercised in send.test.ts:AC3.
     expect(mockSendWelcomeEmail).toHaveBeenCalledTimes(2);
     expect(mockSendWelcomeEmail).toHaveBeenCalledWith(USER.email, USER.id);
   });

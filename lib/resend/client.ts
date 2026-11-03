@@ -25,6 +25,11 @@ export interface SendEmailOptions {
  * 4. The update step never throws — a send failure must not break sign-in / sign-up.
  */
 export async function sendEmail(opts: SendEmailOptions): Promise<void> {
+  if (opts.relatedType && !opts.relatedId) {
+    // relatedType without relatedId stores NULL, bypassing the unique index silently.
+    throw new Error(`sendEmail: relatedId is required when relatedType is set (got relatedType="${opts.relatedType}")`);
+  }
+
   const db = createSupabaseServiceRoleClient();
 
   // Step 1: insert log row and capture the new row's id for precise updates
@@ -50,6 +55,8 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
     throw insertError;
   }
 
+  // Note: Supabase JS may serialize BIGINT as string at runtime; cast as number to satisfy
+  // the generated schema type. .eq() accepts both — no arithmetic is performed on this value.
   const logId = (insertData as { id: number } | null)?.id;
   if (!logId) {
     // Insert succeeded but returned no id — cannot track the send precisely; skip.
