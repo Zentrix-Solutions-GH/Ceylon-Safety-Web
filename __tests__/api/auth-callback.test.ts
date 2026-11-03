@@ -90,6 +90,19 @@ describe("GET /api/auth/callback — AC6 happy path", () => {
   });
 });
 
+describe("GET /api/auth/callback — auth error path", () => {
+  it("does not call sendWelcomeEmail when exchangeCodeForSession returns an error", async () => {
+    mockExchangeCodeForSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: { message: "Code already used", status: 400 },
+    });
+    const req = makeRequest("abc123");
+    await GET(req);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(resendClient.sendWelcomeEmail).not.toHaveBeenCalled();
+  });
+});
+
 describe("GET /api/auth/callback — EC2 double callback", () => {
   it("second exchange returns Supabase error — redirects to /?error=auth_failed without clearing next cookie", async () => {
     mockExchangeCodeForSession.mockResolvedValueOnce({

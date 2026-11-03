@@ -6,6 +6,7 @@ import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 // Postgres unique-violation error code
 const PG_UNIQUE_VIOLATION = "23505";
 
+
 export interface SendEmailOptions {
   to: string;
   template: string;
@@ -79,14 +80,14 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
       await db
         .from("email_logs")
         .update({ status: "failed", error: String(errorCode).slice(0, 120) })
-        .eq("id", logId!);
+        .eq("id", logId);
       return;
     }
 
     await db
       .from("email_logs")
       .update({ status: "sent", provider_message_id: data.id ?? null })
-      .eq("id", logId!);
+      .eq("id", logId);
   } catch (err: unknown) {
     // Resend unreachable or threw synchronously — use constructor name only (no message content)
     const name = err instanceof Error ? err.constructor.name : "";
@@ -94,7 +95,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
     await db
       .from("email_logs")
       .update({ status: "failed", error: errorCode })
-      .eq("id", logId!);
+      .eq("id", logId);
   }
 }
 
