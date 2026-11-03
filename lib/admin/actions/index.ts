@@ -1,2 +1,3 @@
 'use server';
-export {};
+export { grantRole, removeRole, listStaff } from "./staff-roles";
+export { removeAuthenticator } from "./remove-authenticator";
