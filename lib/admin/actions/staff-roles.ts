@@ -169,7 +169,9 @@ export async function listStaff(): Promise<ListStaffResult> {
     return { ok: false, code: "unknown" };
   }
 
-  // Step 2: for each staff user, check TOTP via admin API
+  // Step 2: check TOTP per user via admin API (one call per row).
+  // auth.admin has no bulk-get; staff count is bounded to O(10) in V1.
+  // Revisit with a DB join on auth.users if staff grows beyond ~50.
   const staff: StaffListItem[] = await Promise.all(
     (staffRows ?? []).map(async (row) => {
       const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;

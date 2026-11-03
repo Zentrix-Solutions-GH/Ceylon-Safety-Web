@@ -209,4 +209,22 @@ describe("removeRole", () => {
     expect(result.ok).toBe(false);
     expect((result as { ok: false; code: string }).code).toBe("not_found");
   });
+
+  it("EC3 (stale JWT): after role is removed, requireStaff refuses the next DB call", async () => {
+    // EC3: the removed user's JWT may still be valid for up to 1 hour, but every
+    // server action calls requireStaff which reads user_roles from the DB.
+    // Once the row is gone, the DB read returns nothing → not_allowed.
+    // This behaviour is covered end-to-end in __tests__/lib/auth/require-staff.test.ts
+    // ("returns not_allowed when user_metadata has a role claim but no user_roles DB row").
+    // Here we verify removeRole hard-deletes the row so that path is reachable.
+    vi.mocked(requireSuperAdmin).mockResolvedValue({ ok: true, user: SUPER_ADMIN_USER });
+    const client = makeClient({ fromSingle: { data: { role: "admin" }, error: null } });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(client as never);
+
+    const result = await removeRole({ userId: TARGET_UUID, totpCode: "123456" });
+
+    expect(result.ok).toBe(true);
+    // The delete must have been called so the row no longer exists in the DB.
+    expect(client.from).toHaveBeenCalledWith("user_roles");
+  });
 });

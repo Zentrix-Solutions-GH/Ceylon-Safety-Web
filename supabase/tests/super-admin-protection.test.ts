@@ -54,12 +54,21 @@ describe("Super Admin protection (AC3, S-012 trigger)", () => {
   );
 
   it.skipIf(!STACK_AVAILABLE)(
-    "user_roles CHECK constraint accepts 'editor' value (insert then cleanup)",
+    "role_permissions CHECK constraint accepts 'editor' value",
     async () => {
-      // 'editor' is covered by the migration seed; 'maintainer' rejection above
-      // proves the constraint was updated. A full round-trip insert needs a seeded
-      // auth user UUID — deferred to integration CI (see story Out of scope).
-      expect(true).toBe(true);
+      const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+      // 'editor' rows are seeded by the migration; verify one exists rather than
+      // attempting an insert (which requires a real auth user UUID for user_roles).
+      const { data, error } = await admin
+        .from("role_permissions")
+        .select("role")
+        .eq("role", "editor")
+        .limit(1)
+        .single();
+
+      expect(error).toBeNull();
+      expect(data?.role).toBe("editor");
     }
   );
 
