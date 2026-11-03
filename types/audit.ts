@@ -44,7 +44,8 @@ export type AuditEventName =
   | "purge.failed"
   // Support reads (Q65 resolved; team decision)
   | "support.read"
-  | "support.download";
+  | "support.download"
+  | "user.remove_mfa";
 
 export type AuditEvent = {
   action: AuditEventName;

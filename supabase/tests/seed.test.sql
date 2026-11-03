@@ -191,11 +191,11 @@ SELECT is(
   'AC4: admin has exactly 18 role_permissions rows'
 );
 
--- No rows for maintainer
+-- Editor has 15 permission rows (articles.*, videos.*, documents.*, etc.)
 SELECT is(
-  (SELECT count(*)::int FROM public.role_permissions WHERE role = 'maintainer'),
-  0,
-  'AC4: maintainer has 0 role_permissions rows'
+  (SELECT count(*)::int FROM public.role_permissions WHERE role = 'editor'),
+  15,
+  'AC4: editor has 15 role_permissions rows'
 );
 
 -- No rows for super_admin (SA always passes via has_permission logic)
@@ -238,7 +238,7 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.user_roles (user_id, role, granted_by)
 VALUES
   ('02000001-0000-0000-0000-000000000001', 'admin',       '02000001-0000-0000-0000-000000000003'),
-  ('02000001-0000-0000-0000-000000000002', 'maintainer',  '02000001-0000-0000-0000-000000000003'),
+  ('02000001-0000-0000-0000-000000000002', 'editor',  '02000001-0000-0000-0000-000000000003'),
   ('02000001-0000-0000-0000-000000000003', 'super_admin', '02000001-0000-0000-0000-000000000003')
 ON CONFLICT DO NOTHING;
 
@@ -265,16 +265,21 @@ SELECT ok(
 -- Reset to service_role for fixture cleanup
 RESET role;
 
--- Maintainer: deny-by-default, has no rows
+-- Editor: has articles.* and documents.* rows
 SET LOCAL role TO authenticated;
 SET LOCAL "request.jwt.claims" TO '{"sub":"02000001-0000-0000-0000-000000000002","role":"authenticated"}';
 SELECT ok(
-  NOT public.has_permission('articles.write'),
-  'AC4: maintainer has_permission(articles.write) = false (no rows)'
+  public.has_permission('articles.write'),
+  'AC4: editor has_permission(articles.write) = true via articles.* wildcard'
 );
 SELECT ok(
-  NOT public.has_permission('documents.*'),
-  'AC4: maintainer has_permission(documents.*) = false (no rows)'
+  public.has_permission('documents.publish'),
+  'AC4: editor has_permission(documents.publish) = true via documents.* wildcard'
+);
+-- Editor does NOT have admin-only actions (users.read, settings.site)
+SELECT ok(
+  NOT public.has_permission('users.read'),
+  'AC4: editor has_permission(users.read) = false (admin only)'
 );
 
 RESET role;

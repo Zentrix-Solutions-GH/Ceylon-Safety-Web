@@ -69,7 +69,7 @@ function suspended() {
 }
 
 function staffUser(
-  role: "super_admin" | "admin" | "maintainer",
+  role: "super_admin" | "admin" | "editor",
   { totpEnrolled = true, totpInSession = true } = {}
 ) {
   mockGetUser.mockResolvedValue({
@@ -118,8 +118,8 @@ describe("AC5 — /admin/** route matrix", () => {
     expect(res.status).toBe(404);
   });
 
-  it("maintainer → 404 (no panel access by default, ASSUMPTION accepted)", async () => {
-    staffUser("maintainer");
+  it("editor → 404 (no panel access by default, ASSUMPTION accepted)", async () => {
+    staffUser("editor");
     const res = await middleware(req("/admin/dashboard"));
     expect(res.status).toBe(404);
   });
@@ -133,13 +133,13 @@ describe("AC5 — /admin/** route matrix", () => {
     expect(mockSignOut).toHaveBeenCalled();
   });
 
-  it("suspended user (maintainer) → signOut + redirect /suspended (not 404)", async () => {
+  it("suspended user (editor) → signOut + redirect /suspended (not 404)", async () => {
     mockGetUser.mockResolvedValue({
       data: {
         user: {
           id: "m1",
           email: "m@example.com",
-          app_metadata: { user_role: "maintainer", account_status: "suspended" },
+          app_metadata: { user_role: "editor", account_status: "suspended" },
           factors: [],
         },
       },

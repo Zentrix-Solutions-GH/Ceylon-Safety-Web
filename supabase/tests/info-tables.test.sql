@@ -545,13 +545,16 @@ SELECT lives_ok(
 RESET ROLE;
 
 -- AC9: staff without banners.write cannot insert a banner
+-- editor now carries banners.write by design (S-039), so we temporarily strip it.
 DO $$
 DECLARE v_noperm uuid := 'bb180001-0000-0000-0000-000000000010'::uuid;
 BEGIN
   INSERT INTO public.profiles (id, display_name, email, status)
   VALUES (v_noperm, 'No Perm Staff', 'noperm_staff@test.com', 'active');
   INSERT INTO public.user_roles (user_id, role)
-  VALUES (v_noperm, 'maintainer');
+  VALUES (v_noperm, 'editor');
+  -- Temporarily remove banners.write from editor for this test
+  DELETE FROM public.role_permissions WHERE role = 'editor' AND action IN ('banners.write', 'banners.read');
 END;
 $$;
 
@@ -568,6 +571,12 @@ SELECT throws_ok(
 );
 
 RESET ROLE;
+
+-- Restore editor banners permissions so subsequent tests are unaffected
+INSERT INTO public.role_permissions (role, action) VALUES
+  ('editor', 'banners.read'),
+  ('editor', 'banners.write')
+ON CONFLICT (role, action) DO NOTHING;
 
 -- staff with banners.write can insert (and read hidden/draft courses)
 SET LOCAL ROLE authenticated;

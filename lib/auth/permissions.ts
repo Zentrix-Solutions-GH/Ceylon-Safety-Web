@@ -41,9 +41,30 @@ export const SERVER_ONLY_PERMISSIONS: string[] = [
   "orders.grant",
 ];
 
+/** Seeded role_permissions actions for the Editor role (Q63 confirmed 2026-11-03).
+ *  Editor = Admin minus users.read, users.suspend, settings.site.
+ */
+const EDITOR_PERMISSIONS = [
+  "articles.*",
+  "videos.*",
+  "authors.*",
+  "media.upload",
+  "comments.moderate",
+  "documents.*",
+  "courses.*",
+  "trainers.*",
+  "pages.publish",
+  "banners.read",
+  "banners.write",
+  "coupons.*",
+  "bank_transfers.review",
+  "download_requests.review",
+  "orders.read",
+] as const;
+
 export const PERMISSION_MAP: Partial<Record<string, readonly string[]>> = {
   admin: ADMIN_PERMISSIONS,
-  // maintainer: [] — no seeded rows; deny by default (assumptions accepted)
+  editor: EDITOR_PERMISSIONS,
   // super_admin: passes everything — no row needed
 };
 

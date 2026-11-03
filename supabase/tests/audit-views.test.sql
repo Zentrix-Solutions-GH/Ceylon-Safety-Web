@@ -40,8 +40,8 @@ INSERT INTO public.user_roles (user_id, role, granted_by)
 VALUES
   ('a1900001-0000-0000-0000-000000000001', 'super_admin',  'a1900001-0000-0000-0000-000000000001'),
   ('a1900001-0000-0000-0000-000000000002', 'admin',        'a1900001-0000-0000-0000-000000000001'),
-  -- Maintainer has no audit.read permission → used to prove is_staff_member() alone is not enough
-  ('a1900001-0000-0000-0000-000000000007', 'maintainer',   'a1900001-0000-0000-0000-000000000001')
+  -- Editor has no audit.read permission → used to prove is_staff_member() alone is not enough
+  ('a1900001-0000-0000-0000-000000000007', 'editor',   'a1900001-0000-0000-0000-000000000001')
 ON CONFLICT DO NOTHING;
 
 -- role_permissions: give admin the audit.read action

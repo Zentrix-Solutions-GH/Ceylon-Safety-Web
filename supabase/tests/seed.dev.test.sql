@@ -25,8 +25,8 @@ SELECT ok(
 SELECT ok(
   EXISTS (SELECT 1 FROM public.user_roles ur
           JOIN public.profiles p ON p.id = ur.user_id
-          WHERE p.email = 'maint@dev.invalid' AND ur.role = 'maintainer'),
-  'AC6: dev Maintainer has maintainer role'
+          WHERE p.email = 'maint@dev.invalid' AND ur.role = 'editor'),
+  'AC6: dev Maintainer has editor role'
 );
 
 -- ── Authors ───────────────────────────────────────────────────────────────────
