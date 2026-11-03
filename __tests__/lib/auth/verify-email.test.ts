@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+vi.mock("@/lib/resend/client", () => ({
+  sendWelcomeEmail: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ---------------------------------------------------------------------------
 // Supabase mock
 // ---------------------------------------------------------------------------

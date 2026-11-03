@@ -55,6 +55,8 @@ const vals = collect([
   ["SUPABASE_SERVICE_ROLE_KEY", string],
   ["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY", hex64],
   ["CRON_SECRET", string],
+  ["RESEND_API_KEY", string],
+  ["EMAIL_FROM", string],
 ]);
 
 // CSP config — validated separately so errors are specific
@@ -78,6 +80,8 @@ export const serverConfig = {
   supabaseServiceRoleKey: vals["SUPABASE_SERVICE_ROLE_KEY"],
   encryptionKey: vals["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"],
   cronSecret: vals["CRON_SECRET"],
+  resendApiKey: vals["RESEND_API_KEY"],
+  emailFrom: vals["EMAIL_FROM"],
 } as const;
 
 // Healthchecks config — optional; returns null when env vars are absent so the
