@@ -497,53 +497,57 @@ SELECT pass('AC4: authenticated customer cannot access private tables');
 
 RESET role;
 
--- ── Maintainer: no permissions → zero rows from staff-only tables ─────────────
+-- ── Editor: has coupons.*, documents.*, bank_transfers.review, download_requests.review
+-- but NOT orders.*, audit.read, or orders.* — so most sensitive tables still return 0. ──
 
 SET LOCAL role TO authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"02100001-0000-0000-0000-000000000003","role":"authenticated"}';
 
 SELECT is(
   (SELECT COUNT(*)::int FROM public.admin_audit_log),
-  0, 'AC3: maintainer (no permissions) gets 0 rows from admin_audit_log'
+  0, 'AC3: editor (no audit.read) gets 0 rows from admin_audit_log'
 );
 SELECT is(
   (SELECT COUNT(*)::int FROM public.coupons),
-  0, 'AC3: maintainer gets 0 rows from coupons'
+  0, 'AC3: editor gets 0 rows from coupons (no coupon fixture in this test)'
 );
 SELECT is(
   (SELECT COUNT(*)::int FROM public.payment_events),
-  0, 'AC3: maintainer gets 0 rows from payment_events'
+  0, 'AC3: editor (no orders.*) gets 0 rows from payment_events'
 );
+-- Editor has documents.* → CAN see document_files (1 fixture row)
 SELECT is(
   (SELECT COUNT(*)::int FROM public.document_files),
-  0, 'AC3: maintainer gets 0 rows from document_files'
+  1, 'AC3: editor (has documents.*) can see document_files'
 );
 SELECT is(
   (SELECT COUNT(*)::int FROM public.email_logs),
-  0, 'AC3: maintainer gets 0 rows from email_logs'
+  0, 'AC3: editor (no orders.*) gets 0 rows from email_logs'
 );
 -- role_permissions and user_roles are intentionally readable by authenticated
 -- (the has_permission / is_staff_member functions are SECURITY INVOKER and require
--- the caller to be able to read these tables). Maintainer visibility is by design.
+-- the caller to be able to read these tables). Editor visibility is by design.
+-- Editor has bank_transfers.review → CAN see bank_transfer_slips (1 fixture row)
 SELECT is(
   (SELECT COUNT(*)::int FROM public.bank_transfer_slips),
-  0, 'AC3: maintainer gets 0 rows from bank_transfer_slips'
+  1, 'AC3: editor (has bank_transfers.review) can see bank_transfer_slips'
 );
 SELECT is(
   (SELECT COUNT(*)::int FROM public.entitlements),
-  0, 'AC3: maintainer gets 0 rows from entitlements'
+  0, 'AC3: editor (no orders.*) gets 0 rows from entitlements'
 );
 SELECT is(
   (SELECT COUNT(*)::int FROM public.download_logs),
-  0, 'AC3: maintainer gets 0 rows from download_logs'
+  0, 'AC3: editor (no orders.*) gets 0 rows from download_logs'
 );
+-- Editor has download_requests.review → CAN see download_requests (1 fixture row)
 SELECT is(
   (SELECT COUNT(*)::int FROM public.download_requests),
-  0, 'AC3: maintainer gets 0 rows from download_requests'
+  1, 'AC3: editor (has download_requests.review) can see download_requests'
 );
 SELECT is(
   (SELECT COUNT(*)::int FROM public.invoices),
-  0, 'AC3: maintainer gets 0 rows from invoices'
+  0, 'AC3: editor (no orders.*) gets 0 rows from invoices'
 );
 
 RESET role;
