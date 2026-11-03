@@ -4,29 +4,25 @@
 
 BEGIN;
 
--- 1. Update any existing user_roles rows (data migration before constraint change)
-UPDATE public.user_roles SET role = 'editor' WHERE role = 'maintainer';
-
--- 2. Update any existing role_permissions rows
-UPDATE public.role_permissions SET role = 'editor' WHERE role = 'maintainer';
-
--- 3. Drop old CHECK constraints on user_roles
+-- 1. Drop old CHECK constraints so the data migration can write 'editor'
 ALTER TABLE public.user_roles
   DROP CONSTRAINT IF EXISTS user_roles_role_check;
 
--- 4. Add new CHECK constraint with 'editor'
+ALTER TABLE public.role_permissions
+  DROP CONSTRAINT IF EXISTS role_permissions_role_check;
+
+-- 2. Add new CHECK constraints with 'editor'
 ALTER TABLE public.user_roles
   ADD CONSTRAINT user_roles_role_check
   CHECK (role IN ('super_admin', 'admin', 'editor'));
 
--- 5. Drop old CHECK constraint on role_permissions
-ALTER TABLE public.role_permissions
-  DROP CONSTRAINT IF EXISTS role_permissions_role_check;
-
--- 6. Add new CHECK constraint with 'editor'
 ALTER TABLE public.role_permissions
   ADD CONSTRAINT role_permissions_role_check
   CHECK (role IN ('super_admin', 'admin', 'editor'));
+
+-- 3. Migrate existing 'maintainer' rows now that constraints allow 'editor'
+UPDATE public.user_roles SET role = 'editor' WHERE role = 'maintainer';
+UPDATE public.role_permissions SET role = 'editor' WHERE role = 'maintainer';
 
 -- 7. Replace custom_access_token_hook to emit 'editor' instead of 'maintainer'
 CREATE OR REPLACE FUNCTION private.custom_access_token_hook(event jsonb)

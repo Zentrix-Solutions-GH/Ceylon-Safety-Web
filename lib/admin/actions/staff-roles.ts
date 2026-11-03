@@ -47,7 +47,8 @@ export async function grantRole(input: {
   const serviceClient = createSupabaseServiceRoleClient();
 
   // EC1: validate target before consuming the TOTP window (step-up is irreversible)
-  const { data: { user: targetUser }, error: userErr } = await serviceClient.auth.admin.getUserById(userId);
+  const { data: targetData, error: userErr } = await serviceClient.auth.admin.getUserById(userId);
+  const targetUser = targetData?.user ?? null;
 
   if (userErr || !targetUser) {
     return { ok: false, code: "not_found" };
