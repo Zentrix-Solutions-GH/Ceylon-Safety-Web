@@ -38,8 +38,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   // Send welcome email once (auth design §14, §19); failure must not break sign-in.
   try {
-    const supabase2 = await createSupabaseServerClient();
-    const { data: { user } } = await supabase2.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (user?.id && user?.email) {
       sendWelcomeEmail(user.email, user.id).catch(() => undefined);
     }

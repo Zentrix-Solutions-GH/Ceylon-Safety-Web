@@ -51,6 +51,10 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
   }
 
   const logId = (insertData as { id: number } | null)?.id;
+  if (!logId) {
+    // Insert succeeded but returned no id — cannot track the send precisely; skip.
+    return;
+  }
 
   // Step 2: send via Resend
   const resend = new Resend(serverConfig.resendApiKey);
