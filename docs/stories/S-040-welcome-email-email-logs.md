@@ -132,6 +132,15 @@ $ RESEND_API_KEY=re_test EMAIL_FROM=noreply@ceylonsafety.com bash scripts/check.
 - **P1** `__tests__/api/auth-callback.test.ts` — `sendWelcomeEmail` mocked but never asserted in happy-path test; Google-callback half of AC3 has zero assertion coverage. Add `expect(mockSendWelcomeEmail).toHaveBeenCalledWith(user.email, user.id)`. (full-review 2026-11-03)
 - **P1** `__tests__/lib/auth/welcome-once.test.ts` — "two callbacks → one email" only calls `verifyEmail` twice; missing cross-path test (verifyEmail + Google callback for same userId → one Resend call). (full-review 2026-11-03)
 
+---
+
+*(abevicrama review 2026-11-03 — resolved in commit 73bcc8a)*
+
+- **P1** `lib/resend/templates/welcome.tsx:22,36` — **Brand colour wrong**: `#16a34a` (green) used; S-022 specifies `#E30613` (red). Fixed.
+- **P1** `__tests__/lib/auth/welcome-once.test.ts:69-80` — **Misleading dedup test**: test name claimed "unique-index prevents second Resend call" but asserted `toHaveBeenCalledTimes(2)` on a plain mock. Test name and comment corrected to state actual behaviour.
+- **P1** `lib/resend/client.ts:31` — **NULL relatedId bypasses unique index**: `opts.relatedId ?? null` stores SQL NULL when omitted; Postgres treats each NULL as distinct. Runtime guard added — throws if `relatedType` is set without `relatedId`.
+- **P1** `lib/resend/client.ts:53` — **BIGINT type assertion**: `{ id: number }` cast wrong at runtime (Supabase serializes BIGINT as string). Added comment; no arithmetic is performed on this value so runtime is safe.
+
 ## After this merges, a user can:
 
 - Receive one welcome email after first verifying their email or first signing in with Google.
