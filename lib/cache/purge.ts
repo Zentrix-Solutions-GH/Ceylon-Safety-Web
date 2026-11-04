@@ -19,9 +19,14 @@ function articleTags(articleId: string): string[] {
   ];
 }
 
-async function attemptPurge(tags: string[]): Promise<void> {
-  for (const tag of tags) {
-    revalidateTag(tag);
+function attemptPurge(tags: string[]): boolean {
+  try {
+    for (const tag of tags) {
+      revalidateTag(tag);
+    }
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -36,25 +41,19 @@ export async function purgeArticle(
 ): Promise<PurgeResult> {
   const tags = articleTags(articleId);
 
+  if (attemptPurge(tags)) return { ok: true };
+
+  // One retry
+  if (attemptPurge(tags)) return { ok: true };
+
   try {
-    await attemptPurge(tags);
-    return { ok: true };
-  } catch {
-    // One retry
-    try {
-      await attemptPurge(tags);
-      return { ok: true };
-    } catch (err2) {
-      try {
-        await writeAuditRow({
-          action: "purge.failed" as AuditEventName,
-          actorId: actorId ?? "system",
-          entityType: "article",
-          entityId: articleId,
-          after: { event, error: String(err2) },
-        });
-      } catch {} // audit failure must not mask the purge result
-      return { ok: false, code: "purge_failed" };
-    }
-  }
+    await writeAuditRow({
+      action: "purge.failed" as AuditEventName,
+      actorId: actorId ?? "system",
+      entityType: "article",
+      entityId: articleId,
+      after: { event },
+    });
+  } catch {} // audit failure must not mask the purge result
+  return { ok: false, code: "purge_failed" };
 }

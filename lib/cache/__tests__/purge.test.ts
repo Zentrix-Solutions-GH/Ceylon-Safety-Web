@@ -48,7 +48,7 @@ describe("purgeArticle", () => {
     expect(calledTags).toContain("sitemap");
   });
 
-  it("retries once if revalidateTag throws", async () => {
+  it("retries once if revalidateTag throws on first attempt", async () => {
     vi.mocked(revalidateTag)
       .mockImplementationOnce(() => { throw new Error("network"); })
       .mockImplementation(() => {});
@@ -69,11 +69,9 @@ describe("purgeArticle", () => {
     );
   });
 
-  it("body-only save does NOT trigger purge (no purge call)", async () => {
-    // purgeArticle is not called on a body-only save — this test verifies the
-    // helper exists and is NOT called in that code path.
+  it("body-only save does NOT trigger purge (no purgeArticle call)", async () => {
     // The saveArticle test covers the no-purge assertion on body-only saves.
-    // Here we just confirm revalidateTag is not called when purgeArticle is not invoked.
+    // Here we confirm no revalidateTag calls when purgeArticle is not invoked.
     expect(vi.mocked(revalidateTag)).not.toHaveBeenCalled();
   });
 });

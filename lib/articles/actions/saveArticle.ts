@@ -169,8 +169,11 @@ export async function saveArticle(input: SaveArticleInput): Promise<SaveArticleR
       .single();
 
     if (updateErr || !updated) {
-      // If no row matched, another save already incremented body_version
-      if (!updated && !updateErr) return { ok: false, code: "version_conflict" };
+      // PGRST116 = "JSON object requested, multiple (or no) rows returned" — zero rows matched
+      // the body_version guard, meaning another save already incremented it.
+      if ((updateErr as { code?: string } | null)?.code === "PGRST116" || (!updated && !updateErr)) {
+        return { ok: false, code: "version_conflict" };
+      }
       return { ok: false, code: "unknown", reason: updateErr?.message };
     }
     const u = updated as { id: string; body_version: number; slug: string };

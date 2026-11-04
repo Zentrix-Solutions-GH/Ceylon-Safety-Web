@@ -348,3 +348,54 @@ describe("saveArticle — EC4 hostile input stored as text", () => {
     expect(result.ok).toBe(true);
   });
 });
+
+describe("saveArticle — AC4 body ref to non-existent target", () => {
+  it("returns validation_failed when a body video node references a deleted video", async () => {
+    mockStaff(true);
+    // Build a mock where the "videos" table returns null (video does not exist)
+    const sbMock = makeSupabaseMock({ selectData: null, upsertData: { id: ARTICLE_ID, body_version: 1, slug: "test" } });
+    const originalFrom = sbMock.from.getMockImplementation();
+    sbMock.from = vi.fn((table: string) => {
+      if (table === "videos") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: null, error: { code: "PGRST116", message: "not found" } }),
+        };
+      }
+      return originalFrom!(table);
+    });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(sbMock as never);
+
+    const VIDEO_ID = "ee000001-0000-4000-8000-000000000001";
+    const result = await saveArticle(validInput({
+      body: {
+        schema_version: SCHEMA_VERSION,
+        type: "doc",
+        content: [{ type: "video", attrs: { node_id: "v1", video_id: VIDEO_ID } }],
+      },
+    }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("validation_failed");
+  });
+});
+
+describe("saveArticle — AC6 slug locked after first publish", () => {
+  it("returns validation_failed when caller tries to change slug of a published article", async () => {
+    mockStaff(true);
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeSupabaseMock({
+        selectData: { id: ARTICLE_ID, body_version: 2, status: "published", slug: "original-slug" },
+        upsertData: { id: ARTICLE_ID, body_version: 3, slug: "original-slug" },
+      }) as never
+    );
+    const result = await saveArticle(validInput({
+      articleId: ARTICLE_ID,
+      bodyVersion: 2,
+      slug: "new-different-slug",
+    }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("validation_failed");
+    expect((result as { ok: false; reason?: string }).reason).toMatch(/locked/);
+  });
+});
