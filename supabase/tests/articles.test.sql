@@ -30,7 +30,7 @@ BEGIN
     ('admin', 'articles.write'), ('admin', 'articles.publish')
   ON CONFLICT (role, action) DO NOTHING;
   -- minimal author and category for FK
-  INSERT INTO public.authors  (id, display_name, is_active) VALUES (v_author, 'Test Author', TRUE);
+  INSERT INTO public.authors  (id, slug, name, is_active) VALUES (v_author, 'test-author-048', 'Test Author', TRUE);
   INSERT INTO public.categories (id, slug, name, applies_to) VALUES (v_cat, 'test-cat-048', 'Test Cat 048', ARRAY['article']::text[]);
   -- seed one draft and one published article as service role
   INSERT INTO public.articles (id, locale, slug, title, body, body_version, status, author_id, category_id)
