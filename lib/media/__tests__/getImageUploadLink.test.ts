@@ -339,7 +339,8 @@ describe("getImageUploadLink", () => {
       expect.any(String),
       expect.stringContaining(existingRow.file_key),
       expect.any(String),
-      expect.any(Number)
+      expect.any(Number),
+      expect.any(Number)  // sizeCap (ContentLength)
     );
   });
 });

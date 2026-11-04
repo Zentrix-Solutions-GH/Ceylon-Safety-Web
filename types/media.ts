@@ -30,8 +30,8 @@ export type UploadLink = {
 
 export type GetImageUploadLinkResult =
   | { ok: true; mediaId: string; links: UploadLink[] }
-  | { ok: false; code: "validation_failed" | "not_allowed" | "rate_limited" | "not_found" };
+  | { ok: false; code: "validation_failed" | "not_allowed" | "rate_limited" | "not_found" | "server_error" };
 
 export type ConfirmImageUploadResult =
   | { ok: true; mediaId: string }
-  | { ok: false; code: "not_found" | "upload_failed" | "not_allowed" };
+  | { ok: false; code: "not_found" | "upload_failed" | "not_allowed" | "server_error" };

@@ -71,7 +71,7 @@ export async function getImageUploadLink(
   const { mimeType, variants, mediaId: retryMediaId } = parsed.data;
 
   const cfg = r2Config();
-  if (!cfg) return { ok: false, code: "validation_failed" };
+  if (!cfg) return { ok: false, code: "server_error" }; // misconfigured env — distinguishable from client errors
 
   const supabase = createSupabaseServiceRoleClient();
 
@@ -95,7 +95,8 @@ export async function getImageUploadLink(
           cfg.bucketPublic,
           variantKey(existing.file_key as string, v.width),
           v.mimeType,
-          PRESIGN_TTL
+          PRESIGN_TTL,
+          v.sizeCap
         ),
       }))
     );
@@ -134,7 +135,8 @@ export async function getImageUploadLink(
         cfg.bucketPublic,
         variantKey(fileKey, v.width),
         v.mimeType,
-        PRESIGN_TTL
+        PRESIGN_TTL,
+        v.sizeCap
       ),
     }))
   );

@@ -42,7 +42,7 @@ export async function confirmImageUpload(
   const actorId = authResult.user.id;
 
   const cfg = r2Config();
-  if (!cfg) return { ok: false, code: "not_found" };
+  if (!cfg) return { ok: false, code: "server_error" }; // misconfigured env — distinguishable from client errors
 
   const supabase = createSupabaseServiceRoleClient();
 

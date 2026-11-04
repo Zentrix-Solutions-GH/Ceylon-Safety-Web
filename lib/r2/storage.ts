@@ -48,13 +48,15 @@ export async function presignedPut(
   bucket: string,
   key: string,
   mimeType: string,
-  ttlSeconds = PRESIGN_TTL_SECONDS
+  ttlSeconds = PRESIGN_TTL_SECONDS,
+  maxBytes?: number
 ): Promise<string> {
   const client = getClient();
   const cmd = new PutObjectCommand({
     Bucket: bucket,
     Key: key,
     ContentType: mimeType,
+    ...(maxBytes !== undefined ? { ContentLength: maxBytes } : {}),
   });
   return getSignedUrl(client, cmd, { expiresIn: ttlSeconds });
 }
