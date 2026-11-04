@@ -101,7 +101,7 @@ describe("getImageUploadLink", () => {
     expect(presignedPut).toHaveBeenCalledTimes(2);
   });
 
-  it("AC1: uploaded_by is set to the calling staff member's user id", async () => {
+  it("AC1: insert payload contains uploaded_by, status=pending, kind=image, bucket=public", async () => {
     mockRequireStaff(true);
     mockRateLimit(true);
     const sb = makeSupabaseMock(null, { id: "media-uuid" });
@@ -109,8 +109,14 @@ describe("getImageUploadLink", () => {
 
     await getImageUploadLink(VALID_INPUT);
 
-    const insertCall = sb.from.mock.calls.find(([t]: string[]) => t === "media_assets");
-    expect(insertCall).toBeDefined();
+    expect(sb.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        uploaded_by: STAFF_USER.id,
+        status: "pending",
+        kind: "image",
+        bucket: "public",
+      })
+    );
   });
 
   it("EC1: no media.upload permission returns not_allowed and writes permission.denied audit", async () => {
@@ -126,6 +132,23 @@ describe("getImageUploadLink", () => {
       "media_assets",
       expect.any(String)
     );
+  });
+
+  it("AC2: GIF MIME type returns validation_failed and creates no row", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+    const sb = makeSupabaseMock();
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
+
+    const result = await getImageUploadLink({
+      mimeType: "image/gif" as never,
+      variants: [{ width: 480, sizeCap: 120 * 1024, mimeType: "image/webp" as const }] as never,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("validation_failed");
+    expect(sb.from).not.toHaveBeenCalled();
   });
 
   it("AC2: SVG MIME type returns validation_failed and creates no row", async () => {
