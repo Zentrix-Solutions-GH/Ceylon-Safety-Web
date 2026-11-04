@@ -1,11 +1,11 @@
 ---
 id: S-048
 title: Articles write backend: saveArticle, setArticleStatus
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-048-articles-write-backend
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/53"
 depends_on: [S-014, S-038, S-047]
 reqs: [REQ-021, REQ-022, REQ-026, REQ-034, REQ-034d, REQ-132, REQ-191]
 ---
