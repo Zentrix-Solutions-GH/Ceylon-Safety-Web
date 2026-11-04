@@ -215,8 +215,11 @@ P2 reviewer findings addressed:
 
 ## Review notes
 
-- **P0** `lib/media/actions/confirmImageUpload.ts:76` — `headObject` returning null triggers `continue` instead of `upload_failed`; a caller who uploads only the 480 w variant can confirm and receive a `ready` row with the 1200 w copy absent, violating AC5. Fix: replace `if (!head) continue;` with `return { ok: false, code: "upload_failed" };`. (full-review 2026-11-04)
-- **P1** `lib/r2/storage.ts:34` — `_setClientForTest` exported from production module; guard behind `NODE_ENV === "test"` or use Vitest module injection. (full-review 2026-11-04)
+- **P0** `lib/media/actions/confirmImageUpload.ts:76` — `headObject` returning null triggers `continue` instead of `upload_failed`; a caller who uploads only the 480 w variant can confirm and receive a `ready` row with the 1200 w copy absent, violating AC5. Fix: replace `if (!head) continue;` with `return { ok: false, code: "upload_failed" };`. (full-review 2026-11-04) ✓ resolved d7022f1
+- **P0** `lib/media/actions/confirmImageUpload.ts` — Server hardcodes `STANDARD_WIDTHS = [480, 1200]`; a narrow image (< 480 px) produces one variant at its original width, so confirming it always returned `upload_failed`. Fix: add `declared_widths INTEGER[]` column; `getImageUploadLink` stores variant widths at insert time; `confirmImageUpload` reads and iterates only those widths. Width validation relaxed to 1–1200. (full-review 2026-11-04) ✓ resolved 29ca32b
+- **P1** `lib/r2/storage.ts:34` — `_setClientForTest` exported from production module; guard behind `NODE_ENV === "test"` or use Vitest module injection. (full-review 2026-11-04) ✓ resolved 29ca32b (guard changed to `=== "production"`)
+- **P1** `lib/r2/storage.ts` (`headObject`) — all errors returned null; 503/timeout indistinguishable from NoSuchKey. Fix: re-throw non-404 errors; confirmImageUpload wraps in try/catch. (full-review 2026-11-04) ✓ resolved 29ca32b
+- **P1** `lib/config.ts` (`r2Config`) — returned null silently; CLAUDE.md requires startup failure. Fix: module-level check throws in production when r2Config() is null. (full-review 2026-11-04) ✓ resolved 29ca32b
 - **P1** `lib/media/actions/getImageUploadLink.ts:55` — rate limit charged before Zod validation; move `safeParse` before `checkRateLimit`. (full-review 2026-11-04)
 - **P1** `lib/media/actions/getImageUploadLink.ts:52` / `confirmImageUpload.ts:40` — `writeDenied("unknown", ...)` logs a fake actor id; skip the denied-audit row here (auth layer already logs) or propagate partial identity. (full-review 2026-11-04)
 - **P1** `lib/media/__tests__/getImageUploadLink.test.ts` — no test for `text/html` or `application/pdf` MIME types returning `validation_failed`; AC2 names them explicitly. (full-review 2026-11-04)
