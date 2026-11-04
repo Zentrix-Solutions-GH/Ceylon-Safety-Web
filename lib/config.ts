@@ -118,3 +118,37 @@ export const cspConfig = {
     "challenges.cloudflare.com"
   ),
 } as const;
+
+// R2 config — server only; returns null when env vars absent (tests inject mocks via vi.mock).
+export function r2Config(): {
+  accountId: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucketPublic: string;
+  publicMediaBaseUrl: string;
+} | null {
+  const accountId = process.env["R2_ACCOUNT_ID"]?.trim();
+  const accessKeyId = process.env["R2_ACCESS_KEY_ID"]?.trim();
+  const secretAccessKey = process.env["R2_SECRET_ACCESS_KEY"]?.trim();
+  const bucketPublic = process.env["R2_BUCKET_PUBLIC"]?.trim();
+  const publicMediaBaseUrl = process.env["NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL"]?.trim();
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucketPublic || !publicMediaBaseUrl) {
+    return null;
+  }
+  return { accountId, accessKeyId, secretAccessKey, bucketPublic, publicMediaBaseUrl };
+}
+
+// Fail fast when R2 is not configured (CLAUDE.md: missing config → startup error).
+// Skip during `next build` — Next.js sets NODE_ENV=production at build time but
+// R2 vars are only available at runtime, so NEXT_PHASE guards the build phase.
+if (
+  process.env.NODE_ENV === "production" &&
+  process.env.NEXT_PHASE !== "phase-production-build" &&
+  !r2Config()
+) {
+  throw new Error(
+    "[config] Missing required R2 environment variables: " +
+      "R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, " +
+      "R2_BUCKET_PUBLIC, NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL"
+  );
+}
