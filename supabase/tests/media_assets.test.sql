@@ -49,11 +49,14 @@ SELECT is(
 );
 
 -- Test 2: anon INSERT raises RLS violation (42501)
+-- 4-arg form: throws_ok(sql, errcode, expected_message, description)
+-- Pass NULL for message so only the SQLSTATE is checked.
 SELECT throws_ok(
   $$INSERT INTO public.media_assets (id, bucket, kind, status, file_key, mime_type, uploaded_by)
     VALUES ('bb047001-cccc-0000-0000-000000000001'::uuid, 'public', 'image', 'pending',
             'images/anon/key', 'image/jpeg', 'bb047001-0000-4000-8000-000000000001'::uuid)$$,
   '42501',
+  NULL,
   'anon cannot INSERT into media_assets'
 );
 
@@ -108,6 +111,7 @@ SELECT throws_ok(
     VALUES ('bb047001-dddd-0000-0000-000000000001'::uuid, 'public', 'image', 'pending',
             'images/cust/key', 'image/jpeg', 'bb047001-0000-4000-8000-000000000002'::uuid)$$,
   '42501',
+  NULL,
   'customer cannot INSERT into media_assets'
 );
 
