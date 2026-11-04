@@ -1,7 +1,7 @@
 ---
 id: S-047
 title: Image upload backend (presigned flow)
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-047-image-upload-backend
@@ -22,15 +22,15 @@ Let a signed-in staff member with `media.upload` put an image into the public R2
 
 ## Acceptance criteria
 
-- [ ] AC1: `getImageUploadLink` is a server action in `lib/media/actions/`. It calls `requireStaff('media.upload')`. Input: declared type (`image/jpeg`, `image/png` or `image/webp` only) and a list of one or two variants (width, size in bytes, type). It inserts one `media_assets` row (`bucket = public`, `kind = image`, `status = pending`, `uploaded_by`) and returns the media id plus one short-lived presigned PUT link per variant with the content type fixed.
+- [ ] AC1: `getImageUploadLink` is a server action in `lib/media/actions/`. It calls `requireStaff('media.upload')`. Input: declared MIME type (`image/jpeg`, `image/png` or `image/webp`) for the upload session, and a list of one or two variant descriptors each with `{ width: number, sizeCap: number, mimeType: string }`, plus an optional `mediaId` for retry (see AC9). It inserts one `media_assets` row (`bucket = public`, `kind = image`, `status = pending`, `uploaded_by` set to the calling staff member's user id) and returns the media id plus one short-lived presigned PUT link per variant with the content type fixed.
 - [ ] AC2: Any other type (SVG, GIF, HTML, PDF) returns `validation_failed` and creates no row. A variant wider than 1200 px or a list with more than two variants returns `validation_failed`.
-- [ ] AC3: More than 60 `getImageUploadLink` calls per hour by one admin returns `rate_limited` (limit from auth design section 15, held in Upstash through `lib/ratelimit/`).
+- [ ] AC3: More than 60 `getImageUploadLink` calls per hour by one admin returns `rate_limited` (limit from auth design section 15, held in Upstash through `lib/ratelimit/`). The rate-limit key is the staff member's user id (not IP).
 - [ ] AC4: `confirmImageUpload(mediaId)` reads the first bytes of every variant object in R2 and checks the real file type is JPEG, PNG or WebP and matches the declared type. An SVG or HTML file renamed `.png` returns `upload_failed`.
-- [ ] AC5: The confirm step checks all declared variants exist; a variant over its cap (480 px copy over 120 KB, 1200 px copy over 400 KB) is deleted from R2 and the call returns `upload_failed`. R2 may not enforce length at upload, so this check after upload is the real limit.
+- [ ] AC5: The confirm step checks all declared variants exist; a variant over its cap (480 px copy over 120 KB, 1200 px copy over 400 KB) is deleted from R2 and the call returns `upload_failed`. R2 may not enforce length at upload, so this check after upload is the real limit. The confirm step also verifies the actual pixel width of each variant matches the declared width within ±2 px; a copy with a wrong width is deleted and `upload_failed` is returned.
 - [ ] AC6: The confirm step reads width and height of each copy and refuses (and deletes) a copy that still carries GPS or other location data.
 - [ ] AC7: On success the row becomes `status = ready` with `mime_type`, `size_bytes`, `width`, `height` filled, and one `image.upload` audit row is written through `lib/audit/`.
 - [ ] AC8: Variant object names follow one fixed rule from the file key, in one helper `variantKey(key, width)` in `lib/media/`. No new column or row is created per variant.
-- [ ] AC9: A row left `pending` after a dropped connection can be retried: calling `getImageUploadLink` again with that `mediaId` re-issues links for the same row, and `confirmImageUpload` succeeds once the missing variant is uploaded.
+- [ ] AC9: A row left `pending` after a dropped connection can be retried: if `mediaId` is supplied and the row is `pending` and owned by the calling staff member, `getImageUploadLink` re-issues new links for the same row and creates no new row. `confirmImageUpload` succeeds once the missing variant is uploaded.
 - [ ] AC10: `lib/media/` exports a public URL builder that returns `PUBLIC_MEDIA_BASE_URL` (read through `lib/config.ts`) plus the key. No bucket address or key is written in code.
 - [ ] AC11: `lib/content/image-resize.ts` is the browser helper (pure code, no secrets, no database). Input: a File. It refuses a type other than JPEG, PNG, WebP, a file over 5 MB, or an image wider or taller than 6000 px. It returns WebP copies at about 480 and 1200 px, never enlarges (a copy is made only for widths up to the original width; an image narrower than 480 px gets one copy), falls back to JPEG when the browser silently returns another type, and never returns the full-size original.
 
@@ -43,6 +43,11 @@ Let a signed-in staff member with `media.upload` put an image into the public R2
 - [ ] EC5: Browser canvas returns JPEG instead of WebP: the helper uploads a small JPEG, and the server accepts it (JPEG is an allowed type) under the same size caps.
 - [ ] EC6: Very large pixel size (over 6000 px) is refused in the browser before any call; the server never sees the original.
 - [ ] EC7: Two parallel confirms of the same row end with one `ready` row and one audit row.
+- [ ] EC-A: A variant descriptor with zero or negative width or size returns `validation_failed`.
+- [ ] EC-B: Two variants with the same width in the list returns `validation_failed`.
+- [ ] EC-C: `confirmImageUpload` on a valid `pending` row owned by a different staff member returns `not_found` (treats it as non-existent to the caller).
+- [ ] EC-D: Object key includes a UUID component so two uploads of the same filename by the same admin never collide.
+- [ ] EC-E: A zero-byte R2 object (upload initiated but no body sent) has no magic bytes → real-type check fails → `upload_failed`.
 
 ## Contract
 
@@ -91,14 +96,111 @@ Server actions: `lib/media/actions/getImageUploadLink.ts`, `lib/media/actions/co
 
 Prior art: Searched docs/ for "image upload", "presign", "media_assets", "image-resize". Found content system design sections 14, 14.1, 21 (this story implements them), file-structure routes `upload/image-link` and `image-confirm` (extended: built as server actions), schema `media_assets` (Group K; used as is), auth design section 15 (60 uploads per hour). No code exists yet. The earlier draft stories S-008b and S-009a (moved to scratch) are superseded.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. For this sensitive story the owner approves the plan. -->
+### Existing infrastructure confirmed
+
+- `lib/auth/server.ts` — `requireStaff(permission)` ✓
+- `lib/ratelimit/index.ts` — `checkRateLimit({ limitName, key, maxCount, windowSeconds, mode })` ✓
+- `lib/audit/index.ts` — `writeAuditRow`, `writeDenied` ✓
+- `lib/config.ts` — `NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL` (as `cspConfig.imageCdnUrl`) ✓
+- `.env.example` — `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_PUBLIC` ✓
+- `lib/r2/storage.ts` — empty stub, needs implementing ✓
+- `types/audit.ts` — `image.upload` event name ✓
+- `media.upload` permission seeded for Admin and Editor roles ✓
+
+### Packages to install
+
+- `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` — presigned PUT links for R2 (S3-compatible API)
+- No server-side image processing lib needed — the server reads only the first bytes (magic bytes for type check) and uses the `image-size` or manual header parse for dimensions. Use `image-size` npm package for width/height from buffer.
+- For GPS/EXIF check: read raw JPEG/WebP bytes for EXIF markers; use `exifr` (browser-compatible, light) or manual check.
+
+**Decision**: use `image-size` for dimensions and a manual EXIF GPS check (parse JPEG/WebP headers for GPS IFD without a full EXIF library to keep the bundle minimal).
+
+### Input shape decision (resolves analyst gap)
+
+`GetImageUploadLinkInput`:
+```ts
+{
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+  variants: Array<{ width: number; sizeCap: number; mimeType: string }>;
+  mediaId?: string; // retry: existing pending row owned by caller
+}
+```
+One call → one `media_assets` row → up to two presigned PUT links (one per variant). The variant `mimeType` must be one of the three allowed types (browser WebP may fall back to JPEG, so it may differ from the session `mimeType`).
+
+### Variant key rule (AC8)
+
+```
+variantKey(key, width) = `${key}_${width}w`
+```
+Example: key `images/article/uuid/abc` → `images/article/uuid/abc_480w`, `images/article/uuid/abc_1200w`. No new column.
+
+### Object key format (EC-D uniqueness)
+
+```
+images/article/{mediaId}/{nanoid8}
+```
+`mediaId` is the UUID of the row (generated before insert, passed as the key segment). This guarantees uniqueness because `mediaId` is a fresh UUID per row.
+
+### Files to create / edit
+
+| File | Action |
+|---|---|
+| `lib/config.ts` | Add R2 config block (`r2Config()`) |
+| `lib/r2/storage.ts` | Implement: R2 client, `presignedPut(bucket, key, mimeType, ttlSeconds)`, `getObjectBytes(bucket, key, maxBytes)`, `deleteObject(bucket, key)`, `headObject(bucket, key)` |
+| `lib/media/variantKey.ts` | `variantKey(key, width): string` |
+| `lib/media/publicUrl.ts` | `publicUrl(key): string` — reads `PUBLIC_MEDIA_BASE_URL` from config |
+| `lib/media/checkRealType.ts` | Reads first 12 bytes, returns detected MIME or null |
+| `lib/media/checkGps.ts` | Reads JPEG/WebP bytes, returns true if GPS IFD found |
+| `lib/media/readDimensions.ts` | Reads width/height from buffer using `image-size` |
+| `lib/media/actions/getImageUploadLink.ts` | Server action (AC1, AC2, AC3, AC9, EC-A, EC-B) |
+| `lib/media/actions/confirmImageUpload.ts` | Server action (AC4–AC7, EC2–EC7) |
+| `lib/content/image-resize.ts` | Browser helper (AC11, EC5, EC6) |
+| `types/media.ts` | `MediaVariantInput`, `GetImageUploadLinkInput`, `GetImageUploadLinkResult`, `ConfirmImageUploadResult` |
+| `supabase/migrations/YYYYMMDD_S047_add_r2_config_env.md` | Env note only — no schema change needed (media_assets already exists) |
+
+### No schema migration needed
+
+`media_assets` table already defined in schema v14. No new column or table.
+
+### Test files
+
+| File | Tests |
+|---|---|
+| `lib/media/__tests__/variantKey.test.ts` | AC8 |
+| `lib/media/__tests__/getImageUploadLink.test.ts` | AC1, AC2, AC3, AC9, EC1, EC-A, EC-B |
+| `lib/media/__tests__/confirmImageUpload.test.ts` | AC4, AC5, AC6, AC7, EC2, EC3, EC4, EC7, EC-C, EC-E |
+| `lib/content/__tests__/image-resize.test.ts` | AC11, EC5, EC6 |
+| `supabase/tests/media_assets.test.sql` | RLS: anon and customer cannot read/write |
+
+### Step order
+
+1. Install packages
+2. `lib/config.ts` — R2 config
+3. `lib/r2/storage.ts` — R2 helpers
+4. `types/media.ts` — types
+5. `lib/media/variantKey.ts`, `publicUrl.ts`, `checkRealType.ts`, `checkGps.ts`, `readDimensions.ts`
+6. `lib/media/actions/getImageUploadLink.ts`
+7. `lib/media/actions/confirmImageUpload.ts`
+8. `lib/content/image-resize.ts`
+9. Tests — write failing, then make green
+10. `scripts/check.sh`
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+════════════════════════════════
+  check.sh: 5 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
+[exit code 0]
+
+Unit tests (S-047 specific):
+  ✓ lib/media/__tests__/variantKey.test.ts (2 tests)
+  ✓ lib/media/__tests__/getImageUploadLink.test.ts (12 tests)
+  ✓ lib/media/__tests__/confirmImageUpload.test.ts (12 tests)
+  ✓ lib/content/__tests__/image-resize.test.ts (7 tests)
+  Total: 33 passed
 ```
 
 ## Review notes

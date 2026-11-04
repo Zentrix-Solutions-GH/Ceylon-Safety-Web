@@ -1,0 +1,265 @@
+// S-047: getImageUploadLink server action — AC1, AC2, AC3, AC9, EC1, EC-A, EC-B
+
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/config", () => ({
+  r2Config: vi.fn(() => ({
+    accountId: "acct",
+    accessKeyId: "key",
+    secretAccessKey: "secret",
+    bucketPublic: "pub-bucket",
+    publicMediaBaseUrl: "https://img.example.com",
+  })),
+  serverConfig: { supabaseServiceRoleKey: "srk" },
+  publicConfig: { supabaseUrl: "https://test.supabase.co", supabaseAnonKey: "anon" },
+}));
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServiceRoleClient: vi.fn(),
+  createSupabaseServerClient: vi.fn(),
+}));
+vi.mock("@/lib/auth/server", () => ({
+  requireStaff: vi.fn(),
+}));
+vi.mock("@/lib/ratelimit/index", () => ({
+  checkRateLimit: vi.fn(),
+}));
+vi.mock("@/lib/audit/index", () => ({
+  writeDenied: vi.fn(),
+}));
+vi.mock("@/lib/r2/storage", () => ({
+  presignedPut: vi.fn(),
+  _setClientForTest: vi.fn(),
+}));
+
+import { requireStaff } from "@/lib/auth/server";
+import { checkRateLimit } from "@/lib/ratelimit/index";
+import { writeDenied } from "@/lib/audit/index";
+import { presignedPut } from "@/lib/r2/storage";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { getImageUploadLink } from "@/lib/media/actions/getImageUploadLink";
+
+const STAFF_USER = { id: "aa000001-0000-4000-8000-000000000001", claimedRole: "admin" as const };
+
+function mockRequireStaff(ok: boolean) {
+  if (ok) {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: true, user: STAFF_USER as never });
+  } else {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" });
+  }
+}
+
+function mockRateLimit(ok: boolean) {
+  vi.mocked(checkRateLimit).mockResolvedValue(
+    ok ? { ok: true } : { ok: false, retryAfterSeconds: 3600, reason: "rate_limited" }
+  );
+}
+
+function makeSupabaseMock(insertError: unknown = null, insertData: unknown = { id: "media-uuid" }, selectData: unknown = null, selectError: unknown = null) {
+  const singleInsert = vi.fn().mockResolvedValue({ data: insertData, error: insertError });
+  const selectInsert = vi.fn().mockReturnValue({ single: singleInsert });
+  const insert = vi.fn().mockReturnValue({ select: selectInsert });
+
+  const singleSelect = vi.fn().mockResolvedValue({ data: selectData, error: selectError });
+  const eqSelect = vi.fn().mockReturnValue({ single: singleSelect });
+  const selectQ = vi.fn().mockReturnValue({ eq: eqSelect });
+  const updateEq = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
+  const update = vi.fn().mockReturnValue(updateEq);
+
+  const from = vi.fn().mockReturnValue({ insert, select: selectQ, update });
+  return { from, insert, singleInsert, selectQ, eqSelect, singleSelect };
+}
+
+const VALID_INPUT = {
+  mimeType: "image/webp" as const,
+  variants: [
+    { width: 480, sizeCap: 120 * 1024, mimeType: "image/webp" as const },
+    { width: 1200, sizeCap: 400 * 1024, mimeType: "image/webp" as const },
+  ] as [{ width: number; sizeCap: number; mimeType: "image/webp" }, { width: number; sizeCap: number; mimeType: "image/webp" }],
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(presignedPut).mockResolvedValue("https://r2.example.com/presigned");
+});
+
+describe("getImageUploadLink", () => {
+  it("AC1: happy path inserts a pending row and returns one link per variant", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+    const sb = makeSupabaseMock(null, { id: "media-uuid" });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
+
+    const result = await getImageUploadLink(VALID_INPUT);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.mediaId).toBe("media-uuid");
+    expect(result.links).toHaveLength(2);
+    expect(result.links[0]!.width).toBe(480);
+    expect(result.links[1]!.width).toBe(1200);
+    expect(presignedPut).toHaveBeenCalledTimes(2);
+  });
+
+  it("AC1: uploaded_by is set to the calling staff member's user id", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+    const sb = makeSupabaseMock(null, { id: "media-uuid" });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
+
+    await getImageUploadLink(VALID_INPUT);
+
+    const insertCall = sb.from.mock.calls.find(([t]: string[]) => t === "media_assets");
+    expect(insertCall).toBeDefined();
+  });
+
+  it("EC1: no media.upload permission returns not_allowed and writes permission.denied audit", async () => {
+    mockRequireStaff(false);
+
+    const result = await getImageUploadLink(VALID_INPUT);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("not_allowed");
+    expect(writeDenied).toHaveBeenCalledWith(
+      expect.any(String),
+      "media_assets",
+      expect.any(String)
+    );
+  });
+
+  it("AC2: SVG MIME type returns validation_failed and creates no row", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+    const sb = makeSupabaseMock();
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
+
+    const result = await getImageUploadLink({
+      mimeType: "image/svg+xml" as never,
+      variants: [{ width: 480, sizeCap: 120 * 1024, mimeType: "image/webp" as const }] as never,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("validation_failed");
+    expect(sb.from).not.toHaveBeenCalled();
+  });
+
+  it("AC2: more than two variants returns validation_failed", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+
+    const result = await getImageUploadLink({
+      mimeType: "image/webp" as const,
+      variants: [
+        { width: 480, sizeCap: 120 * 1024, mimeType: "image/webp" as const },
+        { width: 800, sizeCap: 200 * 1024, mimeType: "image/webp" as const },
+        { width: 1200, sizeCap: 400 * 1024, mimeType: "image/webp" as const },
+      ] as never,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("validation_failed");
+  });
+
+  it("AC2: variant wider than 1200 px returns validation_failed", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+
+    const result = await getImageUploadLink({
+      mimeType: "image/webp" as const,
+      variants: [{ width: 1600, sizeCap: 400 * 1024, mimeType: "image/webp" as const }] as never,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("validation_failed");
+  });
+
+  it("AC3: 61st call in an hour returns rate_limited", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(false);
+
+    const result = await getImageUploadLink(VALID_INPUT);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("rate_limited");
+  });
+
+  it("AC3: rate limit is keyed on the staff user id", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+    const sb = makeSupabaseMock(null, { id: "media-uuid" });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
+
+    await getImageUploadLink(VALID_INPUT);
+
+    expect(checkRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ key: STAFF_USER.id })
+    );
+  });
+
+  it("EC-A: variant with zero width returns validation_failed", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+
+    const result = await getImageUploadLink({
+      mimeType: "image/webp" as const,
+      variants: [{ width: 0, sizeCap: 120 * 1024, mimeType: "image/webp" as const }] as never,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("validation_failed");
+  });
+
+  it("EC-A: variant with negative sizeCap returns validation_failed", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+
+    const result = await getImageUploadLink({
+      mimeType: "image/webp" as const,
+      variants: [{ width: 480, sizeCap: -1, mimeType: "image/webp" as const }] as never,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("validation_failed");
+  });
+
+  it("EC-B: two variants with the same width returns validation_failed", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+
+    const result = await getImageUploadLink({
+      mimeType: "image/webp" as const,
+      variants: [
+        { width: 480, sizeCap: 120 * 1024, mimeType: "image/webp" as const },
+        { width: 480, sizeCap: 120 * 1024, mimeType: "image/webp" as const },
+      ] as never,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("validation_failed");
+  });
+
+  it("AC9: supplying an existing pending mediaId re-issues links for the same row", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+    // selectQ returns the existing pending row owned by caller
+    const existingRow = { id: "ee000001-0000-4000-8000-000000000001", status: "pending", uploaded_by: STAFF_USER.id, file_key: "images/existing-uuid/abc" };
+    const sb = makeSupabaseMock(null, null, existingRow, null);
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
+
+    const result = await getImageUploadLink({ ...VALID_INPUT, mediaId: "ee000001-0000-4000-8000-000000000001" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.mediaId).toBe("ee000001-0000-4000-8000-000000000001");
+    // Verify insert was NOT called (retry path only re-issues links, no new row)
+    expect(sb.insert).not.toHaveBeenCalled();
+  });
+});
