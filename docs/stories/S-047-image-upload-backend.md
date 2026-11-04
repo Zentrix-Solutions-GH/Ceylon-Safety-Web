@@ -215,7 +215,11 @@ P2 reviewer findings addressed:
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `lib/media/actions/confirmImageUpload.ts:76` — `headObject` returning null triggers `continue` instead of `upload_failed`; a caller who uploads only the 480 w variant can confirm and receive a `ready` row with the 1200 w copy absent, violating AC5. Fix: replace `if (!head) continue;` with `return { ok: false, code: "upload_failed" };`. (full-review 2026-11-04)
+- **P1** `lib/r2/storage.ts:34` — `_setClientForTest` exported from production module; guard behind `NODE_ENV === "test"` or use Vitest module injection. (full-review 2026-11-04)
+- **P1** `lib/media/actions/getImageUploadLink.ts:55` — rate limit charged before Zod validation; move `safeParse` before `checkRateLimit`. (full-review 2026-11-04)
+- **P1** `lib/media/actions/getImageUploadLink.ts:52` / `confirmImageUpload.ts:40` — `writeDenied("unknown", ...)` logs a fake actor id; skip the denied-audit row here (auth layer already logs) or propagate partial identity. (full-review 2026-11-04)
+- **P1** `lib/media/__tests__/getImageUploadLink.test.ts` — no test for `text/html` or `application/pdf` MIME types returning `validation_failed`; AC2 names them explicitly. (full-review 2026-11-04)
 
 ## After this merges, a user can:
 
