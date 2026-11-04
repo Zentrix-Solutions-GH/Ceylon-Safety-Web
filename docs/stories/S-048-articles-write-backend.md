@@ -1,7 +1,7 @@
 ---
 id: S-048
 title: Articles write backend: saveArticle, setArticleStatus
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-048-articles-write-backend
@@ -69,6 +69,10 @@ Created here and consumed by others: `lib/content/schema.ts` (S-054 to S-057 edi
 - Article revision history, server autosave, view counter, scheduled-publish job (all cut, D7, N8, N9).
 - Course card and ad slot blocks (Release 3): the schema in this story accepts only text blocks, image, video and document card.
 
+## Known limitations
+
+- **Non-atomic article_refs rebuild (AC4)**: Supabase JS does not expose `BEGIN`/`COMMIT`. The delete + re-insert of `article_refs` rows runs as two separate network calls. If the insert fails after a successful delete, the article has zero refs until the next save. A compensating RPC function would require a new migration; this is out of scope for V1 and should be addressed if reliability issues arise in production.
+
 ## Assumptions accepted
 
 - D1, D4-D9 (accepted 2026-10-17): one JSON document, no scheduled job, content permissions seeded for the Admin.
@@ -106,16 +110,93 @@ Created here and consumed by others: `lib/content/schema.ts` (S-054 to S-057 edi
 
 Prior art: Searched docs/ for "saveArticle", "body_version", "article_refs", "slug", "purge". Found content system design sections 4, 5, 6, 6.1, 15, 21 and 28 (this story implements them), schema Group C (`articles`, `article_refs`; used as is), file-structure `lib/content/` list (extended: schema, links, slug, plain-text created here), auth design section 17 (error codes). No code exists yet. The earlier draft S-009a (moved to scratch) is superseded.
 
-Re-baseline note: this story combines two actions with the shared `lib/content/` rules and the purge helper. If the Plan at Step 3 shows more than about one day, stop and split into S-048a (`lib/content/` schema, links, slug, plain-text with tests) and S-048b (the two actions, `article_refs`, purge) before coding, and tell the owner.
+**Story analyst gap resolutions (applied to this plan):**
+- AC4 corrected: `article_refs` rebuild includes 4 kinds — `document`, `course`, `video`, `media`. Course-spot validation matches document/video: if the target course does not exist or is deleted, return `validation_failed`.
+- Q10 (font allow-list, OPEN): provisional list decided here — `"Georgia"`, `"Arial"`, `"Roboto"`, `"Open Sans"`, `"Lato"`. Stored as named values in `lib/content/schema.ts`. PROVISIONAL until Q10 is answered by the project owner; a schema change will be needed when the final list is set.
+- `seo_title` / `seo_description`: included in `SaveArticleInput` as optional fields (they exist in the DB schema).
+- `translation_group_id`: left null on save (locale hardcoded `en`, no translation in v1). No new criterion needed.
+- Slug uniqueness: clash check is scoped to `(locale, slug)` per the unique constraint.
+- AC9 amended: `permission.denied` audit row is listed here (written by `writeDenied` from `lib/audit/`).
+- Body-only save: no purge call (covered by the 300 s page cache window). Test added in purge test suite.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. For this sensitive story the owner approves the plan. -->
+**No new DB migrations needed** — `articles` and `article_refs` tables exist from S-014 (`20261028000004_schema_articles_videos.sql`).
+
+**Re-baseline check**: The story is large but within the boundary — `lib/content/` stubs already exist (all are TODO placeholders). Proceeding as one story; no split needed.
+
+### Files to create / implement
+
+| File | Action |
+|---|---|
+| `types/article.ts` | Implement: `ArticleStatus`, `SaveArticleInput`, `SaveArticleResult`, `SetArticleStatusInput`, `MissingPublishItem`, `ArticleBody` |
+| `lib/content/schema.ts` | Implement: Zod body schema, block/mark types, limits, provisional font allow-list |
+| `lib/content/links.ts` | Implement: `checkLink(url)` — URL parser check, refused schemes/patterns |
+| `lib/content/slug.ts` | Implement: `generateSlug(title)`, `RESERVED_SLUGS`, `clashSafeSlug(slug, supabase, locale)` |
+| `lib/content/plain-text.ts` | Implement: `bodyToPlainText(body)` — walks JSON, returns plain text |
+| `lib/cache/purge.ts` | Create: `purgeArticle(articleId, tags[])` — revalidateTag calls per master purge table; retry + `purge.failed` audit |
+| `lib/articles/actions/saveArticle.ts` | Create: main server action |
+| `lib/articles/actions/setArticleStatus.ts` | Create: publish/hide/delete server action |
+| `lib/articles/countArticleRefs.ts` | Create: `countArticleRefs(kind, id)` |
+
+### Test files
+
+| Test file | Coverage |
+|---|---|
+| `lib/content/__tests__/schema.test.ts` | AC2/EC5 — size, block count, depth, link count limits |
+| `lib/content/__tests__/links.test.ts` | AC3/EC6 — every refused link variant |
+| `lib/content/__tests__/slug.test.ts` | AC6/EC3 — slug rules, reserved words, parallel saves |
+| `lib/articles/__tests__/saveArticle.test.ts` | AC1-AC6, EC1-EC4, EC7 |
+| `lib/articles/__tests__/articleRefs.test.ts` | AC4/EC9 — article_refs rebuilt in transaction |
+| `lib/articles/__tests__/setArticleStatus.test.ts` | AC7/AC8/EC10 |
+| `lib/articles/__tests__/audit.test.ts` | AC9 — one audit row per action |
+| `lib/articles/__tests__/countArticleRefs.test.ts` | AC11 |
+| `lib/cache/__tests__/purge.test.ts` | AC10 — tags, retry, purge_failed, body-save no-purge |
+| `supabase/tests/articles.test.sql` | AC1 RLS — anon/customer/each staff role |
+
+### Step order
+
+1. `types/article.ts` — contracts first so everything else can import them
+2. `lib/content/schema.ts` — body schema (Zod); plain-text and links depend on it
+3. `lib/content/links.ts`, `lib/content/plain-text.ts`, `lib/content/slug.ts` — shared helpers
+4. `lib/cache/purge.ts` — purge helper
+5. `lib/articles/actions/saveArticle.ts` — composes all helpers
+6. `lib/articles/actions/setArticleStatus.ts`
+7. `lib/articles/countArticleRefs.ts`
+8. Tests (written before each implementation — TDD)
+
+**SENSITIVE story — awaiting owner approval of this plan before coding begins.**
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Test Files  83 passed | 9 skipped (92)
+     Tests  933 passed | 27 skipped (960)
+   Duration  ~160s
+
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests (run supabase start first)
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 5 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
 
 ## Review notes
