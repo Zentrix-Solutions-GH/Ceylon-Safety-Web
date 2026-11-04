@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { requireStaff } from "@/lib/auth/server";
-import { writeAuditRow, writeDenied } from "@/lib/audit/index";
+import { writeAuditRow } from "@/lib/audit/index";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { getObjectBytes, deleteObject, headObject } from "@/lib/r2/storage";
 import { variantKey } from "@/lib/media/variantKey";
@@ -37,8 +37,7 @@ export async function confirmImageUpload(
   // --- Auth ---
   const authResult = await requireStaff("media.upload");
   if (!authResult.ok) {
-    try { await writeDenied("unknown", "media_assets", "media.upload"); } catch { /* non-fatal */ }
-    return { ok: false, code: "not_allowed" };
+    return { ok: false, code: "not_allowed" }; // auth layer already logs the denied event
   }
   const actorId = authResult.user.id;
 
@@ -77,7 +76,7 @@ export async function confirmImageUpload(
   for (const width of STANDARD_WIDTHS) {
     const vKey = variantKey(fileKey, width);
     const head = await headObject(cfg.bucketPublic, vKey);
-    if (!head) continue; // variant not uploaded — will be caught if none found
+    if (!head) return { ok: false, code: "upload_failed" }; // AC5: all declared variants must exist
 
     foundAny = true;
 

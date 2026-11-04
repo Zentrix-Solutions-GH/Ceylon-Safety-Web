@@ -3,7 +3,6 @@
 import { z } from "zod";
 import { requireStaff } from "@/lib/auth/server";
 import { checkRateLimit } from "@/lib/ratelimit/index";
-import { writeDenied } from "@/lib/audit/index";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { presignedPut } from "@/lib/r2/storage";
 import { variantKey } from "@/lib/media/variantKey";
@@ -48,10 +47,15 @@ export async function getImageUploadLink(
   // --- Auth ---
   const authResult = await requireStaff("media.upload");
   if (!authResult.ok) {
-    try { await writeDenied("unknown", "media_assets", "media.upload"); } catch { /* audit failure is non-fatal */ }
-    return { ok: false, code: "not_allowed" };
+    return { ok: false, code: "not_allowed" }; // auth layer already logs the denied event
   }
   const actorId = authResult.user.id;
+
+  // --- Input validation — zod schema (AC2, EC-A, EC-B) — before rate limit to avoid burning quota ---
+  const parsed = GetImageUploadLinkSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, code: "validation_failed" };
+  }
 
   // --- Rate limit — 60/hour keyed on staff user id (AC3) ---
   const rlResult = await checkRateLimit({
@@ -63,12 +67,6 @@ export async function getImageUploadLink(
   });
   if (!rlResult.ok && rlResult.reason === "rate_limited") {
     return { ok: false, code: "rate_limited" };
-  }
-
-  // --- Input validation — zod schema (AC2, EC-A, EC-B) ---
-  const parsed = GetImageUploadLinkSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, code: "validation_failed" };
   }
   const { mimeType, variants, mediaId: retryMediaId } = parsed.data;
 

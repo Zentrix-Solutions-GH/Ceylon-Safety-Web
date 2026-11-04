@@ -24,9 +24,7 @@ vi.mock("@/lib/auth/server", () => ({
 vi.mock("@/lib/ratelimit/index", () => ({
   checkRateLimit: vi.fn(),
 }));
-vi.mock("@/lib/audit/index", () => ({
-  writeDenied: vi.fn(),
-}));
+vi.mock("@/lib/audit/index", () => ({}));
 vi.mock("@/lib/r2/storage", () => ({
   presignedPut: vi.fn(),
   _setClientForTest: vi.fn(),
@@ -34,7 +32,6 @@ vi.mock("@/lib/r2/storage", () => ({
 
 import { requireStaff } from "@/lib/auth/server";
 import { checkRateLimit } from "@/lib/ratelimit/index";
-import { writeDenied } from "@/lib/audit/index";
 import { presignedPut } from "@/lib/r2/storage";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { getImageUploadLink } from "@/lib/media/actions/getImageUploadLink";
@@ -119,7 +116,7 @@ describe("getImageUploadLink", () => {
     );
   });
 
-  it("EC1: no media.upload permission returns not_allowed and writes permission.denied audit", async () => {
+  it("EC1: no media.upload permission returns not_allowed (auth layer logs the denial)", async () => {
     mockRequireStaff(false);
 
     const result = await getImageUploadLink(VALID_INPUT);
@@ -127,11 +124,6 @@ describe("getImageUploadLink", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe("not_allowed");
-    expect(writeDenied).toHaveBeenCalledWith(
-      expect.any(String),
-      "media_assets",
-      expect.any(String)
-    );
   });
 
   it("AC2: GIF MIME type returns validation_failed and creates no row", async () => {
@@ -159,6 +151,40 @@ describe("getImageUploadLink", () => {
 
     const result = await getImageUploadLink({
       mimeType: "image/svg+xml" as never,
+      variants: [{ width: 480, sizeCap: 120 * 1024, mimeType: "image/webp" as const }] as never,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("validation_failed");
+    expect(sb.from).not.toHaveBeenCalled();
+  });
+
+  it("AC2: text/html MIME type returns validation_failed and creates no row", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+    const sb = makeSupabaseMock();
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
+
+    const result = await getImageUploadLink({
+      mimeType: "text/html" as never,
+      variants: [{ width: 480, sizeCap: 120 * 1024, mimeType: "image/webp" as const }] as never,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("validation_failed");
+    expect(sb.from).not.toHaveBeenCalled();
+  });
+
+  it("AC2: application/pdf MIME type returns validation_failed and creates no row", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+    const sb = makeSupabaseMock();
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
+
+    const result = await getImageUploadLink({
+      mimeType: "application/pdf" as never,
       variants: [{ width: 480, sizeCap: 120 * 1024, mimeType: "image/webp" as const }] as never,
     });
 

@@ -23,7 +23,6 @@ vi.mock("@/lib/auth/server", () => ({
 }));
 vi.mock("@/lib/audit/index", () => ({
   writeAuditRow: vi.fn(),
-  writeDenied: vi.fn(),
 }));
 vi.mock("@/lib/r2/storage", () => ({
   getObjectBytes: vi.fn(),
@@ -42,7 +41,7 @@ vi.mock("@/lib/media/readDimensions", () => ({
 }));
 
 import { requireStaff } from "@/lib/auth/server";
-import { writeAuditRow, writeDenied } from "@/lib/audit/index";
+import { writeAuditRow } from "@/lib/audit/index";
 import { getObjectBytes, deleteObject, headObject } from "@/lib/r2/storage";
 import { checkRealType } from "@/lib/media/checkRealType";
 import { checkGps } from "@/lib/media/checkGps";
@@ -107,7 +106,7 @@ beforeEach(() => {
 });
 
 describe("confirmImageUpload", () => {
-  it("EC1: no media.upload permission returns not_allowed and writes permission.denied audit", async () => {
+  it("EC1: no media.upload permission returns not_allowed (auth layer logs the denial)", async () => {
     mockRequireStaff(false);
 
     const result = await confirmImageUpload("5a3b8f21-0000-4000-8000-000000000001");
@@ -115,7 +114,6 @@ describe("confirmImageUpload", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe("not_allowed");
-    expect(writeDenied).toHaveBeenCalled();
   });
 
   it("S17: suspended staff member (requireStaff returns not_allowed) is blocked", async () => {

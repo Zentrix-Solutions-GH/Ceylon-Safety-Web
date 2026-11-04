@@ -32,8 +32,9 @@ function getClient(): S3Client {
   return _client;
 }
 
-// Exposed for tests to inject a mock client.
+// Exposed for tests to inject a mock client. Guard prevents accidental use in production.
 export function _setClientForTest(client: S3Client | null): void {
+  if (process.env.NODE_ENV !== "test") return;
   _client = client;
 }
 

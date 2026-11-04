@@ -40,32 +40,53 @@ $$;
 -- ─────────────────────────────────────────────────────────────────────────────
 
 SET LOCAL role TO anon;
+
+-- Test 1: anon SELECT returns 0 rows
 SELECT is(
   (SELECT count(*)::int FROM public.media_assets),
   0,
   'anon cannot SELECT media_assets'
 );
 
+-- Test 2: anon INSERT raises RLS violation (42501)
 SELECT throws_ok(
   $$INSERT INTO public.media_assets (id, bucket, kind, status, file_key, mime_type, uploaded_by)
     VALUES ('bb047001-cccc-0000-0000-000000000001'::uuid, 'public', 'image', 'pending',
             'images/anon/key', 'image/jpeg', 'bb047001-0000-4000-8000-000000000001'::uuid)$$,
+  '42501',
   'anon cannot INSERT into media_assets'
 );
 
-SELECT throws_ok(
-  $$UPDATE public.media_assets SET status = 'ready'
-    WHERE id = 'bb047001-aaaa-0000-0000-000000000001'::uuid$$,
-  'anon cannot UPDATE media_assets'
-);
-
-SELECT throws_ok(
-  $$DELETE FROM public.media_assets
-    WHERE id = 'bb047001-aaaa-0000-0000-000000000001'::uuid$$,
-  'anon cannot DELETE from media_assets'
-);
+-- Test 3: anon UPDATE is silently blocked (0 rows affected); verify data unchanged
+-- RLS on UPDATE/DELETE does not throw — it returns 0 rows. Verify via superuser after attempt.
+DO $$ BEGIN
+  UPDATE public.media_assets
+     SET mime_type = 'image/png'
+   WHERE id = 'bb047001-aaaa-0000-0000-000000000001'::uuid;
+END $$;
 
 RESET role;
+SELECT is(
+  (SELECT mime_type FROM public.media_assets
+    WHERE id = 'bb047001-aaaa-0000-0000-000000000001'::uuid),
+  'image/jpeg',
+  'anon UPDATE has no effect on media_assets'
+);
+SET LOCAL role TO anon;
+
+-- Test 4: anon DELETE is silently blocked; verify row still exists
+DO $$ BEGIN
+  DELETE FROM public.media_assets
+   WHERE id = 'bb047001-aaaa-0000-0000-000000000001'::uuid;
+END $$;
+
+RESET role;
+SELECT is(
+  (SELECT count(*)::int FROM public.media_assets
+    WHERE id = 'bb047001-aaaa-0000-0000-000000000001'::uuid),
+  1,
+  'anon DELETE has no effect on media_assets'
+);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Customer: cannot read or write media_assets
@@ -74,32 +95,52 @@ RESET role;
 SET LOCAL role TO authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"bb047001-0000-4000-8000-000000000002","role":"authenticated"}';
 
+-- Test 5: customer SELECT returns 0 rows
 SELECT is(
   (SELECT count(*)::int FROM public.media_assets),
   0,
   'customer cannot SELECT media_assets'
 );
 
+-- Test 6: customer INSERT raises RLS violation (42501)
 SELECT throws_ok(
   $$INSERT INTO public.media_assets (id, bucket, kind, status, file_key, mime_type, uploaded_by)
     VALUES ('bb047001-dddd-0000-0000-000000000001'::uuid, 'public', 'image', 'pending',
             'images/cust/key', 'image/jpeg', 'bb047001-0000-4000-8000-000000000002'::uuid)$$,
+  '42501',
   'customer cannot INSERT into media_assets'
 );
 
-SELECT throws_ok(
-  $$UPDATE public.media_assets SET status = 'ready'
-    WHERE id = 'bb047001-aaaa-0000-0000-000000000001'::uuid$$,
-  'customer cannot UPDATE media_assets'
-);
-
-SELECT throws_ok(
-  $$DELETE FROM public.media_assets
-    WHERE id = 'bb047001-aaaa-0000-0000-000000000001'::uuid$$,
-  'customer cannot DELETE from media_assets'
-);
+-- Test 7: customer UPDATE is silently blocked; verify data unchanged
+DO $$ BEGIN
+  UPDATE public.media_assets
+     SET mime_type = 'image/png'
+   WHERE id = 'bb047001-aaaa-0000-0000-000000000001'::uuid;
+END $$;
 
 RESET role;
+SELECT is(
+  (SELECT mime_type FROM public.media_assets
+    WHERE id = 'bb047001-aaaa-0000-0000-000000000001'::uuid),
+  'image/jpeg',
+  'customer UPDATE has no effect on media_assets'
+);
+SET LOCAL role TO authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"bb047001-0000-4000-8000-000000000002","role":"authenticated"}';
+
+-- Test 8: customer DELETE is silently blocked; verify row still exists
+DO $$ BEGIN
+  DELETE FROM public.media_assets
+   WHERE id = 'bb047001-aaaa-0000-0000-000000000001'::uuid;
+END $$;
+
+RESET role;
+SELECT is(
+  (SELECT count(*)::int FROM public.media_assets
+    WHERE id = 'bb047001-aaaa-0000-0000-000000000001'::uuid),
+  1,
+  'customer DELETE has no effect on media_assets'
+);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Admin with media.upload: can read their own rows
