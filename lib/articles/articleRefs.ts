@@ -29,6 +29,9 @@ export function buildArticleRefs(
   }));
 
   if (coverImageKey) {
+    // Cover image ref_id stores the file key (string path), not a UUID.
+    // This intentionally diverges from video/document/course refs which store UUIDs.
+    // setArticleStatus queries media_assets by key, not id, so this is consistent.
     rows.push({ node_id: "cover", ref_type: "media", ref_id: coverImageKey });
   }
 

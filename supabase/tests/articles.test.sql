@@ -33,12 +33,12 @@ BEGIN
   INSERT INTO public.authors  (id, slug, name, is_active) VALUES (v_author, 'test-author-048', 'Test Author', TRUE);
   INSERT INTO public.categories (id, slug, name, applies_to) VALUES (v_cat, 'test-cat-048', 'Test Cat 048', ARRAY['article']::text[]);
   -- seed one draft and one published article as service role
-  INSERT INTO public.articles (id, locale, slug, title, body, body_version, status, author_id, category_id)
+  INSERT INTO public.articles (id, locale, slug, title, body, body_version, status, published_at, author_id, category_id)
     VALUES
       ('48aaaaaa-0000-4000-8000-000000000001'::uuid, 'en', 'draft-article-048', 'Draft 048',
-       '{"schema_version":1,"type":"doc","content":[]}'::jsonb, 1, 'draft', v_author, v_cat),
+       '{"schema_version":1,"type":"doc","content":[]}'::jsonb, 1, 'draft', NULL, v_author, v_cat),
       ('48aaaaaa-0000-4000-8000-000000000002'::uuid, 'en', 'published-article-048', 'Published 048',
-       '{"schema_version":1,"type":"doc","content":[]}'::jsonb, 1, 'published', v_author, v_cat);
+       '{"schema_version":1,"type":"doc","content":[]}'::jsonb, 1, 'published', now(), v_author, v_cat);
 END;
 $$;
 

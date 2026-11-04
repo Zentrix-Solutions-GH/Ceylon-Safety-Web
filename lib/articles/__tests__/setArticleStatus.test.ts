@@ -246,4 +246,35 @@ describe("setArticleStatus — hide and delete", () => {
     await setArticleStatus({ articleId: ARTICLE_ID, action: "hide" });
     expect(vi.mocked(purgeArticle)).toHaveBeenCalled();
   });
+
+  it("EC8: delete sets deleted_at on the article row", async () => {
+    mockStaff(true);
+    const article = makeArticle({ status: "published" });
+    const updateSpy = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: ARTICLE_ID }, error: null }),
+    });
+    const sbMock = {
+      from: vi.fn((table: string) => {
+        if (table === "articles") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: article, error: null }),
+            update: updateSpy,
+          };
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }),
+    };
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(sbMock as never);
+    const result = await setArticleStatus({ articleId: ARTICLE_ID, action: "delete" });
+    expect(result.ok).toBe(true);
+    expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({ deleted_at: expect.any(String) }));
+  });
 });

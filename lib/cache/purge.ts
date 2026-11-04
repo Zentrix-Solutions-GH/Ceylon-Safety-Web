@@ -19,20 +19,17 @@ function articleTags(articleId: string): string[] {
   ];
 }
 
-function attemptPurge(tags: string[]): boolean {
-  try {
-    for (const tag of tags) {
-      revalidateTag(tag);
-    }
-    return true;
-  } catch {
-    return false;
+function purgeTagSubset(tags: string[]): string[] {
+  const failed: string[] = [];
+  for (const tag of tags) {
+    try { revalidateTag(tag); } catch { failed.push(tag); }
   }
+  return failed;
 }
 
 /**
  * Clear cached pages for an article event.
- * Retries once on failure. If still failing, writes purge.failed audit row.
+ * Retries only failed tags once. If still failing, writes purge.failed audit row.
  */
 export async function purgeArticle(
   articleId: string,
@@ -41,10 +38,12 @@ export async function purgeArticle(
 ): Promise<PurgeResult> {
   const tags = articleTags(articleId);
 
-  if (attemptPurge(tags)) return { ok: true };
+  let failed = purgeTagSubset(tags);
+  if (failed.length === 0) return { ok: true };
 
-  // One retry
-  if (attemptPurge(tags)) return { ok: true };
+  // One retry — only the tags that failed
+  failed = purgeTagSubset(failed);
+  if (failed.length === 0) return { ok: true };
 
   try {
     await writeAuditRow({

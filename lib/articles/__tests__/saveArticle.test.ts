@@ -161,8 +161,13 @@ function makeSupabaseMock({
         insert: vi.fn().mockResolvedValue({ error: refsInsertError }),
       } as unknown as ReturnType<typeof supabase.from>;
     }
+    // Default: ref-existence tables (videos, documents, courses) — batched IN() check
     return {
-      select: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnValue({
+        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }),
       eq: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: null, error: null }),
       delete: vi.fn().mockReturnThis(),
@@ -359,33 +364,112 @@ describe("saveArticle — EC4 hostile input stored as text", () => {
 });
 
 describe("saveArticle — AC4 body ref to non-existent target", () => {
-  it("returns validation_failed when a body video node references a deleted video", async () => {
-    mockStaff(true);
-    // Build a mock where the "videos" table returns null (video does not exist)
+  const VIDEO_ID = "ee000001-0000-4000-8000-000000000001";
+  const DOC_ID = "ff000001-0000-4000-8000-000000000001";
+  const COURSE_ID = "11000001-0000-4000-8000-000000000001";
+
+  function makeMockWithMissingRef(refTable: string) {
     const sbMock = makeSupabaseMock({ selectData: null, upsertData: { id: ARTICLE_ID, body_version: 1, slug: "test" } });
     const originalFrom = sbMock.from.getMockImplementation();
     sbMock.from = vi.fn((table: string) => {
-      if (table === "videos") {
+      if (table === refTable) {
         return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({ data: null, error: { code: "PGRST116", message: "not found" } }),
+          select: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
         };
       }
       return originalFrom!(table);
     });
-    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(sbMock as never);
+    return sbMock;
+  }
 
-    const VIDEO_ID = "ee000001-0000-4000-8000-000000000001";
+  it("returns validation_failed when a body video node references a non-existent video", async () => {
+    mockStaff(true);
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeMockWithMissingRef("videos") as never);
     const result = await saveArticle(validInput({
-      body: {
-        schema_version: SCHEMA_VERSION,
-        type: "doc",
-        content: [{ type: "video", attrs: { node_id: "v1", video_id: VIDEO_ID } }],
-      },
+      body: { schema_version: SCHEMA_VERSION, type: "doc", content: [{ type: "video", attrs: { node_id: "v1", video_id: VIDEO_ID } }] },
     }));
     expect(result.ok).toBe(false);
     expect((result as { ok: false; code: string }).code).toBe("validation_failed");
+    expect((result as { ok: false; reason?: string }).reason).toMatch(/video/);
+  });
+
+  it("returns validation_failed when a body document node references a non-existent document", async () => {
+    mockStaff(true);
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeMockWithMissingRef("documents") as never);
+    const result = await saveArticle(validInput({
+      body: { schema_version: SCHEMA_VERSION, type: "doc", content: [{ type: "document_spot", attrs: { node_id: "d1", document_id: DOC_ID } }] },
+    }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("validation_failed");
+    expect((result as { ok: false; reason?: string }).reason).toMatch(/document/);
+  });
+
+  it("returns validation_failed when a body course node references a non-existent course", async () => {
+    mockStaff(true);
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeMockWithMissingRef("courses") as never);
+    const result = await saveArticle(validInput({
+      body: { schema_version: SCHEMA_VERSION, type: "doc", content: [{ type: "course_spot", attrs: { node_id: "c1", course_id: COURSE_ID } }] },
+    }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("validation_failed");
+    expect((result as { ok: false; reason?: string }).reason).toMatch(/course/);
+  });
+});
+
+describe("saveArticle — AC1 create (no articleId)", () => {
+  it("inserts a new article when no articleId is supplied and returns body_version 1", async () => {
+    mockStaff(true);
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeSupabaseMock({ selectData: null, upsertData: { id: ARTICLE_ID, body_version: 1, slug: "fire-safety-tips" } }) as never
+    );
+    const result = await saveArticle(validInput()); // no articleId
+    expect(result.ok).toBe(true);
+    expect((result as { ok: true; bodyVersion: number }).bodyVersion).toBe(1);
+    expect((result as { ok: true; articleId: string }).articleId).toBe(ARTICLE_ID);
+  });
+});
+
+describe("saveArticle — AC1 locale and seo fields propagated", () => {
+  it("passes seo_title and seo_description to the insert call", async () => {
+    mockStaff(true);
+    const sbMock = makeSupabaseMock({ selectData: null, upsertData: { id: ARTICLE_ID, body_version: 1, slug: "fire-safety-tips" } });
+    const insertSpy = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: ARTICLE_ID, body_version: 1, slug: "fire-safety-tips" }, error: null }),
+    });
+    const originalFrom = sbMock.from.getMockImplementation();
+    sbMock.from = vi.fn((table: string) => {
+      if (table === "articles") {
+        const base = originalFrom!("articles") as Record<string, unknown>;
+        return { ...base, insert: insertSpy };
+      }
+      return originalFrom!(table);
+    });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(sbMock as never);
+    await saveArticle(validInput({ seoTitle: "SEO Title", seoDescription: "SEO desc" }));
+    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({ seo_title: "SEO Title", seo_description: "SEO desc" }));
+  });
+
+  it("passes locale='en' on new article insert", async () => {
+    mockStaff(true);
+    const sbMock = makeSupabaseMock({ selectData: null, upsertData: { id: ARTICLE_ID, body_version: 1, slug: "fire-safety-tips" } });
+    const insertSpy = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: ARTICLE_ID, body_version: 1, slug: "fire-safety-tips" }, error: null }),
+    });
+    const originalFrom = sbMock.from.getMockImplementation();
+    sbMock.from = vi.fn((table: string) => {
+      if (table === "articles") {
+        const base = originalFrom!("articles") as Record<string, unknown>;
+        return { ...base, insert: insertSpy };
+      }
+      return originalFrom!(table);
+    });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(sbMock as never);
+    await saveArticle(validInput());
+    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({ locale: "en" }));
   });
 });
 

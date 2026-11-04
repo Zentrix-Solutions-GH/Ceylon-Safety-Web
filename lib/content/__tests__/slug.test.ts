@@ -1,7 +1,7 @@
 // S-048: lib/content/slug — AC6/EC3 slug generation rules
 
 import { describe, it, expect } from "vitest";
-import { generateSlug, RESERVED_SLUGS } from "@/lib/content/slug";
+import { generateSlug, clashSafeSlug, RESERVED_SLUGS } from "@/lib/content/slug";
 
 describe("generateSlug", () => {
   it("lowercases the title", () => {
@@ -46,6 +46,49 @@ describe("generateSlug", () => {
   it("collapses multiple hyphens into one", () => {
     const slug = generateSlug("fire  &  safety");
     expect(slug).not.toMatch(/--/);
+  });
+});
+
+function makeSlugMock(existingRows: { id: string }[][]) {
+  let call = -1;
+  return {
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          eq: () => {
+            call++;
+            return Promise.resolve({ data: existingRows[Math.min(call, existingRows.length - 1)], error: null });
+          },
+        }),
+      }),
+    }),
+  };
+}
+
+describe("clashSafeSlug", () => {
+  it("returns base slug when no clash exists", async () => {
+    const sb = makeSlugMock([[]]);
+    const result = await clashSafeSlug("fire-safety", null, "en", sb as never);
+    expect(result).toBe("fire-safety");
+  });
+
+  it("appends -1 when base slug is taken by another article", async () => {
+    const sb = makeSlugMock([[{ id: "other-id" }], []]);
+    const result = await clashSafeSlug("fire-safety", null, "en", sb as never);
+    expect(result).toBe("fire-safety-1");
+  });
+
+  it("retries until a free slot is found (clash on -1 too)", async () => {
+    const sb = makeSlugMock([[{ id: "other-id" }], [{ id: "other-id-2" }], []]);
+    const result = await clashSafeSlug("fire-safety", null, "en", sb as never);
+    expect(result).toBe("fire-safety-2");
+  });
+
+  it("EC3: article being updated does not clash with its own slug", async () => {
+    const ARTICLE_ID = "my-article-id";
+    const sb = makeSlugMock([[{ id: ARTICLE_ID }]]);
+    const result = await clashSafeSlug("fire-safety", ARTICLE_ID, "en", sb as never);
+    expect(result).toBe("fire-safety");
   });
 });
 

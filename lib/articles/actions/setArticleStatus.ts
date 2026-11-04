@@ -10,7 +10,7 @@ import type { AuditEventName } from "@/types/audit";
 const InputSchema = z.object({
   articleId: z.string().uuid(),
   action: z.enum(["publish", "hide", "delete"]),
-  publishedAt: z.string().optional(),
+  publishedAt: z.string().datetime({ offset: true }).optional(),
 });
 
 export async function setArticleStatus(input: SetArticleStatusInput): Promise<SetArticleStatusResult> {
@@ -101,31 +101,34 @@ export async function setArticleStatus(input: SetArticleStatusInput): Promise<Se
 
   // ── Apply status change ─────────────────────────────────────────────────────
   let auditAction: AuditEventName;
-  let updateErr: { message: string } | null;
+  let updatePayload: Record<string, unknown>;
 
   if (action === "publish") {
     auditAction = "article.publish";
-    ({ error: updateErr } = await supabase
-      .from("articles")
-      .update({ status: "published", published_at: publishedAt ?? null })
-      .eq("id", articleId));
+    updatePayload = { status: "published", published_at: publishedAt ?? null };
   } else if (action === "hide") {
     auditAction = "article.hide";
-    ({ error: updateErr } = await supabase
-      .from("articles")
-      .update({ status: "hidden" })
-      .eq("id", articleId));
+    updatePayload = { status: "hidden" };
   } else {
     // delete — soft delete
     auditAction = "article.delete";
-    ({ error: updateErr } = await supabase
-      .from("articles")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", articleId));
+    updatePayload = { deleted_at: new Date().toISOString() };
   }
 
-  if (updateErr) {
-    return { ok: false, code: "unknown", reason: updateErr.message };
+  const { data: updatedRow, error: updateErr } = await supabase
+    .from("articles")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update(updatePayload as any)
+    .eq("id", articleId)
+    .select("id")
+    .single();
+
+  if (updateErr || !updatedRow) {
+    // PGRST116 = zero rows matched (article deleted between fetch and update)
+    if ((updateErr as { code?: string } | null)?.code === "PGRST116") {
+      return { ok: false, code: "not_found" };
+    }
+    return { ok: false, code: "unknown", reason: (updateErr as { message?: string } | null)?.message ?? "update failed" };
   }
 
   // ── Audit row ───────────────────────────────────────────────────────────────

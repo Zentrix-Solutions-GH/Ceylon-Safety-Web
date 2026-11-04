@@ -111,23 +111,22 @@ export async function saveArticle(input: SaveArticleInput): Promise<SaveArticleR
 
   // ── Validate body target references exist ──────────────────────────────────
   const refs = buildArticleRefs(data.body, data.coverImageKey ?? null);
-  for (const ref of refs) {
-    if (ref.ref_type === "video" || ref.ref_type === "document" || ref.ref_type === "course") {
-      const table = ref.ref_type === "video" ? "videos"
-        : ref.ref_type === "document" ? "documents"
-        : "courses";
-      const { data: target, error: targetErr } = await supabase
-        .from(table)
-        .select("id, deleted_at")
-        .eq("id", ref.ref_id)
-        .single();
-      if (targetErr || !target || (target as Record<string, unknown>).deleted_at) {
-        return {
-          ok: false,
-          code: "validation_failed",
-          reason: `${ref.ref_type} "${ref.ref_id}" does not exist or has been deleted`,
-        };
-      }
+  const videoIds = refs.filter(r => r.ref_type === "video").map(r => r.ref_id);
+  const documentIds = refs.filter(r => r.ref_type === "document").map(r => r.ref_id);
+  const courseIds = refs.filter(r => r.ref_type === "course").map(r => r.ref_id);
+  for (const [table, ids, kind] of [
+    ["videos", videoIds, "video"],
+    ["documents", documentIds, "document"],
+    ["courses", courseIds, "course"],
+  ] as const) {
+    if (ids.length === 0) continue;
+    const { data: rows, error: refErr } = await supabase.from(table).select("id, deleted_at").in("id", ids);
+    if (refErr) return { ok: false, code: "unknown", reason: refErr.message };
+    const found = (rows ?? []) as { id: string; deleted_at: string | null }[];
+    const foundIds = new Set(found.filter(r => !r.deleted_at).map(r => r.id));
+    const missing = ids.find(id => !foundIds.has(id));
+    if (missing) {
+      return { ok: false, code: "validation_failed", reason: `${kind} "${missing}" does not exist or has been deleted` };
     }
   }
 
