@@ -34,7 +34,7 @@ function getClient(): S3Client {
 
 // Exposed for tests to inject a mock client. Guard prevents accidental use in production.
 export function _setClientForTest(client: S3Client | null): void {
-  if (process.env.NODE_ENV !== "test") return;
+  if (process.env.NODE_ENV === "production") return;
   _client = client;
 }
 
@@ -100,7 +100,9 @@ export async function deleteObject(bucket: string, key: string): Promise<void> {
   await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
 }
 
-/** Returns object metadata or null if the object does not exist. */
+/** Returns object metadata or null if the object does not exist (NoSuchKey / 404).
+ *  Throws for all other errors (network, 5xx) so callers can distinguish a missing
+ *  object from a transient R2 failure. */
 export async function headObject(
   bucket: string,
   key: string
@@ -109,7 +111,11 @@ export async function headObject(
     const client = getClient();
     const res = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
     return { contentLength: res.ContentLength ?? 0 };
-  } catch {
-    return null;
+  } catch (err: unknown) {
+    const e = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+    if (e.name === "NoSuchKey" || e.$metadata?.httpStatusCode === 404) {
+      return null; // object does not exist
+    }
+    throw err; // transient error — let caller handle (EC4)
   }
 }

@@ -112,6 +112,7 @@ describe("getImageUploadLink", () => {
         status: "pending",
         kind: "image",
         bucket: "public",
+        declared_widths: [480, 1200],
       })
     );
   });
@@ -293,6 +294,24 @@ describe("getImageUploadLink", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe("validation_failed");
+  });
+
+  it("AC11: single-variant narrow image (width < 480) is accepted and stored with one declared width", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+    const sb = makeSupabaseMock(null, { id: "media-uuid" });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
+
+    const result = await getImageUploadLink({
+      mimeType: "image/webp" as const,
+      variants: [{ width: 300, sizeCap: 80 * 1024, mimeType: "image/webp" as const }] as never,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(sb.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ declared_widths: [300] })
+    );
+    expect(presignedPut).toHaveBeenCalledTimes(1);
   });
 
   it("EC-D: insert file_key contains the actual mediaId UUID so uploads never collide", async () => {

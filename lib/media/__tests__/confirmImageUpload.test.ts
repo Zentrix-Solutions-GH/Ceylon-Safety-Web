@@ -68,6 +68,7 @@ function makePendingRow(overrides: Record<string, unknown> = {}) {
     uploaded_by: STAFF_USER.id,
     file_key: `images/${MEDIA_UUID}/abc123`,
     mime_type: "image/jpeg",
+    declared_widths: [480, 1200],
     ...overrides,
   };
 }
@@ -282,6 +283,39 @@ describe("confirmImageUpload", () => {
     // row must stay pending — no update call that sets status=ready
     const updateCalls = sb.update.mock.calls;
     const readyCalls = updateCalls.filter(([data]: Record<string, unknown>[]) =>
+      (data as Record<string, unknown>)["status"] === "ready"
+    );
+    expect(readyCalls).toHaveLength(0);
+  });
+
+  it("AC5/AC11: single declared variant (narrow image) is confirmed without checking 1200w", async () => {
+    // A narrow image produces only one copy (declared_widths=[300]).
+    // confirmImageUpload must succeed without looking for a 1200w object.
+    // mockReset clears any unconsumed mockResolvedValueOnce values from earlier tests.
+    vi.mocked(headObject).mockReset().mockResolvedValue({ contentLength: 30 * 1024 });
+    vi.mocked(readDimensions).mockReset().mockReturnValue({ width: 300, height: 200 });
+    const sb = makeSupabaseMock(makePendingRow({ declared_widths: [300] }));
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
+
+    const result = await confirmImageUpload(MEDIA_UUID);
+
+    expect(result.ok).toBe(true);
+    // headObject called exactly once — only the declared 300w variant
+    expect(headObject).toHaveBeenCalledTimes(1);
+  });
+
+  it("EC4: headObject throwing (R2 network error) leaves row pending and returns upload_failed", async () => {
+    vi.mocked(headObject).mockRejectedValue(Object.assign(new Error("timeout"), { name: "TimeoutError" }));
+    const sb = makeSupabaseMock();
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
+
+    const result = await confirmImageUpload(MEDIA_UUID);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("upload_failed");
+    // row must stay pending — no update call that sets status=ready
+    const readyCalls = sb.update.mock.calls.filter(([data]: Record<string, unknown>[]) =>
       (data as Record<string, unknown>)["status"] === "ready"
     );
     expect(readyCalls).toHaveLength(0);

@@ -13,13 +13,14 @@ import { r2Config } from "@/lib/config";
 import type { ConfirmImageUploadResult, AllowedImageMime } from "@/types/media";
 
 // Design constants from content design section 14.1
-// 480 px copy → 120 KB max; 1200 px copy → 400 KB max
+// 480 px copy → 120 KB max; 1200 px copy → 400 KB max; other widths use the nearest bucket
 const VARIANT_CAPS: Record<number, number> = {
   480: 120 * 1024,
   1200: 400 * 1024,
 };
-// Standard widths checked in order
-const STANDARD_WIDTHS = [480, 1200];
+function capForWidth(width: number): number {
+  return width <= 480 ? VARIANT_CAPS[480]! : VARIANT_CAPS[1200]!;
+}
 // Tolerance for pixel-width comparison (±2 px, AC5)
 const WIDTH_TOLERANCE = 2;
 // How many bytes to read for type/GPS/dimension checks
@@ -49,7 +50,7 @@ export async function confirmImageUpload(
   // --- Load row ---
   const { data: row } = await supabase
     .from("media_assets")
-    .select("id, status, uploaded_by, file_key, mime_type")
+    .select("id, status, uploaded_by, file_key, mime_type, declared_widths")
     .eq("id", mediaId)
     .single();
 
@@ -65,18 +66,27 @@ export async function confirmImageUpload(
 
   const fileKey = row.file_key as string;
   const declaredMime = row.mime_type as AllowedImageMime;
+  // Fall back to [480, 1200] for rows inserted before this column existed (migration adds DEFAULT)
+  const declaredWidths = (row.declared_widths as number[] | null) ?? [480, 1200];
 
-  // --- Check each standard variant ---
+  // --- Check each declared variant ---
   const keysToDelete: string[] = [];
   let totalSize = 0;
   let finalWidth = 0;
   let finalHeight = 0;
   let foundAny = false;
 
-  for (const width of STANDARD_WIDTHS) {
+  for (const width of declaredWidths) {
     const vKey = variantKey(fileKey, width);
-    const head = await headObject(cfg.bucketPublic, vKey);
-    if (!head) return { ok: false, code: "upload_failed" }; // AC5: all declared variants must exist
+
+    let head: { contentLength: number } | null;
+    try {
+      head = await headObject(cfg.bucketPublic, vKey);
+    } catch {
+      // Network / 5xx error — row stays pending, caller can retry (EC4)
+      return { ok: false, code: "upload_failed" };
+    }
+    if (!head) return { ok: false, code: "upload_failed" }; // AC5: declared variant must exist
 
     foundAny = true;
 
@@ -108,9 +118,9 @@ export async function confirmImageUpload(
       return { ok: false, code: "upload_failed" };
     }
 
-    // AC5: size cap (use specific cap if known, else use head.contentLength)
-    const cap = VARIANT_CAPS[width];
-    if (cap !== undefined && head.contentLength > cap) {
+    // AC5: size cap
+    const cap = capForWidth(width);
+    if (head.contentLength > cap) {
       keysToDelete.push(vKey);
       await _deleteAll(cfg.bucketPublic, keysToDelete);
       return { ok: false, code: "upload_failed" };

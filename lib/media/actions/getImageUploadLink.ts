@@ -17,13 +17,9 @@ const PRESIGN_TTL = 300; // 5 minutes
 
 const ALLOWED_MIME_SCHEMA = z.enum(["image/jpeg", "image/png", "image/webp"]);
 
-// Only the two design widths are accepted — confirmImageUpload uses fixed caps for these
-const ALLOWED_WIDTHS = [480, 1200] as const;
-
 const VariantSchema = z.object({
-  width: z.number().int().refine((w) => (ALLOWED_WIDTHS as readonly number[]).includes(w), {
-    message: "width must be 480 or 1200",
-  }),
+  // 1–1200 px: narrow images (< 480 px) produce a single copy at their original width (AC11)
+  width: z.number().int().min(1).max(1200),
   sizeCap: z.number().int().min(1),
   mimeType: ALLOWED_MIME_SCHEMA,
 });
@@ -79,7 +75,7 @@ export async function getImageUploadLink(
   if (retryMediaId) {
     const { data: existing } = await supabase
       .from("media_assets")
-      .select("id, status, uploaded_by, file_key")
+      .select("id, status, uploaded_by, file_key, declared_widths")
       .eq("id", retryMediaId)
       .single();
 
@@ -119,6 +115,7 @@ export async function getImageUploadLink(
       file_key: fileKey,
       mime_type: mimeType,
       uploaded_by: actorId,
+      declared_widths: variants.map((v) => v.width),
     })
     .select("id")
     .single();

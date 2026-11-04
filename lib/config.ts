@@ -119,7 +119,8 @@ export const cspConfig = {
   ),
 } as const;
 
-// R2 config — server only; returns null when env vars absent (tests inject mocks)
+// R2 config — server only; returns null when env vars absent (tests inject mocks via vi.mock).
+// In production this module validates R2 vars at import time (see bottom of file).
 export function r2Config(): {
   accountId: string;
   accessKeyId: string;
@@ -136,4 +137,13 @@ export function r2Config(): {
     return null;
   }
   return { accountId, accessKeyId, secretAccessKey, bucketPublic, publicMediaBaseUrl };
+}
+
+// Fail fast in production when R2 is not configured (CLAUDE.md: missing config → startup error)
+if (process.env.NODE_ENV === "production" && !r2Config()) {
+  throw new Error(
+    "[config] Missing required R2 environment variables: " +
+      "R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, " +
+      "R2_BUCKET_PUBLIC, NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL"
+  );
 }
