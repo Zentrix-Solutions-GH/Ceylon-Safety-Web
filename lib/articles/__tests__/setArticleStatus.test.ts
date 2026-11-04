@@ -104,6 +104,14 @@ beforeEach(() => {
 });
 
 describe("setArticleStatus — permission", () => {
+  it("S17: suspended user is blocked (account_suspended → not_allowed)", async () => {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "account_suspended" } as never);
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({} as never);
+    const result = await setArticleStatus({ articleId: ARTICLE_ID, action: "publish", publishedAt: new Date().toISOString() });
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("not_allowed");
+  });
+
   it("EC1: not_allowed when staff check fails", async () => {
     mockStaff(false);
     vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeSupabaseMock(makeArticle()) as never);

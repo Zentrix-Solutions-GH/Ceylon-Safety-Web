@@ -192,6 +192,15 @@ describe("saveArticle — permission", () => {
     await saveArticle(validInput());
     expect(vi.mocked(writeDenied)).toHaveBeenCalled();
   });
+
+  it("S17: suspended user is blocked (account_suspended → not_allowed)", async () => {
+    // requireStaff returns account_suspended for suspended profiles — the action must still refuse
+    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "account_suspended" } as never);
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeSupabaseMock() as never);
+    const result = await saveArticle(validInput());
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("not_allowed");
+  });
 });
 
 describe("saveArticle — validation", () => {
