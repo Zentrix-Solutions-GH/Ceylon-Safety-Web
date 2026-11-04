@@ -138,3 +138,17 @@ export function r2Config(): {
   return { accountId, accessKeyId, secretAccessKey, bucketPublic, publicMediaBaseUrl };
 }
 
+// Fail fast when R2 is not configured (CLAUDE.md: missing config → startup error).
+// Skip during `next build` — Next.js sets NODE_ENV=production at build time but
+// R2 vars are only available at runtime, so NEXT_PHASE guards the build phase.
+if (
+  process.env.NODE_ENV === "production" &&
+  process.env.NEXT_PHASE !== "phase-production-build" &&
+  !r2Config()
+) {
+  throw new Error(
+    "[config] Missing required R2 environment variables: " +
+      "R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, " +
+      "R2_BUCKET_PUBLIC, NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL"
+  );
+}
