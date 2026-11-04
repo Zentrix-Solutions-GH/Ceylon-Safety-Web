@@ -295,19 +295,18 @@ describe("getImageUploadLink", () => {
     expect(result.code).toBe("validation_failed");
   });
 
-  it("EC-D: insert file_key contains the mediaId UUID so uploads never collide", async () => {
+  it("EC-D: insert file_key contains the actual mediaId UUID so uploads never collide", async () => {
     mockRequireStaff(true);
     mockRateLimit(true);
-    const generatedId = "ff000001-0000-4000-8000-000000000001";
-    const sb = makeSupabaseMock(null, { id: generatedId });
+    const sb = makeSupabaseMock(null, { id: "media-uuid" });
     vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
 
     await getImageUploadLink(VALID_INPUT);
 
     const payload = sb.insert.mock.calls[0]?.[0] as Record<string, string> | undefined;
     expect(payload).toBeDefined();
-    // file_key must contain the row UUID as a path segment
-    expect(payload!.file_key).toMatch(/[0-9a-f-]{36}/);
+    // file_key must contain the same UUID that was inserted as the row id
+    expect(payload!.file_key).toContain(payload!.id);
   });
 
   it("S17: suspended staff member (requireStaff returns not_allowed) is blocked", async () => {
@@ -323,17 +322,24 @@ describe("getImageUploadLink", () => {
   it("AC9: supplying an existing pending mediaId re-issues links for the same row", async () => {
     mockRequireStaff(true);
     mockRateLimit(true);
-    // selectQ returns the existing pending row owned by caller
     const existingRow = { id: "ee000001-0000-4000-8000-000000000001", status: "pending", uploaded_by: STAFF_USER.id, file_key: "images/existing-uuid/abc" };
     const sb = makeSupabaseMock(null, null, existingRow, null);
     vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
+    vi.mocked(presignedPut).mockResolvedValue("https://r2.example.com/signed");
 
     const result = await getImageUploadLink({ ...VALID_INPUT, mediaId: "ee000001-0000-4000-8000-000000000001" });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.mediaId).toBe("ee000001-0000-4000-8000-000000000001");
-    // Verify insert was NOT called (retry path only re-issues links, no new row)
+    // Insert must NOT be called — retry re-uses the existing row
     expect(sb.insert).not.toHaveBeenCalled();
+    // presignedPut must be called with the existing file_key (not a fresh one)
+    expect(presignedPut).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.stringContaining(existingRow.file_key),
+      expect.any(String),
+      expect.any(Number)
+    );
   });
 });

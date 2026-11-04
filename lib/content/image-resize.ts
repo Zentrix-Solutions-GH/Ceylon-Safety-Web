@@ -55,31 +55,34 @@ export async function resizeImage(file: File): Promise<ResizedVariant[]> {
 
   const results: ResizedVariant[] = [];
 
-  for (const targetW of widthsToProduce) {
-    const scale = targetW / origWidth;
-    const targetH = Math.round(origHeight * scale);
+  try {
+    for (const targetW of widthsToProduce) {
+      const scale = targetW / origWidth;
+      const targetH = Math.round(origHeight * scale);
 
-    const canvas = document.createElement("canvas");
-    canvas.width = targetW;
-    canvas.height = targetH;
+      const canvas = document.createElement("canvas");
+      canvas.width = targetW;
+      canvas.height = targetH;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas 2D context unavailable");
-    ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas 2D context unavailable");
+      ctx.drawImage(bitmap, 0, 0, targetW, targetH);
 
-    const blob = await _toBlob(canvas, "image/webp", WEBP_QUALITY);
-    if (!blob) throw new Error("Canvas toBlob returned null");
+      const blob = await _toBlob(canvas, "image/webp", WEBP_QUALITY);
+      if (!blob) throw new Error("Canvas toBlob returned null");
 
-    // Determine actual MIME — older browsers may return JPEG silently (EC5)
-    const actualType =
-      blob.type === "image/webp" || blob.type === "image/jpeg" || blob.type === "image/png"
-        ? (blob.type as AllowedType)
-        : "image/jpeg"; // safe fallback
+      // Determine actual MIME — older browsers may return JPEG silently (EC5)
+      const actualType =
+        blob.type === "image/webp" || blob.type === "image/jpeg" || blob.type === "image/png"
+          ? (blob.type as AllowedType)
+          : "image/jpeg"; // safe fallback
 
-    results.push({ blob, width: targetW, height: targetH, mimeType: actualType });
+      results.push({ blob, width: targetW, height: targetH, mimeType: actualType });
+    }
+  } finally {
+    bitmap.close();
   }
 
-  bitmap.close();
   return results;
 }
 
