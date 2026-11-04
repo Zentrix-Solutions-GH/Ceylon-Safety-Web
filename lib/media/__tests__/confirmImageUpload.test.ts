@@ -118,6 +118,16 @@ describe("confirmImageUpload", () => {
     expect(writeDenied).toHaveBeenCalled();
   });
 
+  it("S17: suspended staff member (requireStaff returns not_allowed) is blocked", async () => {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" });
+
+    const result = await confirmImageUpload(MEDIA_UUID);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("not_allowed");
+  });
+
   it("AC7: happy path marks row ready and writes image.upload audit row", async () => {
     const sb = makeSupabaseMock();
     vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);

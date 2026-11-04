@@ -269,6 +269,31 @@ describe("getImageUploadLink", () => {
     expect(result.code).toBe("validation_failed");
   });
 
+  it("EC-D: insert file_key contains the mediaId UUID so uploads never collide", async () => {
+    mockRequireStaff(true);
+    mockRateLimit(true);
+    const generatedId = "ff000001-0000-4000-8000-000000000001";
+    const sb = makeSupabaseMock(null, { id: generatedId });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: sb.from } as never);
+
+    await getImageUploadLink(VALID_INPUT);
+
+    const payload = sb.insert.mock.calls[0]?.[0] as Record<string, string> | undefined;
+    expect(payload).toBeDefined();
+    // file_key must contain the row UUID as a path segment
+    expect(payload!.file_key).toMatch(/[0-9a-f-]{36}/);
+  });
+
+  it("S17: suspended staff member (requireStaff returns not_allowed) is blocked", async () => {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" });
+
+    const result = await getImageUploadLink(VALID_INPUT);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("not_allowed");
+  });
+
   it("AC9: supplying an existing pending mediaId re-issues links for the same row", async () => {
     mockRequireStaff(true);
     mockRateLimit(true);
