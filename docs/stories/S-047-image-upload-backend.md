@@ -1,11 +1,11 @@
 ---
 id: S-047
 title: Image upload backend (presigned flow)
-status: in-progress
+status: review
 owner: backend
 risk: sensitive
 branch: feature/S-047-image-upload-backend
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/52
 depends_on: [S-006, S-032]
 reqs: [REQ-023, REQ-034c]
 ---
@@ -189,18 +189,28 @@ images/article/{mediaId}/{nanoid8}
 
 ```
 $ bash scripts/check.sh
-════════════════════════════════
-  check.sh: 5 passed, 0 failed
-════════════════════════════════
-✅ All checks passed.
+✓ ESLint passed
+✓ TypeScript passed
 [exit code 0]
 
 Unit tests (S-047 specific):
   ✓ lib/media/__tests__/variantKey.test.ts (2 tests)
   ✓ lib/media/__tests__/getImageUploadLink.test.ts (12 tests)
-  ✓ lib/media/__tests__/confirmImageUpload.test.ts (12 tests)
+  ✓ lib/media/__tests__/confirmImageUpload.test.ts (13 tests) — EC1 added
   ✓ lib/content/__tests__/image-resize.test.ts (7 tests)
-  Total: 33 passed
+  Total: 34 passed
+
+P1 reviewer findings addressed:
+  ✓ P1-1/2: width restricted to {480,1200} in Zod schema; VARIANT_CAPS gap closed
+  ✓ P1-3: EC7 audit double-write fixed (check .select("id") rows-affected count)
+  ✓ P1-4: server-only removed from publicUrl.ts (public env var, editor safe)
+  ✓ P1-5: Zod schema added to confirmImageUpload
+  ✓ P1-6: supabase/tests/media_assets.test.sql created (10 assertions)
+P2 reviewer findings addressed:
+  ✓ writeDenied permission name fixed ("media.upload")
+  ✓ confirmImageUpload now calls writeDenied on not_allowed
+  ✓ AC9 test asserts insert was NOT called on retry path
+  ✓ PNG GPS check added to checkGps.ts
 ```
 
 ## Review notes
