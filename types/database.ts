@@ -663,14 +663,14 @@ isOneToOne: true
                   ]
                 },"media_assets": {
                   Row: {
-                    "alt_text": string | null,"bucket": string,"created_at": string,"declared_widths": number[],"file_key": string,"height": number | null,"id": string,"kind": string,"mime_type": string | null,"size_bytes": number | null,"status": string,"uploaded_by": string | null,"width": number | null
+                    "alt_text": string | null,"bucket": string,"created_at": string,"declared_widths": (number)[],"file_key": string,"height": number | null,"id": string,"kind": string,"mime_type": string | null,"size_bytes": number | null,"status": string,"uploaded_by": string | null,"width": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "alt_text"?: string | null,"bucket": string,"created_at"?: string,"declared_widths"?: number[],"file_key": string,"height"?: number | null,"id"?: string,"kind": string,"mime_type"?: string | null,"size_bytes"?: number | null,"status"?: string,"uploaded_by"?: string | null,"width"?: number | null
+                    "alt_text"?: string | null,"bucket": string,"created_at"?: string,"declared_widths"?: (number)[],"file_key": string,"height"?: number | null,"id"?: string,"kind": string,"mime_type"?: string | null,"size_bytes"?: number | null,"status"?: string,"uploaded_by"?: string | null,"width"?: number | null
                   }
                   Update: {
-                    "alt_text"?: string | null,"bucket"?: string,"created_at"?: string,"declared_widths"?: number[],"file_key"?: string,"height"?: number | null,"id"?: string,"kind"?: string,"mime_type"?: string | null,"size_bytes"?: number | null,"status"?: string,"uploaded_by"?: string | null,"width"?: number | null
+                    "alt_text"?: string | null,"bucket"?: string,"created_at"?: string,"declared_widths"?: (number)[],"file_key"?: string,"height"?: number | null,"id"?: string,"kind"?: string,"mime_type"?: string | null,"size_bytes"?: number | null,"status"?: string,"uploaded_by"?: string | null,"width"?: number | null
                   }
                   Relationships: [
                     {
