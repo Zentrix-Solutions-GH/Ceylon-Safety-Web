@@ -45,7 +45,7 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
 // ── Parse globals.css ─────────────────────────────────────────────────────────
 
 const cssPath = path.resolve("app/globals.css");
-const css = readFileSync(cssPath, "utf8");
+const css = readFileSync(cssPath, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 
 /**
  * Extract the HSL triple for a CSS custom property like `--foo: H S% L%;`

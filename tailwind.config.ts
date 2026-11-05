@@ -58,7 +58,9 @@ const config: Config = {
         ring: "hsl(var(--ring))",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        // Full multilingual cascade: Inter → Noto Sinhala → Noto Tamil → system fallback.
+        // Components using font-sans get the same cascade as the body.
+        sans: ["var(--font-sans)", "var(--font-sinhala)", "var(--font-tamil)", "system-ui", "sans-serif"],
         sinhala: ["var(--font-sinhala)", "sans-serif"],
         tamil: ["var(--font-tamil)", "sans-serif"],
       },
