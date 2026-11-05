@@ -585,3 +585,23 @@ describe("saveArticle — AC6 slug locked after first publish", () => {
     expect((result as { ok: false; reason?: string }).reason).toMatch(/locked/);
   });
 });
+
+describe("saveArticle — AC4 article_refs rebuild failure", () => {
+  it("returns refs_inconsistent when article_refs insert fails after delete succeeds", async () => {
+    mockStaff(true);
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeSupabaseMock({
+        selectData: null,
+        upsertData: { id: ARTICLE_ID, body_version: 1, slug: "fire-safety-tips" },
+        refsInsertError: { message: "DB constraint violation" },
+      }) as never
+    );
+    // body has one paragraph with text so buildArticleRefs produces no refs (no embeds)
+    // but to trigger the insert path we need at least one ref — use a body with a text node only
+    // The insert path fires only when refs.length > 0; use a body that generates a ref by
+    // including a media node (cover image key triggers media ref in buildArticleRefs).
+    const result = await saveArticle(validInput({ coverImageKey: "img/cover.webp" }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("refs_inconsistent");
+  });
+});

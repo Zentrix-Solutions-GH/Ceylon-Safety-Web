@@ -88,7 +88,7 @@ export async function setArticleStatus(input: SetArticleStatusInput): Promise<Se
       const { data: mediaRefs } = await supabase
         .from("media_assets")
         .select("status")
-        .in("key", mediaKeys);
+        .in("file_key", mediaKeys);
 
       const pendingImages = (mediaRefs ?? []) as { status: string }[];
       if (pendingImages.some(m => m.status === "pending")) {

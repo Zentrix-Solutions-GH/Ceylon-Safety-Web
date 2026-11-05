@@ -220,7 +220,9 @@ export async function saveArticle(input: SaveArticleInput): Promise<SaveArticleR
 
     const { error: insertRefsErr } = await supabase.from("article_refs").insert(refRows);
     if (insertRefsErr) {
-      return { ok: false, code: "unknown", reason: insertRefsErr.message };
+      // Article body is saved but refs are now empty — distinguish from a clean unknown error
+      // so the caller can surface the right message ("article saved, some links may be broken").
+      return { ok: false, code: "refs_inconsistent", reason: insertRefsErr.message };
     }
   }
 

@@ -71,36 +71,23 @@ export async function clashSafeSlug(
   baseSlug: string,
   articleId: string | null,
   locale: string,
-  supabase: {
-    from: (table: string) => {
-      select: (col: string) => {
-        eq: (col: string, val: string) => {
-          eq: (col: string, val: string) => {
-            neq?: (col: string, val: string) => { data: unknown[]; error: unknown } | PromiseLike<{ data: unknown[]; error: unknown }>;
-            data: unknown[];
-            error: unknown;
-          } | PromiseLike<{ data: unknown[]; error: unknown }>;
-        };
-      };
-    };
-  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: { from: (table: string) => any }
 ): Promise<string> {
   let candidate = baseSlug;
   let attempt = 0;
 
   while (true) {
-    const query = supabase
+    // Exclude soft-deleted articles so a deleted slug can be reused.
+    const result = await supabase
       .from("articles")
       .select("id")
       .eq("locale", locale)
-      .eq("slug", candidate);
-
-    // Exclude the article being updated from the clash check
-    // The Supabase client builder is chainable but we need to handle the shape
-    const result = await (query as unknown as Promise<{ data: unknown[]; error: unknown }>);
+      .eq("slug", candidate)
+      .is("deleted_at", null);
 
     const rows = (result.data ?? []) as { id: string }[];
-    const clash = rows.some(r => r.id !== articleId);
+    const clash = rows.some((r: { id: string }) => r.id !== articleId);
 
     if (!clash) return candidate;
 

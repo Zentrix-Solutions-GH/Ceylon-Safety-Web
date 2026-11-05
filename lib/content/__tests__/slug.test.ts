@@ -55,10 +55,12 @@ function makeSlugMock(existingRows: { id: string }[][]) {
     from: () => ({
       select: () => ({
         eq: () => ({
-          eq: () => {
-            call++;
-            return Promise.resolve({ data: existingRows[Math.min(call, existingRows.length - 1)], error: null });
-          },
+          eq: () => ({
+            is: () => {
+              call++;
+              return Promise.resolve({ data: existingRows[Math.min(call, existingRows.length - 1)], error: null });
+            },
+          }),
         }),
       }),
     }),

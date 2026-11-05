@@ -171,6 +171,42 @@ describe("setArticleStatus — publish checklist (AC7)", () => {
     expect((result as { ok: false; missing?: { field: string }[] }).missing?.map(m => m.field)).toContain("images_ready");
   });
 
+  it("queries media_assets with file_key column (not key)", async () => {
+    mockStaff(true);
+    const inSpy = vi.fn().mockResolvedValue({ data: [{ status: "pending" }], error: null });
+    const sbMock = {
+      from: vi.fn((table: string) => {
+        if (table === "articles") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: makeArticle(), error: null }),
+            update: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              select: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({ data: { id: ARTICLE_ID }, error: null }),
+            }),
+          };
+        }
+        if (table === "authors") {
+          return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: "x", is_active: true }, error: null }) };
+        }
+        if (table === "article_refs") {
+          return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), mockResolvedValue: vi.fn().mockResolvedValue({ data: [], error: null }) };
+        }
+        if (table === "media_assets") {
+          return { select: vi.fn().mockReturnThis(), in: inSpy };
+        }
+        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: null, error: null }) };
+      }),
+    };
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(sbMock as never);
+    await setArticleStatus({ articleId: ARTICLE_ID, action: "publish", publishedAt: new Date().toISOString() });
+    // Verify .in() was called with "file_key", not "key"
+    expect(inSpy).toHaveBeenCalledWith("file_key", expect.any(Array));
+  });
+
   it("returns validation_failed when publishedAt is absent for publish", async () => {
     mockStaff(true);
     vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
