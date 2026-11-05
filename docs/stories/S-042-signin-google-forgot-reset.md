@@ -1,11 +1,11 @@
 ---
 id: S-042
 title: Sign-in, Google button, forgot/reset screens
-status: in-progress
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-042-signin-google-forgot-reset
-pr: ~
+pr: 58
 depends_on: [S-035, S-036, S-041]
 reqs: [REQ-119, REQ-192]
 ---
@@ -21,21 +21,21 @@ Returning users and Google sign-in users need screens to authenticate. This stor
 
 ## Acceptance criteria
 
-- [ ] AC1: `/sign-in` renders email, password, Turnstile widget, a "Forgot password?" link, and a Google sign-in button; submitting valid credentials calls `signIn` and redirects to the `next` page or home
-- [ ] AC2: Wrong credentials → `invalid_credentials` mapped to "Email or password is not correct" (one message for both; never reveals which is wrong)
-- [ ] AC3: `email_not_verified` response → store pending email and redirect to `/verify-email`
-- [ ] AC4: `account_suspended` → message "This account has been suspended. Contact support"
-- [ ] AC5: Google button calls `startGoogleSignIn`; on a social-app browser (detected by UA string), shows "For Google sign-in, open this page in your phone's normal browser" with a copy-link button, before the button does anything
-- [ ] AC6: `/forgot-password` renders email input and Turnstile; calling `requestPasswordReset` always shows "If an account exists, we have sent a code" regardless of whether the email exists
-- [ ] AC7: `/reset-password` renders OTP + new password fields; if the account has an authenticator enrolled (staff), an additional TOTP field is shown; successful `resetPassword` → signed in and redirected home
-- [ ] AC8: All error codes (`code_invalid`, `code_expired`, `weak_password`, `captcha_failed`, `rate_limited`) render via `messages/en.json` strings, not hard-coded
+- [x] AC1: `/sign-in` renders email, password, Turnstile widget, a "Forgot password?" link, and a Google sign-in button; submitting valid credentials calls `signIn` and redirects to the `next` page or home
+- [x] AC2: Wrong credentials → `invalid_credentials` mapped to "Email or password is not correct" (one message for both; never reveals which is wrong)
+- [x] AC3: `email_not_verified` response → store pending email and redirect to `/verify-email`
+- [x] AC4: `account_suspended` → message "This account has been suspended. Contact support"
+- [x] AC5: Google button calls `startGoogleSignIn`; on a social-app browser (detected by UA string), shows "For Google sign-in, open this page in your phone's normal browser" with a copy-link button, before the button does anything
+- [x] AC6: `/forgot-password` renders email input and Turnstile; calling `requestPasswordReset` always shows "If an account exists, we have sent a code" regardless of whether the email exists
+- [x] AC7: `/reset-password` renders OTP + new password fields; if the account has an authenticator enrolled (staff), an additional TOTP field is shown; successful `resetPassword` → signed in and redirected home
+- [x] AC8: All error codes (`code_invalid`, `code_expired`, `weak_password`, `captcha_failed`, `rate_limited`) render via `messages/en.json` strings, not hard-coded
 
 ## Edge cases
 
-- [ ] EC1: User navigates to `/reset-password` without going through `/forgot-password` (no pending-reset cookie) — page shows a message "Enter your code below" with an email field first
-- [ ] EC2: `rate_limited` on forgot-password — neutral message "If an account exists, we have sent a code" still shown (do not leak the rate-limited state)
-- [ ] EC3: Google auth returns error from Supabase (e.g. provider disabled) — show generic `unknown` error message
-- [ ] EC4: Social-app browser UA detection is best-effort; if detection fails, the Google button still works normally (no hard block)
+- [x] EC1: User navigates to `/reset-password` without going through `/forgot-password` (no pending-reset cookie) — page shows a message "Enter your code below" with an email field first
+- [x] EC2: `rate_limited` on forgot-password — neutral message "If an account exists, we have sent a code" still shown (do not leak the rate-limited state)
+- [x] EC3: Google auth returns error from Supabase (e.g. provider disabled) — show generic `unknown` error message
+- [x] EC4: Social-app browser UA detection is best-effort; if detection fails, the Google button still works normally (no hard block)
 
 ## Contract
 
