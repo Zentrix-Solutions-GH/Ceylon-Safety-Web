@@ -1,4 +1,4 @@
-// AC7 (S-022): Dev-only font render test — not included in production builds.
+// AC7 (S-022): Dev-only font render test — returns 404 in production.
 // Check this page in a browser at /font-test to verify Latin, Sinhala and Tamil
 // names render without empty boxes (see story Evidence for screenshot notes).
 import { notFound } from "next/navigation";

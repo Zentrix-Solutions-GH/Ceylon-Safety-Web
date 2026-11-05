@@ -71,7 +71,7 @@ describe("design tokens — contrast ratios", () => {
 
   it("brand-red-text on white achieves ≥4.5:1 (AC1, EC4)", () => {
     const hsl = extractHsl("brand-red-text");
-    if (!hsl) return; // covered by previous test
+    if (!hsl) throw new Error("--brand-red-text not found — see 'token exists' test above");
     const [r, g, b] = hslToRgb(...hsl);
     const ratio = contrast(luminance(r, g, b), WHITE_LUMINANCE);
     expect(ratio).toBeGreaterThanOrEqual(4.5);
@@ -84,7 +84,7 @@ describe("design tokens — contrast ratios", () => {
 
   it("focus-ring on white achieves ≥3:1 (EC5)", () => {
     const hsl = extractHsl("focus-ring");
-    if (!hsl) return;
+    if (!hsl) throw new Error("--focus-ring not found — see 'token exists' test above");
     const [r, g, b] = hslToRgb(...hsl);
     const ratio = contrast(luminance(r, g, b), WHITE_LUMINANCE);
     expect(ratio).toBeGreaterThanOrEqual(3);

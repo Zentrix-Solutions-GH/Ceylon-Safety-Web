@@ -101,7 +101,7 @@ if [ -d ".next/static" ]; then
     PASS=$((PASS + 1))
   fi
 else
-  printf '⚠ Supabase not running — skipping Google Fonts check (run npm run build first)\n'
+  printf '⚠ No build output found — skipping Google Fonts check (run npm run build first)\n'
 fi
 
 # 7. Dev seed guard (EC3): verify the guard pattern exists in seed.dev.sql
