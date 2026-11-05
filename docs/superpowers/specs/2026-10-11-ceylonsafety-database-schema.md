@@ -264,7 +264,10 @@ article_refs               (v14 NEW: DERIVED index of what each article body use
   article_id          FK -> articles           CASCADE
   node_id             text NOT NULL            id of the block inside the body JSON
   ref_type            CHECK in (document, course, video, media)
-  ref_id              uuid NOT NULL            the document, course, video or media_assets id.
+  ref_id              text NOT NULL            the document, course, video or media_assets id, or a media
+                                               file key (e.g. "img/cover.webp"). Changed from uuid to text
+                                               in migration 20261105000001_article_refs_ref_id_text.sql
+                                               because media refs store R2 object keys, not UUIDs.
                                                No foreign key (one column points at four tables); the
                                                server checks the target when it writes the row
   phrase              text nullable            only for a phrase link on a word (REQ-024; the editor button
@@ -1668,7 +1671,7 @@ Edited in place; a backup of the earlier text is kept outside the project. Table
 |---|---|
 | Article body (D1) | `articles.body` jsonb NOT NULL: the whole article as ONE editor document, with a database CHECK limiting its size to 1 MB. Special blocks (image, video, course card, document card, ad slot) are nodes inside the body that hold a `node_id` and the id of what they show |
 | Removed table | `article_sections` is REMOVED (not parked). Its `position`, `type`, `content`, `video_id`, `course_id`, `document_id` and `banner_id` columns are gone. This also removes the old clash on `document_spot` (`document_id` was "SET NULL on delete" but "required when type = document_spot") |
-| New table | `article_refs` (article_id FK CASCADE, node_id, ref_type in document / course / video / media, ref_id uuid, phrase nullable, created_at; UNIQUE(article_id, node_id, ref_type, ref_id, phrase)). A derived index, rebuilt by the server on every save in the same transaction. Answers "which articles use video, course, document or image X" for hide and delete warnings, related documents and the orphan-media scan. Phrase links stay supported through the `phrase` column; the editor button waits for Q11 |
+| New table | `article_refs` (article_id FK CASCADE, node_id, ref_type in document / course / video / media, ref_id text (changed from uuid in S-048 — media refs store R2 file keys), phrase nullable, created_at; UNIQUE(article_id, node_id, ref_type, ref_id, phrase)). A derived index, rebuilt by the server on every save in the same transaction. Answers "which articles use video, course, document or image X" for hide and delete warnings, related documents and the orphan-media scan. Phrase links stay supported through the `phrase` column; the editor button waits for Q11 |
 | Merged table | `article_document_links` is merged into `article_refs` (ref_type document, with a phrase) |
 | Ad slot | No custom ad id in v1; the old `banner_id` use is gone. `banners.placements = in_article` stays reserved for v2 |
 | Videos | CHECK `youtube_id ~ '^[A-Za-z0-9_-]{11}$'`. `thumbnail_url` and `custom_thumbnail_key` replaced by `thumbnail_key` (R2 key; the server copies the YouTube thumbnail into our bucket at add time, D4) and `thumbnail_source` in (youtube_copy, custom). Videos have no address or slug and no `view_count`; `slug_redirects.entity_type` no longer lists `video` |
