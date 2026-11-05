@@ -56,12 +56,9 @@ export async function listAdminArticles(
     .order("updated_at", { ascending: false })
     .range(from, to);
 
-  if (error) {
-    console.error("[listAdminArticles] db error:", error.code ?? "unknown");
+  if (error || !data) {
+    console.error("[listAdminArticles] db error:", error?.code ?? "unknown");
     return { ok: false, code: "unknown" };
-  }
-  if (!data) {
-    return { ok: true, data: { items: [], pageCount: 0 } };
   }
 
   const items: AdminArticleRow[] = data.map((r) => {
