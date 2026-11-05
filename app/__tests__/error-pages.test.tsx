@@ -76,6 +76,11 @@ describe("NotFoundPage", () => {
     render(<NotFoundPage />);
     expect(screen.getByRole("link", { name: /contact/i })).toBeInTheDocument();
   });
+
+  it("exports noindex metadata (AC8)", async () => {
+    const mod = await import("@/app/not-found");
+    expect((mod as { metadata?: { robots?: { index?: boolean } } }).metadata?.robots?.index).toBe(false);
+  });
 });
 
 // ─── EC1: global error page ───────────────────────────────────────────────────
@@ -93,11 +98,12 @@ describe("GlobalError", () => {
     expect(mockReset).toHaveBeenCalled();
   });
 
-  it("renders its own html and body (EC1 — no root layout dependency)", () => {
-    const { container } = render(<GlobalError error={new Error()} reset={mockReset} />);
-    // jsdom strips duplicate html/body but the content still renders
-    expect(container).toBeInTheDocument();
+  it("renders heading and button without globals.css or layout imports (EC1 smoke)", () => {
+    // jsdom cannot verify the import chain; CI typecheck catches accidental imports.
+    // This test confirms the component renders in isolation (no layout context needed).
+    render(<GlobalError error={new Error()} reset={mockReset} />);
     expect(screen.getByRole("heading")).toBeInTheDocument();
+    expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
   it("shows no technical error detail", () => {

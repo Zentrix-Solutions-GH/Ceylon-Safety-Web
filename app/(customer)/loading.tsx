@@ -5,7 +5,7 @@ export default function CustomerLoading() {
   return (
     <>
       <span role="status" className="sr-only">{t("loading.message")}</span>
-      <div className="container mx-auto animate-pulse px-4 py-8" aria-hidden>
+      <div className="container mx-auto animate-pulse px-4 py-8" aria-hidden={true}>
       <div className="mb-4 h-8 w-48 rounded bg-muted" />
       <div className="space-y-4">
         {Array.from({ length: 4 }).map((_, i) => (

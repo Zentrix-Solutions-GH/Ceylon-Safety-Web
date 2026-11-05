@@ -6,7 +6,7 @@ export default function PublicLoading() {
   return (
     <>
       <span role="status" className="sr-only">{t("loading.message")}</span>
-      <div className="container mx-auto animate-pulse px-4 py-8" aria-hidden>
+      <div className="container mx-auto animate-pulse px-4 py-8" aria-hidden={true}>
       {/* Hero-area skeleton */}
       <div className="mb-6 h-64 rounded-lg bg-muted" />
       {/* Card grid skeleton */}
