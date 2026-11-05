@@ -2,7 +2,7 @@
 
 // AC7/EC1: global-error — plain HTML with own html+body; no database reads.
 // Must not import globals.css or any component that might fail during a root-layout error.
-import { t } from "@/messages/en";
+import { t } from "../messages/en";
 
 export default function GlobalError({
   reset,

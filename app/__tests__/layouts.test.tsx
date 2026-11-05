@@ -1,6 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 
+// next/font/google is not available in Vitest/jsdom — mock font constructors
+vi.mock("next/font/google", () => ({
+  Inter: () => ({ variable: "--font-sans", className: "" }),
+  Noto_Sans_Sinhala: () => ({ variable: "--font-sinhala", className: "" }),
+  Noto_Sans_Tamil: () => ({ variable: "--font-tamil", className: "" }),
+}));
+
 // Mock next/navigation (needed by HeaderPersonal / CustomerHeader)
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(() => "/"),
@@ -98,6 +105,13 @@ describe("PublicLayout", () => {
 // ─── AC3: auth layout ─────────────────────────────────────────────────────────
 
 describe("AuthLayout", () => {
+  it("renders children inside main#main-content (skip-link target)", () => {
+    render(<AuthLayout><div data-testid="child" /></AuthLayout>);
+    const main = document.getElementById("main-content")!;
+    expect(main).toBeInTheDocument();
+    expect(main).toContainElement(screen.getByTestId("child"));
+  });
+
   it("renders children", () => {
     render(<AuthLayout><div data-testid="child" /></AuthLayout>);
     expect(screen.getByTestId("child")).toBeInTheDocument();

@@ -2,7 +2,9 @@
 // No layout jump: height matches the Header (4rem) already rendered above this file.
 export default function PublicLoading() {
   return (
-    <div className="container mx-auto animate-pulse px-4 py-8" aria-hidden>
+    <>
+      <span role="status" className="sr-only">Loading…</span>
+      <div className="container mx-auto animate-pulse px-4 py-8" aria-hidden>
       {/* Hero-area skeleton */}
       <div className="mb-6 h-64 rounded-lg bg-muted" />
       {/* Card grid skeleton */}
@@ -16,5 +18,6 @@ export default function PublicLoading() {
         ))}
       </div>
     </div>
+    </>
   );
 }

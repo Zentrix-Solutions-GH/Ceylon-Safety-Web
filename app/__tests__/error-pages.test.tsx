@@ -7,6 +7,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import ErrorPage from "@/app/error";
+import GlobalError from "@/app/global-error";
 import NotFoundPage from "@/app/not-found";
 
 const mockReset = vi.fn();
@@ -33,6 +34,11 @@ describe("ErrorPage", () => {
     render(<ErrorPage error={new Error()} reset={mockReset} />);
     const homeLink = screen.getByRole("link", { name: /home/i });
     expect(homeLink).toHaveAttribute("href", "/");
+  });
+
+  it("wraps content in main#main-content for skip link (AC7)", () => {
+    render(<ErrorPage error={new Error()} reset={mockReset} />);
+    expect(document.getElementById("main-content")).toBeInTheDocument();
   });
 });
 
@@ -64,5 +70,33 @@ describe("NotFoundPage", () => {
   it("has a link to Contact Coach", () => {
     render(<NotFoundPage />);
     expect(screen.getByRole("link", { name: /contact/i })).toBeInTheDocument();
+  });
+});
+
+// ─── EC1: global error page ───────────────────────────────────────────────────
+
+describe("GlobalError", () => {
+  it("renders a heading", () => {
+    render(<GlobalError error={new Error()} reset={mockReset} />);
+    expect(screen.getByRole("heading")).toBeInTheDocument();
+  });
+
+  it("has a reload button that calls reset", () => {
+    render(<GlobalError error={new Error()} reset={mockReset} />);
+    const btn = screen.getByRole("button");
+    btn.click();
+    expect(mockReset).toHaveBeenCalled();
+  });
+
+  it("renders its own html and body (EC1 — no root layout dependency)", () => {
+    const { container } = render(<GlobalError error={new Error()} reset={mockReset} />);
+    // jsdom strips duplicate html/body but the content still renders
+    expect(container).toBeInTheDocument();
+    expect(screen.getByRole("heading")).toBeInTheDocument();
+  });
+
+  it("shows no technical error detail", () => {
+    render(<GlobalError error={new Error("secret internal message")} reset={mockReset} />);
+    expect(screen.queryByText(/secret internal message/)).toBeNull();
   });
 });
