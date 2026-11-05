@@ -120,7 +120,7 @@ export interface SaveArticleInput {
 
 export type SaveArticleResult =
   | { ok: true; articleId: string; bodyVersion: number; slug: string }
-  | { ok: false; code: "not_allowed" | "validation_failed" | "version_conflict" | "not_found" | "unknown"; reason?: string };
+  | { ok: false; code: "not_allowed" | "validation_failed" | "version_conflict" | "not_found" | "purge_failed" | "unknown"; reason?: string };
 
 // ─── setArticleStatus ────────────────────────────────────────────────────────
 
