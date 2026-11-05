@@ -164,3 +164,40 @@ describe("listArticles — EC6 Colombo calendar", () => {
     expect(cutoff).toMatch(/T18:30:00\.000Z$/);
   });
 });
+
+// ─── AC2: all ArticleCard fields present ─────────────────────────────────────
+
+describe("listArticles — AC2 ArticleCard fields", () => {
+  it("returns all required fields on each card", async () => {
+    makeSupabase([makeRow()]);
+    const result = await listArticles({});
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const card = result.data.items[0];
+    expect(card.id).toBe("art-1");
+    expect(card.slug).toBe("test-article");
+    expect(card.title).toBe("Test Article");
+    expect(card.excerpt).toBe("An excerpt");
+    expect(card.coverImageKey).toBe("imgs/cover.jpg");
+    expect(card.coverImageAlt).toBe("Cover");
+    expect(card.category).toMatchObject({ id: "cat-1", name: "Fire Safety", slug: "fire-safety" });
+    expect(card.authorName).toBe("John");
+    expect(card.publishedAt).toBe("2026-10-01T08:00:00+05:30");
+    expect(card.likeCount).toBe(5);
+    expect(card.commentCount).toBe(2);
+  });
+});
+
+// ─── EC2: deactivated author — article still returns author name ──────────────
+
+describe("listArticles — EC2 deactivated author", () => {
+  it("still returns the author name when the author is inactive", async () => {
+    // The JOIN reads name from the authors table regardless of author status.
+    // If the name comes back (the row exists), it is mapped correctly.
+    makeSupabase([makeRow({ authors: { name: "Inactive Author" } })]);
+    const result = await listArticles({});
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.items[0].authorName).toBe("Inactive Author");
+  });
+});

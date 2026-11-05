@@ -20,7 +20,7 @@ vi.mock("next/cache", () => ({
 }));
 
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import { getArticle } from "@/lib/articles/getArticle";
+import { getArticle, ARTICLE_LIST_CACHE_TAG, articleCacheTag, articleSlugCacheTag } from "@/lib/articles/getArticle";
 import { SCHEMA_VERSION } from "@/lib/content/schema";
 
 function makeChain(row: unknown | null, videoRows: unknown[] = []) {
@@ -123,5 +123,34 @@ describe("getArticle — AC4", () => {
     // document_spot always "not_shown" until S-071
     expect(result.data.resolvedDocuments).toHaveLength(1);
     expect(result.data.resolvedDocuments[0].status).toBe("not_shown");
+  });
+});
+
+// ─── EC7: article with no document refs → resolvedDocuments is empty ─────────
+
+describe("getArticle — EC7 no document refs", () => {
+  it("resolvedDocuments is [] when article has no document refs", async () => {
+    makeChain({ ...FULL_ROW, article_refs: [] });
+    const result = await getArticle("fire-safety");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.resolvedDocuments).toEqual([]);
+    expect(result.data.resolvedVideos).toEqual([]);
+  });
+});
+
+// ─── AC5: cache tag constant values ──────────────────────────────────────────
+
+describe("cache tag exports — AC5", () => {
+  it("ARTICLE_LIST_CACHE_TAG is 'articles-list'", () => {
+    expect(ARTICLE_LIST_CACHE_TAG).toBe("articles-list");
+  });
+
+  it("articleCacheTag returns 'article:<id>'", () => {
+    expect(articleCacheTag("abc-123")).toBe("article:abc-123");
+  });
+
+  it("articleSlugCacheTag returns 'article-slug:<slug>'", () => {
+    expect(articleSlugCacheTag("fire-safety")).toBe("article-slug:fire-safety");
   });
 });
