@@ -124,6 +124,11 @@ describe("AuthLayout", () => {
 // ─── AC4: customer layout ────────────────────────────────────────────────────
 
 describe("CustomerLayout", () => {
+  it("renders CustomerHeader (AC4)", () => {
+    render(<CustomerLayout><div /></CustomerLayout>);
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+  });
+
   it("renders children", () => {
     render(<CustomerLayout><div data-testid="child" /></CustomerLayout>);
     expect(screen.getByTestId("child")).toBeInTheDocument();
@@ -150,6 +155,7 @@ describe("AdminLayout", () => {
 
   it("has no public Header or Footer", () => {
     render(<AdminLayout><div /></AdminLayout>);
+    expect(screen.queryByRole("banner")).toBeNull();
     expect(screen.queryByRole("navigation")).toBeNull();
     expect(screen.queryByRole("contentinfo")).toBeNull();
   });

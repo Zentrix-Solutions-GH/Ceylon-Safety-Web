@@ -87,7 +87,7 @@ export default function GlobalError({
             textAlign: "center",
           }}
         >
-          {t("global_error.heading")}
+          &copy; CeylonSafety
         </footer>
       </body>
     </html>
