@@ -63,6 +63,7 @@ function makeSupabaseMock(article: Record<string, unknown>, authorActive = true,
         return {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
+          is: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({ data: article, error: null }),
           update: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnThis(),
@@ -275,6 +276,7 @@ describe("setArticleStatus — hide and delete", () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({ data: article, error: null }),
             update: updateSpy,
           };

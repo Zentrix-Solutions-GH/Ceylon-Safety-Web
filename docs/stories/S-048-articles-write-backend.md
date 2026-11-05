@@ -201,7 +201,14 @@ Test Files  83 passed | 9 skipped (92)
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `lib/articles/actions/setArticleStatus.ts` (~line 36) — No `.is("deleted_at", null)` on article fetch; a soft-deleted article can be re-published/hidden, overwriting `deleted_at`. Add guard; return `not_found`. (full-review 2026-11-05)
+- **P0** `lib/articles/actions/saveArticle.ts` (purge branch, end of function) — `purgeArticle` result discarded on author/category change; AC10 requires returning `purge_failed` when purge fails. Check result and propagate. (full-review 2026-11-05)
+- **P1** `lib/articles/actions/saveArticle.ts` (~line 65) — Same missing `.is("deleted_at", null)` guard on article fetch; saving to soft-deleted article succeeds. (full-review 2026-11-05)
+- **P1** `lib/articles/actions/saveArticle.ts` / `setArticleStatus.ts` — `writeDenied` hardcodes `"anonymous"` even for authenticated non-staff users; pass real user ID when available. (full-review 2026-11-05)
+- **P1** `docs/superpowers/specs/2026-10-11-ceylonsafety-database-schema.md` (Group C) — `article_refs.ref_id` still shown as `uuid`; migration `20261105000001` changed it to `text`. Update doc. (full-review 2026-11-05)
+- **P2** `lib/content/links.ts` — Verify `findBadLink` recurses into nested content (list items, blockquotes); add test with link inside a bullet list. (full-review 2026-11-05)
+- **P2** `lib/cache/purge.ts` — `revalidateTag` cannot throw in Next.js 15; retry logic in `purgeTagSubset` is dead code. Remove or document. (full-review 2026-11-05)
+- **P2** `lib/cache/__tests__/purge.test.ts` — "body-only save" test is a tautology; replace with one that calls `saveArticle` and asserts `purgeArticle` not invoked. (full-review 2026-11-05)
 
 ## After this merges, a user can:
 

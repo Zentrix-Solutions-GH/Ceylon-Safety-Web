@@ -17,7 +17,8 @@ export async function setArticleStatus(input: SetArticleStatusInput): Promise<Se
   // ── Auth ────────────────────────────────────────────────────────────────────
   const auth = await requireStaff("articles.*");
   if (!auth.ok) {
-    try { await writeDenied("anonymous", "article", input.articleId); } catch {}
+    const actor = (auth as { user?: { id: string } }).user?.id ?? "anonymous";
+    try { await writeDenied(actor, "article", input.articleId); } catch {}
     return { ok: false, code: "not_allowed" };
   }
   const actorId = auth.user.id;
@@ -34,8 +35,9 @@ export async function setArticleStatus(input: SetArticleStatusInput): Promise<Se
   // ── Fetch article ───────────────────────────────────────────────────────────
   const { data: article, error: fetchErr } = await supabase
     .from("articles")
-    .select("id, title, excerpt, cover_image_key, cover_image_alt, author_id, category_id, status, slug, body")
+    .select("id, title, excerpt, cover_image_key, cover_image_alt, author_id, category_id, status, slug, body, deleted_at")
     .eq("id", articleId)
+    .is("deleted_at", null)
     .single();
 
   if (fetchErr || !article) {

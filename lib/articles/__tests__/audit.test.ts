@@ -64,6 +64,7 @@ function makeSupabase(article: Record<string, unknown>) {
         return {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
+          is: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({ data: article, error: null }),
           insert: vi.fn().mockReturnValue({
             select: vi.fn().mockReturnThis(),

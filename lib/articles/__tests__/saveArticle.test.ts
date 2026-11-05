@@ -135,6 +135,7 @@ function makeSupabaseMock({
   const articleFrom = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue({ data: selectData, error: selectError }),
     upsert: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),
@@ -547,6 +548,21 @@ describe("saveArticle — AC10 purge on author/category change", () => {
     vi.mocked(purgeArticle).mockResolvedValue({ ok: true });
     await saveArticle(validInput({ articleId: ARTICLE_ID, bodyVersion: 2, authorId: NEW_AUTHOR_ID }));
     expect(vi.mocked(purgeArticle)).not.toHaveBeenCalled();
+  });
+
+  it("returns purge_failed when purgeArticle fails on author change", async () => {
+    mockStaff(true);
+    const NEW_AUTHOR_ID = "cc000001-0000-4000-8000-000000000099";
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeSupabaseMock({
+        selectData: { id: ARTICLE_ID, body_version: 2, status: "published", slug: "fire-safety-tips", author_id: AUTHOR_ID, category_id: CATEGORY_ID },
+        upsertData: { id: ARTICLE_ID, body_version: 3, slug: "fire-safety-tips" },
+      }) as never
+    );
+    vi.mocked(purgeArticle).mockResolvedValue({ ok: false, code: "purge_failed" });
+    const result = await saveArticle(validInput({ articleId: ARTICLE_ID, bodyVersion: 2, authorId: NEW_AUTHOR_ID }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("purge_failed");
   });
 });
 

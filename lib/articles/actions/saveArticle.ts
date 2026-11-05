@@ -33,7 +33,8 @@ export async function saveArticle(input: SaveArticleInput): Promise<SaveArticleR
   // ── Auth ────────────────────────────────────────────────────────────────────
   const auth = await requireStaff("articles.*");
   if (!auth.ok) {
-    try { await writeDenied("anonymous", "article", input.articleId ?? "new"); } catch {}
+    const actor = (auth as { user?: { id: string } }).user?.id ?? "anonymous";
+    try { await writeDenied(actor, "article", input.articleId ?? "new"); } catch {}
     return { ok: false, code: "not_allowed" };
   }
   const actorId = auth.user.id;
@@ -68,8 +69,9 @@ export async function saveArticle(input: SaveArticleInput): Promise<SaveArticleR
   if (data.articleId) {
     const { data: row, error } = await supabase
       .from("articles")
-      .select("id, body_version, status, slug, author_id, category_id")
+      .select("id, body_version, status, slug, author_id, category_id, deleted_at")
       .eq("id", data.articleId)
+      .is("deleted_at", null)
       .single();
 
     if (error || !row) {
@@ -251,7 +253,10 @@ export async function saveArticle(input: SaveArticleInput): Promise<SaveArticleR
     const categoryChanged = existing.category_id !== data.categoryId;
     if (authorChanged || categoryChanged) {
       const purgeEvent = authorChanged ? "author_change" : "category_change";
-      await purgeArticle(savedId, purgeEvent, actorId);
+      const purgeResult = await purgeArticle(savedId, purgeEvent, actorId);
+      if (!purgeResult.ok) {
+        return { ok: false, code: "purge_failed" };
+      }
     }
   }
   // Body-only saves on non-published articles do NOT clear the cache (content design §15).
