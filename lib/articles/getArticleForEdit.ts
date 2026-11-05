@@ -46,13 +46,15 @@ export async function getArticleForEdit(id: string): Promise<GetArticleForEditRe
 
   const rawRefs = (data.article_refs ?? []) as Array<Record<string, unknown>>;
 
+  const VALID_REF_STATUSES = new Set(["published", "hidden", "deleted", "not_found"]);
+
   const resolvedVideos: ResolvedVideoNode[] = rawRefs
     .filter((r) => r.ref_type === "video")
     .map((r) => {
       const videoRow = r.videos as { status?: string } | null;
-      const status: RefTargetStatus = videoRow?.status
-        ? (videoRow.status as RefTargetStatus)
-        : "not_found";
+      const raw = videoRow?.status;
+      const status: RefTargetStatus =
+        raw && VALID_REF_STATUSES.has(raw) ? (raw as RefTargetStatus) : "not_found";
       return { nodeId: r.node_id as string, videoId: r.ref_id as string, status };
     });
 
@@ -60,9 +62,9 @@ export async function getArticleForEdit(id: string): Promise<GetArticleForEditRe
     .filter((r) => r.ref_type === "document")
     .map((r) => {
       const docRow = r.documents as { status?: string } | null;
-      const status: RefTargetStatus = docRow?.status
-        ? (docRow.status as RefTargetStatus)
-        : "not_found";
+      const raw = docRow?.status;
+      const status: RefTargetStatus =
+        raw && VALID_REF_STATUSES.has(raw) ? (raw as RefTargetStatus) : "not_found";
       return { nodeId: r.node_id as string, documentId: r.ref_id as string, status };
     });
 

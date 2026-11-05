@@ -40,7 +40,7 @@ function makeRow(overrides: Record<string, unknown> = {}) {
 
 function makeChain(rows: unknown[], count: number | null = rows.length) {
   const chain: Record<string, unknown> = {};
-  const methods = ["from", "select", "eq", "is", "lte", "gte", "ilike", "order", "range", "or", "neq", "not"];
+  const methods = ["from", "select", "eq", "is", "lte", "gte", "gt", "ilike", "order", "range", "or", "neq", "not"];
   for (const m of methods) {
     chain[m] = vi.fn().mockReturnThis();
   }
@@ -102,9 +102,9 @@ describe("listAdminArticles — AC8", () => {
   it("filters by status=scheduled (published with future published_at)", async () => {
     const chain = makeChain([]);
     await listAdminArticles({ status: "scheduled" });
-    // must set status=published and apply a future-date filter via gte
+    // must set status=published and apply a future-date filter via gt
     expect((chain.eq as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith("status", "published");
-    expect((chain.gte as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+    expect((chain.gt as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
       "published_at",
       expect.any(String)
     );

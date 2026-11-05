@@ -28,7 +28,7 @@ import { unstable_noStore } from "next/cache";
 
 const STAFF_USER = { id: "staff-1", claimedRole: "admin" as const };
 
-function makeChain(row: unknown | null, assetStatus?: string) {
+function makeChain(row: unknown | null, assetStatus?: string, videoRows: unknown[] = []) {
   const articleChain: Record<string, unknown> = {};
   const methods = ["select", "eq", "maybeSingle"];
   for (const m of methods) {
@@ -44,9 +44,14 @@ function makeChain(row: unknown | null, assetStatus?: string) {
     .fn()
     .mockResolvedValue({ data: assetStatus ? { status: assetStatus } : null, error: null });
 
+  const videoChain: Record<string, unknown> = { select: vi.fn().mockReturnThis() };
+  videoChain.in = vi.fn().mockResolvedValue({ data: videoRows, error: null });
+
   const supabase = {
     from: vi.fn().mockImplementation((table: string) => {
-      return table === "media_assets" ? assetChain : articleChain;
+      if (table === "media_assets") return assetChain;
+      if (table === "videos") return videoChain;
+      return articleChain;
     }),
   };
   (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(supabase);

@@ -37,10 +37,7 @@ export async function listAdminArticles(
 
   if (status === "scheduled") {
     // published rows with a future published_at (published_at > now)
-    query = query.eq("status", "published").not("published_at", "is", null);
-    // Use gte with now+1ms to filter future-dated rows
-    const slightlyFuture = new Date(Date.now() + 1).toISOString();
-    query = query.gte("published_at", slightlyFuture);
+    query = query.eq("status", "published").not("published_at", "is", null).gt("published_at", now);
   } else if (status === "published") {
     query = query.eq("status", "published").lte("published_at", now);
   } else if (status) {
