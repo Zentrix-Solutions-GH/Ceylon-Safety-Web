@@ -83,7 +83,7 @@ jobs:
             // pull_request and pull_request_review events carry it in context.payload.pull_request.number.
             const prNumber = context.payload.pull_request?.number
               ?? context.payload.issue?.number
-              ?? Number(context.payload.inputs?.pr_number || '0') || undefined;
+              ?? (Number(context.payload.inputs?.pr_number || '0') || undefined);
             if (!prNumber) {
               console.log('No PR number found — skipping.');
               return;
