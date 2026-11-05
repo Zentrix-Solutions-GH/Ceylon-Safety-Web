@@ -38,7 +38,7 @@ function colomboMidnightUtc(daysAgo: number): string {
 
 const CursorSchema = z.object({
   publishedAt: z.string().datetime(),
-  id: z.string().min(1),
+  id: z.string().uuid(),
 });
 
 export async function listArticles(input: ArticleListInput): Promise<ArticleListResponse> {

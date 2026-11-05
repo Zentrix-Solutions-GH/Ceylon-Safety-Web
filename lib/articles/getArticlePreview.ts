@@ -19,6 +19,8 @@ export async function getArticlePreview(id: string): Promise<GetArticlePreviewRe
 
   const supabase = createSupabaseServiceRoleClient();
 
+  // Intentionally no deleted_at filter: staff may preview soft-deleted articles
+  // to review content before permanent removal.
   const { data, error } = await supabase
     .from("articles")
     .select(

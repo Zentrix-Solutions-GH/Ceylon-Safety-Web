@@ -1,7 +1,17 @@
 // S-049: lib/content/render — AC10, AC11, AC12, EC3
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
+
+vi.mock("@/lib/config.public", () => ({
+  publicConfig: {
+    supabaseUrl: "https://test.supabase.co",
+    supabaseAnonKey: "anon",
+    appUrl: "https://ceylonsafety.com",
+    turnstileSiteKey: "test-key",
+  },
+}));
+
 import { renderArticleBody } from "@/lib/content/render";
 import type { ArticleBody, ArticleNode } from "@/types/article";
 
@@ -223,6 +233,61 @@ describe("renderArticleBody — AC11 links", () => {
     ]);
     const { container } = render(renderArticleBody(body));
     expect(container.querySelector("a")).toBeNull();
+  });
+
+  it("drops a link with tab-obfuscated javascript: scheme (java\\tscript:)", () => {
+    const body = makeBody([
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: "xss-tab",
+            marks: [{ type: "link", attrs: { href: "java\tscript:alert(1)" } }],
+          },
+        ],
+      },
+    ]);
+    const { container } = render(renderArticleBody(body));
+    expect(container.textContent).toContain("xss-tab");
+    expect(container.querySelector("a")).toBeNull();
+  });
+
+  it("drops a protocol-relative link (//evil.com)", () => {
+    const body = makeBody([
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: "proto-rel",
+            marks: [{ type: "link", attrs: { href: "//evil.com/steal" } }],
+          },
+        ],
+      },
+    ]);
+    const { container } = render(renderArticleBody(body));
+    expect(container.querySelector("a")).toBeNull();
+  });
+
+  it("does NOT set target=_blank for inbound links (same host)", () => {
+    // publicConfig.appUrl is mocked to "https://ceylonsafety.com" in vi.mock above
+    const body = makeBody([
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: "inbound",
+            marks: [{ type: "link", attrs: { href: "https://ceylonsafety.com/articles/fire-safety" } }],
+          },
+        ],
+      },
+    ]);
+    const { container } = render(renderArticleBody(body));
+    const a = container.querySelector("a");
+    expect(a).not.toBeNull();
+    expect(a?.getAttribute("target")).not.toBe("_blank");
   });
 });
 

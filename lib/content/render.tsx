@@ -5,6 +5,7 @@ import React from "react";
 import { validateBody, MAX_LINKS } from "@/lib/content/schema";
 import { checkLink } from "@/lib/content/links";
 import { isValidYouTubeId } from "@/lib/content/youtube";
+import { publicConfig } from "@/lib/config.public";
 import type {
   ArticleBody,
   ArticleNode,
@@ -21,10 +22,7 @@ import type {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const OUR_HOST =
-  typeof process !== "undefined" && process.env.NEXT_PUBLIC_SITE_URL
-    ? new URL(process.env.NEXT_PUBLIC_SITE_URL).hostname
-    : "ceylonsafety.com";
+const OUR_HOST = new URL(publicConfig.appUrl).hostname;
 
 function isOutbound(href: string): boolean {
   try {

@@ -19,6 +19,8 @@ export async function getArticleForEdit(id: string): Promise<GetArticleForEditRe
 
   const supabase = createSupabaseServiceRoleClient();
 
+  // Intentionally no deleted_at filter: staff may load soft-deleted articles
+  // for edit review before permanent removal.
   const { data, error } = await supabase
     .from("articles")
     .select(

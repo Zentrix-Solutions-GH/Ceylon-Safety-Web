@@ -139,7 +139,7 @@ describe("listArticles — EC5 cursor validation", () => {
 
   it("accepts a valid cursor", async () => {
     makeSupabase([]);
-    const result = await listArticles({ cursor: { publishedAt: "2026-10-01T08:00:00Z", id: "art-1" } });
+    const result = await listArticles({ cursor: { publishedAt: "2026-10-01T08:00:00Z", id: "00000000-0000-4000-8000-000000000001" } });
     expect(result.ok).toBe(true);
   });
 });
@@ -162,6 +162,21 @@ describe("listArticles — EC6 Colombo calendar", () => {
     await listArticles({ range: "month" });
     const [, cutoff] = sb.gte.mock.calls[0] as [string, string];
     expect(cutoff).toMatch(/T18:30:00\.000Z$/);
+  });
+
+  it("week cutoff date is exactly correct for a known Colombo time", async () => {
+    // Fix the clock to 2026-11-05T10:00:00Z (= 15:30 Colombo on 2026-11-05)
+    // Colombo midnight 7 days ago = 2026-10-29T00:00:00+05:30 = 2026-10-28T18:30:00Z
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-05T10:00:00.000Z"));
+    try {
+      const sb = makeSupabase([]);
+      await listArticles({ range: "week" });
+      const [, cutoff] = sb.gte.mock.calls[0] as [string, string];
+      expect(cutoff).toBe("2026-10-28T18:30:00.000Z");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

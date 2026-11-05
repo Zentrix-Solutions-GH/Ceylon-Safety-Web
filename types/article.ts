@@ -288,4 +288,4 @@ export type AdminArticleListInput = {
 
 export type AdminArticleListResponse =
   | { ok: true; data: AdminArticleListResult }
-  | { ok: false; code: "not_allowed" };
+  | { ok: false; code: "not_allowed" | "unknown" };

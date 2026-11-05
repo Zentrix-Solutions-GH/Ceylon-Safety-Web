@@ -160,7 +160,12 @@ check.sh: 6 passed, 4 failed — all 4 failures verified pre-existing on dev bra
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `lib/articles/listArticles.ts` — `cursor.id` validated as `z.string().min(1)` then interpolated into PostgREST `.or()` filter string; fix: change to `z.string().uuid()`. (full-review 2026-11-05)
+- **P0** `supabase/tests/articles.test.sql` — pgTAP RLS test file listed in story Test Plan is absent from PR; must be created (anon/customer/staff article read access rules). (full-review 2026-11-05)
+- **P1** `lib/content/render.tsx:24–27` — `"ceylonsafety.com"` hardcoded as hostname fallback; `NEXT_PUBLIC_SITE_URL` read via `process.env` directly, not `lib/config.ts`. Add to `publicConfig`, remove literal. (full-review 2026-11-05)
+- **P1** `lib/articles/listAdminArticles.ts:59–61` — DB error returns `{ok:true, data:{items:[], pageCount:0}}`; admin cannot distinguish real empty from failure. Return `{ok:false, code:"unknown"}` on error. (full-review 2026-11-05)
+- **P1** `lib/content/render.tsx` (link scheme tests) — `java\tscript:` tab/newline variant and `//evil.com` protocol-relative links listed in test plan but absent from `render.test.tsx`. (full-review 2026-11-05)
+- **P1** `lib/content/render.tsx` (AC11 inbound link) — inverse of outbound test (inbound links do NOT get `target="_blank"`) is untested. (full-review 2026-11-05)
 
 ## After this merges, a user can:
 

@@ -58,7 +58,7 @@ export async function listAdminArticles(
 
   if (error) {
     console.error("[listAdminArticles] db error:", error.code ?? "unknown");
-    return { ok: true, data: { items: [], pageCount: 0 } };
+    return { ok: false, code: "unknown" };
   }
   if (!data) {
     return { ok: true, data: { items: [], pageCount: 0 } };

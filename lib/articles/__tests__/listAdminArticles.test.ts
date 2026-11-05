@@ -63,6 +63,18 @@ describe("listAdminArticles — AC8", () => {
     expect(result.code).toBe("not_allowed");
   });
 
+  it("returns ok:false on DB error", async () => {
+    const chain: Record<string, unknown> = {};
+    const methods = ["from", "select", "eq", "is", "lte", "gte", "gt", "ilike", "order", "range", "or", "neq", "not"];
+    for (const m of methods) chain[m] = vi.fn().mockReturnThis();
+    chain.range = vi.fn().mockResolvedValue({ data: null, count: null, error: { code: "PGRST301", message: "timeout" } });
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+    const result = await listAdminArticles({});
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("unknown");
+  });
+
   it("returns items sorted by updated_at desc, 25 per page", async () => {
     const rows = Array.from({ length: PAGE_SIZE }, (_, i) => makeRow({ id: `art-${i}` }));
     makeChain(rows, 50);
