@@ -203,7 +203,7 @@ describe("SignInForm — AC8: captcha_failed and rate_limited map via errorMessa
     await userEvent.type(screen.getByLabelText(/password/i), "pass123");
     await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
     await waitFor(() => {
-      expect(screen.getByRole("alert")).toBeInTheDocument();
+      expect(screen.getByRole("alert")).toHaveTextContent(/security check/i);
     });
   });
 

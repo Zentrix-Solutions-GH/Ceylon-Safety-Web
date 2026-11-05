@@ -27,6 +27,7 @@ export function SignInForm() {
   const [topError, setTopError] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const resetTurnstileRef = useRef<(() => void) | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const socialApp = isSocialAppBrowser();
 
@@ -52,6 +53,7 @@ export function SignInForm() {
 
     if (result.code === "email_not_verified") {
       router.replace("/verify-email");
+      setPending(false);
       return;
     }
 
@@ -75,7 +77,8 @@ export function SignInForm() {
     try {
       await navigator.clipboard.writeText(window.location.href);
       setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2000);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setLinkCopied(false), 2000);
     } catch {
       // clipboard unavailable — silent fail
     }

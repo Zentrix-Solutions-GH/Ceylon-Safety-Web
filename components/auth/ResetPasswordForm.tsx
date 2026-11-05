@@ -16,11 +16,6 @@ export function ResetPasswordForm({ email: initialEmail }: Props) {
   const [pending, setPending] = useState(false);
   const [topError, setTopError] = useState<string | null>(null);
   const [showTotp, setShowTotp] = useState(false);
-  const [submittedData, setSubmittedData] = useState<{
-    email: string;
-    code: string;
-    newPassword: string;
-  } | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -42,7 +37,6 @@ export function ResetPasswordForm({ email: initialEmail }: Props) {
     }
 
     if (result.code === "mfa_required") {
-      setSubmittedData({ email, code, newPassword });
       setShowTotp(true);
       setPending(false);
       return;
@@ -78,7 +72,7 @@ export function ResetPasswordForm({ email: initialEmail }: Props) {
             required
             defaultValue={initialEmail ?? ""}
             readOnly={!!initialEmail}
-            className="w-full rounded-md border px-3 py-2 text-sm disabled:bg-muted"
+            className="w-full rounded-md border px-3 py-2 text-sm read-only:bg-muted"
           />
         </FormField>
 
@@ -90,7 +84,7 @@ export function ResetPasswordForm({ email: initialEmail }: Props) {
             inputMode="numeric"
             autoComplete="one-time-code"
             required
-            defaultValue={submittedData?.code ?? ""}
+            defaultValue=""
             className="w-full rounded-md border px-3 py-2 text-sm"
           />
         </FormField>
@@ -102,7 +96,7 @@ export function ResetPasswordForm({ email: initialEmail }: Props) {
             type="password"
             autoComplete="new-password"
             required
-            defaultValue={submittedData?.newPassword ?? ""}
+            defaultValue=""
             className="w-full rounded-md border px-3 py-2 text-sm"
           />
         </FormField>
