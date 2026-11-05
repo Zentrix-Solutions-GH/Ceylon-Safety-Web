@@ -8,6 +8,11 @@ on:
     types: [submitted, dismissed]
   issue_comment:
     types: [created, edited, deleted]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to check'
+        required: true
 
 permissions:
   contents: read
@@ -25,6 +30,7 @@ jobs:
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
+            if (context.eventName === 'workflow_dispatch') return false; // skip docs-only check; require review
             if (!context.payload.pull_request) return false; // issue_comment events handled by step 2
             const branch = context.payload.pull_request.head.ref;
             // Only story branches (feature/S-NNN-*) require external review.
@@ -60,9 +66,9 @@ jobs:
           script: |
             // issue_comment events carry the PR number in context.payload.issue.number;
             // pull_request and pull_request_review events carry it in context.payload.pull_request.number.
-            const prNumber = context.payload.pull_request
-              ? context.payload.pull_request.number
-              : context.payload.issue?.number;
+            const prNumber = context.payload.pull_request?.number
+              ?? context.payload.issue?.number
+              ?? Number(context.payload.inputs?.pr_number || '0') || undefined;
             if (!prNumber) {
               console.log('No PR number found — skipping.');
               return;
