@@ -51,6 +51,10 @@ export function VerifyEmailForm({ pendingEmail }: VerifyEmailFormProps) {
       }
       setResolvedEmail(email);
       startCooldown(RESEND_COOLDOWN_SECONDS);
+    } catch {
+      resetTurnstileRef.current?.();
+      setCaptchaToken(null);
+      setPreStepError(errorMessage("unknown"));
     } finally {
       setPreStepPending(false);
     }
@@ -94,6 +98,8 @@ export function VerifyEmailForm({ pendingEmail }: VerifyEmailFormProps) {
         return;
       }
       router.replace(result.redirect);
+    } catch {
+      setCodeError(errorMessage("unknown"));
     } finally {
       setVerifyPending(false);
     }
@@ -105,18 +111,24 @@ export function VerifyEmailForm({ pendingEmail }: VerifyEmailFormProps) {
   async function handleResend() {
     if (!captchaToken || cooldownSeconds > 0) return;
     setResendError(null);
-    const result = await resendCode({ email: resolvedEmail!, captchaToken });
-    resetTurnstileRef.current?.();
-    setCaptchaToken(null);
-    if (!result.ok) {
-      const retryAfter = (result as { retryAfterSeconds?: number }).retryAfterSeconds;
-      if (retryAfter) {
-        startCooldown(retryAfter);
+    try {
+      const result = await resendCode({ email: resolvedEmail!, captchaToken });
+      resetTurnstileRef.current?.();
+      setCaptchaToken(null);
+      if (!result.ok) {
+        const retryAfter = (result as { retryAfterSeconds?: number }).retryAfterSeconds;
+        if (retryAfter) {
+          startCooldown(retryAfter);
+        }
+        setResendError(errorMessage(result.code, (result as { reason?: string }).reason));
+        return;
       }
-      setResendError(errorMessage(result.code, (result as { reason?: string }).reason));
-      return;
+      startCooldown(RESEND_COOLDOWN_SECONDS);
+    } catch {
+      resetTurnstileRef.current?.();
+      setCaptchaToken(null);
+      setResendError(errorMessage("unknown"));
     }
-    startCooldown(RESEND_COOLDOWN_SECONDS);
   }
 
   // ── Pre-step render ───────────────────────────────────────────────────────
