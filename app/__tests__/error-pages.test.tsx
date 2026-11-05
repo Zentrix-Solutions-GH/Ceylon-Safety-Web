@@ -45,6 +45,11 @@ describe("ErrorPage", () => {
 // ─── AC8: not-found page ─────────────────────────────────────────────────────
 
 describe("NotFoundPage", () => {
+  it("wraps content in main#main-content for skip link (AC8)", () => {
+    render(<NotFoundPage />);
+    expect(document.getElementById("main-content")).toBeInTheDocument();
+  });
+
   it("shows a heading", () => {
     render(<NotFoundPage />);
     expect(screen.getByRole("heading")).toBeInTheDocument();

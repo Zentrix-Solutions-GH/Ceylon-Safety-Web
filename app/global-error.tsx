@@ -12,6 +12,11 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{t("global_error.heading")}</title>
+      </head>
       <body
         style={{
           margin: 0,
@@ -86,7 +91,7 @@ export default function GlobalError({
             textAlign: "center",
           }}
         >
-          &copy; CeylonSafety
+          &copy; {t("site.copyright")}
         </footer>
       </body>
     </html>

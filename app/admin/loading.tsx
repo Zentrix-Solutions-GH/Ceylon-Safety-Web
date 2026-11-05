@@ -1,8 +1,10 @@
 // AC6: admin-area loading skeleton.
+import { t } from "@/messages/en";
+
 export default function AdminLoading() {
   return (
     <>
-      <span role="status" className="sr-only">Loading…</span>
+      <span role="status" className="sr-only">{t("loading.message")}</span>
       <div className="animate-pulse p-8" aria-hidden>
       <div className="mb-6 h-8 w-56 rounded bg-muted" />
       <div className="space-y-3">

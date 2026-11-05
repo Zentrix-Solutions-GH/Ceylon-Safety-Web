@@ -74,6 +74,12 @@ const en = {
 
   // --- customer area (S-027) ---
   "customer.header_label": "Customer navigation",
+
+  // --- loading state (S-027) ---
+  "loading.message": "Loading…",
+
+  // --- site footer (S-027) ---
+  "site.copyright": "CeylonSafety",
 } as const;
 
 export type MessageKey = keyof typeof en;
