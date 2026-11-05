@@ -206,8 +206,11 @@ Test Files  83 passed | 9 skipped (92)
 - **P1** ~~`lib/articles/actions/saveArticle.ts` (~line 65) — missing `.is("deleted_at", null)` guard~~ **FIXED** in `804897f` (full-review 2026-11-05)
 - **P1** ~~`writeDenied` hardcodes `"anonymous"` in both actions~~ **FIXED** in `804897f` (full-review 2026-11-05)
 - **P1** ~~`article_refs.ref_id` shown as `uuid` in schema doc~~ **FIXED** in `804897f` (full-review 2026-11-05)
+- **P0** ~~`setArticleStatus.ts` `.in("key", ...)` — wrong column, should be `file_key`~~ **FIXED** in `831aaca` (abevicrama 2026-11-05)
+- **P1** ~~`clashSafeSlug` missing `.is("deleted_at", null)` — soft-deleted slugs block reuse~~ **FIXED** in `831aaca` (abevicrama 2026-11-05)
+- **P1** ~~`saveArticle.ts` refs rebuild returns opaque `unknown` on insert failure~~ **FIXED** in `831aaca`; now `refs_inconsistent` (abevicrama 2026-11-05)
 - **P2** `lib/content/links.ts` — Verify `findBadLink` recurses into nested content (list items, blockquotes); add test with link inside a bullet list. (full-review 2026-11-05)
-- **P2** `lib/cache/purge.ts` — `revalidateTag` cannot throw in Next.js 15; retry logic in `purgeTagSubset` is dead code. Remove or document. (full-review 2026-11-05)
+- **P2** `lib/cache/purge.ts` — `revalidateTag` cannot throw in Next.js 15; retry logic is dead code. Remove or document. (full-review 2026-11-05)
 - **P2** `lib/cache/__tests__/purge.test.ts` — "body-only save" test is a tautology; replace with one that calls `saveArticle` and asserts `purgeArticle` not invoked. (full-review 2026-11-05)
 
 ## After this merges, a user can:
