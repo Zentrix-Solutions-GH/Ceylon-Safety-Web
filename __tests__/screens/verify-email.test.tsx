@@ -77,6 +77,18 @@ describe("VerifyEmailForm — AC3: renders email and code input", () => {
     await user.click(resendBtn);
     await waitFor(() => expect(resendBtn).toBeDisabled());
   });
+
+  it("AC3: countdown text with seconds is shown after resend", async () => {
+    mockResendCode.mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
+    render(<VerifyEmailForm pendingEmail="test@example.com" />);
+
+    await user.click(screen.getByRole("button", { name: /resend code/i }));
+    // After resend, the button text should show the cooldown countdown
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /\d+/ })).toBeDisabled()
+    );
+  });
 });
 
 describe("VerifyEmailForm — AC4: error codes", () => {

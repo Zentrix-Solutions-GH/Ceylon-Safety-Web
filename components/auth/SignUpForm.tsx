@@ -26,6 +26,7 @@ export function SignUpForm() {
 
   const [pending, setPending] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [topError, setTopError] = useState<string | null>(null);
   const resetTurnstileRef = useRef<(() => void) | null>(null);
@@ -116,7 +117,7 @@ export function SignUpForm() {
         </FormField>
 
         <div className="flex items-start gap-2">
-          <Checkbox id="terms" name="terms" className="mt-0.5" />
+          <Checkbox id="terms" name="terms" className="mt-0.5" onCheckedChange={(v) => setTermsAccepted(v === true)} />
           <Label htmlFor="terms" className="text-sm font-normal leading-snug cursor-pointer">
             {t("auth.sign_up.terms")}{" "}
             <Link href="/terms" className="underline hover:no-underline">
@@ -140,7 +141,7 @@ export function SignUpForm() {
 
         <button
           type="submit"
-          disabled={pending || !captchaToken}
+          disabled={pending || !captchaToken || !termsAccepted}
           className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {pending ? t("auth.sign_up.submitting") : t("auth.sign_up.submit")}

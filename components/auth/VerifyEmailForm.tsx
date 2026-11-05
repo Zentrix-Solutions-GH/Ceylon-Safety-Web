@@ -87,12 +87,13 @@ export function VerifyEmailForm({ pendingEmail }: VerifyEmailFormProps) {
 
   async function handleVerify(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!resolvedEmail) return;
     const data = new FormData(e.currentTarget);
     const code = (data.get("code") as string) ?? "";
     setCodeError(null);
     setVerifyPending(true);
     try {
-      const result = await verifyEmail({ email: resolvedEmail!, code });
+      const result = await verifyEmail({ email: resolvedEmail, code });
       if (!result.ok) {
         setCodeError(errorMessage(result.code));
         return;
