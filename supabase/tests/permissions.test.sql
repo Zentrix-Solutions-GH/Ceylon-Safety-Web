@@ -30,7 +30,7 @@ BEGIN
   INSERT INTO public.user_roles (user_id, role) VALUES
     (v_sa_id, 'super_admin'),
     (v_admin, 'admin'),
-    (v_maint, 'maintainer'),
+    (v_maint, 'editor'),
     (v_sa2,   'super_admin');
 
   -- Clear pre-seeded admin permissions so the test controls exactly which
@@ -106,14 +106,14 @@ SELECT is(
 );
 RESET role;
 
--- Maintainer with no rows fails everything
+-- Editor passes actions it has (articles.*) but fails admin-only actions (users.read)
 SET LOCAL role TO authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"11111111-0000-0000-0000-000000000003","role":"authenticated"}';
 
 SELECT is(
-  (SELECT public.has_permission('articles.save')),
+  (SELECT public.has_permission('users.read')),
   false,
-  'AC2: maintainer with no permission rows fails everything'
+  'AC2: editor fails users.read (admin-only action, editor has no such row)'
 );
 RESET role;
 
@@ -441,7 +441,7 @@ DECLARE
   v_result jsonb;
 BEGIN
   v_event := jsonb_build_object(
-    'user_id', '11111111-0000-0000-0000-000000000001',
+    'userId', '11111111-0000-0000-0000-000000000001',
     'claims',  '{}'::jsonb
   );
   v_result := private.custom_access_token_hook(v_event);
@@ -460,7 +460,7 @@ DECLARE
   v_result jsonb;
 BEGIN
   v_event := jsonb_build_object(
-    'user_id', '11111111-0000-0000-0000-000000000002',
+    'userId', '11111111-0000-0000-0000-000000000002',
     'claims',  '{}'::jsonb
   );
   v_result := private.custom_access_token_hook(v_event);
@@ -477,15 +477,15 @@ DECLARE
   v_result jsonb;
 BEGIN
   v_event := jsonb_build_object(
-    'user_id', '11111111-0000-0000-0000-000000000003',
+    'userId', '11111111-0000-0000-0000-000000000003',
     'claims',  '{}'::jsonb
   );
   v_result := private.custom_access_token_hook(v_event);
-  ASSERT v_result->'claims'->>'user_role' = 'maintainer',
-    format('AC6: expected maintainer, got %s', v_result->'claims'->>'user_role');
+  ASSERT v_result->'claims'->>'user_role' = 'editor',
+    format('AC6: expected editor, got %s', v_result->'claims'->>'user_role');
 END;
 $$;
-SELECT pass('AC6: maintainer hook returns user_role=maintainer');
+SELECT pass('AC6: editor hook returns user_role=editor');
 
 -- customer gets no user_role claim, but account_status=active
 DO $$
@@ -494,7 +494,7 @@ DECLARE
   v_result jsonb;
 BEGIN
   v_event := jsonb_build_object(
-    'user_id', '11111111-0000-0000-0000-000000000004',
+    'userId', '11111111-0000-0000-0000-000000000004',
     'claims',  '{}'::jsonb
   );
   v_result := private.custom_access_token_hook(v_event);
@@ -513,7 +513,7 @@ DECLARE
   v_result jsonb;
 BEGIN
   v_event := jsonb_build_object(
-    'user_id', '11111111-0000-0000-0000-000000000005',
+    'userId', '11111111-0000-0000-0000-000000000005',
     'claims',  '{}'::jsonb
   );
   v_result := private.custom_access_token_hook(v_event);

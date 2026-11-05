@@ -90,7 +90,21 @@ fi
 # 6. AC11: no server session reads in public pages
 run "Public pages session check (AC11)" npx tsx scripts/check-public-pages.ts
 
-# 7. Dev seed guard (EC3): verify the guard pattern exists in seed.dev.sql
+# 7. AC5 (S-022): no Google Fonts runtime requests in built output
+printf '\n── Google Fonts check (AC5) ──\n'
+if [ -d ".next/static" ]; then
+  if grep -r 'fonts\.googleapis\.com\|fonts\.gstatic\.com' .next/static/ 2>/dev/null | grep -qv '\.map$'; then
+    printf '✗ Google Fonts check (AC5) FAILED — Google Fonts host found in built output\n'
+    FAIL=$((FAIL + 1))
+  else
+    printf '✓ Google Fonts check (AC5) passed\n'
+    PASS=$((PASS + 1))
+  fi
+else
+  printf '⚠ No build output found — skipping Google Fonts check (run npm run build first)\n'
+fi
+
+# 8. Dev seed guard (EC3): verify the guard pattern exists in seed.dev.sql
 printf '\n── Dev seed guard ──\n'
 if grep -q "current_setting('app.environment', true)" supabase/seed.dev.sql; then
   printf '✓ Dev seed guard passed\n'

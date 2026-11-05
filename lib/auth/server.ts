@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { writeDenied } from "@/lib/audit";
 import { buildSessionUser, isWithinStaffWindow } from "@/lib/auth/claims";
 import { ensureProfile } from "@/lib/auth/ensure-profile";
 import type { SessionUser, ActionResult, UserRole } from "@/types/auth";
@@ -198,6 +199,9 @@ export async function requireSuperAdmin(): Promise<AuthResult> {
 
   const role = await getStaffRole(user.id);
   if (role !== "super_admin") {
+    await writeDenied(user.id, "staff_action", "super_admin_required").catch((e: unknown) => {
+      console.error("[audit] writeDenied failed:", (e as Error).message);
+    });
     return { ok: false, code: "not_allowed" };
   }
 

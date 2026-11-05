@@ -17,6 +17,9 @@ const VALID_ENV = {
   NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL: "https://cdn.ceylonsafety.com",
   // S-010: cron secret
   CRON_SECRET: "cron-secret-value",
+  // S-040: email sender
+  RESEND_API_KEY: "re_test_key",
+  EMAIL_FROM: "noreply@ceylonsafety.com",
 };
 
 function setEnv(overrides: Record<string, string | undefined> = {}) {

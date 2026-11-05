@@ -3,14 +3,16 @@ import { NextRequest } from "next/server";
 
 // AC5/AC6/EC1/EC2: /api/auth/callback route
 
+vi.mock("@/lib/resend/client", () => ({
+  sendWelcomeEmail: vi.fn().mockResolvedValue(undefined),
+}));
+
 const mockExchangeCodeForSession = vi.fn();
-const mockGetUser = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(async () => ({
     auth: {
       exchangeCodeForSession: mockExchangeCodeForSession,
-      getUser: mockGetUser,
     },
   })),
 }));
@@ -28,6 +30,7 @@ vi.mock("next/headers", () => ({
 }));
 
 import { GET } from "@/app/api/auth/callback/route";
+import * as resendClient from "@/lib/resend/client";
 
 function makeRequest(code?: string): NextRequest {
   const url = code
@@ -39,10 +42,9 @@ function makeRequest(code?: string): NextRequest {
 beforeEach(() => {
   vi.clearAllMocks();
   mockExchangeCodeForSession.mockResolvedValue({
-    data: { session: { user: { id: "u1" } } },
+    data: { session: { user: { id: "u1", email: "user@example.com" } } },
     error: null,
   });
-  mockGetUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
   // Default: auth_next cookie present
   mockCookiesGet.mockImplementation((name: string) =>
     name === "auth_next" ? { value: "/purchases" } : undefined
@@ -58,6 +60,14 @@ describe("GET /api/auth/callback — AC6 happy path", () => {
     expect(mockCookiesDelete).toHaveBeenCalledWith("auth_next");
     expect(res.status).toBe(307);
     expect(res.headers.get("Location")).toBe("http://localhost/purchases");
+  });
+
+  it("AC3: triggers sendWelcomeEmail with user email and id from session (Google callback path)", async () => {
+    const req = makeRequest("abc123");
+    await GET(req);
+    // Allow the fire-and-forget to settle
+    await new Promise((r) => setTimeout(r, 0));
+    expect(resendClient.sendWelcomeEmail).toHaveBeenCalledWith("user@example.com", "u1");
   });
 
   it("redirects to / when auth_next cookie is missing (EC1)", async () => {
@@ -77,6 +87,19 @@ describe("GET /api/auth/callback — AC6 happy path", () => {
     const res = await GET(req);
 
     expect(res.headers.get("Location")).toBe("http://localhost/");
+  });
+});
+
+describe("GET /api/auth/callback — auth error path", () => {
+  it("does not call sendWelcomeEmail when exchangeCodeForSession returns an error", async () => {
+    mockExchangeCodeForSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: { message: "Code already used", status: 400 },
+    });
+    const req = makeRequest("abc123");
+    await GET(req);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(resendClient.sendWelcomeEmail).not.toHaveBeenCalled();
   });
 });
 
