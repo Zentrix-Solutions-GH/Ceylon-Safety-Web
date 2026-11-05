@@ -10,6 +10,7 @@ const VALID_ENV = {
   NEXT_PUBLIC_SUPABASE_URL: "https://abc.supabase.co",
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key-value",
   NEXT_PUBLIC_APP_URL: "https://ceylonsafety.com",
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key-value",
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: "a".repeat(64),
   // S-030: required by cspConfig
@@ -221,6 +222,13 @@ describe("lib/config.public — validation (P1: untested copy)", () => {
     setEnv({ NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321" });
     const { publicConfig } = await importFresh("../lib/config.public");
     expect(publicConfig.supabaseUrl).toBe("http://127.0.0.1:54321");
+  });
+
+  it("throws when NEXT_PUBLIC_TURNSTILE_SITE_KEY is missing (REQ-192)", async () => {
+    setEnv({ NEXT_PUBLIC_TURNSTILE_SITE_KEY: undefined });
+    await expect(importFresh("../lib/config.public")).rejects.toThrow(
+      "NEXT_PUBLIC_TURNSTILE_SITE_KEY"
+    );
   });
 });
 

@@ -1,6 +1,9 @@
-﻿// Root layout: html, body, fonts (S-022), globals.css
+// Root layout: html, body, fonts (S-022), skip link, toast area, cookie banner mount.
 import type { ReactNode } from "react";
 import { Inter, Noto_Sans_Sinhala, Noto_Sans_Tamil } from "next/font/google";
+import { Toaster } from "@/components/ui/toaster";
+import CookieConsentBanner from "@/components/layout/CookieConsentBanner";
+import { t } from "@/messages/en";
 import "./globals.css";
 
 // Latin — preloaded; variable font covers all weights
@@ -35,7 +38,23 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="en"
       className={`${inter.variable} ${notoSinhala.variable} ${notoTamil.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        {/* AC1: skip link must be first in the page */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded focus:bg-background focus:px-4 focus:py-2 focus:text-foreground focus:shadow-md"
+        >
+          {t("layout.skip_to_main")}
+        </a>
+
+        {children}
+
+        {/* AC1: toast area */}
+        <Toaster />
+
+        {/* AC1: cookie banner mount point — filled by S-029 */}
+        <CookieConsentBanner />
+      </body>
     </html>
   );
 }
