@@ -173,7 +173,9 @@ describe("setArticleStatus — publish checklist (AC7)", () => {
 
   it("queries media_assets with file_key column (not key)", async () => {
     mockStaff(true);
-    const inSpy = vi.fn().mockResolvedValue({ data: [{ status: "pending" }], error: null });
+    const inSpy = vi.fn().mockResolvedValue({ data: [{ status: "ready" }], error: null });
+    // Article has cover_image_key set, guaranteeing mediaKeys is non-empty and .in() fires.
+    const article = makeArticle({ cover_image_key: "img/cover.webp", cover_image_alt: "Alt" });
     const sbMock = {
       from: vi.fn((table: string) => {
         if (table === "articles") {
@@ -181,7 +183,7 @@ describe("setArticleStatus — publish checklist (AC7)", () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             is: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: makeArticle(), error: null }),
+            single: vi.fn().mockResolvedValue({ data: article, error: null }),
             update: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnThis(),
               select: vi.fn().mockReturnThis(),
@@ -193,7 +195,10 @@ describe("setArticleStatus — publish checklist (AC7)", () => {
           return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: "x", is_active: true }, error: null }) };
         }
         if (table === "article_refs") {
-          return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), mockResolvedValue: vi.fn().mockResolvedValue({ data: [], error: null }) };
+          // Chain is .select().eq().eq() — make the object thenable so await resolves { data: [], error: null }.
+          // cover_image_key on the article ensures mediaKeys is non-empty even with no body refs.
+          const refsMock = { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() };
+          return Object.assign(refsMock, { then: (resolve: (v: unknown) => void) => resolve({ data: [], error: null }) });
         }
         if (table === "media_assets") {
           return { select: vi.fn().mockReturnThis(), in: inSpy };
@@ -203,8 +208,8 @@ describe("setArticleStatus — publish checklist (AC7)", () => {
     };
     vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(sbMock as never);
     await setArticleStatus({ articleId: ARTICLE_ID, action: "publish", publishedAt: new Date().toISOString() });
-    // Verify .in() was called with "file_key", not "key"
-    expect(inSpy).toHaveBeenCalledWith("file_key", expect.any(Array));
+    // The implementation calls .in("file_key", ...) — not .in("key", ...).
+    expect(inSpy).toHaveBeenCalledWith("file_key", expect.arrayContaining(["img/cover.webp"]));
   });
 
   it("returns validation_failed when publishedAt is absent for publish", async () => {

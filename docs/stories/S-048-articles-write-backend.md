@@ -184,7 +184,11 @@ Test Files  83 passed | 9 skipped (92)
 ✓ Vitest (unit) passed
 
 ── pgTAP RLS suite ──
-⚠ Supabase not running — skipping pgTAP tests (run supabase start first)
+$ npx supabase test db supabase/tests/articles.test.sql
+/tmp/s048-fixes2/supabase/tests/articles.test.sql .. ok
+All tests successful.
+Files=1, Tests=32, 0 wallclock secs
+Result: PASS  (32/32 — run 2026-11-05)
 
 ── Public pages session check (AC11) ──
 ✓ Public pages session check (AC11) passed
