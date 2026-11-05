@@ -80,6 +80,35 @@ const en = {
 
   // --- site footer (S-027) ---
   "site.copyright": "CeylonSafety",
+
+  // --- sign-up screen (S-041) ---
+  "auth.sign_up.heading": "Create your account",
+  "auth.sign_up.first_name": "First name",
+  "auth.sign_up.last_name": "Last name",
+  "auth.sign_up.email": "Email address",
+  "auth.sign_up.password": "Password",
+  "auth.sign_up.terms": "I agree to the",
+  "auth.sign_up.terms_link": "Terms of Service",
+  "auth.sign_up.and": "and",
+  "auth.sign_up.privacy_link": "Privacy Policy",
+  "auth.sign_up.submit": "Create account",
+  "auth.sign_up.submitting": "Creating account…",
+  "auth.sign_up.have_account": "Already have an account?",
+  "auth.sign_up.sign_in_link": "Sign in",
+
+  // --- verify-email screen (S-041) ---
+  "auth.verify_email.heading": "Check your email",
+  "auth.verify_email.code_sent": "We sent a verification code to",
+  "auth.verify_email.code_label": "Verification code",
+  "auth.verify_email.submit": "Verify email",
+  "auth.verify_email.submitting": "Verifying…",
+  "auth.verify_email.resend": "Resend code",
+  "auth.verify_email.resend_wait": "Resend in {seconds}s",
+  "auth.verify_email.different_email": "Use a different email",
+  "auth.verify_email.enter_email_heading": "Enter your email address",
+  "auth.verify_email.enter_email_hint": "Enter the email address you registered with",
+  "auth.verify_email.enter_email_label": "Email address",
+  "auth.verify_email.enter_email_submit": "Send code",
 } as const;
 
 export type MessageKey = keyof typeof en;

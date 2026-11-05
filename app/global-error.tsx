@@ -5,6 +5,8 @@
 import { t } from "../messages/en";
 
 export default function GlobalError({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  error: _error,
   reset,
 }: {
   error: Error & { digest?: string };

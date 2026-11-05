@@ -4,6 +4,8 @@ import Link from "next/link";
 import { t } from "@/messages/en";
 
 export function ErrorPage({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  error: _error,
   reset,
 }: {
   error: Error & { digest?: string };

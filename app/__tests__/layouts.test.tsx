@@ -20,6 +20,13 @@ vi.mock("@/hooks/useAuth", () => ({
   useAuth: vi.fn(() => ({ user: null, isLoading: false, signOut: vi.fn() })),
 }));
 
+// next/font/google is not available in jsdom — stub each font to return a plain object
+vi.mock("next/font/google", () => ({
+  Inter: () => ({ variable: "--font-sans", className: "" }),
+  Noto_Sans_Sinhala: () => ({ variable: "--font-sinhala", className: "" }),
+  Noto_Sans_Tamil: () => ({ variable: "--font-tamil", className: "" }),
+}));
+
 // Mocks for RootLayout and PublicLayout
 vi.mock("@/components/ui/toaster", () => ({ Toaster: () => null }));
 vi.mock("@/components/layout/CookieConsentBanner", () => ({ default: () => null }));

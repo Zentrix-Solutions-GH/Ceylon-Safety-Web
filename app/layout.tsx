@@ -1,6 +1,4 @@
-// AC1: root layout — html lang="en", body, skip link, toast area, cookie banner mount.
-// No ad or analytics scripts and no session read.
-// Fonts: S-022 self-hosted fonts via next/font/google; CSS variables set on <html>.
+// Root layout: html, body, fonts (S-022), skip link, toast area, cookie banner mount.
 import type { ReactNode } from "react";
 import { Inter, Noto_Sans_Sinhala, Noto_Sans_Tamil } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";
