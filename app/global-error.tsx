@@ -5,7 +5,6 @@
 import { t } from "@/messages/en";
 
 export default function GlobalError({
-  error: _error,
   reset,
 }: {
   error: Error & { digest?: string };

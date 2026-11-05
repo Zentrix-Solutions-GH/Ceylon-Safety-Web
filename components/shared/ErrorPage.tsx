@@ -4,7 +4,6 @@ import Link from "next/link";
 import { t } from "@/messages/en";
 
 export function ErrorPage({
-  error: _error,
   reset,
 }: {
   error: Error & { digest?: string };
