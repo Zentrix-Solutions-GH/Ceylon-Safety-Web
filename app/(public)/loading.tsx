@@ -1,8 +1,12 @@
 ﻿// AC6: public-area loading skeleton — matches the height of the real content area.
 // No layout jump: height matches the Header (4rem) already rendered above this file.
+import { t } from "@/messages/en";
+
 export default function PublicLoading() {
   return (
-    <div className="container mx-auto animate-pulse px-4 py-8" aria-hidden>
+    <>
+      <span role="status" className="sr-only">{t("loading.message")}</span>
+      <div className="container mx-auto animate-pulse px-4 py-8" aria-hidden={true}>
       {/* Hero-area skeleton */}
       <div className="mb-6 h-64 rounded-lg bg-muted" />
       {/* Card grid skeleton */}
@@ -16,5 +20,6 @@ export default function PublicLoading() {
         ))}
       </div>
     </div>
+    </>
   );
 }

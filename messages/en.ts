@@ -75,6 +75,12 @@ const en = {
   // --- customer area (S-027) ---
   "customer.header_label": "Customer navigation",
 
+  // --- loading state (S-027) ---
+  "loading.message": "Loading…",
+
+  // --- site footer (S-027) ---
+  "site.copyright": "CeylonSafety",
+
   // --- sign-up screen (S-041) ---
   "auth.sign_up.heading": "Create your account",
   "auth.sign_up.first_name": "First name",
