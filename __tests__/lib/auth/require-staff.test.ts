@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockGetUser = vi.fn();
 const mockRpc = vi.fn();
 const mockFrom = vi.fn();
-
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(async () => ({
     auth: { getUser: mockGetUser },
@@ -14,8 +13,13 @@ vi.mock("@/lib/supabase/server", () => ({
     rpc: mockRpc,
   })),
 }));
+vi.mock("@/lib/audit", () => ({
+  writeAuditRow: vi.fn().mockResolvedValue(undefined),
+  writeDenied: vi.fn().mockResolvedValue(undefined),
+}));
 
 import { requireStaff, requireSuperAdmin, requireStaffNoMfa } from "@/lib/auth/server";
+import { writeDenied } from "@/lib/audit";
 
 const NOW_ISO = new Date().toISOString();
 
@@ -109,7 +113,7 @@ describe("requireStaff", () => {
       data: { user: makeUser() },
       error: null,
     });
-    mockFrom.mockImplementation(makeFromMock("active", "maintainer"));
+    mockFrom.mockImplementation(makeFromMock("active", "editor"));
     mockRpc.mockResolvedValue({ data: false, error: null });
 
     const result = await requireStaff("articles.publish");
@@ -208,6 +212,22 @@ describe("requireSuperAdmin", () => {
     const result = await requireSuperAdmin();
 
     expect(result).toEqual({ ok: false, code: "not_allowed" });
+  });
+
+  it("EC4: calls writeDenied when non-SA caller is rejected (permission.denied audit)", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: makeUser() },
+      error: null,
+    });
+    mockFrom.mockImplementation(makeFromMock("active", "admin"));
+
+    await requireSuperAdmin();
+
+    expect(vi.mocked(writeDenied)).toHaveBeenCalledWith(
+      "staff-1",
+      "staff_action",
+      "super_admin_required"
+    );
   });
 });
 

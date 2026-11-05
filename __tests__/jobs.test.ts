@@ -12,6 +12,9 @@ const BASE_ENV = {
   CSP_MODE: "report-only",
   NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL: "https://cdn.ceylonsafety.com",
   CRON_SECRET: "a".repeat(32),
+  // S-040: email sender
+  RESEND_API_KEY: "re_test_key",
+  EMAIL_FROM: "noreply@ceylonsafety.com",
 };
 
 function setEnv(overrides: Record<string, string | undefined> = {}) {

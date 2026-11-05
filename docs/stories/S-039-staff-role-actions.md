@@ -1,11 +1,11 @@
 ---
 id: S-039
 title: Staff role actions — grantRole, removeRole, removeAuthenticator, listStaff
-status: ready
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-039-staff-role-actions
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/49
 depends_on: [S-038]
 reqs: [REQ-130, REQ-130b, REQ-130c, REQ-130d, REQ-130e, REQ-130f, REQ-131]
 ---
@@ -28,7 +28,7 @@ Let the Super Admin create and remove Admin and Editor accounts (formerly called
 - [ ] AC3: The last Super Admin cannot remove their own role (`not_allowed`); any action against a Super Admin target by a non-Super-Admin is refused by the action AND by the database trigger from S-012 (both tested).
 - [ ] AC4: A `super_admin` row is written only by the service role (our script) or by a Super Admin. A request to grant `super_admin` through the action is refused.
 - [ ] AC5: `removeAuthenticator({ userId, reason })` (lockout recovery) — Super Admin removes an Admin or Editor's authenticator through the Supabase admin API; audit-logged `user.remove_mfa`; refused for a Super Admin target.
-- [ ] AC6: `listStaff()` — `requireSuperAdmin()`; returns Admin and Maintainer accounts with last sign-in and whether an authenticator is enrolled. Admins and Maintainers calling it get `not_allowed`.
+- [ ] AC6: `listStaff()` — `requireSuperAdmin()`; returns Admin and Editor accounts with last sign-in and whether an authenticator is enrolled. Admins and Editors calling it get `not_allowed`.
 - [ ] AC7: No sign-up path produces any staff role; there is no invite email and no `staff_invites` table.
 - [ ] AC8: A staff member cannot delete their own account from the profile (S-037 refuses); the Super Admin removes the role first.
 
@@ -70,26 +70,96 @@ Types added or changed in `types/` by this story:
 | AC4 cannot grant `super_admin` | unit | `__tests__/lib/admin/staff-roles.test.ts` |
 | AC5 remove authenticator; Super Admin target refused | integration | `__tests__/lib/admin/remove-authenticator.test.ts` |
 | AC6 listStaff Super Admin only | unit | `__tests__/lib/admin/list-staff.test.ts` |
-| EC2/EC3 maintainer refused; removed role refused next call | integration | `__tests__/lib/admin/staff-roles.test.ts` |
+| EC2/EC3 editor content access passes; non-content refused; removed role refused next call | integration | `__tests__/lib/admin/staff-roles.test.ts` |
 | EC4 Admin attempt refused and `permission.denied` written | integration | `__tests__/lib/admin/staff-roles.test.ts` |
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+Prior art: searched `grantRole`, `removeRole`, `listStaff`, `removeAuthenticator`, `staff_invites`, `role_permissions`, `maintainer`, `editor` across `lib/`, `supabase/`, `types/`, `docs/`. Found: `lib/auth/server.ts` has `requireSuperAdmin()` and `requireStaff()` (S-038); `lib/auth/permissions.ts` has `PERMISSION_MAP` with admin rows only; `supabase/migrations/20261028000001_schema_users_roles.sql` has CHECK constraint with `maintainer`; `supabase/migrations/20261028000002_permissions_super_admin.sql` has `custom_access_token_hook` emitting `maintainer`; `supabase/migrations/20261029000003_seed_content.sql` has 18 admin `role_permissions` rows, no editor rows. No `grantRole`/`removeRole`/`listStaff` implementation exists. This story creates them and renames `maintainer`→`editor` in all DB artefacts.
 
-Prior art: read auth design sections 9, 11, 17, 19; admin panel design sections 4.5, 8.3, 16; requirements REQ-130 to REQ-131, Q62 to Q64. Implements the `lib/admin/actions/` staff rows of auth section 17; supersedes nothing. The design has no invite email and no `staff_invites` table, so none is built.
+### Step order
+
+1. **Migration** `supabase/migrations/20261103000001_rename_maintainer_to_editor.sql`
+   - Drop and recreate CHECK constraints on `user_roles.role` and `role_permissions.role` with `'editor'` in place of `'maintainer'`
+   - Update any existing `user_roles` rows with `role = 'maintainer'` → `'editor'` (data migration)
+   - Replace `custom_access_token_hook` to emit `'editor'` instead of `'maintainer'`
+   - Seed `editor` rows in `role_permissions`: all 18 admin actions minus `users.read`, `users.suspend`, `settings.site`
+
+2. **`types/role.ts`** — `StaffRole = 'admin' | 'editor'`, `StaffListItem` shape
+
+3. **`types/auth.ts`** — update `UserRole` union: `'super_admin' | 'admin' | 'editor'`; add input/output types for the four actions
+
+4. **`lib/auth/permissions.ts`** — add `editor` array (15 rows), update comment
+
+5. **`lib/admin/actions/staff-roles.ts`** — `grantRole`, `removeRole`, `listStaff`
+
+6. **`lib/admin/actions/remove-authenticator.ts`** — `removeAuthenticator`
+
+7. **`lib/admin/actions/index.ts`** — re-export all four
+
+### Files touched (backend only)
+- `supabase/migrations/20261103000001_rename_maintainer_to_editor.sql` (new)
+- `types/role.ts` (new content replaces stub)
+- `types/auth.ts` (update `UserRole` union, add action types)
+- `lib/auth/permissions.ts` (add editor rows)
+- `lib/admin/actions/staff-roles.ts` (new)
+- `lib/admin/actions/remove-authenticator.ts` (new)
+- `lib/admin/actions/index.ts` (re-export)
+- `__tests__/lib/admin/staff-roles.test.ts` (new)
+- `__tests__/lib/admin/remove-authenticator.test.ts` (new)
+- `__tests__/lib/admin/list-staff.test.ts` (new)
+- `supabase/tests/super-admin-protection.test.ts` (new)
+
+### Editor permission rows (seeded in migration)
+All 18 admin rows **minus**: `users.read`, `users.suspend`, `settings.site` → 15 rows.
+`staff.*` and `audit.read` remain Super Admin only (no row for any role).
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  64 passed | 9 skipped (73)
+      Tests  753 passed | 27 skipped (780)
+   Duration  35.35s
+
+✓ Vitest (unit) passed
+
+── pgTAP / Types ──
+⚠ Supabase not running — skipping (run supabase start first)
+
+── Public pages session check ──
+✓ passed (18 files checked)
+
+── Dev seed guard ──
+✓ passed
+
+════════════════════════════════
+  check.sh: 5 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
 ```
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `lib/admin/actions/staff-roles.ts:107` — `removeRole` calls `requireStepUp` before checking `existing.role === "super_admin"`. TOTP window consumed on Super Admin target. Fix: fetch role → check super_admin → step-up. (full-review 2026-11-03)
+- **P1** `lib/admin/actions/staff-roles.ts:180` — `listStaff` unchecked destructuring of `data.user` from `getUserById`; `data` can be `null` on error, causing `TypeError` in `Promise.all`. Add error guard before destructuring. (full-review 2026-11-03)
+- **P1** `lib/auth/server.ts:199` — dynamic `import("@/lib/audit")` inside `requireSuperAdmin` on every non-SA rejection. Move to static import at file top. (full-review 2026-11-03)
+- **P1** `__tests__/lib/admin/list-staff.test.ts:90` — assertion creates a fresh mock chain instead of inspecting the call made during `listStaff()`; always passes. Fix to assert on captured mock reference. (full-review 2026-11-03)
+- **P1** `__tests__/lib/admin/staff-roles.test.ts` — EC4 `permission.denied` audit row not tested; `writeDenied` mocked away via `vi.mock("@/lib/auth/server")`. Add test asserting `writeDenied` is called when non-SA attempts an action. (full-review 2026-11-03)
+- **P1** `supabase/tests/super-admin-protection.test.ts` — all four pgTAP tests skip in CI (no live stack). DB-trigger half of AC3 has zero actual coverage. (full-review 2026-11-03)
+- **P1** `supabase/tests/permissions.test.sql:488` — `pass()` description still says `'AC6: maintainer hook returns user_role=maintainer'` after rename to editor. Misleads future readers of test output. Fix: `'AC6: editor hook returns user_role=editor'`. (full-review 2026-11-03 re-review 6)
+- **P1** `supabase/tests/zz-schema-verification.test.sql:511,519,529,537` — `ok(COUNT(*) >= 0)` is tautologically true; passes even if RLS blocks all rows. For `document_files`, `bank_transfer_slips`, `download_requests` (fixture inserts known rows), change to `ok(COUNT(*) > 0)`. `coupons` depends on seed.dev.sql — keep `>= 0`. (full-review 2026-11-03 re-review 6) **FIXED** f01da4d
+- **P0** `supabase/migrations/20261103000001_rename_maintainer_to_editor.sql:7` — UPDATE ran before old CHECK constraint was dropped; 'editor' rejected on any env with existing 'maintainer' rows. Fixed: drop constraints first, then UPDATE. (abevicrama review 2026-11-03) **FIXED** 6e18ce6
+- **P0** `lib/admin/actions/staff-roles.ts:50` — nested destructure `data: { user }` in grantRole crashes with TypeError when Supabase returns `data:null`. Fixed: defensive `targetData?.user ?? null`. (abevicrama review 2026-11-03) **FIXED** 6e18ce6
+- **P1** `lib/auth/server.ts:202` — `writeDenied .catch(() => undefined)` silently swallowed audit failures. Fixed: logs error with console.error. (abevicrama review 2026-11-03) **FIXED** 6e18ce6
 
 ## After this merges, a user can:
 
@@ -99,4 +169,4 @@ $ bash scripts/check.sh
 
 - The staff screen (S-046) and MFA pages (S-044).
 - Owner / second-member alert emails on role changes (S-100).
-- Maintainer access to anything (until Q62/Q63).
+- Editor access to User Roles and Settings pages (by design; Q62/Q63 confirmed).

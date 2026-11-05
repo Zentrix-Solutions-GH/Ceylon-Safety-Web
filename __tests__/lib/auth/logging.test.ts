@@ -4,6 +4,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Intercepts console.* and verifies that passwords, tokens, codes and full
 // email addresses never appear in log output during sign-up or verify flows.
 
+vi.mock("@/lib/resend/client", () => ({
+  sendWelcomeEmail: vi.fn().mockResolvedValue(undefined),
+}));
+
 const mockCheckRateLimit = vi.fn();
 vi.mock("@/lib/ratelimit", () => ({
   checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
