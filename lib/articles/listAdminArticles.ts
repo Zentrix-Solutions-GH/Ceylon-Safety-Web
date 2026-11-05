@@ -49,6 +49,9 @@ export async function listAdminArticles(
   }
 
   if (title) {
+    if (title.length > 200) {
+      return { ok: false, code: "unknown" };
+    }
     query = query.ilike("title", `%${title}%`);
   }
 

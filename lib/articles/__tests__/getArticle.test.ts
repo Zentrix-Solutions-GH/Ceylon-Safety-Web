@@ -8,6 +8,7 @@ vi.mock("@/lib/config", () => ({
   publicConfig: { supabaseUrl: "https://test.supabase.co", supabaseAnonKey: "anon" },
 }));
 vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseAnonClient: vi.fn(),
   createSupabaseServiceRoleClient: vi.fn(),
 }));
 vi.mock("next/cache", () => ({
@@ -19,7 +20,7 @@ vi.mock("next/cache", () => ({
   cacheLife: vi.fn(),
 }));
 
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { getArticle, ARTICLE_LIST_CACHE_TAG, articleCacheTag, articleSlugCacheTag } from "@/lib/articles/getArticle";
 import { SCHEMA_VERSION } from "@/lib/content/schema";
 
@@ -41,6 +42,8 @@ function makeChain(row: unknown | null, videoRows: unknown[] = []) {
       table === "videos" ? videoChain : articleChain
     ),
   };
+  // getArticle uses anon client; resolveRefs uses service-role — both point to the same mock
+  (createSupabaseAnonClient as ReturnType<typeof vi.fn>).mockReturnValue(supabase);
   (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(supabase);
   return supabase;
 }

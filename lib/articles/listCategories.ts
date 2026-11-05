@@ -1,9 +1,10 @@
 import "server-only";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import type { Category } from "@/types/article";
 
 export async function listCategories(): Promise<Category[]> {
-  const supabase = createSupabaseServiceRoleClient();
+  // Anon client: categories_public_read RLS policy allows all anon reads.
+  const supabase = createSupabaseAnonClient();
   const { data, error } = await supabase
     .from("categories")
     .select("id, name, slug")

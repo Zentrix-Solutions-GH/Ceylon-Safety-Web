@@ -1,12 +1,7 @@
 import "server-only";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import type {
-  GetArticleResponse,
-  PublicArticle,
-  ResolvedVideoNode,
-  ResolvedDocumentNode,
-  RefTargetStatus,
-} from "@/types/article";
+import { createSupabaseAnonClient } from "@/lib/supabase/server";
+import { resolveArticleRefs } from "@/lib/articles/resolveRefs";
+import type { GetArticleResponse, PublicArticle } from "@/types/article";
 
 // Cache tag names exported for the frontend page layer.
 export const ARTICLE_LIST_CACHE_TAG = "articles-list";
@@ -14,7 +9,8 @@ export const articleCacheTag = (id: string) => `article:${id}`;
 export const articleSlugCacheTag = (slug: string) => `article-slug:${slug}`;
 
 export async function getArticle(slug: string): Promise<GetArticleResponse> {
-  const supabase = createSupabaseServiceRoleClient();
+  // Anon client: RLS policy articles_public_read enforces visibility at DB level.
+  const supabase = createSupabaseAnonClient();
   const now = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -23,7 +19,7 @@ export async function getArticle(slug: string): Promise<GetArticleResponse> {
       `id, slug, title, excerpt, cover_image_key, cover_image_alt,
        seo_title, seo_description, published_at, like_count, comment_count, body,
        categories!inner(id, name, slug),
-       authors!inner(name),
+       authors(name),
        article_refs(ref_type, ref_id, node_id, phrase)`
     )
     .eq("slug", slug)
@@ -43,42 +39,7 @@ export async function getArticle(slug: string): Promise<GetArticleResponse> {
     phrase: string | null;
   }>;
 
-  // Resolve video statuses via separate lookup (EC4)
-  const videoRefIds = rawRefs
-    .filter((r) => r.ref_type === "video")
-    .map((r) => r.ref_id);
-  const videoStatusMap = new Map<string, string>();
-  if (videoRefIds.length > 0) {
-    const { data: videos } = await supabase
-      .from("videos")
-      .select("id, status")
-      .in("id", videoRefIds);
-    if (videos) {
-      for (const v of videos as Array<{ id: string; status: string }>) {
-        videoStatusMap.set(v.id, v.status);
-      }
-    }
-  }
-
-  const resolvedVideos: ResolvedVideoNode[] = rawRefs
-    .filter((r) => r.ref_type === "video")
-    .map((r) => {
-      const videoStatus = videoStatusMap.get(r.ref_id);
-      const status: RefTargetStatus =
-        videoStatus === "published"
-          ? "published"
-          : videoStatus === "hidden"
-          ? "hidden"
-          : videoStatus === "deleted"
-          ? "deleted"
-          : "not_found";
-      return { nodeId: r.node_id, videoId: r.ref_id, status };
-    });
-
-  // Documents: always "not_shown" until S-071
-  const resolvedDocuments: ResolvedDocumentNode[] = rawRefs
-    .filter((r) => r.ref_type === "document")
-    .map((r) => ({ nodeId: r.node_id, documentId: r.ref_id, status: "not_shown" as const }));
+  const { resolvedVideos, resolvedDocuments } = await resolveArticleRefs(rawRefs);
 
   const article: PublicArticle = {
     id: data.id as string,
@@ -90,7 +51,7 @@ export async function getArticle(slug: string): Promise<GetArticleResponse> {
     seoTitle: (data.seo_title as string | null) ?? null,
     seoDescription: (data.seo_description as string | null) ?? null,
     category: data.categories as unknown as { id: string; name: string; slug: string },
-    authorName: (data.authors as unknown as { name: string }).name,
+    authorName: (data.authors as unknown as { name: string } | null)?.name ?? "",
     publishedAt: data.published_at as string,
     body: data.body as unknown as PublicArticle["body"],
     likeCount: (data.like_count as number) ?? 0,

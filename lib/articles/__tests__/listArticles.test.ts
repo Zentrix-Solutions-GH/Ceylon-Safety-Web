@@ -8,7 +8,7 @@ vi.mock("@/lib/config", () => ({
   publicConfig: { supabaseUrl: "https://test.supabase.co", supabaseAnonKey: "anon" },
 }));
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServiceRoleClient: vi.fn(),
+  createSupabaseAnonClient: vi.fn(),
 }));
 vi.mock("next/cache", () => ({
   unstable_cache: (fn: unknown) => fn,
@@ -19,7 +19,7 @@ vi.mock("next/cache", () => ({
   cacheLife: vi.fn(),
 }));
 
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import { listArticles } from "@/lib/articles/listArticles";
 
 const CAT = { id: "cat-1", name: "Fire Safety", slug: "fire-safety" };
@@ -41,7 +41,7 @@ function makeRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function makeSupabase(rows: unknown[], error?: { message: string }) {
+function makeSupabase(rows: unknown[], error?: { message: string; code?: string }) {
   const chain = {
     from: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
@@ -52,9 +52,9 @@ function makeSupabase(rows: unknown[], error?: { message: string }) {
     or: vi.fn().mockReturnThis(),
     lt: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockResolvedValue({ data: rows, error: error ?? null }),
+    limit: vi.fn().mockResolvedValue({ data: error ? null : rows, error: error ?? null }),
   };
-  (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+  (createSupabaseAnonClient as ReturnType<typeof vi.fn>).mockReturnValue(chain);
   return chain;
 }
 
@@ -164,6 +164,21 @@ describe("listArticles — EC6 Colombo calendar", () => {
     expect(cutoff).toMatch(/T18:30:00\.000Z$/);
   });
 
+  it("month cutoff date is exactly correct for a known Colombo time", async () => {
+    // Fix the clock to 2026-11-05T10:00:00Z (= 15:30 Colombo on 2026-11-05)
+    // Colombo midnight 30 days ago = 2026-10-06T00:00:00+05:30 = 2026-10-05T18:30:00Z
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-05T10:00:00.000Z"));
+    try {
+      const sb = makeSupabase([]);
+      await listArticles({ range: "month" });
+      const [, cutoff] = sb.gte.mock.calls[0] as [string, string];
+      expect(cutoff).toBe("2026-10-05T18:30:00.000Z");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("week cutoff date is exactly correct for a known Colombo time", async () => {
     // Fix the clock to 2026-11-05T10:00:00Z (= 15:30 Colombo on 2026-11-05)
     // Colombo midnight 7 days ago = 2026-10-29T00:00:00+05:30 = 2026-10-28T18:30:00Z
@@ -200,6 +215,18 @@ describe("listArticles — AC2 ArticleCard fields", () => {
     expect(card.publishedAt).toBe("2026-10-01T08:00:00+05:30");
     expect(card.likeCount).toBe(5);
     expect(card.commentCount).toBe(2);
+  });
+});
+
+// ─── DB error path ────────────────────────────────────────────────────────────
+
+describe("listArticles — DB error", () => {
+  it("returns ok:false code:unknown on DB error", async () => {
+    makeSupabase([], { message: "connection error", code: "PGRST" });
+    const result = await listArticles({});
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("unknown");
   });
 });
 

@@ -116,6 +116,23 @@ describe("getArticlePreview — AC6", () => {
   });
 });
 
+// ─── EC8b: preview returns soft-deleted article (no deleted_at filter) ───────
+
+describe("getArticlePreview — soft-deleted article", () => {
+  it("returns soft-deleted article for staff (no deleted_at filter)", async () => {
+    (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF_USER });
+    const deletedRow = {
+      ...DRAFT_ROW,
+      deleted_at: "2026-10-01T08:00:00Z",
+      status: "published",
+    };
+    makeChain(deletedRow);
+    const result = await getArticlePreview("art-1");
+    // Staff can still preview soft-deleted articles
+    expect(result.ok).toBe(true);
+  });
+});
+
 // ─── EC8: preview returns pending image flag ──────────────────────────────────
 
 describe("getArticlePreview — EC8", () => {

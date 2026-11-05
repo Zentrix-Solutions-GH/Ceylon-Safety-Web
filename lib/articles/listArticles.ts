@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import type {
   ArticleCard,
   ArticleListInput,
@@ -52,7 +52,8 @@ export async function listArticles(input: ArticleListInput): Promise<ArticleList
     }
   }
 
-  const supabase = createSupabaseServiceRoleClient();
+  // Anon client: RLS policy articles_public_read enforces visibility at DB level.
+  const supabase = createSupabaseAnonClient();
   const now = new Date().toISOString();
 
   let query = supabase
@@ -61,7 +62,7 @@ export async function listArticles(input: ArticleListInput): Promise<ArticleList
       `id, slug, title, excerpt,
        cover_image_key, cover_image_alt, published_at, like_count, comment_count,
        categories!inner(id, name, slug),
-       authors!inner(name)`,
+       authors(name)`,
       { count: undefined }
     )
     .eq("status", "published")
@@ -90,12 +91,9 @@ export async function listArticles(input: ArticleListInput): Promise<ArticleList
     .order("id", { ascending: true })
     .limit(PAGE_SIZE + 1);
 
-  if (error) {
-    console.error("[listArticles] db error:", error.code ?? "unknown");
-    return { ok: true, data: { items: [], next: null } };
-  }
-  if (!data) {
-    return { ok: true, data: { items: [], next: null } };
+  if (error || !data) {
+    console.error("[listArticles] db error:", error?.code ?? "unknown");
+    return { ok: false, code: "unknown" };
   }
 
   const hasMore = data.length > PAGE_SIZE;
@@ -109,7 +107,7 @@ export async function listArticles(input: ArticleListInput): Promise<ArticleList
     coverImageKey: (r.cover_image_key as string | null) ?? null,
     coverImageAlt: (r.cover_image_alt as string | null) ?? null,
     category: r.categories as unknown as { id: string; name: string; slug: string },
-    authorName: (r.authors as unknown as { name: string }).name,
+    authorName: (r.authors as unknown as { name: string } | null)?.name ?? "",
     publishedAt: r.published_at as string,
     likeCount: (r.like_count as number) ?? 0,
     commentCount: (r.comment_count as number) ?? 0,

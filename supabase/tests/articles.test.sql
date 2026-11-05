@@ -6,7 +6,7 @@
 --   article_refs table: 4, RLS article_refs: 8
 
 BEGIN;
-SELECT plan(32);
+SELECT plan(35);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Fixtures (postgres/service role; all rolled back after the test)
@@ -277,6 +277,56 @@ SELECT results_eq(
     ) SELECT COUNT(*)::int FROM del$$,
   ARRAY[0],
   'S-048 RLS: staff cannot delete article_refs directly (service_role only)'
+);
+
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- S-049: RLS visibility — hidden, soft-deleted, future published_at — 3 assertions
+-- ─────────────────────────────────────────────────────────────────────────────
+
+RESET ROLE;
+
+DO $$
+DECLARE
+  v_author uuid := '48111111-0000-0000-0000-000000000010'::uuid;
+  v_cat    uuid := '48111111-0000-0000-0000-000000000011'::uuid;
+BEGIN
+  INSERT INTO public.articles (id, locale, slug, title, body, body_version, status, published_at, deleted_at, author_id, category_id)
+    VALUES
+      -- hidden: status=hidden, no deleted_at
+      ('49aaaaaa-0000-4000-8000-000000000001'::uuid, 'en', 'hidden-049', 'Hidden 049',
+       '{"schema_version":1,"type":"doc","content":[]}'::jsonb, 1, 'hidden', now(), NULL, v_author, v_cat),
+      -- soft-deleted: published but deleted_at set
+      ('49aaaaaa-0000-4000-8000-000000000002'::uuid, 'en', 'deleted-049', 'Deleted 049',
+       '{"schema_version":1,"type":"doc","content":[]}'::jsonb, 1, 'published', now(), now(), v_author, v_cat),
+      -- future: published but published_at in the future
+      ('49aaaaaa-0000-4000-8000-000000000003'::uuid, 'en', 'future-049', 'Future 049',
+       '{"schema_version":1,"type":"doc","content":[]}'::jsonb, 1, 'published', now() + interval '1 day', NULL, v_author, v_cat);
+END;
+$$;
+
+SET LOCAL ROLE anon;
+
+SELECT results_eq(
+  $$SELECT COUNT(*)::int FROM public.articles
+    WHERE id = '49aaaaaa-0000-4000-8000-000000000001'$$,
+  ARRAY[0],
+  'S-049 RLS: anon cannot read hidden article'
+);
+
+SELECT results_eq(
+  $$SELECT COUNT(*)::int FROM public.articles
+    WHERE id = '49aaaaaa-0000-4000-8000-000000000002'$$,
+  ARRAY[0],
+  'S-049 RLS: anon cannot read soft-deleted article'
+);
+
+SELECT results_eq(
+  $$SELECT COUNT(*)::int FROM public.articles
+    WHERE id = '49aaaaaa-0000-4000-8000-000000000003'$$,
+  ARRAY[0],
+  'S-049 RLS: anon cannot read future-published article'
 );
 
 RESET ROLE;

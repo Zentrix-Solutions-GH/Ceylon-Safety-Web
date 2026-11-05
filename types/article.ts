@@ -185,7 +185,8 @@ export type ArticleListInput = {
 
 export type ArticleListResponse =
   | { ok: true; data: ArticleListResult }
-  | { ok: false; code: "validation_failed"; reason: string };
+  | { ok: false; code: "validation_failed"; reason: string }
+  | { ok: false; code: "unknown" };
 
 /** Resolved node status for editor dead-card warnings. */
 export type RefTargetStatus = "published" | "hidden" | "deleted" | "not_found";

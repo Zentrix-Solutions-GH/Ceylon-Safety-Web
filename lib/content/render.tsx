@@ -22,7 +22,13 @@ import type {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const OUR_HOST = new URL(publicConfig.appUrl).hostname;
+// If NEXT_PUBLIC_APP_URL is malformed, treat all links as outbound (safe fallback).
+let OUR_HOST = "";
+try {
+  OUR_HOST = new URL(publicConfig.appUrl).hostname;
+} catch {
+  // malformed env — all links treated as outbound
+}
 
 function isOutbound(href: string): boolean {
   try {

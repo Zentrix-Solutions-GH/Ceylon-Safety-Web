@@ -2,13 +2,11 @@ import "server-only";
 import { unstable_noStore } from "next/cache";
 import { requireStaff } from "@/lib/auth/server";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { resolveArticleRefs } from "@/lib/articles/resolveRefs";
 import type {
   GetArticlePreviewResponse,
   ArticlePreviewData,
   ArticleStatus,
-  ResolvedVideoNode,
-  ResolvedDocumentNode,
-  RefTargetStatus,
 } from "@/types/article";
 
 export async function getArticlePreview(id: string): Promise<GetArticlePreviewResponse> {
@@ -47,43 +45,14 @@ export async function getArticlePreview(id: string): Promise<GetArticlePreviewRe
     coverImageStatus = (asset?.status as string | null) ?? null;
   }
 
-  const refs = (data.article_refs ?? []) as Array<{
+  const rawRefs = (data.article_refs ?? []) as Array<{
     ref_type: string;
     ref_id: string;
     node_id: string;
     phrase: string | null;
   }>;
 
-  // Resolve video statuses via separate lookup (same as getArticle — EC4)
-  const videoRefIds = refs.filter((r) => r.ref_type === "video").map((r) => r.ref_id);
-  const videoStatusMap = new Map<string, string>();
-  if (videoRefIds.length > 0) {
-    const { data: videos } = await supabase
-      .from("videos")
-      .select("id, status")
-      .in("id", videoRefIds);
-    if (videos) {
-      for (const v of videos as Array<{ id: string; status: string }>) {
-        videoStatusMap.set(v.id, v.status);
-      }
-    }
-  }
-
-  const resolvedVideos: ResolvedVideoNode[] = refs
-    .filter((r) => r.ref_type === "video")
-    .map((r) => {
-      const videoStatus = videoStatusMap.get(r.ref_id);
-      const status: RefTargetStatus =
-        videoStatus === "published" ? "published"
-        : videoStatus === "hidden" ? "hidden"
-        : videoStatus === "deleted" ? "deleted"
-        : "not_found";
-      return { nodeId: r.node_id, videoId: r.ref_id, status };
-    });
-
-  const resolvedDocuments: ResolvedDocumentNode[] = refs
-    .filter((r) => r.ref_type === "document")
-    .map((r) => ({ nodeId: r.node_id, documentId: r.ref_id, status: "not_shown" as const }));
+  const { resolvedVideos, resolvedDocuments } = await resolveArticleRefs(rawRefs);
 
   const article = {
     id: data.id as string,

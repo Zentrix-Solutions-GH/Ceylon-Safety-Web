@@ -8,10 +8,10 @@ vi.mock("@/lib/config", () => ({
   publicConfig: { supabaseUrl: "https://test.supabase.co", supabaseAnonKey: "anon" },
 }));
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServiceRoleClient: vi.fn(),
+  createSupabaseAnonClient: vi.fn(),
 }));
 
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import { listCategories } from "@/lib/articles/listCategories";
 
 function makeChain(rows: unknown[], error?: { message: string }) {
@@ -20,7 +20,7 @@ function makeChain(rows: unknown[], error?: { message: string }) {
     chain[m] = vi.fn().mockReturnThis();
   }
   chain.order = vi.fn().mockResolvedValue({ data: rows, error: error ?? null });
-  (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({ from: vi.fn().mockReturnValue(chain) });
+  (createSupabaseAnonClient as ReturnType<typeof vi.fn>).mockReturnValue({ from: vi.fn().mockReturnValue(chain) });
   return chain;
 }
 
@@ -57,7 +57,7 @@ describe("listCategories — AC9", () => {
   it("returns empty array when data is null", async () => {
     const chain: Record<string, unknown> = { select: vi.fn().mockReturnThis() };
     chain.order = vi.fn().mockResolvedValue({ data: null, error: null });
-    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({ from: vi.fn().mockReturnValue(chain) });
+    (createSupabaseAnonClient as ReturnType<typeof vi.fn>).mockReturnValue({ from: vi.fn().mockReturnValue(chain) });
     const result = await listCategories();
     expect(result).toEqual([]);
   });

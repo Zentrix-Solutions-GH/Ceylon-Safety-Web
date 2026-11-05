@@ -8,6 +8,7 @@ vi.mock("@/lib/config", () => ({
   publicConfig: { supabaseUrl: "https://test.supabase.co", supabaseAnonKey: "anon" },
 }));
 vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseAnonClient: vi.fn(),
   createSupabaseServiceRoleClient: vi.fn(),
 }));
 vi.mock("next/cache", () => ({
@@ -19,31 +20,38 @@ vi.mock("next/cache", () => ({
   cacheLife: vi.fn(),
 }));
 
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { getArticle } from "@/lib/articles/getArticle";
 import { listArticles } from "@/lib/articles/listArticles";
 
 function makeSlugChain(row: unknown | null, error?: { message: string }) {
   const chain: Record<string, unknown> = {};
-  const methods = ["from", "select", "eq", "is", "lte", "single", "maybeSingle"];
+  const methods = ["from", "select", "eq", "is", "lte", "single", "maybeSingle", "in"];
   for (const m of methods) {
     chain[m] = vi.fn().mockReturnThis();
   }
   (chain as Record<string, unknown>).maybeSingle = vi
     .fn()
     .mockResolvedValue({ data: row, error: error ?? null });
-  (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+  (chain as Record<string, unknown>).in = vi.fn().mockResolvedValue({ data: [], error: null });
+  const supabase = { from: vi.fn().mockReturnValue(chain) };
+  // getArticle uses anon client; resolveRefs uses service-role
+  (createSupabaseAnonClient as ReturnType<typeof vi.fn>).mockReturnValue(supabase);
+  (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(supabase);
   return chain;
 }
 
 function makeListChain(rows: unknown[]) {
   const chain: Record<string, unknown> = {};
-  const methods = ["from", "select", "eq", "is", "lte", "gte", "order", "limit", "or", "lt"];
+  const methods = ["from", "select", "eq", "is", "lte", "gte", "order", "limit", "or", "lt", "in"];
   for (const m of methods) {
     chain[m] = vi.fn().mockReturnThis();
   }
   chain.limit = vi.fn().mockResolvedValue({ data: rows, error: null });
-  (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+  chain.in = vi.fn().mockResolvedValue({ data: [], error: null });
+  const supabase = { from: vi.fn().mockReturnValue(chain) };
+  (createSupabaseAnonClient as ReturnType<typeof vi.fn>).mockReturnValue(supabase);
+  (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(supabase);
   return chain;
 }
 
