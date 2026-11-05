@@ -10,8 +10,8 @@ export const noRawColorsRule = {
   },
   create(context) {
     const HEX_COLOR = /#([0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{3})\b/;
-    const RGB_FUNC = /\brgb\s*\(\s*\d/;
-    const HSL_FUNC = /\bhsl\s*\(\s*\d/;
+    const RGB_FUNC = /\brgba?\s*\(\s*\d/;
+    const HSL_FUNC = /\bhsla?\s*\(\s*\d/;
     const ARBITRARY_COLOR = /\[#[0-9A-Fa-f]{3,8}\]/;
 
     function report(node, match) {

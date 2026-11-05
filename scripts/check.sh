@@ -104,7 +104,7 @@ else
   printf '⚠ No build output found — skipping Google Fonts check (run npm run build first)\n'
 fi
 
-# 7. Dev seed guard (EC3): verify the guard pattern exists in seed.dev.sql
+# 8. Dev seed guard (EC3): verify the guard pattern exists in seed.dev.sql
 printf '\n── Dev seed guard ──\n'
 if grep -q "current_setting('app.environment', true)" supabase/seed.dev.sql; then
   printf '✓ Dev seed guard passed\n'

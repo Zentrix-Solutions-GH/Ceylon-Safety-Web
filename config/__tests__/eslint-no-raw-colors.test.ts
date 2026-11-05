@@ -22,7 +22,9 @@ describe("no-raw-colors ESLint rule (AC3, S-022)", () => {
         { code: 'const c = "#abc"', errors: [{ messageId: "found" }] },
         { code: 'const c = "#AABBCCDD"', errors: [{ messageId: "found" }] },
         { code: 'const c = "rgb(255, 0, 0)"', errors: [{ messageId: "found" }] },
+        { code: 'const c = "rgba(255, 0, 0, 0.5)"', errors: [{ messageId: "found" }] },
         { code: 'const c = "hsl(357 95% 46%)"', errors: [{ messageId: "found" }] },
+        { code: 'const c = "hsla(357, 95%, 46%, 1)"', errors: [{ messageId: "found" }] },
         { code: 'const c = `bg-[#E30613]`', errors: [{ messageId: "found" }] },
       ],
     });

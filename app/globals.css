@@ -28,7 +28,7 @@
     --danger: 0 84% 60%;
     --danger-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: var(--danger);
     --destructive-foreground: 0 0% 100%;
 
     /* ── Surface / layout ── */
