@@ -75,6 +75,39 @@ const en = {
   // --- customer area (S-027) ---
   "customer.header_label": "Customer navigation",
 
+  // --- sign-in screen (S-042) ---
+  "auth.sign_in.heading": "Sign in to your account",
+  "auth.sign_in.email": "Email address",
+  "auth.sign_in.password": "Password",
+  "auth.sign_in.forgot_password": "Forgot password?",
+  "auth.sign_in.submit": "Sign in",
+  "auth.sign_in.submitting": "Signing in…",
+  "auth.sign_in.no_account": "Don't have an account?",
+  "auth.sign_in.sign_up_link": "Create one",
+  "auth.sign_in.or": "or",
+  "auth.sign_in.google_button": "Continue with Google",
+  "auth.sign_in.social_app_hint": "For Google sign-in, open this page in your phone’s normal browser",
+  "auth.sign_in.copy_link": "Copy link",
+  "auth.sign_in.link_copied": "Link copied!",
+
+  // --- forgot-password screen (S-042) ---
+  "auth.forgot_password.heading": "Reset your password",
+  "auth.forgot_password.email": "Email address",
+  "auth.forgot_password.submit": "Send reset code",
+  "auth.forgot_password.submitting": "Sending…",
+  "auth.forgot_password.sent": "If an account exists, we have sent a code",
+  "auth.forgot_password.sign_in_link": "Back to sign in",
+
+  // --- reset-password screen (S-042) ---
+  "auth.reset_password.heading": "Set a new password",
+  "auth.reset_password.email": "Email address",
+  "auth.reset_password.code": "Reset code",
+  "auth.reset_password.new_password": "New password",
+  "auth.reset_password.totp": "Authenticator code",
+  "auth.reset_password.submit": "Set new password",
+  "auth.reset_password.submitting": "Saving…",
+  "auth.reset_password.no_pending": "Enter your code below",
+
   // --- sign-up screen (S-041) ---
   "auth.sign_up.heading": "Create your account",
   "auth.sign_up.first_name": "First name",

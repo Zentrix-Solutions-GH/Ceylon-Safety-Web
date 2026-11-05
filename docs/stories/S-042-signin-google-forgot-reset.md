@@ -1,7 +1,7 @@
 ---
 id: S-042
 title: Sign-in, Google button, forgot/reset screens
-status: ready
+status: in-progress
 owner: frontend
 risk: normal
 branch: feature/S-042-signin-google-forgot-reset
@@ -78,6 +78,18 @@ Prior art: searched "sign-in Google forgot password reset" in docs/ — found au
 
 ```
 $ bash scripts/check.sh
+
+✓ ESLint passed
+✓ TypeScript passed
+✓ Vitest (unit) passed
+  Test Files  92 passed | 9 skipped (101)
+        Tests  1041 passed | 27 skipped (1068)
+
+════════════════════════════════
+  check.sh: 6 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
 
 ## Review notes
