@@ -23,7 +23,9 @@
     --warning: 38 92% 50%;              /* #f59e0b */
     --warning-foreground: 0 0% 10%;
 
-    --danger: 0 84% 60%;                /* alias for destructive */
+    /* danger / destructive: ~3.78:1 on white — use for backgrounds, borders and icons ONLY.
+       For red error TEXT on a white surface use brand-red-text (4.83:1) instead. */
+    --danger: 0 84% 60%;
     --danger-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
