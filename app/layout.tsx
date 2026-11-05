@@ -1,16 +1,43 @@
-﻿// AC1: root layout — html lang="en", body, skip link, toast area, cookie banner mount.
-// No ad or analytics scripts and no session read.
-// Fonts: S-022 will add @font-face and CSS custom properties to globals.css; no font
-// class is added here so S-022 lands with zero changes to this file.
+// Root layout: html, body, fonts (S-022), skip link, toast area, cookie banner mount.
 import type { ReactNode } from "react";
+import { Inter, Noto_Sans_Sinhala, Noto_Sans_Tamil } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";
 import CookieConsentBanner from "@/components/layout/CookieConsentBanner";
 import { t } from "@/messages/en";
 import "./globals.css";
 
+// Latin — preloaded; variable font covers all weights
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-sans",
+  preload: true,
+});
+
+// Sinhala — not preloaded; unicode-range restricts download to pages with Sinhala glyphs (EC3)
+const notoSinhala = Noto_Sans_Sinhala({
+  subsets: ["sinhala"],
+  weight: ["400"],
+  display: "swap",
+  variable: "--font-sinhala",
+  preload: false,
+});
+
+// Tamil — not preloaded; unicode-range restricts download to pages with Tamil glyphs (EC3)
+const notoTamil = Noto_Sans_Tamil({
+  subsets: ["tamil"],
+  weight: ["400"],
+  display: "swap",
+  variable: "--font-tamil",
+  preload: false,
+});
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      className={`${inter.variable} ${notoSinhala.variable} ${notoTamil.variable}`}
+    >
       <body>
         {/* AC1: skip link must be first in the page */}
         <a
