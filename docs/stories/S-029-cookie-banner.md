@@ -1,7 +1,7 @@
 ---
 id: S-029
 title: Cookie banner + "Cookie settings" link
-status: draft
+status: in-progress
 owner: frontend
 risk: normal
 branch: feature/S-029-cookie-banner
@@ -55,7 +55,7 @@ REQ-192 is ASSUMED and Q48 is unanswered. The banner can only be accepted by the
 
 ## Assumptions accepted
 
-- (none accepted yet) The owner must accept REQ-192 as ASSUMED and the text above (trainer 3.7 gives it as written). Mark `ready` only after Q48 is answered or the owner accepts the assumption.
+- REQ-192 accepted as ASSUMED (2026-11-05): Banner text is "We use cookies for ads and visitor counts. Essential cookies are always on. Read our Privacy Policy." with a link to `/privacy`. Owner accepted via chat. Q48 answered per S-028 notes (2026-10-29): no objection to consent banner.
 
 ## Test plan
 
@@ -69,8 +69,23 @@ REQ-192 is ASSUMED and Q48 is unanswered. The banner can only be accepted by the
 
 ## Plan
 
-Prior art: designer pass 2026-10-25 read trainer/public pages 3.7, frontend architecture 10 and 13.3, content design 25. Extends them. `/story-run` re-runs `grep -ril "cookie" docs/`.
-<!-- Rest filled by /story-run at Step 3. -->
+Prior art: `grep -ril "cookie" docs/` — S-028 (consent store, merged), frontend architecture 10 & 13.3 (banner rules, React context), trainer/public pages 3.7 (banner table), content design 25 (before/after accept/reject), S-026-footer.md (Footer story, draft — adding one link). This story extends S-028; Footer addition is scoped to one link.
+
+### Files created/edited
+1. `messages/en.ts` — added `cookie.*` keys (banner text, button labels, footer link, aria label)
+2. `components/layout/CookieConsentBanner.tsx` — replaced stub with full client component
+3. `components/layout/Footer.tsx` — replaced stub with minimal footer containing Cookie settings button
+4. `app/layout.tsx` — moved `<CookieConsentBanner />` before `{children}` (AC4: DOM order near top)
+5. `components/layout/__tests__/CookieConsentBanner.test.tsx` — 20 component tests (AC1–AC7, EC1, EC3)
+6. `components/layout/__tests__/Footer.cookie.test.tsx` — 3 footer cookie settings tests (AC6)
+
+### Architecture decisions
+- State: `useState(false)` init via `useEffect(() => { if (getConsent() === 'undecided') setVisible(true) }, [])` — no SSR flash (EC3)
+- Footer-to-banner communication: `window.dispatchEvent(new CustomEvent('open-cookie-banner', { detail: { trigger } }))` — avoids crossing React tree boundary
+- Focus management: store `triggerRef` from event detail; on close → focus trigger (if set) or `#main-content`
+- Scroll padding + body bottom padding: `useEffect` keyed on `visible` sets `document.body.style.paddingBottom` / `document.documentElement.style.scrollPaddingBottom` (AC7)
+- Both buttons use identical `className` string for equal appearance (AC3)
+- WhatsApp layering (AC8): banner uses `z-[100]`; WhatsApp button (future) will use `z-[90]`
 
 ## Evidence
 
