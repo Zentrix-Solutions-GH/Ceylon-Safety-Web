@@ -473,6 +473,83 @@ describe("saveArticle — AC1 locale and seo fields propagated", () => {
   });
 });
 
+describe("saveArticle — AC6 reserved slug rejected", () => {
+  it("returns validation_failed when slug is a reserved word (e.g. 'admin')", async () => {
+    mockStaff(true);
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeSupabaseMock({ selectData: null, upsertData: { id: ARTICLE_ID, body_version: 1, slug: "admin" } }) as never
+    );
+    const result = await saveArticle(validInput({ slug: "admin" }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("validation_failed");
+    expect((result as { ok: false; reason?: string }).reason).toMatch(/reserved/);
+  });
+
+  it("returns validation_failed when slug is 'api'", async () => {
+    mockStaff(true);
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeSupabaseMock({ selectData: null, upsertData: { id: ARTICLE_ID, body_version: 1, slug: "api" } }) as never
+    );
+    const result = await saveArticle(validInput({ slug: "api" }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("validation_failed");
+    expect((result as { ok: false; reason?: string }).reason).toMatch(/reserved/);
+  });
+});
+
+describe("saveArticle — AC10 purge on author/category change", () => {
+  it("calls purgeArticle when authorId changes on a published article", async () => {
+    mockStaff(true);
+    const NEW_AUTHOR_ID = "cc000001-0000-4000-8000-000000000099";
+    // existing article has original author; new call uses a different authorId
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeSupabaseMock({
+        selectData: { id: ARTICLE_ID, body_version: 2, status: "published", slug: "fire-safety-tips", author_id: AUTHOR_ID, category_id: CATEGORY_ID },
+        upsertData: { id: ARTICLE_ID, body_version: 3, slug: "fire-safety-tips" },
+      }) as never
+    );
+    vi.mocked(purgeArticle).mockResolvedValue({ ok: true });
+    await saveArticle(validInput({ articleId: ARTICLE_ID, bodyVersion: 2, authorId: NEW_AUTHOR_ID }));
+    expect(vi.mocked(purgeArticle)).toHaveBeenCalledWith(
+      ARTICLE_ID,
+      "author_change",
+      STAFF_USER.id
+    );
+  });
+
+  it("calls purgeArticle when categoryId changes on a published article", async () => {
+    mockStaff(true);
+    const NEW_CATEGORY_ID = "dd000001-0000-4000-8000-000000000099";
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeSupabaseMock({
+        selectData: { id: ARTICLE_ID, body_version: 2, status: "published", slug: "fire-safety-tips", author_id: AUTHOR_ID, category_id: CATEGORY_ID },
+        upsertData: { id: ARTICLE_ID, body_version: 3, slug: "fire-safety-tips" },
+      }) as never
+    );
+    vi.mocked(purgeArticle).mockResolvedValue({ ok: true });
+    await saveArticle(validInput({ articleId: ARTICLE_ID, bodyVersion: 2, categoryId: NEW_CATEGORY_ID }));
+    expect(vi.mocked(purgeArticle)).toHaveBeenCalledWith(
+      ARTICLE_ID,
+      "category_change",
+      STAFF_USER.id
+    );
+  });
+
+  it("does not call purgeArticle on author change for a draft article", async () => {
+    mockStaff(true);
+    const NEW_AUTHOR_ID = "cc000001-0000-4000-8000-000000000099";
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeSupabaseMock({
+        selectData: { id: ARTICLE_ID, body_version: 2, status: "draft", slug: "fire-safety-tips", author_id: AUTHOR_ID, category_id: CATEGORY_ID },
+        upsertData: { id: ARTICLE_ID, body_version: 3, slug: "fire-safety-tips" },
+      }) as never
+    );
+    vi.mocked(purgeArticle).mockResolvedValue({ ok: true });
+    await saveArticle(validInput({ articleId: ARTICLE_ID, bodyVersion: 2, authorId: NEW_AUTHOR_ID }));
+    expect(vi.mocked(purgeArticle)).not.toHaveBeenCalled();
+  });
+});
+
 describe("saveArticle — AC6 slug locked after first publish", () => {
   it("returns validation_failed when caller tries to change slug of a published article", async () => {
     mockStaff(true);

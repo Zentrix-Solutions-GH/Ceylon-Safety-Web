@@ -247,6 +247,20 @@ describe("setArticleStatus — hide and delete", () => {
     expect(vi.mocked(purgeArticle)).toHaveBeenCalled();
   });
 
+  it("EC7: hide then publish — hidden article becomes published", async () => {
+    mockStaff(true);
+    const publishedAt = new Date().toISOString();
+    // Article is currently hidden (status=hidden, published_at set from prior publish)
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeSupabaseMock(makeArticle({ status: "hidden", published_at: publishedAt })) as never
+    );
+    const result = await setArticleStatus({ articleId: ARTICLE_ID, action: "publish", publishedAt });
+    expect(result.ok).toBe(true);
+    expect(vi.mocked(writeAuditRow)).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "article.publish" })
+    );
+  });
+
   it("EC8: delete sets deleted_at on the article row", async () => {
     mockStaff(true);
     const article = makeArticle({ status: "published" });
