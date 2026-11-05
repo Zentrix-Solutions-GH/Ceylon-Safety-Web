@@ -93,7 +93,7 @@ export default function GlobalError({
             textAlign: "center",
           }}
         >
-          &copy; {t("site.copyright")}
+          &copy; {new Date().getFullYear()} {t("site.copyright")}
         </footer>
       </body>
     </html>

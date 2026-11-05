@@ -31,8 +31,23 @@ jobs:
         with:
           script: |
             if (context.eventName === 'workflow_dispatch') return false; // skip docs-only check; require review
-            if (!context.payload.pull_request) return false; // issue_comment events handled by step 2
-            const branch = context.payload.pull_request.head.ref;
+            // For issue_comment events, load the PR from the issue number so the docs-only
+            // check runs correctly (without this, the null guard below bypasses the check).
+            let pr = context.payload.pull_request;
+            if (!pr && context.payload.issue) {
+              try {
+                const { data } = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.payload.issue.number,
+                });
+                pr = data;
+              } catch (_) {
+                return false; // not a PR comment — require review
+              }
+            }
+            if (!pr) return false;
+            const branch = pr.head.ref;
             // Only story branches (feature/S-NNN-*) require external review.
             // Infrastructure, CI, chore, and docs branches are self-mergeable.
             const isStoryBranch = /^feature\/S-\d+/i.test(branch);
@@ -43,7 +58,7 @@ jobs:
             const { data: files } = await github.rest.pulls.listFiles({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
+              pull_number: pr.number,
               per_page: 100,
             });
             const allDocs = files.length > 0 && files.every(f =>
