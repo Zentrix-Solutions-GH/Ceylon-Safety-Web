@@ -183,9 +183,10 @@ SELECT lives_ok(
   'S-048 RLS: staff can insert draft article'
 );
 
--- Count checked after insert so fixture article + published + staff draft = 3.
+-- Count only the 3 articles belonging to this test (seed.dev.sql may add more).
 SELECT results_eq(
-  $$SELECT COUNT(*)::int FROM public.articles$$,
+  $$SELECT COUNT(*)::int FROM public.articles
+    WHERE slug IN ('draft-article-048','published-article-048','staff-draft-048')$$,
   ARRAY[3],
   'S-048 RLS: staff can read all articles'
 );
@@ -209,11 +210,12 @@ INSERT INTO public.article_refs (article_id, node_id, ref_type, ref_id)
 
 SET LOCAL ROLE anon;
 
+-- article_refs has no public SELECT policy; anon cannot read refs at all.
 SELECT results_eq(
   $$SELECT COUNT(*)::int FROM public.article_refs
     WHERE article_id = '48aaaaaa-0000-4000-8000-000000000002'$$,
-  ARRAY[1],
-  'S-048 RLS: anon can read refs for published article'
+  ARRAY[0],
+  'S-048 RLS: anon cannot read article_refs (no public read policy)'
 );
 
 SELECT results_eq(
@@ -230,9 +232,13 @@ SELECT throws_ok(
   'S-048 RLS: anon cannot insert article_refs'
 );
 
-SELECT throws_ok(
-  $$DELETE FROM public.article_refs WHERE article_id = '48aaaaaa-0000-4000-8000-000000000002'$$,
-  NULL, NULL,
+-- RLS blocks DELETE by returning 0 rows (no exception), same as blocked UPDATE.
+SELECT results_eq(
+  $$WITH del AS (
+      DELETE FROM public.article_refs WHERE article_id = '48aaaaaa-0000-4000-8000-000000000002'
+      RETURNING id
+    ) SELECT COUNT(*)::int FROM del$$,
+  ARRAY[0],
   'S-048 RLS: anon cannot delete article_refs'
 );
 
@@ -263,9 +269,13 @@ SELECT throws_ok(
   'S-048 RLS: staff cannot insert article_refs directly (service_role only)'
 );
 
-SELECT throws_ok(
-  $$DELETE FROM public.article_refs WHERE node_id = 'node-1'$$,
-  NULL, NULL,
+-- RLS blocks DELETE by returning 0 rows (no exception), same as blocked UPDATE.
+SELECT results_eq(
+  $$WITH del AS (
+      DELETE FROM public.article_refs WHERE node_id = 'node-1'
+      RETURNING id
+    ) SELECT COUNT(*)::int FROM del$$,
+  ARRAY[0],
   'S-048 RLS: staff cannot delete article_refs directly (service_role only)'
 );
 
