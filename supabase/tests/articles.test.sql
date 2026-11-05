@@ -91,9 +91,14 @@ SELECT throws_ok(
   'S-048 RLS: anon cannot insert articles'
 );
 
-SELECT throws_ok(
-  $$UPDATE public.articles SET title = 'Hacked' WHERE id = '48aaaaaa-0000-4000-8000-000000000002'$$,
-  NULL, NULL,
+-- RLS blocks UPDATE by returning 0 rows (no exception); verify via row count unchanged.
+SELECT results_eq(
+  $$WITH upd AS (
+      UPDATE public.articles SET title = 'Hacked'
+        WHERE id = '48aaaaaa-0000-4000-8000-000000000002'
+      RETURNING id
+    ) SELECT COUNT(*)::int FROM upd$$,
+  ARRAY[0],
   'S-048 RLS: anon cannot update articles'
 );
 
@@ -129,9 +134,14 @@ SELECT throws_ok(
   'S-048 RLS: customer cannot insert articles'
 );
 
-SELECT throws_ok(
-  $$UPDATE public.articles SET title = 'Hacked by Cust' WHERE id = '48aaaaaa-0000-4000-8000-000000000002'$$,
-  NULL, NULL,
+-- RLS blocks UPDATE by returning 0 rows (no exception); verify via row count unchanged.
+SELECT results_eq(
+  $$WITH upd AS (
+      UPDATE public.articles SET title = 'Hacked by Cust'
+        WHERE id = '48aaaaaa-0000-4000-8000-000000000002'
+      RETURNING id
+    ) SELECT COUNT(*)::int FROM upd$$,
+  ARRAY[0],
   'S-048 RLS: customer cannot update articles'
 );
 
@@ -158,12 +168,6 @@ SELECT results_eq(
   'S-048 RLS: staff can read published article'
 );
 
-SELECT results_eq(
-  $$SELECT COUNT(*)::int FROM public.articles$$,
-  ARRAY[2],
-  'S-048 RLS: staff can read all articles'
-);
-
 SELECT lives_ok(
   $$UPDATE public.articles SET title = 'Staff Updated'
     WHERE id = '48aaaaaa-0000-4000-8000-000000000001'$$,
@@ -177,6 +181,13 @@ SELECT lives_ok(
             '48111111-0000-0000-0000-000000000010',
             '48111111-0000-0000-0000-000000000011')$$,
   'S-048 RLS: staff can insert draft article'
+);
+
+-- Count checked after insert so fixture article + published + staff draft = 3.
+SELECT results_eq(
+  $$SELECT COUNT(*)::int FROM public.articles$$,
+  ARRAY[3],
+  'S-048 RLS: staff can read all articles'
 );
 
 SELECT results_eq(
@@ -244,15 +255,18 @@ SELECT results_eq(
   'S-048 RLS: staff can read refs for published article'
 );
 
-SELECT lives_ok(
+-- article_refs writes are service_role only (BYPASSRLS); staff has SELECT policy only.
+SELECT throws_ok(
   $$INSERT INTO public.article_refs (article_id, node_id, ref_type, ref_id)
     VALUES ('48aaaaaa-0000-4000-8000-000000000002','node-staff','media','img/staff.webp')$$,
-  'S-048 RLS: staff can insert article_refs'
+  NULL, NULL,
+  'S-048 RLS: staff cannot insert article_refs directly (service_role only)'
 );
 
-SELECT lives_ok(
-  $$DELETE FROM public.article_refs WHERE node_id = 'node-staff'$$,
-  'S-048 RLS: staff can delete article_refs'
+SELECT throws_ok(
+  $$DELETE FROM public.article_refs WHERE node_id = 'node-1'$$,
+  NULL, NULL,
+  'S-048 RLS: staff cannot delete article_refs directly (service_role only)'
 );
 
 RESET ROLE;
