@@ -25,6 +25,7 @@ jobs:
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
+            if (!context.payload.pull_request) return false; // issue_comment events handled by step 2
             const branch = context.payload.pull_request.head.ref;
             // Only story branches (feature/S-NNN-*) require external review.
             // Infrastructure, CI, chore, and docs branches are self-mergeable.
@@ -79,6 +80,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: prNumber,
+              per_page: 100,
             });
 
             const headReviews = reviews.filter(r =>
