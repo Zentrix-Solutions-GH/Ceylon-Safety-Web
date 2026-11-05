@@ -22,10 +22,14 @@ export function ForgotPasswordForm() {
     const data = new FormData(form);
 
     // Always show neutral message regardless of ok/error (AC6, EC2 — never leak rate-limit or existence)
-    await requestPasswordReset({
-      email: data.get("email") as string,
-      captchaToken,
-    });
+    try {
+      await requestPasswordReset({
+        email: data.get("email") as string,
+        captchaToken,
+      });
+    } catch {
+      // network/server error — treat the same as success (never expose internals)
+    }
 
     setSent(true);
     setPending(false);

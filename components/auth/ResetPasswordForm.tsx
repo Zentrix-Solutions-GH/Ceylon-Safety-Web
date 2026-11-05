@@ -29,21 +29,25 @@ export function ResetPasswordForm({ email: initialEmail }: Props) {
     const newPassword = data.get("newPassword") as string;
     const authenticatorCode = (data.get("authenticatorCode") as string) || undefined;
 
-    const result = await resetPassword({ email, code, newPassword, authenticatorCode });
+    try {
+      const result = await resetPassword({ email, code, newPassword, authenticatorCode });
 
-    if (result.ok) {
-      router.replace(result.redirectTo);
-      return;
-    }
+      if (result.ok) {
+        router.replace(result.redirectTo);
+        return;
+      }
 
-    if (result.code === "mfa_required") {
-      setShowTotp(true);
+      if (result.code === "mfa_required") {
+        setShowTotp(true);
+        return;
+      }
+
+      setTopError(errorMessage(result.code));
+    } catch {
+      setTopError(errorMessage("unknown"));
+    } finally {
       setPending(false);
-      return;
     }
-
-    setTopError(errorMessage(result.code));
-    setPending(false);
   }
 
   const noPending = !initialEmail;

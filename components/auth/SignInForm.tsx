@@ -39,38 +39,50 @@ export function SignInForm() {
 
     const form = e.currentTarget;
     const data = new FormData(form);
-    const result = await signIn({
-      email: data.get("email") as string,
-      password: data.get("password") as string,
-      captchaToken,
-      next,
-    });
+    try {
+      const result = await signIn({
+        email: data.get("email") as string,
+        password: data.get("password") as string,
+        captchaToken,
+        next,
+      });
 
-    if (result.ok) {
-      router.replace(result.redirectTo);
-      return;
-    }
+      if (result.ok) {
+        router.replace(result.redirectTo);
+        return;
+      }
 
-    if (result.code === "email_not_verified") {
-      router.replace("/verify-email");
+      if (result.code === "email_not_verified") {
+        router.replace("/verify-email");
+        return;
+      }
+
+      setTopError(errorMessage(result.code));
+    } catch {
+      setTopError(errorMessage("unknown"));
+    } finally {
+      resetTurnstileRef.current?.();
+      setCaptchaToken(null);
       setPending(false);
-      return;
     }
-
-    setTopError(errorMessage(result.code));
-    resetTurnstileRef.current?.();
-    setCaptchaToken(null);
-    setPending(false);
   }
 
   async function handleGoogleSignIn() {
+    if (pending) return;
+    setPending(true);
     setTopError(null);
-    const result = await startGoogleSignIn({ next });
-    if (!result.ok) {
-      setTopError(errorMessage(result.code));
-      return;
+    try {
+      const result = await startGoogleSignIn({ next });
+      if (!result.ok) {
+        setTopError(errorMessage(result.code));
+        return;
+      }
+      router.replace(result.url);
+    } catch {
+      setTopError(errorMessage("unknown"));
+    } finally {
+      setPending(false);
     }
-    router.replace(result.url);
   }
 
   async function handleCopyLink() {
