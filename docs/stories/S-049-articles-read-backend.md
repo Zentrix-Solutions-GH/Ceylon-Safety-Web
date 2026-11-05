@@ -1,11 +1,11 @@
 ---
 id: S-049
 title: Articles read backend: list, filters, get, preview
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-049-articles-read-backend
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/55"
 depends_on: [S-014]
 reqs: [REQ-016, REQ-021, REQ-022, REQ-032, REQ-033, REQ-142, REQ-191]
 ---
