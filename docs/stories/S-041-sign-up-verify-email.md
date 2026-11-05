@@ -1,7 +1,7 @@
 ---
 id: S-041
 title: Sign-up + verify-email screens
-status: ready
+status: in-progress
 owner: frontend
 risk: normal
 branch: feature/S-041-sign-up-verify-email
@@ -71,17 +71,60 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 
 ## Plan
 
-Prior art: searched "sign-up verify email OTP screen" in docs/ — found auth-design.md sections 4 and 17 (the canonical reference for this story). No earlier implementation exists.
+Prior art: searched "sign-up verify email OTP screen" in docs/ — found auth-design.md sections 4 and 17 (the canonical reference for this story). No earlier implementation exists. S-027 layout shell is on this branch (based on `feature/S-027-layout-shells-error-pages`, PR #47).
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+### Files to create / edit
+
+**New files:**
+- `components/auth/TurnstileWidget.tsx` — lightweight Cloudflare Turnstile wrapper (no extra npm package; loads `challenges.cloudflare.com/turnstile/v0/api.js` via Next.js Script)
+- `components/auth/SignUpForm.tsx` — sign-up form client component
+- `components/auth/VerifyEmailForm.tsx` — verify-email form client component
+- `components/auth/EmailEntryForm.tsx` — pre-step form when no pending cookie (AC5)
+- `app/(auth)/sign-up/page.tsx` — replace stub; server component reading pending state
+- `app/(auth)/verify-email/page.tsx` — replace stub; server component reading pending cookie
+- `__tests__/screens/sign-up.test.tsx` — unit tests for sign-up screen
+- `__tests__/screens/verify-email.test.tsx` — unit tests for verify-email screen
+
+**Edit:**
+- `messages/en.ts` — add sign-up / verify-email UI strings (labels, headings, button text, links; AC6)
+
+### Message keys to add
+`auth.sign_up.heading`, `auth.sign_up.submit`, `auth.sign_up.first_name`, `auth.sign_up.last_name`, `auth.sign_up.email`, `auth.sign_up.password`, `auth.sign_up.terms`, `auth.sign_up.terms_link`, `auth.sign_up.privacy_link`, `auth.sign_up.have_account`, `auth.verify_email.heading`, `auth.verify_email.submit`, `auth.verify_email.code_label`, `auth.verify_email.resend`, `auth.verify_email.resend_wait`, `auth.verify_email.different_email`, `auth.verify_email.enter_email_heading`, `auth.verify_email.enter_email_submit`
+
+### Implementation order
+1. Add message keys to `messages/en.ts`
+2. Build `TurnstileWidget.tsx` (loads Cloudflare script, calls `window.turnstile.render`)
+3. Write failing tests
+4. Build `SignUpForm.tsx`, `VerifyEmailForm.tsx`, `EmailEntryForm.tsx`
+5. Wire up `app/(auth)/sign-up/page.tsx` and `app/(auth)/verify-email/page.tsx`
+6. Make tests green → check.sh
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed (0 warnings after fixes)
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Test Files  65 passed | 8 skipped (73)
+     Tests  781 passed | 23 skipped (804)
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
 ```
+
+New S-041 screen tests: 23 passed (sign-up: 9, verify-email: 14)
 
 ## Review notes
 

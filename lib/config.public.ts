@@ -23,8 +23,16 @@ function requiredUrl(name: string): string {
   return val;
 }
 
+function optionalString(name: string, fallback: string): string {
+  const val = process.env[name];
+  return val?.trim() || fallback;
+}
+
 export const publicConfig = {
   supabaseUrl: requiredUrl("NEXT_PUBLIC_SUPABASE_URL"),
   supabaseAnonKey: requiredString("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
   appUrl: requiredUrl("NEXT_PUBLIC_APP_URL"),
+  // Cloudflare Turnstile public site key (safe to expose in browser)
+  // Test key (always passes): 1x00000000000000000000AA
+  turnstileSiteKey: optionalString("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "1x00000000000000000000AA"),
 } as const;
