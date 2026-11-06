@@ -132,7 +132,7 @@ $ bash scripts/check.sh
 ✅ All checks passed.
 ```
 
-(Final run after security fix + delete-error fix: 1253 tests.)
+(Run after adding missing tests — 18ad0aa: 1255 tests, 5 in auth.test.ts now proper route-level HTTP status tests.)
 
 ## Review notes
 
