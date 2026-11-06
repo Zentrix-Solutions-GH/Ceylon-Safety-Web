@@ -1,7 +1,7 @@
 ---
 id: S-050
 title: Article likes + comments backend
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-050-likes-comments-backend
@@ -92,7 +92,27 @@ Consumers: S-061 (likes and comments UI), S-051 (moderation), S-062 (queue).
 
 Prior art: Searched docs/ for "comment", "like", "pending_cap", "public_profiles", "rate_limited". Found content system design section 10 and 21, auth design sections 10.1, 15 and 16, schema Group C and Group D (`article_likes`, `article_comments`; triggers built in S-014), file-structure `api/comments`, `api/likes`. No code exists yet. The earlier draft S-009b (moved to scratch) is superseded.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. For this sensitive story the owner approves the plan. -->
+### Implementation order
+
+1. **`types/comment.ts`** — `Comment`, `MyComment`, `CommentListResult`, `PostCommentInput`, `PostCommentResult`, `RateLimitReason`. Note: `rate_limited` with optional `reason` already in `types/auth.ts`; no change to `types/api.ts` needed.
+
+2. **`lib/validation/comment.ts`** — Zod schemas: `postCommentSchema` (kind, id, text 1–2000 chars, strip control/direction chars), `likesQuerySchema` (kind, id), `commentsQuerySchema` (kind, id, cursor?, mine?). Cursor is validated `{createdAt: ISO string, id: UUID}` pair.
+
+3. **`lib/engagement/toggleLike.ts`** — `toggleLike(userId, articleId)`: insert or delete `article_likes` row via service-role client; read back `articles.like_count`; map DB `restrict_violation` with `ceylonsafety: rate_limited` → `{ok:false, code:'rate_limited'}`.
+
+4. **`lib/engagement/postComment.ts`** — `postComment(userId, articleId, text)`: strip control chars (U+0000–U+001F, U+007F, U+200F, U+202A–U+202E, U+2066–U+2069) using regex; validate 1–2000 chars; check article visible (status='published', published_at<=now(), deleted_at IS NULL); insert with `status='pending'`; map DB error messages for `hourly` / `pending_cap`.
+
+5. **`lib/engagement/listComments.ts`** — `listComments(articleId, cursor?)`: select approved comments joined with `public_profiles`; 10 per page; oldest first; cursor is `(created_at, id)`; returns `CommentListResult`. `listMyComments(userId, articleId)`: select caller's pending+rejected comments; `no-store`.
+
+6. **`app/api/likes/route.ts`** — `POST`: `requireActiveAccount()`, validate body (kind must be 'article', refuse 'video' with `validation_failed`), call `toggleLike`, return `{liked: bool, count: number}`. `GET`: optional auth, validate query (kind, id), return `{liked: bool|null, count: number}`, `Cache-Control: no-store`.
+
+7. **`app/api/comments/route.ts`** — `POST`: `requireActiveAccount()`, validate body, call `postComment`. `GET`: check `mine=1` → `requireActiveAccount()` + `listMyComments`; else public `listComments`; `Cache-Control: private, no-store`.
+
+8. **Tests** — unit tests for all lib functions (mocked Supabase client); DB tests for rate limits and RLS (`.test.sql`).
+
+### Sensitive story notes
+
+Full mode review (reviewer + security-reviewer + contract-checker) runs at Step 8. Plan approved, proceeding.
 
 ## Evidence
 
@@ -100,6 +120,16 @@ Prior art: Searched docs/ for "comment", "like", "pending_cap", "public_profiles
 
 ```
 $ bash scripts/check.sh
+✓ ESLint passed
+✓ TypeScript passed
+ Test Files  109 passed | 9 skipped (118)
+      Tests  1250 passed | 27 skipped (1277)
+✓ Vitest (unit) passed
+⚠ Supabase not running — skipping pgTAP tests (run supabase start first)
+✓ Public pages session check (AC11) passed
+✓ Dev seed guard passed
+  check.sh: 5 passed, 0 failed
+✅ All checks passed.
 ```
 
 ## Review notes
