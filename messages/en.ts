@@ -81,6 +81,22 @@ const en = {
   // --- site footer (S-027) ---
   "site.copyright": "CeylonSafety",
 
+  // --- footer (S-026) ---
+  "footer.label": "Site footer",
+  "footer.contact": "Contact",
+  "footer.email_link": "Email us",
+  "footer.follow": "Follow us",
+  "footer.quick_links": "Quick links",
+  "footer.categories": "Categories",
+  "footer.terms": "Terms",
+  "footer.privacy": "Privacy",
+  "footer.refund_policy": "Refund policy",
+  "footer.disclaimer": "Disclaimer",
+  "footer.social.facebook": "Facebook",
+  "footer.social.instagram": "Instagram",
+  "footer.social.linkedin": "LinkedIn",
+  "footer.social.youtube": "YouTube",
+
   // --- sign-up screen (S-041) ---
   "auth.sign_up.heading": "Create your account",
   "auth.sign_up.first_name": "First name",
