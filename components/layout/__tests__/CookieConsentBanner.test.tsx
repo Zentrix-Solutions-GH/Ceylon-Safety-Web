@@ -151,6 +151,15 @@ describe("AC5: focus moves to main-content after choice", () => {
 });
 
 describe("AC6: opens from open-cookie-banner event and returns focus to trigger", () => {
+  let trigger: HTMLButtonElement;
+  beforeEach(() => {
+    trigger = document.createElement("button");
+    trigger.textContent = "Cookie settings";
+    document.body.appendChild(trigger);
+  });
+  afterEach(() => {
+    trigger.remove();
+  });
   it("shows the banner when event is dispatched (consent already set)", async () => {
     mockGetConsent.mockReturnValue("accepted");
     render(<CookieConsentBanner />);
@@ -163,16 +172,12 @@ describe("AC6: opens from open-cookie-banner event and returns focus to trigger"
 
   it("returns focus to the trigger element after closing", async () => {
     mockGetConsent.mockReturnValue("accepted");
-    const trigger = document.createElement("button");
-    trigger.textContent = "Cookie settings";
-    document.body.appendChild(trigger);
     render(<CookieConsentBanner />);
     await act(async () => {
       window.dispatchEvent(new CustomEvent("open-cookie-banner", { detail: { trigger } }));
     });
     await userEvent.setup().click(await screen.findByRole("button", { name: /accept/i }));
     expect(document.activeElement).toBe(trigger);
-    trigger.remove();
   });
 });
 

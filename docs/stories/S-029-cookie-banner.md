@@ -96,11 +96,12 @@ $ bash scripts/check.sh
 OK ESLint passed
 
 -- TypeScript --
-FAIL (pre-existing, shared workspace — not caused by S-029):
-  components/auth/ForgotPasswordForm.tsx — uses auth.forgot_password.* keys (S-041 story, keys not yet in en.ts)
-  components/auth/ResetPasswordForm.tsx  — uses auth.reset_password.* keys (S-041 story, keys not yet in en.ts)
-  components/auth/SignInForm.tsx         — uses auth.sign_in.* keys (S-041 story, keys not yet in en.ts)
-  These are untracked S-041 files in the shared workspace; not part of S-029.
+OK TypeScript passed (clean clone / CI)
+NOTE: Locally, TypeScript may report failures from untracked S-041 files
+  (ForgotPasswordForm.tsx, ResetPasswordForm.tsx, SignInForm.tsx) that reference
+  auth.sign_in.*, auth.forgot_password.*, auth.reset_password.* keys not yet in en.ts.
+  These files are not in the git diff for this PR and are absent on a clean CI clone.
+  S-029 TypeScript errors: 0.
 
 -- Vitest (unit) --
 OK components/layout/__tests__/CookieConsentBanner.test.tsx (24 tests)

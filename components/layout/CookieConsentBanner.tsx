@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { getConsent, setConsent } from "@/lib/consent";
 import { t } from "@/messages/en";
+import { cn } from "@/lib/utils/cn";
 
 type ConsentValue = "undecided" | "accepted" | "rejected";
 
@@ -54,7 +55,7 @@ export default function CookieConsentBanner() {
 
   const btnClass =
     "inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
-  const selectedClass = `${btnClass} ring-2 ring-primary`;
+  const selectedClass = cn(btnClass, "ring-2 ring-primary");
 
   return (
     <div
@@ -68,7 +69,7 @@ export default function CookieConsentBanner() {
           <Link href="/privacy" className="underline hover:no-underline">
             {t("cookie.privacy_link")}
           </Link>
-          .
+          {t("cookie.privacy_link_suffix")}
         </p>
         <div className="flex shrink-0 gap-2">
           <button

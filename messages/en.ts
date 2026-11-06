@@ -1,6 +1,6 @@
 const en = {
   // --- auth flows ---
-  // auth.code_sent has an {email} parameter â€” used by t() parameter tests.
+  // auth.code_sent has an {email} parameter â€" used by t() parameter tests.
   "auth.code_sent": "We sent a code to {email}. Check your inbox.",
   "auth.already_registered":
     "If this email can be registered, we have sent a code. Already registered? Sign in or reset your password",
@@ -33,7 +33,7 @@ const en = {
   "errors.email_not_verified": "Please verify your email address before signing in.",
   "errors.code_invalid": "That code is not right",
   "errors.code_expired": "That code has expired. Please request a new one.",
-  "errors.code_attempts_exceeded": "Too many wrong attempts â€” request a new code",
+  "errors.code_attempts_exceeded": "Too many wrong attempts — request a new code",
   "errors.weak_password": "Please choose a stronger password.",
   "errors.captcha_failed": "Security check failed. Please try again.",
   "errors.account_suspended": "This account has been suspended. Contact support",
@@ -55,7 +55,7 @@ const en = {
   "nav.open_menu": "Open menu",
   "nav.mobile_nav_title": "Navigation",
   "nav.loading_account": "Loading account",
-  "nav.home_link_label": "CeylonSafety â€” home",
+  "nav.home_link_label": "CeylonSafety — home",
   "site.wordmark": "CeylonSafety",
 
   // --- layout chrome (S-027) ---
@@ -76,7 +76,7 @@ const en = {
   "customer.header_label": "Customer navigation",
 
   // --- loading state (S-027) ---
-  "loading.message": "Loadingâ€¦",
+  "loading.message": "Loading…",
 
   // --- site footer (S-027) ---
   "site.copyright": "CeylonSafety",
@@ -92,7 +92,7 @@ const en = {
   "auth.sign_up.and": "and",
   "auth.sign_up.privacy_link": "Privacy Policy",
   "auth.sign_up.submit": "Create account",
-  "auth.sign_up.submitting": "Creating accountâ€¦",
+  "auth.sign_up.submitting": "Creating account…",
   "auth.sign_up.have_account": "Already have an account?",
   "auth.sign_up.sign_in_link": "Sign in",
 
@@ -101,7 +101,7 @@ const en = {
   "auth.verify_email.code_sent": "We sent a verification code to",
   "auth.verify_email.code_label": "Verification code",
   "auth.verify_email.submit": "Verify email",
-  "auth.verify_email.submitting": "Verifyingâ€¦",
+  "auth.verify_email.submitting": "Verifying…",
   "auth.verify_email.resend": "Resend code",
   "auth.verify_email.resend_wait": "Resend in {seconds}s",
   "auth.verify_email.different_email": "Use a different email",
@@ -114,6 +114,7 @@ const en = {
   "cookie.banner_label": "Cookie consent",
   "cookie.banner_text": "We use cookies for ads and visitor counts. Essential cookies are always on. Read our",
   "cookie.privacy_link": "Privacy Policy",
+  "cookie.privacy_link_suffix": ".",
   "cookie.accept": "Accept",
   "cookie.reject": "Reject",
   "cookie.settings_link": "Cookie settings",
@@ -121,7 +122,7 @@ const en = {
 
 export type MessageKey = keyof typeof en;
 
-// AC1: typed key â€” unknown keys are compile errors.
+// AC1: typed key â€" unknown keys are compile errors.
 // EC1: one pass of replacement per param key; no recursion, no HTML interpretation.
 export function t(key: MessageKey, params?: Record<string, string>): string {
   let text: string = en[key];
