@@ -172,6 +172,15 @@ describe("SignInForm — AC5: social-app browser shows hint before Google action
     render(<SignInForm />);
     expect(screen.getByText(/open this page in your phone.s normal browser/i)).toBeInTheDocument();
   });
+
+  it("Google button is not disabled when social-app hint is showing (EC4: no hard block)", () => {
+    Object.defineProperty(window, "navigator", {
+      value: { userAgent: "Mozilla/5.0 FBAN/FBForIPhone" },
+      writable: true,
+    });
+    render(<SignInForm />);
+    expect(screen.getByRole("button", { name: /continue with google/i })).not.toBeDisabled();
+  });
 });
 
 describe("SignInForm — EC3: Google auth error shows generic message", () => {

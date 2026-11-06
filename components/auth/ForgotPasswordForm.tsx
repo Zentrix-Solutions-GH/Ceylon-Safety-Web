@@ -29,12 +29,13 @@ export function ForgotPasswordForm() {
       });
     } catch {
       // network/server error — treat the same as success (never expose internals)
+    } finally {
+      setPending(false);
+      resetTurnstileRef.current?.();
+      setCaptchaToken(null);
     }
 
     setSent(true);
-    setPending(false);
-    resetTurnstileRef.current?.();
-    setCaptchaToken(null);
   }
 
   if (sent) {
