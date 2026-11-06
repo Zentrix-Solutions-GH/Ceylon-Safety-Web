@@ -12,18 +12,53 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServiceRoleClient: vi.fn(),
 }));
 
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseServiceRoleClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { toggleLike, getLikeStatus } from "@/lib/engagement/toggleLike";
 
 function makeServiceClient(overrides: Record<string, unknown> = {}) {
   const rpcResult = overrides.rpcResult ?? { data: null, error: null };
-  const insertResult = overrides.insertResult ?? { data: null, error: null };
   const deleteResult = overrides.deleteResult ?? { data: null, error: null };
 
   const eqMock = vi.fn().mockReturnThis();
   const singleMock = vi.fn().mockResolvedValue({ data: { article_id: "art-1", user_id: "u-1" }, error: null });
 
-  const chain: Record<string, unknown> = {
+  // Service role client — articles read + count read + article_likes read (getLikeStatus)
+  const serviceChain: Record<string, unknown> = {
+    from: vi.fn().mockImplementation((table: string) => {
+      if (table === "articles") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue(
+                overrides.articleResult ?? { data: { like_count: 3, status: "published", published_at: "2026-01-01", deleted_at: null }, error: null }
+              ),
+            }),
+          }),
+        };
+      }
+      if (table === "article_likes") {
+        // Used by getLikeStatus (which uses service role for reads)
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue(
+                  overrides.existingLike !== undefined
+                    ? { data: overrides.existingLike, error: null }
+                    : { data: null, error: null }
+                ),
+              }),
+            }),
+          }),
+        };
+      }
+      return { select: vi.fn().mockReturnThis(), eq: eqMock, single: singleMock };
+    }),
+    rpc: vi.fn().mockResolvedValue(rpcResult),
+  };
+
+  // Server (user-scoped) client — article_likes read + write
+  const serverChain: Record<string, unknown> = {
     from: vi.fn().mockImplementation((table: string) => {
       if (table === "article_likes") {
         return {
@@ -41,7 +76,7 @@ function makeServiceClient(overrides: Record<string, unknown> = {}) {
           insert: vi.fn().mockResolvedValue(
             overrides.insertError
               ? { data: null, error: overrides.insertError }
-              : insertResult
+              : { data: null, error: null }
           ),
           delete: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
@@ -50,23 +85,13 @@ function makeServiceClient(overrides: Record<string, unknown> = {}) {
           }),
         };
       }
-      if (table === "articles") {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue(
-                overrides.articleResult ?? { data: { like_count: 3, status: "published", published_at: "2026-01-01", deleted_at: null }, error: null }
-              ),
-            }),
-          }),
-        };
-      }
       return { select: vi.fn().mockReturnThis(), eq: eqMock, single: singleMock };
     }),
-    rpc: vi.fn().mockResolvedValue(rpcResult),
   };
-  (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(chain);
-  return chain;
+
+  (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(serviceChain);
+  (createSupabaseServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(serverChain);
+  return { serviceChain, serverChain };
 }
 
 describe("toggleLike", () => {

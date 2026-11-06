@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseServiceRoleClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/types/auth";
 import type { PostCommentResult, RateLimitReason } from "@/types/comment";
 
@@ -50,10 +50,13 @@ export async function postComment(
     return { ok: false, code: "validation_failed" };
   }
 
-  const supabase = createSupabaseServiceRoleClient();
+  // Service role for read-only visibility check (must bypass article RLS).
+  const serviceRole = createSupabaseServiceRoleClient();
+  // User-scoped client for insert — enforces article_comments RLS (user_id = auth.uid(), status = pending).
+  const supabase = await createSupabaseServerClient();
 
   // Verify article is visible
-  const { data: article } = await supabase
+  const { data: article } = await serviceRole
     .from("articles")
     .select("status, published_at, deleted_at")
     .eq("id", articleId)

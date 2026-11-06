@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// Limit request body size (AC11)
-export const config = { api: { bodyParser: { sizeLimit: "1kb" } } };
 import { requireActiveAccount, getCurrentUser } from "@/lib/auth/server";
 import { toggleLike, getLikeStatus } from "@/lib/engagement/toggleLike";
 import { likeBodySchema, likeQuerySchema } from "@/lib/validation/comment";
 
+// App Router does not honour export const config bodyParser; guard via Content-Length (AC11).
+const LIKES_MAX_BYTES = 512;
+
 // POST /api/likes — toggle a like (AC1)
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const contentLength = request.headers.get("content-length");
+  if (contentLength && parseInt(contentLength, 10) > LIKES_MAX_BYTES) {
+    return NextResponse.json({ error: "validation_failed" }, { status: 413 });
+  }
+
   const auth = await requireActiveAccount();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.code }, { status: 401 });

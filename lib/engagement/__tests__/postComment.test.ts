@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServiceRoleClient: vi.fn(),
 }));
 
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseServiceRoleClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { postComment } from "@/lib/engagement/postComment";
 
 function makeClient(opts: {
@@ -25,7 +25,8 @@ function makeClient(opts: {
     ? opts.articleData
     : { id: "art-1", status: "published", published_at: "2026-01-01T00:00:00Z", deleted_at: null };
 
-  const chain = {
+  // Service role — articles read only
+  const serviceChain = {
     from: vi.fn().mockImplementation((table: string) => {
       if (table === "articles") {
         return {
@@ -39,6 +40,13 @@ function makeClient(opts: {
           }),
         };
       }
+      return {};
+    }),
+  };
+
+  // Server (user-scoped) client — article_comments insert
+  const serverChain = {
+    from: vi.fn().mockImplementation((table: string) => {
       if (table === "article_comments") {
         return {
           insert: vi.fn().mockReturnValue({
@@ -54,8 +62,10 @@ function makeClient(opts: {
       return {};
     }),
   };
-  (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(chain);
-  return chain;
+
+  (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(serviceChain);
+  (createSupabaseServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(serverChain);
+  return { serviceChain, serverChain };
 }
 
 describe("postComment", () => {
@@ -70,7 +80,7 @@ describe("postComment", () => {
 
   it("strips control characters from text before saving (EC4)", async () => {
     let capturedBody: string | undefined;
-    const chain = {
+    const serviceChain = {
       from: vi.fn().mockImplementation((table: string) => {
         if (table === "articles") {
           return {
@@ -84,6 +94,11 @@ describe("postComment", () => {
             }),
           };
         }
+        return {};
+      }),
+    };
+    const serverChain = {
+      from: vi.fn().mockImplementation((table: string) => {
         if (table === "article_comments") {
           return {
             insert: vi.fn().mockImplementation((rows: Array<Record<string, string>>) => {
@@ -99,7 +114,8 @@ describe("postComment", () => {
         return {};
       }),
     };
-    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(serviceChain);
+    (createSupabaseServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(serverChain);
     await postComment("user-1", "art-1", "Hello\u0000World‮Test");
     // Control char U+0000 and direction override U+202E must be stripped
     expect(capturedBody).not.toContain("\u0000");
@@ -172,7 +188,7 @@ describe("postComment", () => {
 
   it("stores comment as pending status always (AC4)", async () => {
     let capturedStatus: string | undefined;
-    const chain = {
+    const serviceChain = {
       from: vi.fn().mockImplementation((table: string) => {
         if (table === "articles") {
           return {
@@ -186,6 +202,11 @@ describe("postComment", () => {
             }),
           };
         }
+        return {};
+      }),
+    };
+    const serverChain = {
+      from: vi.fn().mockImplementation((table: string) => {
         if (table === "article_comments") {
           return {
             insert: vi.fn().mockImplementation((rows: Array<Record<string, string>>) => {
@@ -201,7 +222,8 @@ describe("postComment", () => {
         return {};
       }),
     };
-    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(serviceChain);
+    (createSupabaseServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(serverChain);
     await postComment("user-1", "art-1", "Hello world");
     expect(capturedStatus).toBe("pending");
   });

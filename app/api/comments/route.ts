@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// Limit request body size (AC11): kind+id+2000-char text ≈ 2.1 KB max
-export const config = { api: { bodyParser: { sizeLimit: "3kb" } } };
 import { requireActiveAccount } from "@/lib/auth/server";
 import { postComment } from "@/lib/engagement/postComment";
 import { listComments, listMyComments } from "@/lib/engagement/listComments";
@@ -9,8 +6,16 @@ import { commentsQuerySchema, postCommentBodySchema } from "@/lib/validation/com
 
 const NO_STORE = "private, no-store";
 
+// App Router does not honour export const config bodyParser; guard via Content-Length (AC11).
+const COMMENTS_MAX_BYTES = 3072; // kind+id+2000-char text ≈ 2.1 KB; leave headroom
+
 // POST /api/comments — post a comment (AC4)
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const contentLength = request.headers.get("content-length");
+  if (contentLength && parseInt(contentLength, 10) > COMMENTS_MAX_BYTES) {
+    return NextResponse.json({ error: "validation_failed" }, { status: 413 });
+  }
+
   const auth = await requireActiveAccount();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.code }, { status: 401 });

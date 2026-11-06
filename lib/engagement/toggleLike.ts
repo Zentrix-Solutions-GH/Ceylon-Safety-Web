@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseServiceRoleClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/types/auth";
 import type { LikeResult, LikeStatusResult } from "@/types/comment";
 
@@ -26,10 +26,13 @@ export async function toggleLike(
   userId: string,
   articleId: string
 ): Promise<ToggleLikeResult> {
-  const supabase = createSupabaseServiceRoleClient();
+  // Service role for read-only visibility check (must bypass article RLS).
+  const serviceRole = createSupabaseServiceRoleClient();
+  // User-scoped client for writes — enforces article_likes RLS (user_id = auth.uid()).
+  const supabase = await createSupabaseServerClient();
 
   // Check article visibility
-  const { data: article } = await supabase
+  const { data: article } = await serviceRole
     .from("articles")
     .select("status, published_at, deleted_at, like_count")
     .eq("id", articleId)
@@ -39,7 +42,7 @@ export async function toggleLike(
     return { ok: false, code: "not_allowed" };
   }
 
-  // Check if user already liked
+  // Check if user already liked (use server client so RLS applies)
   const { data: existing } = await supabase
     .from("article_likes")
     .select("article_id")
@@ -48,14 +51,14 @@ export async function toggleLike(
     .maybeSingle();
 
   if (existing) {
-    // Remove like
+    // Remove like — RLS enforces user_id = auth.uid()
     await supabase
       .from("article_likes")
       .delete()
       .eq("article_id", articleId)
       .eq("user_id", userId);
   } else {
-    // Add like
+    // Add like — RLS enforces user_id = auth.uid() and active status
     const { error } = await supabase
       .from("article_likes")
       .insert({ article_id: articleId, user_id: userId });
@@ -68,8 +71,8 @@ export async function toggleLike(
     }
   }
 
-  // Read updated count
-  const { data: updated } = await supabase
+  // Read updated count via service role (public read, no user context needed)
+  const { data: updated } = await serviceRole
     .from("articles")
     .select("like_count")
     .eq("id", articleId)
