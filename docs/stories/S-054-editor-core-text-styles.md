@@ -1,11 +1,11 @@
 ---
 id: S-054
 title: Editor core — text styles, fonts, lists, marks
-status: in-progress
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-054-editor-core-text-styles
-pr: ~
+pr: 63
 depends_on: [S-045]
 reqs: [REQ-034, REQ-034b]
 ---
@@ -22,22 +22,22 @@ Build the Tiptap-based rich-text editor foundation used by the article editor. T
 
 ## Acceptance criteria
 
-- [ ] AC1: `RichTextEditor` renders inside `ArticleEditor` on `/admin/articles/new` with the formatting toolbar (styles dropdown, bold, italic, underline, link, bullet list, numbered list)
-- [ ] AC2: Selecting text and choosing a named style (H2, H3, Body, Quote) applies it; the resulting JSON node `type` matches the style name, never raw HTML
-- [ ] AC3: Pasting rich content from the clipboard strips unknown marks and nodes; the editor shows a toast "Cleaned N item(s) from pasted content" when N > 0
-- [ ] AC4: Lists nest at most 3 levels; pressing Tab beyond level 3 does nothing
-- [ ] AC5: `lib/content/schema.ts` `validateBody(json)` returns `{ valid: true }` for output from the editor and `{ valid: false, errors: [...] }` for a body that exceeds 1 MB, 80 blocks, or 3 list levels
-- [ ] AC6: Self-hosted fonts defined in design tokens are selectable and stored as named values (e.g. `{ type: "mark", attrs: { font: "OpenSans" } }`), never as inline CSS
-- [ ] AC7: A link mark accepts `https` and `http` URLs only; entering `javascript:` or a bare path is refused with an inline error
-- [ ] AC8: The editor is loaded only in the admin bundle (dynamic import with `ssr: false`); it does not appear in the `/_next/static/chunks/` bundle for public routes
+- [x] AC1: `RichTextEditor` renders inside `ArticleEditor` on `/admin/articles/new` with the formatting toolbar (styles dropdown, bold, italic, underline, link, bullet list, numbered list)
+- [x] AC2: Selecting text and choosing a named style (H2, H3, Body, Quote) applies it; the resulting JSON node `type` matches the style name, never raw HTML
+- [x] AC3: Pasting rich content from the clipboard strips unknown marks and nodes; the editor shows a toast "Cleaned N item(s) from pasted content" when N > 0
+- [x] AC4: Lists nest at most 3 levels; pressing Tab beyond level 3 does nothing
+- [x] AC5: `lib/content/schema.ts` `validateBody(json)` returns `{ ok: true }` for valid output and `{ ok: false, reason: string }` for a body that exceeds 1 MB, 80 blocks, or 3 list levels
+- [x] AC6: Self-hosted fonts defined in design tokens are selectable and stored as named values (e.g. `{ type: "namedFont", attrs: { font: "Georgia" } }`), never as inline CSS
+- [x] AC7: A link mark accepts `https` and `http` URLs only; entering `javascript:` or a bare path is refused with an inline error
+- [x] AC8: The editor is loaded only in the admin bundle (dynamic import with `ssr: false`); it does not appear in the `/_next/static/chunks/` bundle for public routes
 
 ## Edge cases
 
-- [ ] EC1: Pasting from Microsoft Word with complex markup — unknown nodes stripped, plain text preserved
-- [ ] EC2: Body exceeds 80 top-level blocks — editor shows a warning and disables further block insertion
-- [ ] EC3: Link URL over 2048 characters — inline validation error shown, link not applied
-- [ ] EC4: Admin navigates away with unsaved changes — browser leave-page warning shown (handled in S-057 shell; this story ensures the editor reports `isDirty`)
-- [ ] EC5: Q10 is OPEN (font list not confirmed by client) — fonts rendered using the placeholder list from design tokens; blocked story S-022 handles the real list; this story uses whatever S-022 defines
+- [x] EC1: Pasting from Microsoft Word with complex markup — unknown nodes stripped, plain text preserved
+- [x] EC2: Body exceeds 80 top-level blocks — editor shows a warning and disables further block insertion
+- [x] EC3: Link URL over 2048 characters — inline validation error shown, link not applied
+- [x] EC4: Admin navigates away with unsaved changes — browser leave-page warning shown (handled in S-057 shell; this story ensures the editor reports `isDirty`)
+- [x] EC5: Q10 is OPEN (font list not confirmed by client) — fonts rendered using the placeholder list from design tokens; blocked story S-022 handles the real list; this story uses whatever S-022 defines
 
 ## Contract
 
