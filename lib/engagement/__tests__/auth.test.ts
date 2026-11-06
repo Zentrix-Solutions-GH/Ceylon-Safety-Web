@@ -115,6 +115,18 @@ describe("GET /api/comments?mine=1 auth gate (AC8)", () => {
 // The Content-Length guard fires before auth, so no mock needed.
 
 describe("POST /api/likes body-size guard (AC11)", () => {
+  it("returns 411 when Content-Length header is absent", async () => {
+    const req = new NextRequest("http://localhost/api/likes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    const res = await likesPost(req);
+    expect(res.status).toBe(411);
+    const body = await res.json();
+    expect(body.error).toBe("validation_failed");
+  });
+
   it("returns 413 when Content-Length exceeds 512 bytes", async () => {
     const oversized = "x".repeat(600);
     const req = new NextRequest("http://localhost/api/likes", {
@@ -130,6 +142,18 @@ describe("POST /api/likes body-size guard (AC11)", () => {
 });
 
 describe("POST /api/comments body-size guard (AC11)", () => {
+  it("returns 411 when Content-Length header is absent", async () => {
+    const req = new NextRequest("http://localhost/api/comments", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    const res = await commentsPost(req);
+    expect(res.status).toBe(411);
+    const body = await res.json();
+    expect(body.error).toBe("validation_failed");
+  });
+
   it("returns 413 when Content-Length exceeds 3072 bytes", async () => {
     const oversized = "x".repeat(4000);
     const req = new NextRequest("http://localhost/api/comments", {
@@ -149,8 +173,8 @@ describe("POST /api/comments body-size guard (AC11)", () => {
 
 describe("POST /api/likes kind=video refusal (AC1)", () => {
   it("returns 400 validation_failed for kind=video", async () => {
-    // Auth gate comes after body parsing; mock auth to pass so validation is reached.
-    (requireActiveAccount as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, userId: "u-1" });
+    // Auth gate runs before schema validation; mock auth to pass so Zod refusal is reached.
+    (requireActiveAccount as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: { id: "u-1" } });
     const req = makePost("http://localhost/api/likes", { kind: "video", id: ARTICLE_ID });
     const res = await likesPost(req);
     expect(res.status).toBe(400);
@@ -161,7 +185,7 @@ describe("POST /api/likes kind=video refusal (AC1)", () => {
 
 describe("POST /api/comments kind=video refusal (AC1)", () => {
   it("returns 400 validation_failed for kind=video", async () => {
-    (requireActiveAccount as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, userId: "u-1" });
+    (requireActiveAccount as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: { id: "u-1" } });
     const req = makePost("http://localhost/api/comments", { kind: "video", id: ARTICLE_ID, text: "Hello" });
     const res = await commentsPost(req);
     expect(res.status).toBe(400);

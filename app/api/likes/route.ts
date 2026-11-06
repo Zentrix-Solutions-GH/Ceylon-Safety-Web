@@ -9,7 +9,10 @@ const LIKES_MAX_BYTES = 512;
 // POST /api/likes — toggle a like (AC1)
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const contentLength = request.headers.get("content-length");
-  if (contentLength && parseInt(contentLength, 10) > LIKES_MAX_BYTES) {
+  if (!contentLength) {
+    return NextResponse.json({ error: "validation_failed" }, { status: 411 });
+  }
+  if (parseInt(contentLength, 10) > LIKES_MAX_BYTES) {
     return NextResponse.json({ error: "validation_failed" }, { status: 413 });
   }
 
@@ -60,6 +63,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const result = await getLikeStatus(user?.id ?? null, id);
 
   return NextResponse.json(result, {
-    headers: { "Cache-Control": "no-store" },
+    headers: { "Cache-Control": "private, no-store" },
   });
 }

@@ -12,7 +12,10 @@ const COMMENTS_MAX_BYTES = 3072; // kind+id+2000-char text ≈ 2.1 KB; leave hea
 // POST /api/comments — post a comment (AC4)
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const contentLength = request.headers.get("content-length");
-  if (contentLength && parseInt(contentLength, 10) > COMMENTS_MAX_BYTES) {
+  if (!contentLength) {
+    return NextResponse.json({ error: "validation_failed" }, { status: 411 });
+  }
+  if (parseInt(contentLength, 10) > COMMENTS_MAX_BYTES) {
     return NextResponse.json({ error: "validation_failed" }, { status: 413 });
   }
 

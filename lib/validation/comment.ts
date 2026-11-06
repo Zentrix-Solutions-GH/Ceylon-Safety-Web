@@ -16,10 +16,8 @@ export const commentCursorSchema = z
         return (
           typeof obj === "object" &&
           obj !== null &&
-          typeof obj.createdAt === "string" &&
-          /^\d{4}-\d{2}-\d{2}T/.test(obj.createdAt) &&
-          typeof obj.id === "string" &&
-          /^[0-9a-f-]{36}$/.test(obj.id)
+          z.string().datetime().safeParse(obj.createdAt).success &&
+          z.string().uuid().safeParse(obj.id).success
         );
       } catch {
         return false;

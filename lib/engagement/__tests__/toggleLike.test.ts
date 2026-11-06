@@ -122,6 +122,22 @@ describe("toggleLike", () => {
     if (!result.ok) expect(result.code).toBe("rate_limited");
   });
 
+  it("returns liked=true on concurrent insert race (23505 unique violation — EC5)", async () => {
+    // Simulates two simultaneous POSTs: this one loses the race (23505), but the
+    // like now exists so the correct response is liked=true with the current count.
+    makeServiceClient({
+      existingLike: null,
+      insertError: { code: "23505", message: "duplicate key value violates unique constraint" },
+      articleResult: { data: { like_count: 5, status: "published", published_at: "2026-01-01", deleted_at: null }, error: null },
+    });
+    const result = await toggleLike("user-1", "article-1");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.liked).toBe(true);
+      expect(result.count).toBe(5);
+    }
+  });
+
   it("returns not_allowed for hidden article (AC1)", async () => {
     makeServiceClient({
       existingLike: null,

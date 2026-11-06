@@ -71,6 +71,16 @@ export async function toggleLike(
       if (isRateLimitError(error.message)) {
         return { ok: false, code: "rate_limited" };
       }
+      // 23505 = unique_violation: a concurrent request inserted the same row.
+      // The like now exists; treat as a successful "liked=true" toggle.
+      if ((error as { code?: string }).code === "23505") {
+        const { data: raced } = await serviceRole
+          .from("articles")
+          .select("like_count")
+          .eq("id", articleId)
+          .single();
+        return { ok: true, liked: true, count: raced?.like_count ?? 0 };
+      }
       return { ok: false, code: "unknown" };
     }
   }
