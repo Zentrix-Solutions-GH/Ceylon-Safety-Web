@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as React from "react";
 import { SignInForm } from "@/components/auth/SignInForm";
 
@@ -15,7 +15,7 @@ vi.mock("@/lib/auth/actions/start-google-sign-in", () => ({
 }));
 
 const mockReplace = vi.fn();
-const mockSearchParamsGet = vi.fn(() => null);
+const mockSearchParamsGet = vi.fn(() => null as string | null);
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mockReplace }),
   useSearchParams: () => ({ get: mockSearchParamsGet }),
@@ -70,6 +70,10 @@ describe("SignInForm — AC1/happy path: submits and redirects", () => {
     mockReplace.mockReset();
     mockSearchParamsGet.mockReset();
     Object.defineProperty(window, "navigator", { value: mockNavigator, writable: true });
+  });
+
+  afterEach(() => {
+    mockSearchParamsGet.mockReset();
   });
 
   it("calls signIn with email, password and captcha token then redirects", async () => {

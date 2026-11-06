@@ -83,7 +83,7 @@ $ bash scripts/check.sh
 ✓ TypeScript passed
 ✓ Vitest (unit) passed
   Test Files  92 passed | 9 skipped (101)
-        Tests  1041 passed | 27 skipped (1068)
+        Tests  1056 passed | 27 skipped (1083)
 
 ════════════════════════════════
   check.sh: 6 passed, 0 failed

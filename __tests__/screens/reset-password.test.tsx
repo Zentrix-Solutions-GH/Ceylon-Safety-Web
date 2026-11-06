@@ -11,7 +11,6 @@ vi.mock("@/lib/auth/actions/reset-password", () => ({
 const mockReplace = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mockReplace }),
-  useSearchParams: () => ({ get: () => null }),
 }));
 
 describe("ResetPasswordForm — AC7: renders OTP + new-password fields", () => {
