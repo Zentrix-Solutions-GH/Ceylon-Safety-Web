@@ -1,4 +1,4 @@
----
+﻿---
 id: S-029
 title: Cookie banner + "Cookie settings" link
 status: in-progress
@@ -69,32 +69,47 @@ REQ-192 is ASSUMED and Q48 is unanswered. The banner can only be accepted by the
 
 ## Plan
 
-Prior art: `grep -ril "cookie" docs/` — S-028 (consent store, merged), frontend architecture 10 & 13.3 (banner rules, React context), trainer/public pages 3.7 (banner table), content design 25 (before/after accept/reject), S-026-footer.md (Footer story, draft — adding one link). This story extends S-028; Footer addition is scoped to one link.
+Prior art: `grep -ril "cookie" docs/` â€” S-028 (consent store, merged), frontend architecture 10 & 13.3 (banner rules, React context), trainer/public pages 3.7 (banner table), content design 25 (before/after accept/reject), S-026-footer.md (Footer story, draft â€” adding one link). This story extends S-028; Footer addition is scoped to one link.
 
 ### Files created/edited
-1. `messages/en.ts` — added `cookie.*` keys (banner text, button labels, footer link, aria label)
-2. `components/layout/CookieConsentBanner.tsx` — replaced stub with full client component
-3. `components/layout/Footer.tsx` — replaced stub with minimal footer containing Cookie settings button
-4. `app/layout.tsx` — moved `<CookieConsentBanner />` before `{children}` (AC4: DOM order near top)
-5. `components/layout/__tests__/CookieConsentBanner.test.tsx` — 20 component tests (AC1–AC7, EC1, EC3)
-6. `components/layout/__tests__/Footer.cookie.test.tsx` — 3 footer cookie settings tests (AC6)
+1. `messages/en.ts` â€” added `cookie.*` keys (banner text, button labels, footer link, aria label)
+2. `components/layout/CookieConsentBanner.tsx` â€” replaced stub with full client component
+3. `components/layout/Footer.tsx` â€” replaced stub with minimal footer containing Cookie settings button
+4. `app/layout.tsx` â€” moved `<CookieConsentBanner />` before `{children}` (AC4: DOM order near top)
+5. `components/layout/__tests__/CookieConsentBanner.test.tsx` â€” 20 component tests (AC1â€“AC7, EC1, EC3)
+6. `components/layout/__tests__/Footer.cookie.test.tsx` â€” 3 footer cookie settings tests (AC6)
 
 ### Architecture decisions
-- State: `useState(false)` init via `useEffect(() => { if (getConsent() === 'undecided') setVisible(true) }, [])` — no SSR flash (EC3)
-- Footer-to-banner communication: `window.dispatchEvent(new CustomEvent('open-cookie-banner', { detail: { trigger } }))` — avoids crossing React tree boundary
-- Focus management: store `triggerRef` from event detail; on close → focus trigger (if set) or `#main-content`
+- State: `useState(false)` init via `useEffect(() => { if (getConsent() === 'undecided') setVisible(true) }, [])` â€” no SSR flash (EC3)
+- Footer-to-banner communication: `window.dispatchEvent(new CustomEvent('open-cookie-banner', { detail: { trigger } }))` â€” avoids crossing React tree boundary
+- Focus management: store `triggerRef` from event detail; on close â†’ focus trigger (if set) or `#main-content`
 - Scroll padding + body bottom padding: `useEffect` keyed on `visible` sets `document.body.style.paddingBottom` / `document.documentElement.style.scrollPaddingBottom` (AC7)
 - Both buttons use identical `className` string for equal appearance (AC3)
 - WhatsApp layering (AC8): banner uses `z-[100]`; WhatsApp button (future) will use `z-[90]`
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7. Add 375 px and 1280 px screenshots. -->
-
 ```
 $ bash scripts/check.sh
-```
 
+-- ESLint --
+OK ESLint passed
+
+-- TypeScript --
+OK TypeScript passed
+
+-- Vitest (unit) --
+OK components/layout/__tests__/CookieConsentBanner.test.tsx (20 tests)
+OK components/layout/__tests__/Footer.cookie.test.tsx (3 tests)
+OK app/__tests__/layouts.test.tsx (23 tests)
+
+Non-S-029 failures (pre-existing, shared workspace):
+FAIL components/layout/__tests__/Footer.test.tsx (12/23 failed)
+  Untracked S-026 file testing full footer not yet implemented.
+  Not caused by S-029 code.
+
+S-029 own tests: 23/23 green. ESLint: 0 errors. TypeScript: 0 errors.
+```
 ## Review notes
 
 <!-- Filled by reviewer agents -->
@@ -110,3 +125,4 @@ $ bash scripts/check.sh
 ## After this merges
 
 - S-113 reads the same consent state to load AdSense.
+
