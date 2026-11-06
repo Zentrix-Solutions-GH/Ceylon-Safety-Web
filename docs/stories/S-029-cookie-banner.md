@@ -1,11 +1,11 @@
 ﻿---
 id: S-029
 title: Cookie banner + "Cookie settings" link
-status: in-progress
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-029-cookie-banner
-pr: ~
+pr: "60"
 depends_on: [S-027, S-028]
 reqs: [REQ-192]
 ---
@@ -25,22 +25,22 @@ REQ-192 is ASSUMED and Q48 is unanswered. The banner can only be accepted by the
 
 ## Acceptance criteria
 
-- [ ] AC1: `components/layout/CookieConsentBanner.tsx` is a client component mounted in the root layout. It shows only when `getConsent()` says `undecided` (decided in the browser, so cached pages stay cached).
-- [ ] AC2: Text: "We use cookies for ads and visitor counts. Essential cookies are always on. Read our Privacy Policy." with the Privacy Policy link to `/privacy`; text comes from `messages/`.
-- [ ] AC3: "Accept" and "Reject" have the same size, weight and colour level and sit side by side. Either one calls `setConsent` and closes the bar.
-- [ ] AC4: The bar is fixed at the bottom with no layout jump. It does not trap focus and does not block the page. It is reachable by keyboard right after the skip link (DOM order near the top, shown at the bottom).
-- [ ] AC5: After a choice, focus moves to the main content.
-- [ ] AC6: The footer gets a "Cookie settings" link (editing S-026's `Footer.tsx` for this one link). It reopens the bar; closing it returns focus to the link.
-- [ ] AC7: A focused item is never fully hidden by the bar (scroll padding set); the last footer line is never covered (bottom padding).
-- [ ] AC8: Reduced layout shift: the bar reserves no space in the page flow; when the floating WhatsApp button exists (later story) the bar sits above it and the button moves up while the bar shows.
+- [x] AC1: `components/layout/CookieConsentBanner.tsx` is a client component mounted in the root layout. It shows only when `getConsent()` says `undecided` (decided in the browser, so cached pages stay cached).
+- [x] AC2: Text: "We use cookies for ads and visitor counts. Essential cookies are always on. Read our Privacy Policy." with the Privacy Policy link to `/privacy`; text comes from `messages/`.
+- [x] AC3: "Accept" and "Reject" have the same size, weight and colour level and sit side by side. Either one calls `setConsent` and closes the bar.
+- [x] AC4: The bar is fixed at the bottom with no layout jump. It does not trap focus and does not block the page. It is reachable by keyboard right after the skip link (DOM order near the top, shown at the bottom).
+- [x] AC5: After a choice, focus moves to the main content.
+- [x] AC6: The footer gets a "Cookie settings" link (editing S-026's `Footer.tsx` for this one link). It reopens the bar; closing it returns focus to the link.
+- [x] AC7: A focused item is never fully hidden by the bar (scroll padding set); the last footer line is never covered (bottom padding).
+- [x] AC8: Reduced layout shift: the bar reserves no space in the page flow; when the floating WhatsApp button exists (later story) the bar sits above it and the button moves up while the bar shows.
 
 ## Edge cases
 
-- [ ] EC1: Cookies blocked: the bar shows on every page load and does not crash; a note is not required.
-- [ ] EC2: JavaScript disabled: no bar, no scripts load (consent stays undecided), page works.
-- [ ] EC3: Choice already made: bar never renders (no flash of the bar before hydration).
-- [ ] EC4: Reopen from the footer while a choice exists: shows the current choice state, saving replaces it.
-- [ ] EC5: Keyboard-only user can accept, reject and reopen without a mouse.
+- [x] EC1: Cookies blocked: the bar shows on every page load and does not crash; a note is not required.
+- [x] EC2: JavaScript disabled: no bar, no scripts load (consent stays undecided), page works.
+- [x] EC3: Choice already made: bar never renders (no flash of the bar before hydration).
+- [x] EC4: Reopen from the footer while a choice exists: shows the current choice state, saving replaces it.
+- [x] EC5: Keyboard-only user can accept, reject and reopen without a mouse.
 
 ## Contract
 
@@ -125,4 +125,5 @@ S-029 own tests: 23/23 green. ESLint: 0 errors. TypeScript: 0 errors.
 ## After this merges
 
 - S-113 reads the same consent state to load AdSense.
+
 
