@@ -218,13 +218,41 @@ describe("SignInForm — AC5: social-app browser shows hint before Google action
   });
 });
 
-describe("SignInForm — EC3: Google auth error shows generic message", () => {
+describe("SignInForm — AC5/EC3: Google sign-in success, next forwarding and errors", () => {
   beforeEach(() => {
     mockStartGoogleSignIn.mockReset();
+    mockReplace.mockReset();
+    mockSearchParamsGet.mockReset();
     Object.defineProperty(window, "navigator", { value: mockNavigator, writable: true });
   });
 
-  it("shows generic error when startGoogleSignIn returns ok:false", async () => {
+  afterEach(() => {
+    mockSearchParamsGet.mockReset();
+  });
+
+  it("calls startGoogleSignIn and redirects to OAuth URL on success (AC5)", async () => {
+    mockStartGoogleSignIn.mockResolvedValue({ ok: true, url: "https://oauth.example.com/google" });
+    render(<SignInForm />);
+    await userEvent.click(screen.getByRole("button", { name: /continue with google/i }));
+    await waitFor(() => {
+      expect(mockStartGoogleSignIn).toHaveBeenCalled();
+      expect(mockReplace).toHaveBeenCalledWith("https://oauth.example.com/google");
+    });
+  });
+
+  it("forwards next param to startGoogleSignIn when present in search params (AC5)", async () => {
+    mockSearchParamsGet.mockReturnValue("/protected-page");
+    mockStartGoogleSignIn.mockResolvedValue({ ok: true, url: "https://oauth.example.com/google" });
+    render(<SignInForm />);
+    await userEvent.click(screen.getByRole("button", { name: /continue with google/i }));
+    await waitFor(() => {
+      expect(mockStartGoogleSignIn).toHaveBeenCalledWith(
+        expect.objectContaining({ next: "/protected-page" })
+      );
+    });
+  });
+
+  it("shows generic error when startGoogleSignIn returns ok:false (EC3)", async () => {
     mockStartGoogleSignIn.mockResolvedValue({ ok: false, code: "unknown" });
     render(<SignInForm />);
     await userEvent.click(screen.getByRole("button", { name: /continue with google/i }));
@@ -273,6 +301,10 @@ describe("SignInForm — AC8: captcha_failed and rate_limited map via errorMessa
 });
 
 describe("SignInForm — AC5: social-app UA detection covers all 7 platforms", () => {
+  beforeEach(() => {
+    Object.defineProperty(window, "navigator", { value: mockNavigator, writable: true });
+  });
+
   it("shows hint for LinkedIn embedded browser", () => {
     Object.defineProperty(window, "navigator", {
       value: { userAgent: "Mozilla/5.0 LinkedInApp/9.0" },

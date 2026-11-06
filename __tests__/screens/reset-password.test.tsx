@@ -135,6 +135,17 @@ describe("ResetPasswordForm — AC8: error codes map via messages/en.ts", () => 
       expect(screen.getByRole("alert")).toHaveTextContent(/stronger password/i);
     });
   });
+
+  it("shows mapped message for rate_limited", async () => {
+    mockResetPassword.mockResolvedValue({ ok: false, code: "rate_limited" });
+    render(<ResetPasswordForm email="user@example.com" />);
+    await userEvent.type(screen.getByLabelText(/reset code/i), "123456");
+    await userEvent.type(screen.getByLabelText(/new password/i), "NewPass123!");
+    await userEvent.click(screen.getByRole("button", { name: /set new password/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(/too many/i);
+    });
+  });
 });
 
 describe("ResetPasswordForm — exception resilience: button re-enables after thrown error", () => {
