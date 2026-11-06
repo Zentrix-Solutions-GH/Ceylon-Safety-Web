@@ -7,6 +7,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import ErrorPage from "@/app/error";
+import GlobalError from "@/app/global-error";
 import NotFoundPage from "@/app/not-found";
 
 const mockReset = vi.fn();
@@ -34,11 +35,21 @@ describe("ErrorPage", () => {
     const homeLink = screen.getByRole("link", { name: /home/i });
     expect(homeLink).toHaveAttribute("href", "/");
   });
+
+  it("wraps content in main#main-content for skip link (AC7)", () => {
+    render(<ErrorPage error={new Error()} reset={mockReset} />);
+    expect(document.getElementById("main-content")).toBeInTheDocument();
+  });
 });
 
 // ─── AC8: not-found page ─────────────────────────────────────────────────────
 
 describe("NotFoundPage", () => {
+  it("wraps content in main#main-content for skip link (AC8)", () => {
+    render(<NotFoundPage />);
+    expect(document.getElementById("main-content")).toBeInTheDocument();
+  });
+
   it("shows a heading", () => {
     render(<NotFoundPage />);
     expect(screen.getByRole("heading")).toBeInTheDocument();
@@ -64,5 +75,39 @@ describe("NotFoundPage", () => {
   it("has a link to Contact Coach", () => {
     render(<NotFoundPage />);
     expect(screen.getByRole("link", { name: /contact/i })).toBeInTheDocument();
+  });
+
+  it("exports noindex metadata (AC8)", async () => {
+    const mod = await import("@/app/not-found");
+    expect((mod as { metadata?: { robots?: { index?: boolean } } }).metadata?.robots?.index).toBe(false);
+  });
+});
+
+// ─── EC1: global error page ───────────────────────────────────────────────────
+
+describe("GlobalError", () => {
+  it("renders a heading", () => {
+    render(<GlobalError error={new Error()} reset={mockReset} />);
+    expect(screen.getByRole("heading")).toBeInTheDocument();
+  });
+
+  it("has a reload button that calls reset", () => {
+    render(<GlobalError error={new Error()} reset={mockReset} />);
+    const btn = screen.getByRole("button");
+    btn.click();
+    expect(mockReset).toHaveBeenCalled();
+  });
+
+  it("renders heading and button without globals.css or layout imports (EC1 smoke)", () => {
+    // jsdom cannot verify the import chain; CI typecheck catches accidental imports.
+    // This test confirms the component renders in isolation (no layout context needed).
+    render(<GlobalError error={new Error()} reset={mockReset} />);
+    expect(screen.getByRole("heading")).toBeInTheDocument();
+    expect(screen.getByRole("button")).toBeInTheDocument();
+  });
+
+  it("shows no technical error detail", () => {
+    render(<GlobalError error={new Error("secret internal message")} reset={mockReset} />);
+    expect(screen.queryByText(/secret internal message/)).toBeNull();
   });
 });

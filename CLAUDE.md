@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # CeylonSafety — Claude Code rules
 
 CeylonSafety is a Health & Safety website for the Sri Lankan market: free articles and videos attract visitors; revenue comes from paid PowerPoint documents (Checklists, Safety Signs, Toolbox Talks), advertising, and training enquiries.
@@ -12,6 +16,53 @@ Stack: Next.js App Router, Supabase (PostgreSQL + Auth), Cloudflare R2, Resend, 
 - Other design docs for content, advertising, admin panel, frontend, infrastructure
 
 **Story and status files** — `docs/stories/` (one story per pull request); `docs/PROJECT_STATUS.md` (live status).
+
+---
+
+## Commands
+
+```bash
+npm run dev            # dev server on :3000
+npm run build          # production build
+bash scripts/check.sh  # full gate: lint → typecheck → Vitest → pgTAP → types freshness → public-pages session check
+```
+
+Single steps (use when iterating):
+```bash
+npx eslint . --max-warnings 0                        # lint only
+npx tsc --noEmit                                     # typecheck only
+npx vitest run                                       # all unit tests
+npx vitest run app/__tests__/layouts.test.tsx        # single test file
+```
+
+`check.sh` skips the pgTAP RLS/seed tests and the types-freshness check when Supabase is not running. Start it with `supabase start` before committing backend changes. The story's Evidence section must contain the real `check.sh` output.
+
+---
+
+## Architecture
+
+### Route groups
+
+| Group | Layout file | Purpose |
+|---|---|---|
+| `(public)` | `app/(public)/layout.tsx` | Marketing pages — Header, Footer, ScriptGate. **No server-session reads allowed** (enforced by `scripts/check-public-pages.ts`). |
+| `(auth)` | `app/(auth)/layout.tsx` | Centred card, wordmark only — no nav, no Footer, `noindex`. |
+| `(customer)` | `app/(customer)/layout.tsx` | Logged-in area — CustomerHeader only, `noindex`. |
+| `admin` | `app/admin/layout.tsx` | Admin shell — plain, `noindex`. Sidebar added in S-045. |
+
+All five layouts (`RootLayout` + four groups) render `<main id="main-content">` as the skip-link target. The skip link itself lives in `app/layout.tsx` and **must remain the first child of `<body>`**.
+
+### UI strings (`messages/en.ts`)
+
+Every user-visible string — including `sr-only` text and `aria-label` values — must come from `messages/en.ts` via `t("key")`. The TypeScript type enforces valid keys at compile time. Add the key first, then reference it. Never hardcode user-visible text.
+
+### Environment config
+
+All environment variables flow through `lib/config.ts`. Read `process.env` only inside that file.
+
+### Review Guard (CI)
+
+Merging into `dev` requires a formal GitHub review (Approve) on the exact HEAD commit SHA. The workflow (`require-review.yml`) fetches reviews with `per_page: 100`. If Review Guard fails despite an existing approval, check whether the PR has accumulated > 100 reviews total — the script won't see approvals beyond page 1.
 
 ---
 

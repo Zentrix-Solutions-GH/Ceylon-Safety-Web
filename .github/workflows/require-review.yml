@@ -8,6 +8,11 @@ on:
     types: [submitted, dismissed]
   issue_comment:
     types: [created, edited, deleted]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to check'
+        required: true
 
 permissions:
   contents: read
@@ -25,7 +30,24 @@ jobs:
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
-            const branch = context.payload.pull_request.head.ref;
+            if (context.eventName === 'workflow_dispatch') return false; // skip docs-only check; require review
+            // For issue_comment events, load the PR from the issue number so the docs-only
+            // check runs correctly (without this, the null guard below bypasses the check).
+            let pr = context.payload.pull_request;
+            if (!pr && context.payload.issue) {
+              try {
+                const { data } = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.payload.issue.number,
+                });
+                pr = data;
+              } catch (_) {
+                return false; // not a PR comment — require review
+              }
+            }
+            if (!pr) return false;
+            const branch = pr.head.ref;
             // Only story branches (feature/S-NNN-*) require external review.
             // Infrastructure, CI, chore, and docs branches are self-mergeable.
             const isStoryBranch = /^feature\/S-\d+/i.test(branch);
@@ -36,7 +58,7 @@ jobs:
             const { data: files } = await github.rest.pulls.listFiles({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
+              pull_number: pr.number,
               per_page: 100,
             });
             const allDocs = files.length > 0 && files.every(f =>
@@ -59,9 +81,9 @@ jobs:
           script: |
             // issue_comment events carry the PR number in context.payload.issue.number;
             // pull_request and pull_request_review events carry it in context.payload.pull_request.number.
-            const prNumber = context.payload.pull_request
-              ? context.payload.pull_request.number
-              : context.payload.issue?.number;
+            const prNumber = context.payload.pull_request?.number
+              ?? context.payload.issue?.number
+              ?? (Number(context.payload.inputs?.pr_number || '0') || undefined);
             if (!prNumber) {
               console.log('No PR number found — skipping.');
               return;
@@ -79,6 +101,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: prNumber,
+              per_page: 100,
             });
 
             const headReviews = reviews.filter(r =>

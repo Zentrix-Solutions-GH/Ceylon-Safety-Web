@@ -1,6 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 
+// next/font/google is not available in Vitest/jsdom — mock font constructors
+vi.mock("next/font/google", () => ({
+  Inter: () => ({ variable: "--font-sans", className: "" }),
+  Noto_Sans_Sinhala: () => ({ variable: "--font-sinhala", className: "" }),
+  Noto_Sans_Tamil: () => ({ variable: "--font-tamil", className: "" }),
+}));
+
 // Mock next/navigation (needed by HeaderPersonal / CustomerHeader)
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(() => "/"),
@@ -105,6 +112,13 @@ describe("PublicLayout", () => {
 // ─── AC3: auth layout ─────────────────────────────────────────────────────────
 
 describe("AuthLayout", () => {
+  it("renders children inside main#main-content (skip-link target)", () => {
+    render(<AuthLayout><div data-testid="child" /></AuthLayout>);
+    const main = document.getElementById("main-content")!;
+    expect(main).toBeInTheDocument();
+    expect(main).toContainElement(screen.getByTestId("child"));
+  });
+
   it("renders children", () => {
     render(<AuthLayout><div data-testid="child" /></AuthLayout>);
     expect(screen.getByTestId("child")).toBeInTheDocument();
@@ -131,6 +145,22 @@ describe("AuthLayout", () => {
 // ─── AC4: customer layout ────────────────────────────────────────────────────
 
 describe("CustomerLayout", () => {
+  it("renders main#main-content (skip-link target)", () => {
+    render(<CustomerLayout><div /></CustomerLayout>);
+    expect(document.getElementById("main-content")).toBeInTheDocument();
+  });
+
+  it("renders children inside main#main-content", () => {
+    render(<CustomerLayout><div data-testid="child" /></CustomerLayout>);
+    const main = document.getElementById("main-content")!;
+    expect(main).toContainElement(screen.getByTestId("child"));
+  });
+
+  it("renders CustomerHeader (AC4)", () => {
+    render(<CustomerLayout><div /></CustomerLayout>);
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+  });
+
   it("renders children", () => {
     render(<CustomerLayout><div data-testid="child" /></CustomerLayout>);
     expect(screen.getByTestId("child")).toBeInTheDocument();
@@ -150,6 +180,17 @@ describe("CustomerLayout", () => {
 // ─── AC5: admin layout ───────────────────────────────────────────────────────
 
 describe("AdminLayout", () => {
+  it("renders main#main-content (skip-link target)", () => {
+    render(<AdminLayout><div /></AdminLayout>);
+    expect(document.getElementById("main-content")).toBeInTheDocument();
+  });
+
+  it("renders children inside main#main-content", () => {
+    render(<AdminLayout><div data-testid="child" /></AdminLayout>);
+    const main = document.getElementById("main-content")!;
+    expect(main).toContainElement(screen.getByTestId("child"));
+  });
+
   it("renders children", () => {
     render(<AdminLayout><div data-testid="child" /></AdminLayout>);
     expect(screen.getByTestId("child")).toBeInTheDocument();
@@ -157,6 +198,7 @@ describe("AdminLayout", () => {
 
   it("has no public Header or Footer", () => {
     render(<AdminLayout><div /></AdminLayout>);
+    expect(screen.queryByRole("banner")).toBeNull();
     expect(screen.queryByRole("navigation")).toBeNull();
     expect(screen.queryByRole("contentinfo")).toBeNull();
   });

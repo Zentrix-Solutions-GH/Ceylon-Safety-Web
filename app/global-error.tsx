@@ -2,7 +2,7 @@
 
 // AC7/EC1: global-error — plain HTML with own html+body; no database reads.
 // Must not import globals.css or any component that might fail during a root-layout error.
-import { t } from "@/messages/en";
+import { t } from "../messages/en";
 
 export default function GlobalError({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -14,6 +14,11 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{t("global_error.heading")}</title>
+      </head>
       <body
         style={{
           margin: 0,
@@ -88,7 +93,7 @@ export default function GlobalError({
             textAlign: "center",
           }}
         >
-          {t("global_error.heading")}
+          &copy; {new Date().getFullYear()} {t("site.copyright")}
         </footer>
       </body>
     </html>

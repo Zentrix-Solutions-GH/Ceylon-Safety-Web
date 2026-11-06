@@ -1,7 +1,7 @@
 ---
 id: S-022
 title: Design tokens, brand colours, self-hosted fonts
-status: pr-open
+status: merged
 owner: frontend
 risk: normal
 branch: feature/S-022-design-tokens-fonts
