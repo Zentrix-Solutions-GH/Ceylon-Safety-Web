@@ -1,4 +1,4 @@
-﻿const en = {
+const en = {
   // --- auth flows ---
   // auth.code_sent has an {email} parameter â€” used by t() parameter tests.
   "auth.code_sent": "We sent a code to {email}. Check your inbox.",
@@ -109,22 +109,6 @@
   "auth.verify_email.enter_email_hint": "Enter the email address you registered with",
   "auth.verify_email.enter_email_label": "Email address",
   "auth.verify_email.enter_email_submit": "Send code",
-
-  // --- footer (S-026) ---
-  "footer.label": "Site footer",
-  "footer.contact": "Contact",
-  "footer.email_link": "Email us",
-  "footer.follow": "Follow us",
-  "footer.quick_links": "Quick links",
-  "footer.categories": "Categories",
-  "footer.terms": "Terms",
-  "footer.privacy": "Privacy",
-  "footer.refund_policy": "Refund policy",
-  "footer.disclaimer": "Disclaimer",
-  "footer.social.facebook": "Facebook",
-  "footer.social.instagram": "Instagram",
-  "footer.social.linkedin": "LinkedIn",
-  "footer.social.youtube": "YouTube",
 
   // --- cookie banner (S-029) ---
   "cookie.banner_label": "Cookie consent",

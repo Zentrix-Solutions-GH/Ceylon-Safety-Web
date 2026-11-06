@@ -1,12 +1,15 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { getConsent, setConsent } from "@/lib/consent";
 import { t } from "@/messages/en";
 
+type ConsentValue = "undecided" | "accepted" | "rejected";
+
 export default function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
+  const [currentChoice, setCurrentChoice] = useState<ConsentValue>("undecided");
   const triggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -17,6 +20,7 @@ export default function CookieConsentBanner() {
     function handleOpen(e: Event) {
       const detail = (e as CustomEvent<{ trigger: HTMLElement | null }>).detail;
       triggerRef.current = detail?.trigger ?? null;
+      setCurrentChoice(getConsent());
       setVisible(true);
     }
 
@@ -25,9 +29,9 @@ export default function CookieConsentBanner() {
   }, []);
 
   useEffect(() => {
-    const val = visible ? "4rem" : "";
-    document.body.style.paddingBottom = val;
-    document.documentElement.style.scrollPaddingBottom = val;
+    if (!visible) return;
+    document.body.style.paddingBottom = "4rem";
+    document.documentElement.style.scrollPaddingBottom = "4rem";
     return () => {
       document.body.style.paddingBottom = "";
       document.documentElement.style.scrollPaddingBottom = "";
@@ -35,7 +39,7 @@ export default function CookieConsentBanner() {
   }, [visible]);
 
   function handleChoice(choice: "accepted" | "rejected") {
-    setConsent(choice);
+    try { setConsent(choice); } catch { /* EC1: ignore storage errors */ }
     setVisible(false);
     const target = triggerRef.current;
     triggerRef.current = null;
@@ -50,6 +54,7 @@ export default function CookieConsentBanner() {
 
   const btnClass =
     "inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const selectedClass = `${btnClass} ring-2 ring-primary`;
 
   return (
     <div
@@ -66,10 +71,18 @@ export default function CookieConsentBanner() {
           .
         </p>
         <div className="flex shrink-0 gap-2">
-          <button className={btnClass} onClick={() => handleChoice("accepted")}>
+          <button
+            className={currentChoice === "accepted" ? selectedClass : btnClass}
+            aria-pressed={currentChoice === "accepted"}
+            onClick={() => handleChoice("accepted")}
+          >
             {t("cookie.accept")}
           </button>
-          <button className={btnClass} onClick={() => handleChoice("rejected")}>
+          <button
+            className={currentChoice === "rejected" ? selectedClass : btnClass}
+            aria-pressed={currentChoice === "rejected"}
+            onClick={() => handleChoice("rejected")}
+          >
             {t("cookie.reject")}
           </button>
         </div>

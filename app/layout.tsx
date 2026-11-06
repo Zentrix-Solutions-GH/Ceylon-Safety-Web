@@ -1,4 +1,4 @@
-﻿// Root layout: html, body, fonts (S-022), skip link, toast area, cookie banner mount.
+// Root layout: html, body, fonts (S-022), skip link, toast area, cookie banner mount.
 import type { ReactNode } from "react";
 import { Inter, Noto_Sans_Sinhala, Noto_Sans_Tamil } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";

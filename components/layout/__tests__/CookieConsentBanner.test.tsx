@@ -1,4 +1,4 @@
-﻿import { render, screen, act } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -200,5 +200,40 @@ describe("EC1: cookies blocked", () => {
     await expect(
       userEvent.setup().click(await screen.findByRole("button", { name: /accept/i }))
     ).resolves.not.toThrow();
+  });
+
+  it("closes the banner even when setConsent throws (storage blocked)", async () => {
+    mockGetConsent.mockReturnValue("undecided");
+    mockSetConsent.mockImplementation(() => { throw new Error("QuotaExceededError"); });
+    render(<CookieConsentBanner />);
+    await userEvent.setup().click(await screen.findByRole("button", { name: /accept/i }));
+    expect(screen.queryByRole("region")).toBeNull();
+  });
+});
+
+describe("EC4: prior choice shown when banner reopens", () => {
+  it("Accept has aria-pressed=true when previous choice was accepted", async () => {
+    mockGetConsent.mockReturnValue("accepted");
+    render(<CookieConsentBanner />);
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("open-cookie-banner", { detail: { trigger: null } }));
+    });
+    expect(await screen.findByRole("button", { name: /accept/i })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("Reject has aria-pressed=true when previous choice was rejected", async () => {
+    mockGetConsent.mockReturnValue("rejected");
+    render(<CookieConsentBanner />);
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("open-cookie-banner", { detail: { trigger: null } }));
+    });
+    expect(await screen.findByRole("button", { name: /reject/i })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("neither button has aria-pressed=true when consent is undecided", async () => {
+    mockGetConsent.mockReturnValue("undecided");
+    render(<CookieConsentBanner />);
+    expect(await screen.findByRole("button", { name: /accept/i })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /reject/i })).toHaveAttribute("aria-pressed", "false");
   });
 });

@@ -1,4 +1,4 @@
-﻿---
+---
 id: S-029
 title: Cookie banner + "Cookie settings" link
 status: pr-open
@@ -96,19 +96,24 @@ $ bash scripts/check.sh
 OK ESLint passed
 
 -- TypeScript --
-OK TypeScript passed
+FAIL (pre-existing, shared workspace — not caused by S-029):
+  components/auth/ForgotPasswordForm.tsx — uses auth.forgot_password.* keys (S-041 story, keys not yet in en.ts)
+  components/auth/ResetPasswordForm.tsx  — uses auth.reset_password.* keys (S-041 story, keys not yet in en.ts)
+  components/auth/SignInForm.tsx         — uses auth.sign_in.* keys (S-041 story, keys not yet in en.ts)
+  These are untracked S-041 files in the shared workspace; not part of S-029.
 
 -- Vitest (unit) --
-OK components/layout/__tests__/CookieConsentBanner.test.tsx (20 tests)
+OK components/layout/__tests__/CookieConsentBanner.test.tsx (24 tests)
 OK components/layout/__tests__/Footer.cookie.test.tsx (3 tests)
 OK app/__tests__/layouts.test.tsx (23 tests)
 
 Non-S-029 failures (pre-existing, shared workspace):
-FAIL components/layout/__tests__/Footer.test.tsx (12/23 failed)
-  Untracked S-026 file testing full footer not yet implemented.
-  Not caused by S-029 code.
+FAIL components/layout/__tests__/Footer.test.tsx (11 failed) — S-026 untracked file; not caused by S-029.
+FAIL __tests__/screens/sign-in.test.tsx (20/21 failed) — S-041 untracked file; not caused by S-029.
+FAIL __tests__/screens/reset-password.test.tsx (6 failed) — S-041 untracked file; not caused by S-029.
 
-S-029 own tests: 23/23 green. ESLint: 0 errors. TypeScript: 0 errors.
+S-029 own tests: 50/50 green (24 banner + 3 footer.cookie + 23 layouts).
+ESLint: 0 errors. TypeScript: 0 S-029 errors.
 ```
 ## Review notes
 
@@ -129,20 +134,29 @@ S-029 own tests: 23/23 green. ESLint: 0 errors. TypeScript: 0 errors.
 | EC1 | PASS | handleChoice ignores setConsent return; closes regardless. |
 | EC2 | PASS | SSR null + "use client" architecture correct. |
 | EC3 | PASS | useState(false); useEffect only shows if undecided. |
-| EC4 | PARTIAL (P1) | Banner reopens correctly but no visual "currently selected" indicator. Owner to decide if highlight is in scope. |
+| EC4 | PASS | aria-pressed on both buttons; ring-2 ring-primary highlight on current choice; currentChoice state read on reopen. |
 | EC5 | PASS | Native button elements, no focus trap. |
 
 ### P0 findings (blocking)
 
 None.
 
-### P1 findings (non-blocking)
+### P1 findings (non-blocking) — resolved post-review
 
-1. **EC4 current-state visual indicator** — Reopened banner shows no indication of which choice was previously made. EC4 says "shows the current choice state." Mechanical re-save works. Owner should confirm whether a highlight is needed; if not, soften EC4 wording.
+1. **EC4 current-state visual indicator** — FIXED: `currentChoice` state reads prior consent on reopen; `aria-pressed` and `ring-2 ring-primary` highlight the selected button.
 
-2. **Footer stub is minimal** — Only has the cookie settings button; full footer is S-026 scope. FooterSettings/FooterCategory interfaces exported for forward-compat. Confirm S-026 owns the merge.
+2. **setConsent exception safety** — FIXED: `handleChoice` wraps `setConsent` in try/catch; banner always closes regardless of storage errors. Test added.
 
-3. **Empty-destructure pattern** `function Footer({}: Props = {})` — Valid TypeScript, slightly unusual. No functional issue.
+3. **footer.* keys in en.ts** — FIXED: 14 stale `footer.*` keys (S-026 scope accidentally present) removed. Only `cookie.*` keys remain.
+
+4. **UTF-8 BOM** — FIXED: BOM stripped from `messages/en.ts` and `app/layout.tsx` working-tree copies.
+
+5. **Scroll-padding guard** — FIXED: `useEffect` keyed on `visible` starts with `if (!visible) return` so cleanup only fires when the banner was actually mounted.
+
+### Notes
+
+- Footer stub is minimal (cookie settings button only); full footer is S-026 scope. FooterSettings/FooterCategory interfaces exported for forward-compat.
+- Empty-destructure pattern `function Footer({}: Props = {})` — valid TypeScript, no functional issue.
 
 ## After this merges, a user can:
 
