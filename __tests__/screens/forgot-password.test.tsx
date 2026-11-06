@@ -11,7 +11,6 @@ vi.mock("@/lib/auth/actions/request-password-reset", () => ({
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
-  useSearchParams: () => ({ get: () => null }),
 }));
 
 vi.mock("@/components/auth/TurnstileWidget", () => ({

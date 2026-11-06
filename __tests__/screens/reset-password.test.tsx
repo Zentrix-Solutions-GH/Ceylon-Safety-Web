@@ -27,6 +27,13 @@ describe("ResetPasswordForm — AC7: renders OTP + new-password fields", () => {
     expect(screen.getByLabelText(/new password/i)).toBeInTheDocument();
   });
 
+  it("email field is pre-filled and readonly when initialEmail prop is provided", () => {
+    render(<ResetPasswordForm email="user@example.com" />);
+    const emailInput = screen.getByLabelText(/email/i);
+    expect(emailInput).toHaveValue("user@example.com");
+    expect(emailInput).toHaveAttribute("readonly");
+  });
+
   it("renders email field for manual entry when no email prop (EC1)", () => {
     render(<ResetPasswordForm />);
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();

@@ -15,9 +15,10 @@ vi.mock("@/lib/auth/actions/start-google-sign-in", () => ({
 }));
 
 const mockReplace = vi.fn();
+const mockSearchParamsGet = vi.fn(() => null);
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mockReplace }),
-  useSearchParams: () => ({ get: () => null }),
+  useSearchParams: () => ({ get: mockSearchParamsGet }),
 }));
 
 vi.mock("@/components/auth/TurnstileWidget", () => ({
@@ -67,6 +68,7 @@ describe("SignInForm — AC1/happy path: submits and redirects", () => {
   beforeEach(() => {
     mockSignIn.mockReset();
     mockReplace.mockReset();
+    mockSearchParamsGet.mockReset();
     Object.defineProperty(window, "navigator", { value: mockNavigator, writable: true });
   });
 
@@ -85,6 +87,20 @@ describe("SignInForm — AC1/happy path: submits and redirects", () => {
         })
       );
       expect(mockReplace).toHaveBeenCalledWith("/dashboard");
+    });
+  });
+
+  it("forwards next param to signIn when present in search params (AC1)", async () => {
+    mockSearchParamsGet.mockReturnValue("/protected-page");
+    mockSignIn.mockResolvedValue({ ok: true, redirectTo: "/protected-page" });
+    render(<SignInForm />);
+    await userEvent.type(screen.getByLabelText(/email/i), "user@example.com");
+    await userEvent.type(screen.getByLabelText(/password/i), "secret123");
+    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith(
+        expect.objectContaining({ next: "/protected-page" })
+      );
     });
   });
 });
@@ -181,6 +197,21 @@ describe("SignInForm — AC5: social-app browser shows hint before Google action
     render(<SignInForm />);
     expect(screen.getByRole("button", { name: /continue with google/i })).not.toBeDisabled();
   });
+
+  it("copy-link button shows 'Link copied!' feedback after click (AC5)", async () => {
+    Object.defineProperty(window, "navigator", {
+      value: {
+        userAgent: "Mozilla/5.0 FBAN/FBForIPhone",
+        clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+      },
+      writable: true,
+    });
+    render(<SignInForm />);
+    await userEvent.click(screen.getByRole("button", { name: /copy link/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /link copied/i })).toBeInTheDocument();
+    });
+  });
 });
 
 describe("SignInForm — EC3: Google auth error shows generic message", () => {
@@ -195,6 +226,15 @@ describe("SignInForm — EC3: Google auth error shows generic message", () => {
     await userEvent.click(screen.getByRole("button", { name: /continue with google/i }));
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(/something went wrong/i);
+    });
+  });
+
+  it("shows generic error when startGoogleSignIn throws (EC3 exception path)", async () => {
+    mockStartGoogleSignIn.mockRejectedValue(new Error("network"));
+    render(<SignInForm />);
+    await userEvent.click(screen.getByRole("button", { name: /continue with google/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
     });
   });
 });

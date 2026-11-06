@@ -108,6 +108,12 @@ const en = {
   "auth.reset_password.submitting": "Saving…",
   "auth.reset_password.no_pending": "Enter your code below",
 
+  // --- loading state (S-027) ---
+  "loading.message": "Loading…",
+
+  // --- site footer (S-027) ---
+  "site.copyright": "CeylonSafety",
+
   // --- sign-up screen (S-041) ---
   "auth.sign_up.heading": "Create your account",
   "auth.sign_up.first_name": "First name",

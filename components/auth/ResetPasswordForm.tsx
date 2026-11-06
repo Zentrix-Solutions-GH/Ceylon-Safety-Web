@@ -114,6 +114,7 @@ export function ResetPasswordForm({ email: initialEmail }: Props) {
               inputMode="numeric"
               autoComplete="one-time-code"
               required
+              autoFocus
               className="w-full rounded-md border px-3 py-2 text-sm"
             />
           </FormField>
