@@ -1,11 +1,11 @@
 ---
 id: S-043
 title: Profile, saved address, change password, delete account screens
-status: in-progress
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-043-profile-address-password-delete
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/62
 depends_on: [S-037, S-042]
 reqs: [REQ-117, REQ-118]
 ---
@@ -21,18 +21,18 @@ Signed-in customers need a single place to manage their account: update their di
 
 ## Acceptance criteria
 
-- [ ] AC1: Profile page renders sections: "Your details" (first name, last name, display name, phone, company), "Saved address" (billing address fields), "Change password" (current-password hint for Google-only accounts — disabled with note "Use Forgot password to set a password"), and "Delete account"
-- [ ] AC2: Saving "Your details" calls `updateProfile`; success shows a toast; `validation_failed` renders the error next to the named field
-- [ ] AC3: Saving "Saved address" calls `updateProfile({ billingAddress: ... })`; success shows a toast
-- [ ] AC4: Change password form has "new password", "confirm new password", and an OTP code field; before the form is shown the page calls `supabase.auth.reauthenticate()` (proactive — no server round-trip needed to trigger it), which sends the user a reauthentication email; submitting the form calls `changePassword({ code, newPassword })` where `code` is the OTP the user entered; `code_invalid` or `code_attempts_exceeded` renders the error on the OTP field; `weak_password` renders on the new-password field
-- [ ] AC5: "Delete account" button opens a confirmation modal; the modal calls `requestReverification` → user receives code → user enters code → `deleteAccount({ code })` (which internally calls `confirmReverification` — the frontend must NOT call it as a separate step); success redirects to home; `validation_failed` (account has pending orders / open download request) shows "Please try again later — you have a pending order or download request"
-- [ ] AC6: Google-only accounts (no password identity): "Change password" section shows "You signed in with Google. Use Forgot password to add a password." — the `changePassword` action is not called
-- [ ] AC7: All messages from `messages/en.ts`; no hard-coded English in components (note: the file is `.ts`, not `.json`)
+- [x] AC1: Profile page renders sections: "Your details" (first name, last name, display name, phone, company), "Saved address" (billing address fields), "Change password" (current-password hint for Google-only accounts — disabled with note "Use Forgot password to set a password"), and "Delete account"
+- [x] AC2: Saving "Your details" calls `updateProfile`; success shows a toast; `validation_failed` renders the error next to the named field
+- [x] AC3: Saving "Saved address" calls `updateProfile({ billingAddress: ... })`; success shows a toast
+- [x] AC4: Change password form has "new password", "confirm new password", and an OTP code field; before the form is shown the page calls `supabase.auth.reauthenticate()` (proactive — no server round-trip needed to trigger it), which sends the user a reauthentication email; submitting the form calls `changePassword({ code, newPassword })` where `code` is the OTP the user entered; `code_invalid` or `code_attempts_exceeded` renders the error on the OTP field; `weak_password` renders on the new-password field
+- [x] AC5: "Delete account" button opens a confirmation modal; the modal calls `requestReverification` → user receives code → user enters code → `deleteAccount({ code })` (which internally calls `confirmReverification` — the frontend must NOT call it as a separate step); success redirects to home; `validation_failed` (account has pending orders / open download request) shows "Please try again later — you have a pending order or download request"
+- [x] AC6: Google-only accounts (no password identity): "Change password" section shows "You signed in with Google. Use Forgot password to add a password." — the `changePassword` action is not called
+- [x] AC7: All messages from `messages/en.ts`; no hard-coded English in components (note: the file is `.ts`, not `.json`)
 
 ## Edge cases
 
-- [ ] EC1: `deleteAccount` → `code_attempts_exceeded` (returned when the internally called `confirmReverification` exceeds 5 attempts) — modal shows "Too many attempts. A new code has been sent automatically" and resets the OTP input
-- [ ] EC2: User is staff — "Delete account" button is hidden (staff cannot delete via the profile page; auth design section 12)
+- [x] EC1: `deleteAccount` → `code_attempts_exceeded` (returned when the internally called `confirmReverification` exceeds 5 attempts) — modal shows "Too many attempts. A new code has been sent automatically" and resets the OTP input
+- [x] EC2: User is staff — "Delete account" button is hidden (staff cannot delete via the profile page; auth design section 12)
 - [ ] EC3: Profile page accessed by a suspended user — middleware (S-033) redirects to `/suspended` before the page loads
 
 ## Contract
