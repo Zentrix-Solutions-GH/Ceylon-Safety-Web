@@ -36,3 +36,12 @@ export function createSupabaseServiceRoleClient() {
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
 }
+
+// No cookies, no session — for public server-side reads where RLS (anon role) must apply.
+export function createSupabaseAnonClient() {
+  return createClient<Database>(
+    publicConfig.supabaseUrl,
+    publicConfig.supabaseAnonKey,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
+}
