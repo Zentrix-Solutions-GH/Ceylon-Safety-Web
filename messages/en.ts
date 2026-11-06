@@ -1,11 +1,11 @@
 const en = {
   // --- auth flows ---
-  // auth.code_sent has an {email} parameter — used by t() parameter tests.
+  // auth.code_sent has an {email} parameter â€" used by t() parameter tests.
   "auth.code_sent": "We sent a code to {email}. Check your inbox.",
   "auth.already_registered":
     "If this email can be registered, we have sent a code. Already registered? Sign in or reset your password",
 
-  // --- error codes: common (auth design §17, M19) ---
+  // --- error codes: common (auth design Â§17, M19) ---
   "errors.validation_failed": "This value is not valid.",
   "errors.validation_failed.already_done": "This has already been done.",
   "errors.validation_failed.files_missing": "One or more required files are missing.",
@@ -28,7 +28,7 @@ const en = {
   "errors.mfa_required": "A second factor is required. Please check your authenticator.",
   "errors.unknown": "Something went wrong. Please try again.",
 
-  // --- error codes: auth-only (auth design §17) ---
+  // --- error codes: auth-only (auth design Â§17) ---
   "errors.invalid_credentials": "Email or password is not correct",
   "errors.email_not_verified": "Please verify your email address before signing in.",
   "errors.code_invalid": "That code is not right",
@@ -125,11 +125,20 @@ const en = {
   "auth.verify_email.enter_email_hint": "Enter the email address you registered with",
   "auth.verify_email.enter_email_label": "Email address",
   "auth.verify_email.enter_email_submit": "Send code",
+
+  // --- cookie banner (S-029) ---
+  "cookie.banner_label": "Cookie consent",
+  "cookie.banner_text": "We use cookies for ads and visitor counts. Essential cookies are always on. Read our",
+  "cookie.privacy_link": "Privacy Policy",
+  "cookie.privacy_link_suffix": ".",
+  "cookie.accept": "Accept",
+  "cookie.reject": "Reject",
+  "cookie.settings_link": "Cookie settings",
 } as const;
 
 export type MessageKey = keyof typeof en;
 
-// AC1: typed key — unknown keys are compile errors.
+// AC1: typed key â€" unknown keys are compile errors.
 // EC1: one pass of replacement per param key; no recursion, no HTML interpretation.
 export function t(key: MessageKey, params?: Record<string, string>): string {
   let text: string = en[key];

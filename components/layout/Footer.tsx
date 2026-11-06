@@ -1,4 +1,7 @@
-﻿import Link from "next/link";
+"use client";
+
+import { useRef } from "react";
+import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { t } from "@/messages/en";
 import type { MessageKey } from "@/messages/en";
@@ -49,6 +52,7 @@ const SOCIAL_SETTINGS: { settingKey: keyof FooterSettings; labelKey: MessageKey 
 
 export default function Footer({ settings, categories = [] }: FooterProps) {
   const year = new Date().getFullYear();
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   const socialLinks = SOCIAL_SETTINGS.flatMap(({ settingKey, labelKey }) => {
     const url = settings?.[settingKey];
@@ -56,6 +60,12 @@ export default function Footer({ settings, categories = [] }: FooterProps) {
   });
   const hasContact =
     settings?.contact_email || settings?.contact_phone || settings?.footer_address;
+
+  function handleCookieSettings() {
+    window.dispatchEvent(
+      new CustomEvent("open-cookie-banner", { detail: { trigger: btnRef.current } })
+    );
+  }
 
   return (
     <footer aria-label={t("footer.label")} className="border-t bg-muted/40">
@@ -146,8 +156,16 @@ export default function Footer({ settings, categories = [] }: FooterProps) {
             </div>
           )}
         </div>
-        <div className="mt-10 border-t pt-6 text-center text-sm text-muted-foreground">
-          &copy; {year} {t("site.copyright")}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t pt-6 text-center text-sm text-muted-foreground">
+          <span>&copy; {year} {t("site.copyright")}</span>
+          <button
+            ref={btnRef}
+            type="button"
+            onClick={handleCookieSettings}
+            className="underline hover:no-underline"
+          >
+            {t("cookie.settings_link")}
+          </button>
         </div>
       </div>
     </footer>

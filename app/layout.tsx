@@ -6,7 +6,7 @@ import CookieConsentBanner from "@/components/layout/CookieConsentBanner";
 import { t } from "@/messages/en";
 import "./globals.css";
 
-// Latin — preloaded; variable font covers all weights
+// Latin -- preloaded; variable font covers all weights
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
@@ -14,7 +14,7 @@ const inter = Inter({
   preload: true,
 });
 
-// Sinhala — not preloaded; unicode-range restricts download to pages with Sinhala glyphs (EC3)
+// Sinhala -- not preloaded; unicode-range restricts download to pages with Sinhala glyphs (EC3)
 const notoSinhala = Noto_Sans_Sinhala({
   subsets: ["sinhala"],
   weight: ["400"],
@@ -23,7 +23,7 @@ const notoSinhala = Noto_Sans_Sinhala({
   preload: false,
 });
 
-// Tamil — not preloaded; unicode-range restricts download to pages with Tamil glyphs (EC3)
+// Tamil -- not preloaded; unicode-range restricts download to pages with Tamil glyphs (EC3)
 const notoTamil = Noto_Sans_Tamil({
   subsets: ["tamil"],
   weight: ["400"],
@@ -47,13 +47,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {t("layout.skip_to_main")}
         </a>
 
+        {/* AC4 (S-029): banner in DOM before page content so keyboard reaches it right after skip link */}
+        <CookieConsentBanner />
+
         {children}
 
         {/* AC1: toast area */}
         <Toaster />
-
-        {/* AC1: cookie banner mount point — filled by S-029 */}
-        <CookieConsentBanner />
       </body>
     </html>
   );
