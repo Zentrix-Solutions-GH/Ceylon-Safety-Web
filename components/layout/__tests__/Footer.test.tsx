@@ -174,6 +174,6 @@ describe("Footer categories (EC4)", () => {
 describe("Footer landmark (AC5)", () => {
   it("renders a contentinfo landmark", () => {
     render(<Footer />);
-    expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+    expect(screen.getByRole("contentinfo", { name: "Site footer" })).toBeInTheDocument();
   });
 });

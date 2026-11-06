@@ -75,7 +75,7 @@ export default function Footer({ settings, categories = [] }: FooterProps) {
                     <span>{settings.contact_email}</span>
                     <span aria-hidden={true}> &middot; </span>
                     <a
-                      href={`mailto:${settings.contact_email}`}
+                      href={`mailto:${settings.contact_email.split("?")[0]}`}
                       className="underline underline-offset-2 hover:text-foreground"
                     >
                       {t("footer.email_link")}
@@ -135,7 +135,7 @@ export default function Footer({ settings, categories = [] }: FooterProps) {
                 {categories.map((cat) => (
                   <li key={cat.slug}>
                     <Link
-                      href={`/articles?category=${cat.slug}`}
+                      href={`/articles?category=${encodeURIComponent(cat.slug)}`}
                       className="hover:text-foreground hover:underline"
                     >
                       {cat.name}

@@ -76,11 +76,51 @@ Prior art: designer pass 2026-10-25 read trainer/public pages 3.5 and 16, fronte
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7. Add 375 px and 1280 px screenshots. -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ ✓ components/layout/__tests__/Footer.test.tsx (24 tests) 1867ms
+   ✓ Footer quick links > renders all 10 quick links
+ ✓ ... (90 test files passed, 1052 tests passed | 27 skipped)
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests (run supabase start first)
+
+── pgTAP seed suite ──
+⚠ Supabase not running — skipping seed tests (run supabase start first)
+
+── pgTAP dev seed suite ──
+⚠ Supabase not running — skipping dev seed tests (run supabase start first)
+
+── Types file freshness ──
+⚠ Supabase not running — skipping types check (run supabase start first)
+
+── Public pages session check (AC11) ──
+check-public-pages: OK — checked 19 file(s), no violations.
+✓ Public pages session check (AC11) passed
+
+── Google Fonts check (AC5) ──
+⚠ No build output found — skipping Google Fonts check (run npm run build first)
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 5 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
+
+AC5 screenshots at 375 px and 1280 px: to be added manually before merge (requires running dev server).
 
 ## Review notes
 
