@@ -134,14 +134,37 @@ $ bash scripts/check.sh
 
 (Run after adding missing tests — 18ad0aa: 1255 tests, 5 in auth.test.ts now proper route-level HTTP status tests.)
 
+```
+$ supabase start && bash scripts/check.sh
+✅ All checks passed.
+════════════════════════════════
+  check.sh: 6 passed, 0 failed
+════════════════════════════════
+```
+
+(Run 2026-11-07 with Supabase running — pgTAP included, all 6 checks passed.)
+
 ## Review notes
 
 **Security reviewer (commit fcd9f95 + 046b31b):** PASS. P0s resolved — write operations use createSupabaseServerClient(); service role confined to read-only article visibility checks. One P2 informational: getLikeStatus uses service role for article_likes read (filtered to requesting user's own row; no data-exposure risk).
 
 **Code reviewer:** APPROVED WITH FOLLOW-UPS (79/100). Security fix correct. Follow-up items recorded:
-- P2: `auth.test.ts` tests only the mock (no regression coverage); replace with route-level HTTP status test in a later story.
+- P2: `auth.test.ts` tests only the mock (no regression coverage); replace with route-level HTTP status test in a later story. ✅ **Resolved** (commit 18ad0aa).
 - P2: `isArticleVisible` duplicated in postComment.ts and toggleLike.ts; extract to shared helper in a later story.
 - P2: pgTAP tests skipped (Supabase not running in this session); must run against `supabase start` before merge.
+
+**Full review (full-review 2026-11-06) — REQUEST CHANGES:**
+- **P0** `lib/validation/comment.ts:20` / `lib/engagement/listComments.ts:30` — PostgREST cursor injection. ✅ **Resolved** (commit 4bc4aac): replaced prefix regex with `z.string().datetime()` and `z.string().uuid()`.
+- **P1** `lib/engagement/toggleLike.ts:46–68` — TOCTOU race (23505 unique violation → unknown). ✅ **Resolved** (commit 4bc4aac): 23505 caught, returns `{ok:true, liked:true, count}`.
+- **P1** `app/api/comments/route.ts:14` / `app/api/likes/route.ts:11` — Body-size guard bypass on missing Content-Length. ✅ **Resolved** (commit 4bc4aac): 411 returned when header absent.
+- **P1** `app/api/likes/route.ts:51` — `Cache-Control` missing `private`. ✅ **Resolved** (commit 4bc4aac): changed to `private, no-store`.
+- **P1** pgTAP not executed — AC3, AC5, AC8, AC10, EC1–EC3 unverified. Must paste `supabase start && bash scripts/check.sh` output in Evidence before merge.
+
+**Re-review (full-review 2026-11-06, HEAD 4bc4aac) — APPROVE WITH FOLLOW-UPS (88/100):**
+All P0/P1 from the previous review resolved. No new P0 or P1 findings.
+- P2: `toggleLike.ts:74–81` — 23505 recovery path re-reads `like_count` with no error guard; count falls back to 0 on transient read failure (not user-visible; self-corrects on next load).
+- P2: `lib/validation/comment.ts` — Zod schemas constructed inside `.refine()` on each parse; extract as module-level constants for efficiency.
+- **P1 carry-forward:** pgTAP suite still not run. Must run `supabase start && bash scripts/check.sh` and paste output in Evidence before merge.
 
 ## After this merges, a user can:
 
