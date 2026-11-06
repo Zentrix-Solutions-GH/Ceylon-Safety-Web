@@ -1,7 +1,7 @@
 ---
 id: S-041
 title: Sign-up + verify-email screens
-status: pr-open
+status: merged
 owner: frontend
 risk: normal
 branch: feature/S-041-sign-up-verify-email
