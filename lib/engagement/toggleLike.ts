@@ -79,7 +79,9 @@ export async function toggleLike(
           .select("like_count")
           .eq("id", articleId)
           .single();
-        return { ok: true, liked: true, count: raced?.like_count ?? 0 };
+        // Fall back to the count we read at visibility-check time if the
+        // recovery read fails (transient error); next page load will correct it.
+        return { ok: true, liked: true, count: raced?.like_count ?? article.like_count ?? 0 };
       }
       return { ok: false, code: "unknown" };
     }

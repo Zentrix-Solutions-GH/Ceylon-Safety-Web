@@ -6,6 +6,10 @@ export const commentKindSchema = z.enum(["article"], {
   error: "Only 'article' is supported in Release 1",
 });
 
+// Module-level constants to avoid re-construction on every cursor parse.
+const isoDatetimeSchema = z.string().datetime();
+const uuidSchema = z.string().uuid();
+
 // Cursor is an opaque (createdAt ISO string, id UUID) pair
 export const commentCursorSchema = z
   .string()
@@ -16,8 +20,8 @@ export const commentCursorSchema = z
         return (
           typeof obj === "object" &&
           obj !== null &&
-          z.string().datetime().safeParse(obj.createdAt).success &&
-          z.string().uuid().safeParse(obj.id).success
+          isoDatetimeSchema.safeParse(obj.createdAt).success &&
+          uuidSchema.safeParse(obj.id).success
         );
       } catch {
         return false;
