@@ -112,7 +112,37 @@ S-029 own tests: 23/23 green. ESLint: 0 errors. TypeScript: 0 errors.
 ```
 ## Review notes
 
-<!-- Filled by reviewer agents -->
+**Verdict: APPROVE** (reviewer agent, 2026-11-06)
+
+### AC-by-AC verdict
+
+| Criterion | Status | Notes |
+|---|---|---|
+| AC1 | PASS | useState(false) init, useEffect guard. SSR returns null. |
+| AC2 | PASS | Exact text + privacy link to /privacy. |
+| AC3 | PASS | Shared btnClass; flex gap-2; test asserts equal className. |
+| AC4 | PASS | fixed bottom-0 z-[100]. No focus trap. Banner before {children} in layout. |
+| AC5 | PASS | All route-group layouts have tabIndex={-1} on #main-content. |
+| AC6 | PASS | CustomEvent path fully implemented. triggerRef returns focus. |
+| AC7 | PASS | useEffect on visible sets/clears paddingBottom and scrollPaddingBottom. |
+| AC8 | PASS | fixed positioning (no flow). z-[100]; WhatsApp (future) at z-[90]. |
+| EC1 | PASS | handleChoice ignores setConsent return; closes regardless. |
+| EC2 | PASS | SSR null + "use client" architecture correct. |
+| EC3 | PASS | useState(false); useEffect only shows if undecided. |
+| EC4 | PARTIAL (P1) | Banner reopens correctly but no visual "currently selected" indicator. Owner to decide if highlight is in scope. |
+| EC5 | PASS | Native button elements, no focus trap. |
+
+### P0 findings (blocking)
+
+None.
+
+### P1 findings (non-blocking)
+
+1. **EC4 current-state visual indicator** — Reopened banner shows no indication of which choice was previously made. EC4 says "shows the current choice state." Mechanical re-save works. Owner should confirm whether a highlight is needed; if not, soften EC4 wording.
+
+2. **Footer stub is minimal** — Only has the cookie settings button; full footer is S-026 scope. FooterSettings/FooterCategory interfaces exported for forward-compat. Confirm S-026 owns the merge.
+
+3. **Empty-destructure pattern** `function Footer({}: Props = {})` — Valid TypeScript, slightly unusual. No functional issue.
 
 ## After this merges, a user can:
 
@@ -125,5 +155,6 @@ S-029 own tests: 23/23 green. ESLint: 0 errors. TypeScript: 0 errors.
 ## After this merges
 
 - S-113 reads the same consent state to load AdSense.
+
 
 
