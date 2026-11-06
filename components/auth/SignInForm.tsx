@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "@/lib/auth/actions/sign-in";
@@ -28,8 +28,10 @@ export function SignInForm() {
   const [linkCopied, setLinkCopied] = useState(false);
   const resetTurnstileRef = useRef<(() => void) | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [socialApp, setSocialApp] = useState(false);
 
-  const socialApp = isSocialAppBrowser();
+  useEffect(() => { setSocialApp(isSocialAppBrowser()); }, []);
+  useEffect(() => () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current); }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -174,7 +176,8 @@ export function SignInForm() {
       <button
         type="button"
         onClick={handleGoogleSignIn}
-        className="w-full rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted"
+        disabled={pending}
+        className="w-full rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
       >
         {t("auth.sign_in.google_button")}
       </button>

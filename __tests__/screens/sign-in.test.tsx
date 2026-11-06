@@ -256,3 +256,34 @@ describe("SignInForm — AC5: social-app UA detection covers all 7 platforms", (
     expect(screen.queryByText(/open this page in your phone.s normal browser/i)).not.toBeInTheDocument();
   });
 });
+
+describe("SignInForm — exception resilience: button re-enables after thrown error", () => {
+  beforeEach(() => {
+    mockSignIn.mockReset();
+    mockStartGoogleSignIn.mockReset();
+    Object.defineProperty(window, "navigator", { value: mockNavigator, writable: true });
+  });
+
+  it("clears pending state (button label reverts) when signIn throws", async () => {
+    mockSignIn.mockRejectedValue(new Error("network"));
+    render(<SignInForm />);
+    await userEvent.type(screen.getByLabelText(/email/i), "x@x.com");
+    await userEvent.type(screen.getByLabelText(/password/i), "pass");
+    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    // pending=false when finally runs: button label reverts from 'Signing in...' to 'Sign in'
+    await waitFor(() => {
+      expect(screen.queryByText(/signing in/i)).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows unknown error message when signIn throws", async () => {
+    mockSignIn.mockRejectedValue(new Error("network"));
+    render(<SignInForm />);
+    await userEvent.type(screen.getByLabelText(/email/i), "x@x.com");
+    await userEvent.type(screen.getByLabelText(/password/i), "pass");
+    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
+  });
+});

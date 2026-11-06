@@ -93,3 +93,19 @@ describe("ForgotPasswordForm — AC6: calls requestPasswordReset with correct ar
     });
   });
 });
+
+describe("ForgotPasswordForm — exception resilience: neutral message shown when action throws", () => {
+  beforeEach(() => {
+    mockRequestPasswordReset.mockReset();
+  });
+
+  it("still shows neutral message when requestPasswordReset throws", async () => {
+    mockRequestPasswordReset.mockRejectedValue(new Error("network"));
+    render(<ForgotPasswordForm />);
+    await userEvent.type(screen.getByLabelText(/email/i), "x@x.com");
+    await userEvent.click(screen.getByRole("button", { name: /send reset code/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/if an account exists/i)).toBeInTheDocument();
+    });
+  });
+});

@@ -50,13 +50,13 @@ export function ResetPasswordForm({ email: initialEmail }: Props) {
     }
   }
 
-  const noPending = !initialEmail;
+  const emailPrefilled = !!initialEmail;
 
   return (
     <div className="space-y-5">
       <h1 className="text-xl font-semibold">{t("auth.reset_password.heading")}</h1>
 
-      {noPending && (
+      {!emailPrefilled && (
         <p className="text-sm text-muted-foreground">{t("auth.reset_password.no_pending")}</p>
       )}
 
