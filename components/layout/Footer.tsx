@@ -24,7 +24,7 @@ interface FooterProps {
 }
 
 function isSafeUrl(url: string | null | undefined): url is string {
-  return typeof url === "string" && (url.startsWith("https://") || url.startsWith("http://"));
+  return typeof url === "string" && url.startsWith("https://");
 }
 
 const QUICK_LINKS: { key: MessageKey; href: string }[] = [
@@ -50,9 +50,10 @@ const SOCIAL_SETTINGS: { settingKey: keyof FooterSettings; labelKey: MessageKey 
 export default function Footer({ settings, categories = [] }: FooterProps) {
   const year = new Date().getFullYear();
 
-  const socialLinks = SOCIAL_SETTINGS.filter(({ settingKey }) =>
-    isSafeUrl(settings?.[settingKey])
-  );
+  const socialLinks = SOCIAL_SETTINGS.flatMap(({ settingKey, labelKey }) => {
+    const url = settings?.[settingKey];
+    return isSafeUrl(url) ? [{ settingKey, labelKey, url }] : [];
+  });
   const hasContact =
     settings?.contact_email || settings?.contact_phone || settings?.footer_address;
 
@@ -62,9 +63,9 @@ export default function Footer({ settings, categories = [] }: FooterProps) {
         <div className="flex flex-col gap-8 md:grid md:grid-cols-3 md:gap-10">
           {hasContact && (
             <div>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground">
                 {t("footer.contact")}
-              </h2>
+              </h3>
               <ul className="space-y-1.5 text-sm text-muted-foreground">
                 {settings?.contact_phone && (
                   <li>{settings.contact_phone}</li>
@@ -91,14 +92,14 @@ export default function Footer({ settings, categories = [] }: FooterProps) {
           )}
           {socialLinks.length > 0 && (
             <div>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground">
                 {t("footer.follow")}
-              </h2>
+              </h3>
               <ul className="flex flex-row gap-1">
-                {socialLinks.map(({ settingKey, labelKey }) => (
+                {socialLinks.map(({ settingKey, labelKey, url }) => (
                   <li key={settingKey}>
                     <a
-                      href={settings![settingKey] as string}
+                      href={url}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={t(labelKey)}
@@ -112,9 +113,9 @@ export default function Footer({ settings, categories = [] }: FooterProps) {
             </div>
           )}
           <div>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground">
               {t("footer.quick_links")}
-            </h2>
+            </h3>
             <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
               {QUICK_LINKS.map(({ key, href }) => (
                 <li key={href}>
@@ -127,9 +128,9 @@ export default function Footer({ settings, categories = [] }: FooterProps) {
           </div>
           {categories.length > 0 && (
             <div>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground">
                 {t("footer.categories")}
-              </h2>
+              </h3>
               <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
                 {categories.map((cat) => (
                   <li key={cat.slug}>

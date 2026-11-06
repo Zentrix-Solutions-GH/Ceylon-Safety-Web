@@ -130,6 +130,11 @@ describe("Footer social links (AC2, EC5)", () => {
     expect(screen.queryByRole("link", { name: "Facebook" })).toBeNull();
   });
 
+  it("hides social link when value uses http:// (EC5 — https only)", () => {
+    render(<Footer settings={{ social_facebook: "http://facebook.com/x" }} />);
+    expect(screen.queryByRole("link", { name: "Facebook" })).toBeNull();
+  });
+
   it("hides social link when value is empty", () => {
     render(<Footer settings={{ social_instagram: "" }} />);
     expect(screen.queryByRole("link", { name: "Instagram" })).toBeNull();
