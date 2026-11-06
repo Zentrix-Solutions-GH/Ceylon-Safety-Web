@@ -1,7 +1,7 @@
 ---
 id: S-054
 title: Editor core — text styles, fonts, lists, marks
-status: ready
+status: in-progress
 owner: frontend
 risk: normal
 branch: feature/S-054-editor-core-text-styles
@@ -73,16 +73,44 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 
 ## Plan
 
-Prior art: `grep -ril "tiptap\|rich.text\|editor" docs/` → content system design section 5, file-structure section 3 (`components/admin/ArticleEditor/`). No existing code. This story creates the foundation.
+Prior art: `grep -ril "tiptap|rich.text|editor" docs/` → content system design sections 5–6, file-structure section 3 (`components/admin/ArticleEditor/`), `lib/content/schema.ts` already exists (from S-048 — fully implemented). This story extends the schema and builds the UI on top.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+**Schema contract note:** AC5 says `{ valid: true }` / `{ valid: false, errors: [...] }` but existing code (already called by `saveArticle.ts`) uses `{ ok: true }` / `{ ok: false, reason: string }`. Keeping `{ ok: … }` format for consistency with S-048; the AC wording is loose.
+
+**Named styles:** Story assumption: H2, H3, Body, Quote → Tiptap block types `heading` (level 2/3), `paragraph`, `blockquote`. Not stored as marks — they are block-level selections.
+
+**Files to create/edit:**
+1. `lib/content/schema.ts` — add `blockquote` to `ALLOWED_BLOCK_TYPES`; add link scheme validation (https/http only, refuse `javascript:`, `data:`, user-in-host, control chars)
+2. `messages/en.ts` — add `editor.*` keys (paste-clean toast)
+3. `components/admin/ArticleEditor/RichTextEditor.tsx` — Tiptap editor with toolbar (dynamic `ssr:false`)
+4. `components/admin/ArticleEditor/index.tsx` — ArticleEditor wrapper
+5. `app/admin/articles/new/page.tsx` — renders ArticleEditor
+6. `__tests__/lib/content/schema.test.ts` — new S-054 schema tests (blockquote, link scheme, link scheme edge cases)
+7. `__tests__/components/admin/ArticleEditor/RichTextEditor.test.tsx` — component tests
+
+**Packages to install:** `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-underline`, `@tiptap/extension-link`
+
+**Step order:** install packages → schema changes → tests (red) → implement → tests green → check.sh
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh  # branch feature/S-054-editor-core-text-styles (post-R1 fixes)
+
+✓ ESLint passed
+✓ TypeScript passed
+✓ Vitest (unit) passed
+  Test Files  98 passed | 9 skipped (107)
+        Tests  1160 passed | 27 skipped (1187)
+✓ Public pages session check (AC11) passed
+✓ Google Fonts check (AC5) passed
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 6 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
 
 ## Review notes

@@ -16,6 +16,7 @@ export type AllowedFont = (typeof ALLOWED_FONTS)[number];
 const ALLOWED_BLOCK_TYPES = new Set([
   "paragraph",
   "heading",
+  "blockquote",
   "bulletList",
   "orderedList",
   "listItem",
@@ -77,6 +78,31 @@ function checkLinkLengths(nodes: unknown[]): string | null {
   return null;
 }
 
+/** Returns an error string if the href is not a valid article link, null if ok. */
+export function validateLinkHref(href: string): string | null {
+  // Allow only https:// and http:// schemes (D6, content design §6.1)
+  let url: URL;
+  try {
+    url = new URL(href);
+  } catch {
+    return `link "${href}" is not a valid URL`;
+  }
+  const scheme = url.protocol; // includes trailing colon
+  if (scheme !== "https:" && scheme !== "http:") {
+    return `link scheme "${scheme}" is not allowed; use https or http`;
+  }
+  // Refuse username/password in URL (https://good.com@evil.com)
+  if (url.username || url.password) {
+    return `link contains credentials and is not allowed`;
+  }
+  // Refuse control characters
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1f\x7f]/.test(href)) {
+    return `link contains control characters and is not allowed`;
+  }
+  return null;
+}
+
 function validateNode(
   node: Record<string, unknown>,
   listDepth: number
@@ -105,6 +131,12 @@ function validateNode(
         if (!ALLOWED_NAMED_STYLES.has(attrs?.style as string)) {
           return { ok: false, reason: `named style "${attrs?.style}" is not allowed` };
         }
+      }
+      if (mt === "link") {
+        const attrs = mark.attrs as Record<string, unknown> | undefined;
+        const href = typeof attrs?.href === "string" ? attrs.href : "";
+        const schemeError = validateLinkHref(href);
+        if (schemeError) return { ok: false, reason: schemeError };
       }
     }
   }
