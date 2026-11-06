@@ -18,7 +18,11 @@ export interface FooterCategory {
   slug: string;
 }
 
-export default function Footer() {
+// S-026 will expand this component; props are accepted now for compatibility.
+export default function Footer(_props?: {
+  settings?: FooterSettings | null;
+  categories?: FooterCategory[];
+}) {
   const btnRef = useRef<HTMLButtonElement>(null);
 
   function handleCookieSettings() {
