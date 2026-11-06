@@ -110,6 +110,22 @@
   "auth.verify_email.enter_email_label": "Email address",
   "auth.verify_email.enter_email_submit": "Send code",
 
+  // --- footer (S-026) ---
+  "footer.label": "Site footer",
+  "footer.contact": "Contact",
+  "footer.email_link": "Email us",
+  "footer.follow": "Follow us",
+  "footer.quick_links": "Quick links",
+  "footer.categories": "Categories",
+  "footer.terms": "Terms",
+  "footer.privacy": "Privacy",
+  "footer.refund_policy": "Refund policy",
+  "footer.disclaimer": "Disclaimer",
+  "footer.social.facebook": "Facebook",
+  "footer.social.instagram": "Instagram",
+  "footer.social.linkedin": "LinkedIn",
+  "footer.social.youtube": "YouTube",
+
   // --- cookie banner (S-029) ---
   "cookie.banner_label": "Cookie consent",
   "cookie.banner_text": "We use cookies for ads and visitor counts. Essential cookies are always on. Read our",
