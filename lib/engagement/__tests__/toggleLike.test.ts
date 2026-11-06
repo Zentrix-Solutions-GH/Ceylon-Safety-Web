@@ -142,6 +142,54 @@ describe("toggleLike", () => {
     if (!result.ok) expect(result.code).toBe("not_allowed");
   });
 
+  it("returns unknown on delete DB error", async () => {
+    const serviceChain: Record<string, unknown> = {
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === "articles") {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { like_count: 3, status: "published", published_at: "2026-01-01", deleted_at: null },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        return {};
+      }),
+    };
+    const serverChain: Record<string, unknown> = {
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === "article_likes") {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({
+                    data: { article_id: "article-1", user_id: "user-1" }, error: null,
+                  }),
+                }),
+              }),
+            }),
+            delete: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ error: { message: "db error" } }),
+              }),
+            }),
+          };
+        }
+        return {};
+      }),
+    };
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(serviceChain);
+    (createSupabaseServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(serverChain);
+    const result = await toggleLike("user-1", "article-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("unknown");
+  });
+
   it("returns not_allowed for future-dated article (AC1)", async () => {
     const future = new Date(Date.now() + 86400000).toISOString();
     makeServiceClient({

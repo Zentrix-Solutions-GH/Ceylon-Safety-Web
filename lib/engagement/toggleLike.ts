@@ -52,11 +52,15 @@ export async function toggleLike(
 
   if (existing) {
     // Remove like — RLS enforces user_id = auth.uid()
-    await supabase
+    const { error: deleteError } = await supabase
       .from("article_likes")
       .delete()
       .eq("article_id", articleId)
       .eq("user_id", userId);
+
+    if (deleteError) {
+      return { ok: false, code: "unknown" };
+    }
   } else {
     // Add like — RLS enforces user_id = auth.uid() and active status
     const { error } = await supabase
