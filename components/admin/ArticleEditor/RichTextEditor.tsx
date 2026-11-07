@@ -1,13 +1,13 @@
 ﻿"use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useEditor, EditorContent, type Extensions } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import { Mark } from "@tiptap/core";
 import { t } from "@/messages/en";
-import { MAX_LINK_LENGTH, MAX_TOP_BLOCKS, ALLOWED_FONTS, type AllowedFont, validateLinkHref } from "@/lib/content/schema";
+import { MAX_LINK_LENGTH, MAX_TOP_BLOCKS, MAX_LIST_DEPTH, ALLOWED_FONTS, type AllowedFont, validateLinkHref } from "@/lib/content/schema";
 
 // Custom mark for named fonts (AC6)
 const NamedFont = Mark.create({
@@ -32,15 +32,16 @@ const STYLES = [
 
 type StyleValue = (typeof STYLES)[number]["value"];
 
+const KNOWN_PASTE_TAGS = new Set(["P", "H1", "H2", "H3", "H4", "H5", "H6", "STRONG", "EM", "U", "A", "UL", "OL", "LI", "BLOCKQUOTE", "BR", "SPAN", "DIV", "B", "I"]);
+
 /** Count elements in pasted HTML that are not in the basic allowed set. */
 export function countUnknownPastedNodes(html: string): number {
   if (typeof document === "undefined") return 0;
   const div = document.createElement("div");
   div.innerHTML = html;
-  const KNOWN = new Set(["P", "H1", "H2", "H3", "H4", "H5", "H6", "STRONG", "EM", "U", "A", "UL", "OL", "LI", "BLOCKQUOTE", "BR", "SPAN", "DIV", "B", "I"]);
   let count = 0;
   div.querySelectorAll("*").forEach((el) => {
-    if (!KNOWN.has(el.tagName)) count++;
+    if (!KNOWN_PASTE_TAGS.has(el.tagName)) count++;
   });
   return count;
 }
@@ -53,14 +54,28 @@ interface RichTextEditorProps {
 export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps) {
   const [pasteToast, setPasteToast] = useState<string | null>(null);
   const [isAtBlockLimit, setIsAtBlockLimit] = useState(false);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // F4 fix: cancel toast timer on unmount
+  useEffect(() => () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); }, []);
+
+  // F1 fix: actually strip unknown nodes from pasted HTML, not just count them
   const handlePasteTransform = useCallback((html: string): string => {
-    const removed = countUnknownPastedNodes(html);
-    if (removed > 0) {
-      setPasteToast(t("editor.paste_cleaned", { count: String(removed) }));
-      setTimeout(() => setPasteToast(null), 4000);
+    if (typeof document === "undefined") return html;
+    const div = document.createElement("div");
+    div.innerHTML = html;
+    const unknownEls = Array.from(div.querySelectorAll("*")).filter(
+      (el) => !KNOWN_PASTE_TAGS.has(el.tagName)
+    );
+    for (const el of unknownEls) {
+      el.replaceWith(...Array.from(el.childNodes));
     }
-    return html;
+    if (unknownEls.length > 0) {
+      setPasteToast(t("editor.paste_cleaned", { count: String(unknownEls.length) }));
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = setTimeout(() => setPasteToast(null), 4000);
+    }
+    return div.innerHTML;
   }, []);
 
   const extensions: Extensions = [
@@ -83,25 +98,16 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
         if (event.key === "Tab" && !event.shiftKey) {
           if (!editor) return false;
           const { state } = editor;
-          let depth = 0;
-          state.doc.nodesBetween(state.selection.from, state.selection.to, (node) => {
-            if (node.type.name === "bulletList" || node.type.name === "orderedList") {
-              depth++;
-            }
-          });
-          if (depth >= MAX_TOP_BLOCKS || depth >= 3) {
-            // Let the natural limit check handle it; block at depth >= 3
-          }
-          // Count list depth at cursor position
+          // F3 fix: i <= resolved.depth includes the cursor's immediate parent node
           let listDepth = 0;
           const resolved = state.doc.resolve(state.selection.from);
-          for (let i = 0; i < resolved.depth; i++) {
+          for (let i = 0; i <= resolved.depth; i++) {
             const node = resolved.node(i);
             if (node.type.name === "bulletList" || node.type.name === "orderedList") {
               listDepth++;
             }
           }
-          if (listDepth >= 3) {
+          if (listDepth >= MAX_LIST_DEPTH) {
             event.preventDefault();
             return true;
           }

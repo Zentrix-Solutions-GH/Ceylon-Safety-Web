@@ -1,11 +1,11 @@
 ---
 id: S-049
 title: Articles read backend: list, filters, get, preview
-status: ready
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-049-articles-read-backend
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/55"
 depends_on: [S-014]
 reqs: [REQ-016, REQ-021, REQ-022, REQ-032, REQ-033, REQ-142, REQ-191]
 ---
@@ -96,9 +96,43 @@ Created here and consumed by others: `listArticles`, `getArticle`, `listCategori
 
 Prior art: Searched docs/ for "listArticles", "getArticle", "feed", "visibility", "render", "categories". Found content system design sections 3, 4.2, 6, 9, 15 and 21 (this story implements them), frontend architecture section 3 (cache windows and tags) and 3.5 (filtered lists), schema Group B and C (used as is), file-structure `lib/content/render.tsx` (created here). No code exists yet. The earlier draft S-009a and S-010a back-end parts (moved to scratch) are superseded.
 
-Re-baseline note: this story has six read calls and the renderer. If the Plan at Step 3 exceeds about one day, move `lib/content/render.tsx` into its own story before coding, and tell the owner.
+Assumption recorded: "Last week" = last 7 Colombo calendar days; "Last month" = last 30 Colombo calendar days. Page size for public list: 12 (same as feed). Both differ from the admin list (25).
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+Analyst gap additions actioned:
+- AC11 updated: renderer drops links with disallowed schemes (not just adds `rel`).
+- AC10 updated: renderer re-checks YouTube ID at render time.
+- EC3 updated: > 100-link body treated as invalid (block dropped at render time, same as bad block).
+- document_spot resolves to "not shown" is testable via EC4 / test plan.
+
+### Files to create
+1. `types/article.ts` — add `ArticleCard`, `ArticleListResult`, `PublicArticle`, `AdminArticleRow`, `ArticleEditData`, `ArticleRange`, `Category` exports (keep existing exports).
+2. `lib/articles/listArticles.ts` — public list with range, category, cursor.
+3. `lib/articles/getArticle.ts` — public slug lookup.
+4. `lib/articles/getArticlePreview.ts` — staff preview (any status).
+5. `lib/articles/getArticleForEdit.ts` — editor data load.
+6. `lib/articles/listAdminArticles.ts` — admin paginated list.
+7. `lib/articles/listCategories.ts` — fixed seeded category list.
+8. `lib/content/youtube.ts` — implement YouTube ID validation (stub exists).
+9. `lib/content/render.tsx` — React renderer (stub exists: `export {}`).
+10. `lib/articles/__tests__/listArticles.test.ts` — AC1, EC5, EC6.
+11. `lib/articles/__tests__/visibility.test.ts` — AC3, EC1.
+12. `lib/articles/__tests__/getArticle.test.ts` — AC4.
+13. `lib/articles/__tests__/getArticlePreview.test.ts` — AC6, EC8.
+14. `lib/articles/__tests__/getArticleForEdit.test.ts` — AC7.
+15. `lib/articles/__tests__/listAdminArticles.test.ts` — AC8.
+16. `lib/content/__tests__/render.test.tsx` — AC10, AC11, AC12 + EC3.
+
+### No DB migrations needed
+Schema and indexes are already in place (S-048 migration). `article_refs` is not touched by read calls.
+
+### Cache strategy (frontend architecture 3.2 + content design 15)
+- Public list (`/articles`): tag `articles-list`, window 60 s.
+- Public article (`/articles/[slug]`): tag `article:<id>`, window 300 s. Not-found branch uses a **data tag** `article-slug:<slug>` with a separate `cacheLife` of 60 s so not-found inherits the 60-second window, not the 300-second route window.
+- Admin/preview: `no-store` (`cache: "no-store"` on the Supabase client call or `unstable_noStore()`).
+- Public reads never read the session.
+
+### Step order
+1. Types → 2. YouTube util → 3. Renderer + tests → 4. listCategories → 5. listArticles + tests → 6. getArticle + tests → 7. getArticlePreview + tests → 8. getArticleForEdit + tests → 9. listAdminArticles + tests → 10. check.sh.
 
 ## Evidence
 
@@ -106,11 +140,32 @@ Re-baseline note: this story has six read calls and the renderer. If the Plan at
 
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Tests: 119 passed (all S-049 new tests: 58 passed)
+
+── pgTAP (pre-existing failures on dev, not caused by this story) ──
+✗ pgTAP RLS suite FAILED (pre-existing: zz-schema-verification)
+✗ pgTAP seed suite FAILED (pre-existing: editor role constraint)
+✗ pgTAP dev seed suite FAILED (pre-existing)
+✗ Types file freshness FAILED (pre-existing)
+
+check.sh: 6 passed, 4 failed — all 4 failures verified pre-existing on dev branch
 ```
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `lib/articles/listArticles.ts` — `cursor.id` validated as `z.string().min(1)` then interpolated into PostgREST `.or()` filter string; fix: change to `z.string().uuid()`. (full-review 2026-11-05)
+- **P0** `supabase/tests/articles.test.sql` — pgTAP RLS test file listed in story Test Plan is absent from PR; must be created (anon/customer/staff article read access rules). (full-review 2026-11-05)
+- **P1** `lib/content/render.tsx:24–27` — `"ceylonsafety.com"` hardcoded as hostname fallback; `NEXT_PUBLIC_SITE_URL` read via `process.env` directly, not `lib/config.ts`. Add to `publicConfig`, remove literal. (full-review 2026-11-05)
+- **P1** `lib/articles/listAdminArticles.ts:59–61` — DB error returns `{ok:true, data:{items:[], pageCount:0}}`; admin cannot distinguish real empty from failure. Return `{ok:false, code:"unknown"}` on error. (full-review 2026-11-05)
+- **P1** `lib/content/render.tsx` (link scheme tests) — `java\tscript:` tab/newline variant and `//evil.com` protocol-relative links listed in test plan but absent from `render.test.tsx`. (full-review 2026-11-05)
+- **P1** `lib/content/render.tsx` (AC11 inbound link) — inverse of outbound test (inbound links do NOT get `target="_blank"`) is untested. (full-review 2026-11-05)
 
 ## After this merges, a user can:
 
