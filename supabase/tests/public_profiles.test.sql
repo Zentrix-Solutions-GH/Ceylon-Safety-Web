@@ -8,6 +8,7 @@
 BEGIN;
 SELECT plan(5);
 
+-- ── Seed ───────────────────────────────────────────────────────────────────────
 DO $$
 DECLARE
   v_sa        uuid := '50333333-0000-0000-0000-000000000001'::uuid;
@@ -20,83 +21,29 @@ BEGIN
     (v_member,  'Admin',              'member_pp@test.com',  'active'),
     (v_admin,   'Admin Staff',        'admin_pp@test.com',   'active'),
     (v_deleted, 'Deleted user',       'deleted_pp@test.com', 'active')
-  ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING;
   INSERT INTO public.user_roles (user_id, role) VALUES
     (v_sa,    'super_admin'),
     (v_admin, 'admin')
-  ON CONFLICT DO NOTHING;
+    ON CONFLICT DO NOTHING;
   INSERT INTO auth.users (id, email, encrypted_password, role) VALUES
     (v_sa,      'sa_pp@test.com',      'x', 'authenticated'),
     (v_member,  'member_pp@test.com',  'x', 'authenticated'),
     (v_admin,   'admin_pp@test.com',   'x', 'authenticated'),
     (v_deleted, 'deleted_pp@test.com', 'x', 'authenticated')
-  ON CONFLICT (id) DO NOTHING;
-
-  -- Simulate anonymised deleted user (display_name and email blanked)
+    ON CONFLICT (id) DO NOTHING;
+  -- Simulate anonymised deleted user
   UPDATE public.profiles SET display_name = 'Deleted user', email = '' WHERE id = v_deleted;
 END;
 $$;
 
--- ─────────────────────────────────────────────────────────────────────────────
--- 1. Super Admin absent from public_profiles (AC10)
--- ─────────────────────────────────────────────────────────────────────────────
-
-DO $$ DECLARE
-  v_sa uuid := '50333333-0000-0000-0000-000000000001'::uuid;
-  v_count int;
-BEGIN
-  SELECT COUNT(*) INTO v_count FROM public.public_profiles WHERE id = v_sa;
-  PERFORM is(v_count, 0, 'AC10: Super Admin must not appear in public_profiles');
-END; $$;
-
--- ─────────────────────────────────────────────────────────────────────────────
--- 2. Member with "Admin" display name has is_staff=false (EC3)
--- ─────────────────────────────────────────────────────────────────────────────
-
-DO $$ DECLARE
-  v_member uuid := '50333333-0000-0000-0000-000000000002'::uuid;
-  v_is_staff bool;
-BEGIN
-  SELECT is_staff INTO v_is_staff FROM public.public_profiles WHERE id = v_member;
-  PERFORM is(v_is_staff, FALSE,
-    'EC3: member with staff-like display name has is_staff=false');
-END; $$;
-
--- ─────────────────────────────────────────────────────────────────────────────
--- 3. Admin role user has is_staff=true (control: badge logic)
--- ─────────────────────────────────────────────────────────────────────────────
-
-DO $$ DECLARE
-  v_admin uuid := '50333333-0000-0000-0000-000000000003'::uuid;
-  v_is_staff bool;
-BEGIN
-  SELECT is_staff INTO v_is_staff FROM public.public_profiles WHERE id = v_admin;
-  PERFORM is(v_is_staff, TRUE, 'AC10: admin role user has is_staff=true in public_profiles');
-END; $$;
-
--- ─────────────────────────────────────────────────────────────────────────────
--- 4. Anonymised (deleted) user shows "Deleted user" in public_profiles (AC7)
--- ─────────────────────────────────────────────────────────────────────────────
-
-DO $$ DECLARE
-  v_deleted uuid := '50333333-0000-0000-0000-000000000004'::uuid;
-  v_name text;
-BEGIN
-  SELECT display_name INTO v_name FROM public.public_profiles WHERE id = v_deleted;
-  PERFORM is(v_name, 'Deleted user',
-    'AC7: anonymised user shows "Deleted user" in public_profiles');
-END; $$;
-
--- ─────────────────────────────────────────────────────────────────────────────
--- 5. Super Admin absent even when queried via article_comments inner join
--- ─────────────────────────────────────────────────────────────────────────────
-
-DO $$ DECLARE
+-- Seed for test 5: article + super_admin comment
+DO $$
+DECLARE
   v_sa     uuid := '50333333-0000-0000-0000-000000000001'::uuid;
   v_author uuid := '50333333-0000-0000-0000-000000000010'::uuid;
   v_cat    uuid := '50333333-0000-0000-0000-000000000011'::uuid;
   v_art    uuid := '50cccccc-0000-4000-8000-000000000001'::uuid;
-  v_count  int;
 BEGIN
   INSERT INTO public.authors (id, slug, name, is_active)
     VALUES (v_author, 'pp-author', 'PP Author', TRUE) ON CONFLICT (id) DO NOTHING;
@@ -111,16 +58,47 @@ BEGIN
   INSERT INTO public.article_comments (article_id, user_id, body, status)
     VALUES (v_art, v_sa, 'SA comment', 'approved')
     ON CONFLICT DO NOTHING;
+END;
+$$;
 
-  -- listComments uses article_comments JOIN public_profiles!inner — SA comment must not appear
-  SELECT COUNT(*) INTO v_count
-    FROM public.article_comments ac
-    INNER JOIN public.public_profiles pp ON pp.id = ac.user_id
-    WHERE ac.article_id = v_art AND ac.status = 'approved';
+-- ── 1. Super Admin absent from public_profiles (AC10) ────────────────────────
+SELECT is(
+  COUNT(*)::int, 0,
+  'AC10: Super Admin must not appear in public_profiles'
+) FROM public.public_profiles
+  WHERE id = '50333333-0000-0000-0000-000000000001'::uuid;
 
-  PERFORM is(v_count, 0,
-    'AC10: Super Admin comment absent from article_comments INNER JOIN public_profiles');
-END; $$;
+-- ── 2. Member with "Admin" display name has is_staff=false (EC3) ──────────────
+SELECT is(
+  is_staff, FALSE,
+  'EC3: member with staff-like display name has is_staff=false'
+) FROM public.public_profiles
+  WHERE id = '50333333-0000-0000-0000-000000000002'::uuid;
+
+-- ── 3. Admin role user has is_staff=true (control: badge logic) ───────────────
+SELECT is(
+  is_staff, TRUE,
+  'AC10: admin role user has is_staff=true in public_profiles'
+) FROM public.public_profiles
+  WHERE id = '50333333-0000-0000-0000-000000000003'::uuid;
+
+-- ── 4. Anonymised (deleted) user shows "Deleted user" in public_profiles (AC7) ─
+SELECT is(
+  display_name, 'Deleted user',
+  'AC7: anonymised user shows "Deleted user" in public_profiles'
+) FROM public.public_profiles
+  WHERE id = '50333333-0000-0000-0000-000000000004'::uuid;
+
+-- ── 5. Super Admin absent even when queried via article_comments inner join ────
+-- listComments uses article_comments JOIN public_profiles!inner — the SA
+-- comment must not appear because the SA row is absent from public_profiles.
+SELECT is(
+  COUNT(*)::int, 0,
+  'AC10: Super Admin comment absent from article_comments INNER JOIN public_profiles'
+) FROM public.article_comments ac
+  INNER JOIN public.public_profiles pp ON pp.id = ac.user_id
+  WHERE ac.article_id = '50cccccc-0000-4000-8000-000000000001'::uuid
+    AND ac.status      = 'approved';
 
 SELECT * FROM finish();
 ROLLBACK;
