@@ -79,7 +79,7 @@ function checkLinkLengths(nodes: unknown[]): string | null {
 }
 
 /** Returns an error string if the href is not a valid article link, null if ok. */
-function validateLinkHref(href: string): string | null {
+export function validateLinkHref(href: string): string | null {
   // Allow only https:// and http:// schemes (D6, content design §6.1)
   let url: URL;
   try {
@@ -96,6 +96,7 @@ function validateLinkHref(href: string): string | null {
     return `link contains credentials and is not allowed`;
   }
   // Refuse control characters
+  // eslint-disable-next-line no-control-regex
   if (/[\x00-\x1f\x7f]/.test(href)) {
     return `link contains control characters and is not allowed`;
   }
