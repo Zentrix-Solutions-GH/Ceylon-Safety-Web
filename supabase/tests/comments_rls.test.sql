@@ -51,18 +51,18 @@ $$ LANGUAGE plpgsql;
 
 -- ─── 1. Anonymous sees only approved comments ────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_art    uuid := '50bbbbbb-0000-4000-8000-000000000001'::uuid;
   v_count  int;
 BEGIN
   SET LOCAL role TO anon;
   SELECT COUNT(*) INTO v_count FROM public.article_comments WHERE article_id = v_art;
-  SELECT is(v_count, 1, 'Anon sees only approved comments (1 approved exists)');
-END;
+  PERFORM is(v_count, 1, 'Anon sees only approved comments (1 approved exists)');
+END; $$;
 
 -- ─── 2. User B sees only approved comments from user A ───────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_cust_b uuid := '50222222-0000-0000-0000-000000000002'::uuid;
   v_cust_a uuid := '50222222-0000-0000-0000-000000000001'::uuid;
   v_art    uuid := '50bbbbbb-0000-4000-8000-000000000001'::uuid;
@@ -71,12 +71,12 @@ BEGIN
   PERFORM pg_temp.set_cust(v_cust_b);
   SELECT COUNT(*) INTO v_count FROM public.article_comments
     WHERE article_id = v_art AND user_id = v_cust_a;
-  SELECT is(v_count, 1, 'EC2: user B sees only 1 approved comment from user A, not pending or rejected');
-END;
+  PERFORM is(v_count, 1, 'EC2: user B sees only 1 approved comment from user A, not pending or rejected');
+END; $$;
 
 -- ─── 3. User A can see their own pending comment ──────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_cust_a uuid := '50222222-0000-0000-0000-000000000001'::uuid;
   v_art    uuid := '50bbbbbb-0000-4000-8000-000000000001'::uuid;
   v_count  int;
@@ -84,12 +84,12 @@ BEGIN
   PERFORM pg_temp.set_cust(v_cust_a);
   SELECT COUNT(*) INTO v_count FROM public.article_comments
     WHERE article_id = v_art AND user_id = v_cust_a AND status = 'pending';
-  SELECT is(v_count, 1, 'AC8: writer sees own pending comment');
-END;
+  PERFORM is(v_count, 1, 'AC8: writer sees own pending comment');
+END; $$;
 
 -- ─── 4. User A can see their own rejected comment ────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_cust_a uuid := '50222222-0000-0000-0000-000000000001'::uuid;
   v_art    uuid := '50bbbbbb-0000-4000-8000-000000000001'::uuid;
   v_count  int;
@@ -97,12 +97,12 @@ BEGIN
   PERFORM pg_temp.set_cust(v_cust_a);
   SELECT COUNT(*) INTO v_count FROM public.article_comments
     WHERE article_id = v_art AND user_id = v_cust_a AND status = 'rejected';
-  SELECT is(v_count, 1, 'AC8: writer sees own rejected comment');
-END;
+  PERFORM is(v_count, 1, 'AC8: writer sees own rejected comment');
+END; $$;
 
 -- ─── 5. User A total visible (own pending + own rejected + own approved = 3) ─
 
-DECLARE
+DO $$ DECLARE
   v_cust_a uuid := '50222222-0000-0000-0000-000000000001'::uuid;
   v_art    uuid := '50bbbbbb-0000-4000-8000-000000000001'::uuid;
   v_count  int;
@@ -110,12 +110,12 @@ BEGIN
   PERFORM pg_temp.set_cust(v_cust_a);
   SELECT COUNT(*) INTO v_count FROM public.article_comments
     WHERE article_id = v_art AND user_id = v_cust_a;
-  SELECT is(v_count, 3, 'AC8: writer sees all 3 of their own comments (pending+rejected+approved)');
-END;
+  PERFORM is(v_count, 3, 'AC8: writer sees all 3 of their own comments (pending+rejected+approved)');
+END; $$;
 
 -- ─── 6. User B sees 0 pending from user A ────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_cust_b uuid := '50222222-0000-0000-0000-000000000002'::uuid;
   v_cust_a uuid := '50222222-0000-0000-0000-000000000001'::uuid;
   v_art    uuid := '50bbbbbb-0000-4000-8000-000000000001'::uuid;
@@ -124,12 +124,12 @@ BEGIN
   PERFORM pg_temp.set_cust(v_cust_b);
   SELECT COUNT(*) INTO v_count FROM public.article_comments
     WHERE article_id = v_art AND user_id = v_cust_a AND status = 'pending';
-  SELECT is(v_count, 0, 'EC2: user B cannot see pending comment of user A');
-END;
+  PERFORM is(v_count, 0, 'EC2: user B cannot see pending comment of user A');
+END; $$;
 
 -- ─── 7. User B sees 0 rejected from user A ───────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_cust_b uuid := '50222222-0000-0000-0000-000000000002'::uuid;
   v_cust_a uuid := '50222222-0000-0000-0000-000000000001'::uuid;
   v_art    uuid := '50bbbbbb-0000-4000-8000-000000000001'::uuid;
@@ -138,24 +138,24 @@ BEGIN
   PERFORM pg_temp.set_cust(v_cust_b);
   SELECT COUNT(*) INTO v_count FROM public.article_comments
     WHERE article_id = v_art AND user_id = v_cust_a AND status = 'rejected';
-  SELECT is(v_count, 0, 'EC2: user B cannot see rejected comment of user A');
-END;
+  PERFORM is(v_count, 0, 'EC2: user B cannot see rejected comment of user A');
+END; $$;
 
 -- ─── 8. User B cannot insert a comment as user A ─────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_cust_b uuid := '50222222-0000-0000-0000-000000000002'::uuid;
   v_cust_a uuid := '50222222-0000-0000-0000-000000000001'::uuid;
   v_art    uuid := '50bbbbbb-0000-4000-8000-000000000001'::uuid;
 BEGIN
   PERFORM pg_temp.set_cust(v_cust_b);
-  SELECT throws_ok(
+  PERFORM throws_ok(
     format($$INSERT INTO public.article_comments (article_id, user_id, body) VALUES (%L::uuid, %L::uuid, 'Spoofed')$$, v_art, v_cust_a),
     NULL,
     NULL,
     'EC2: user B cannot insert a comment with user A as the author'
   );
-END;
+END; $$;
 
 SELECT * FROM finish();
 ROLLBACK;

@@ -71,7 +71,7 @@ $$ LANGUAGE plpgsql;
 -- 1. Hourly like limit (AC3, EC1) — the 61st like in an hour is refused
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_cust uuid := '50111111-0000-0000-0000-000000000002'::uuid;
   v_art  uuid := '50aaaaaa-0000-4000-8000-000000000001'::uuid;
 BEGIN
@@ -90,19 +90,19 @@ BEGIN
 
   -- Now try the 61st as authenticated user
   PERFORM pg_temp.set_role_customer(v_cust);
-  SELECT throws_ok(
+  PERFORM throws_ok(
     format('INSERT INTO public.article_likes (article_id, user_id) VALUES (%L::uuid, %L::uuid)', v_art, v_cust),
     'P0001',
     NULL,
     'AC3/EC1: 61st like in an hour must be refused by trigger'
   );
-END;
+END; $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2. Hourly comment limit (AC5, EC1) — the 11th comment in an hour is refused
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_cust uuid  := '50111111-0000-0000-0000-000000000002'::uuid;
   v_art  uuid  := '50aaaaaa-0000-4000-8000-000000000001'::uuid;
 BEGIN
@@ -113,19 +113,19 @@ BEGIN
     FROM generate_series(1, 10) AS i;
 
   PERFORM pg_temp.set_role_customer(v_cust);
-  SELECT throws_ok(
+  PERFORM throws_ok(
     format($$INSERT INTO public.article_comments (article_id, user_id, body) VALUES (%L::uuid, %L::uuid, 'Eleventh')$$, v_art, v_cust),
     'P0001',
     NULL,
     'AC5/EC1: 11th comment in an hour must be refused by trigger'
   );
-END;
+END; $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 3. Pending cap (AC5, EC1) — the 6th pending comment is refused
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_cust uuid := '50111111-0000-0000-0000-000000000002'::uuid;
   v_art  uuid := '50aaaaaa-0000-4000-8000-000000000001'::uuid;
 BEGIN
@@ -136,19 +136,19 @@ BEGIN
     FROM generate_series(1, 5) AS i;
 
   PERFORM pg_temp.set_role_customer(v_cust);
-  SELECT throws_ok(
+  PERFORM throws_ok(
     format($$INSERT INTO public.article_comments (article_id, user_id, body) VALUES (%L::uuid, %L::uuid, 'Sixth pending')$$, v_art, v_cust),
     'P0001',
     NULL,
     'AC5/EC1: 6th pending comment must be refused by trigger'
   );
-END;
+END; $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. Like toggle: second like removes the row (EC5)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_cust uuid := '50111111-0000-0000-0000-000000000003'::uuid;
   v_art  uuid := '50aaaaaa-0000-4000-8000-000000000001'::uuid;
   v_count int;
@@ -158,26 +158,26 @@ BEGIN
   INSERT INTO public.article_likes (article_id, user_id) VALUES (v_art, v_cust);
   DELETE FROM public.article_likes WHERE article_id = v_art AND user_id = v_cust;
   SELECT COUNT(*) INTO v_count FROM public.article_likes WHERE article_id = v_art AND user_id = v_cust;
-  SELECT is(v_count, 0, 'EC5: second like (delete) leaves zero rows for this user');
-END;
+  PERFORM is(v_count, 0, 'EC5: second like (delete) leaves zero rows for this user');
+END; $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5. like_count never goes negative (EC5)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_art  uuid := '50aaaaaa-0000-4000-8000-000000000001'::uuid;
   v_count int;
 BEGIN
   SELECT like_count INTO v_count FROM public.articles WHERE id = v_art;
-  SELECT ok(v_count >= 0, 'EC5: like_count on article must be >= 0 after toggle');
-END;
+  PERFORM ok(v_count >= 0, 'EC5: like_count on article must be >= 0 after toggle');
+END; $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 6. comment_count counts approved only (AC9)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_art    uuid := '50aaaaaa-0000-4000-8000-000000000001'::uuid;
   v_cust2  uuid := '50111111-0000-0000-0000-000000000003'::uuid;
   v_count_before int;
@@ -189,14 +189,14 @@ BEGIN
   INSERT INTO public.article_comments (article_id, user_id, body, status)
     VALUES (v_art, v_cust2, 'Pending comment', 'pending');
   SELECT comment_count INTO v_count_after FROM public.articles WHERE id = v_art;
-  SELECT is(v_count_after, v_count_before, 'AC9: pending comment must not increment comment_count');
-END;
+  PERFORM is(v_count_after, v_count_before, 'AC9: pending comment must not increment comment_count');
+END; $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 7. comment_count increments on approval (AC9)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_art    uuid := '50aaaaaa-0000-4000-8000-000000000001'::uuid;
   v_cust2  uuid := '50111111-0000-0000-0000-000000000003'::uuid;
   v_cmt    uuid;
@@ -207,33 +207,35 @@ BEGIN
   SELECT id INTO v_cmt FROM public.article_comments WHERE user_id = v_cust2 AND status = 'pending' LIMIT 1;
   UPDATE public.article_comments SET status = 'approved' WHERE id = v_cmt;
   SELECT comment_count INTO v_count_after FROM public.articles WHERE id = v_art;
-  SELECT is(v_count_after, v_count_before + 1, 'AC9: approving a comment increments comment_count by 1');
-END;
+  PERFORM is(v_count_after, v_count_before + 1, 'AC9: approving a comment increments comment_count by 1');
+END; $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 8. Super Admin cannot comment (AC10 / ASSUMPTION)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_sa  uuid := '50111111-0000-0000-0000-000000000001'::uuid;
   v_art uuid := '50aaaaaa-0000-4000-8000-000000000001'::uuid;
+  v_count int;
 BEGIN
   PERFORM pg_temp.set_role_customer(v_sa);
   -- super_admin profile is excluded from public_profiles; the row-level policy
   -- for article_comments prevents super_admin from inserting (see migration comments)
   -- We just verify the super_admin is excluded from public_profiles
-  SELECT is(
-    (SELECT COUNT(*) FROM public.public_profiles WHERE id = v_sa)::int,
+  SELECT COUNT(*) INTO v_count FROM public.public_profiles WHERE id = v_sa;
+  PERFORM is(
+    v_count,
     0,
     'AC10: Super Admin must not appear in public_profiles'
   );
-END;
+END; $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 9. Pending comment not visible to other users (EC2)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_cust  uuid := '50111111-0000-0000-0000-000000000002'::uuid;
   v_cust2 uuid := '50111111-0000-0000-0000-000000000003'::uuid;
   v_art   uuid := '50aaaaaa-0000-4000-8000-000000000001'::uuid;
@@ -249,22 +251,22 @@ BEGIN
   SELECT COUNT(*) INTO v_visible
     FROM public.article_comments
     WHERE article_id = v_art AND user_id = v_cust AND status = 'pending';
-  SELECT is(v_visible, 0, 'EC2: pending comment of user A must not be visible to user B');
-END;
+  PERFORM is(v_visible, 0, 'EC2: pending comment of user A must not be visible to user B');
+END; $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 10. is_staff false for member with staff-like display name (EC3)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_cust uuid := '50111111-0000-0000-0000-000000000002'::uuid;
   v_is_staff bool;
 BEGIN
   SET LOCAL role TO postgres;
   -- Verify that the customer profile does not have is_staff=true in public_profiles
   SELECT is_staff INTO v_is_staff FROM public.public_profiles WHERE id = v_cust;
-  SELECT is(v_is_staff, FALSE, 'EC3: member profile must not have is_staff=true');
-END;
+  PERFORM is(v_is_staff, FALSE, 'EC3: member profile must not have is_staff=true');
+END; $$;
 
 SELECT * FROM finish();
 ROLLBACK;

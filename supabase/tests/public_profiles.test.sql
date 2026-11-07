@@ -41,57 +41,57 @@ $$;
 -- 1. Super Admin absent from public_profiles (AC10)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_sa uuid := '50333333-0000-0000-0000-000000000001'::uuid;
   v_count int;
 BEGIN
   SELECT COUNT(*) INTO v_count FROM public.public_profiles WHERE id = v_sa;
-  SELECT is(v_count, 0, 'AC10: Super Admin must not appear in public_profiles');
-END;
+  PERFORM is(v_count, 0, 'AC10: Super Admin must not appear in public_profiles');
+END; $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2. Member with "Admin" display name has is_staff=false (EC3)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_member uuid := '50333333-0000-0000-0000-000000000002'::uuid;
   v_is_staff bool;
 BEGIN
   SELECT is_staff INTO v_is_staff FROM public.public_profiles WHERE id = v_member;
-  SELECT is(v_is_staff, FALSE,
+  PERFORM is(v_is_staff, FALSE,
     'EC3: member with staff-like display name has is_staff=false');
-END;
+END; $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 3. Admin role user has is_staff=true (control: badge logic)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_admin uuid := '50333333-0000-0000-0000-000000000003'::uuid;
   v_is_staff bool;
 BEGIN
   SELECT is_staff INTO v_is_staff FROM public.public_profiles WHERE id = v_admin;
-  SELECT is(v_is_staff, TRUE, 'AC10: admin role user has is_staff=true in public_profiles');
-END;
+  PERFORM is(v_is_staff, TRUE, 'AC10: admin role user has is_staff=true in public_profiles');
+END; $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. Anonymised (deleted) user shows "Deleted user" in public_profiles (AC7)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_deleted uuid := '50333333-0000-0000-0000-000000000004'::uuid;
   v_name text;
 BEGIN
   SELECT display_name INTO v_name FROM public.public_profiles WHERE id = v_deleted;
-  SELECT is(v_name, 'Deleted user',
+  PERFORM is(v_name, 'Deleted user',
     'AC7: anonymised user shows "Deleted user" in public_profiles');
-END;
+END; $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5. Super Admin absent even when queried via article_comments inner join
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DECLARE
+DO $$ DECLARE
   v_sa     uuid := '50333333-0000-0000-0000-000000000001'::uuid;
   v_author uuid := '50333333-0000-0000-0000-000000000010'::uuid;
   v_cat    uuid := '50333333-0000-0000-0000-000000000011'::uuid;
@@ -118,9 +118,9 @@ BEGIN
     INNER JOIN public.public_profiles pp ON pp.id = ac.user_id
     WHERE ac.article_id = v_art AND ac.status = 'approved';
 
-  SELECT is(v_count, 0,
+  PERFORM is(v_count, 0,
     'AC10: Super Admin comment absent from article_comments INNER JOIN public_profiles');
-END;
+END; $$;
 
 SELECT * FROM finish();
 ROLLBACK;
