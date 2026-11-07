@@ -50,6 +50,9 @@ jobs:
           CRON_SECRET: dummy-cron-secret-for-ci-build-only
           RESEND_API_KEY: re_dummy_key_for_ci_build_only
           EMAIL_FROM: noreply@ceylonsafety.com
+          UPSTASH_REDIS_REST_URL: https://dummy-ci-upstash.upstash.io
+          UPSTASH_REDIS_REST_TOKEN: dummy_upstash_token_for_ci_build_only
+          RATELIMIT_HASH_SECRET: "0000000000000000000000000000000000000000000000000000000000000000"
 
   secret-scan:
     name: secret-scan
