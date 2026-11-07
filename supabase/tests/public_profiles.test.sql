@@ -25,7 +25,7 @@ BEGIN
     (v_sa,    'super_admin'),
     (v_admin, 'admin')
   ON CONFLICT DO NOTHING;
-  INSERT INTO public.auth.users (id, email, encrypted_password, role) VALUES
+  INSERT INTO auth.users (id, email, encrypted_password, role) VALUES
     (v_sa,      'sa_pp@test.com',      'x', 'authenticated'),
     (v_member,  'member_pp@test.com',  'x', 'authenticated'),
     (v_admin,   'admin_pp@test.com',   'x', 'authenticated'),

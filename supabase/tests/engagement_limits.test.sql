@@ -23,7 +23,7 @@ BEGIN
     (v_cust,  'Cust Engage',  'cust_engage@test.com',  'active'),
     (v_cust2, 'Cust Engage2', 'cust_engage2@test.com', 'active');
   INSERT INTO public.user_roles (user_id, role) VALUES (v_sa, 'super_admin');
-  INSERT INTO public.auth.users (id, email, encrypted_password, role)
+  INSERT INTO auth.users (id, email, encrypted_password, role)
     VALUES
       (v_sa,    'sa_engage@test.com',    'x', 'authenticated'),
       (v_cust,  'cust_engage@test.com',  'x', 'authenticated'),

@@ -18,7 +18,7 @@ BEGIN
   INSERT INTO public.profiles (id, display_name, email, status) VALUES
     (v_cust_a, 'Cust A RLS', 'cust_a_rls@test.com', 'active'),
     (v_cust_b, 'Cust B RLS', 'cust_b_rls@test.com', 'active');
-  INSERT INTO public.auth.users (id, email, encrypted_password, role) VALUES
+  INSERT INTO auth.users (id, email, encrypted_password, role) VALUES
     (v_cust_a, 'cust_a_rls@test.com', 'x', 'authenticated'),
     (v_cust_b, 'cust_b_rls@test.com', 'x', 'authenticated')
     ON CONFLICT (id) DO NOTHING;
