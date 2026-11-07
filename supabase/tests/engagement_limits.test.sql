@@ -139,7 +139,7 @@ SELECT throws_ok(
   $sql$INSERT INTO public.article_likes (article_id, user_id)
        VALUES ('50aaaaaa-0000-4000-8000-000000000001'::uuid,
                '50111111-0000-0000-0000-000000000002'::uuid)$sql$,
-  'P0001', NULL,
+  '23001', NULL,
   'AC3/EC1: 61st like in an hour must be refused by trigger'
 );
 
@@ -153,8 +153,10 @@ DECLARE
 BEGIN
   SET LOCAL role TO postgres;
   DELETE FROM public.article_comments WHERE user_id = v_cust;
+  -- Insert as 'approved' so the pending_cap trigger (5 max) does not fire
+  -- during setup. The hourly cap (10/hour) is what this test exercises.
   INSERT INTO public.article_comments (article_id, user_id, body, status, created_at)
-    SELECT v_art, v_cust, 'Comment ' || i, 'pending',
+    SELECT v_art, v_cust, 'Comment ' || i, 'approved',
            now() - (i || ' seconds')::interval
     FROM generate_series(1, 10) AS i;
 END;
@@ -165,7 +167,7 @@ SELECT throws_ok(
        VALUES ('50aaaaaa-0000-4000-8000-000000000001'::uuid,
                '50111111-0000-0000-0000-000000000002'::uuid,
                'Eleventh')$sql$,
-  'P0001', NULL,
+  '23001', NULL,
   'AC5/EC1: 11th comment in an hour must be refused by trigger'
 );
 
@@ -192,7 +194,7 @@ SELECT throws_ok(
        VALUES ('50aaaaaa-0000-4000-8000-000000000001'::uuid,
                '50111111-0000-0000-0000-000000000002'::uuid,
                'Sixth pending')$sql$,
-  'P0001', NULL,
+  '23001', NULL,
   'AC5/EC1: 6th pending comment must be refused by trigger'
 );
 
