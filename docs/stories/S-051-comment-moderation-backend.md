@@ -1,7 +1,7 @@
 ---
 id: S-051
 title: Comment moderation backend
-status: ready
+status: in-progress
 owner: backend
 risk: normal
 branch: feature/S-051-comment-moderation-backend
@@ -80,9 +80,43 @@ Server actions in `lib/engagement/actions/`. Consumer: S-062 (admin comment queu
 
 ## Plan
 
-Prior art: Searched docs/ for "moderateComment", "comments.moderate", "comment queue", "Q81". Found content system design sections 10.2, 15, 16, 21 and 23, admin panel design 3.4 (badge) and 12, auth design 10.1, schema Group C comment fields (`moderated_by`, `moderated_at`; used as is). This story extends S-050 (the comment rows) and reuses `lib/cache/purge.ts` from S-048. No code exists yet. The earlier draft S-009b moderation part (moved to scratch) is superseded.
+Prior art: Searched docs/ for "moderateComment", "comments.moderate", "comment queue", "Q81". Found content system design sections 10.2, 15, 16, 21 and 23, admin panel design 3.4 (badge) and 12, auth design 10.1, schema Group C comment fields (`moderated_by`, `moderated_at`; used as is). This story extends S-050 (the comment rows) and reuses `lib/cache/purge.ts` from S-048. No code exists yet.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+### Analyst gap resolutions
+
+- **AC8 role name**: "Maintainer" → "Editor" (Q62/Q63 answered 2026-11-03). An Editor with `comments.moderate` passes; without it they are refused. Tests updated accordingly.
+- **AC2 wrong-state transitions**: `restore` on non-rejected, or `delete` on non-approved → `validation_failed` with `reason: "wrong_state"`. Added as EC7.
+- **EC for moderated_by NULL**: when a moderator's profile has been anonymised, `moderator` field in `ModerationRow` returns `null`. Added as EC8.
+- **Bulk reject empty result**: when all ids are skipped, return `{ ok: true, rejected: [], skipped: <all ids> }` — success with zero rejections. Covered by AC4.
+- **Audit row for permission.denied**: the `permissions.test.ts` test must assert the audit row is written.
+
+### Implementation order
+
+1. Types: add `ModerationState`, `ModerationRow`, `ModerateCommentInput`, `ModerateCommentResult`, `BulkRejectResult` to `types/comment.ts`.
+2. Write failing tests (all 7 test files in story).
+3. `lib/engagement/actions/listCommentsForModeration.ts`
+4. `lib/engagement/actions/moderateComment.ts`
+5. `lib/engagement/actions/bulkRejectComments.ts`
+6. `supabase/tests/comment_counts.test.sql`
+
+### Files to create/edit
+
+| File | Action |
+|---|---|
+| `types/comment.ts` | Add moderation types |
+| `lib/engagement/actions/listCommentsForModeration.ts` | New |
+| `lib/engagement/actions/moderateComment.ts` | New |
+| `lib/engagement/actions/bulkRejectComments.ts` | New |
+| `lib/engagement/__tests__/listCommentsForModeration.test.ts` | New |
+| `lib/engagement/__tests__/moderateComment.test.ts` | New |
+| `lib/engagement/__tests__/bulkReject.test.ts` | New |
+| `lib/engagement/__tests__/moderatePurge.test.ts` | New |
+| `lib/engagement/__tests__/permissions.test.ts` | New (or extend existing) |
+| `supabase/tests/comment_counts.test.sql` | New |
+
+No DB migration needed: `moderated_by`, `moderated_at`, `moderated_by` FK → profiles `SET NULL` already exist in schema (S-014).
+
+<!-- Filled in by /story-run at Step 3. -->
 
 ## Evidence
 
@@ -90,6 +124,20 @@ Prior art: Searched docs/ for "moderateComment", "comments.moderate", "comment q
 
 ```
 $ bash scripts/check.sh
+✓ ESLint passed
+✓ TypeScript passed
+Test Files  114 passed | 9 skipped (123)
+Tests  1298 passed | 27 skipped (1325)
+✓ Vitest (unit) passed
+⚠ Supabase not running — skipping pgTAP tests (run supabase start first)
+⚠ Supabase not running — skipping seed tests
+⚠ Supabase not running — skipping types check
+✓ Public pages session check (AC11) passed
+⚠ No build output found — skipping Google Fonts check
+✓ Dev seed guard passed
+════════════════════════════════
+  check.sh: 5 passed, 0 failed
+✅ All checks passed.
 ```
 
 ## Review notes

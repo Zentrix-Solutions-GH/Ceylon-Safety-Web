@@ -56,3 +56,42 @@ export interface LikeStatusResult {
   liked: boolean | null;
   count: number;
 }
+
+// S-051: Comment moderation types (backend defines; frontend consumes in S-062)
+
+export type ModerationState = "pending" | "approved" | "rejected";
+
+export type ModerateAction = "approve" | "reject" | "delete" | "restore";
+
+export interface ModerationRow {
+  id: string;
+  body: string;
+  status: ModerationState;
+  writerDisplayName: string;
+  writerSuspended: boolean;
+  articleTitle: string;
+  articleSlug: string;
+  createdAt: string;
+  moderatorName: string | null;
+  moderatedAt: string | null;
+}
+
+export interface ModerationListResult {
+  comments: ModerationRow[];
+  nextCursor: { createdAt: string; id: string } | null;
+}
+
+export interface ModerateCommentInput {
+  commentId: string;
+  action: ModerateAction;
+}
+
+export type ModerateCommentResult =
+  | { ok: true }
+  | { ok: false; code: "not_allowed" | "not_found" | "rate_limited" | "validation_failed" | "purge_failed" | "unknown"; reason?: string };
+
+export interface BulkRejectResult {
+  ok: true;
+  rejected: string[];
+  skipped: string[];
+}
