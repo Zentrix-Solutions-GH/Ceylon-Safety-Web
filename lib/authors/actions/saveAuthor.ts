@@ -6,19 +6,9 @@ import { writeAuditRow } from "@/lib/audit/index";
 import { checkAdminWriteLimit } from "@/lib/ratelimit";
 import { generateSlug } from "@/lib/content/slug";
 import { saveAuthorSchema } from "@/lib/validation/author";
-import type { Author, SaveAuthorInput, SaveAuthorResult } from "@/types/author";
+import type { SaveAuthorInput, SaveAuthorResult } from "@/types/author";
 import { ANON_ACTOR } from "@/lib/engagement/actions/constants";
-
-function mapRow(row: Record<string, unknown>): Author {
-  return {
-    id: row.id as string,
-    name: row.name as string,
-    slug: row.slug as string,
-    bio: (row.bio as string | null) ?? null,
-    isActive: row.is_active as boolean,
-    updatedAt: row.updated_at as string,
-  };
-}
+import { mapRow } from "@/lib/authors/mapRow";
 
 async function clashSafeAuthorSlug(
   baseSlug: string,

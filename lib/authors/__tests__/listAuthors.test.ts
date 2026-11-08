@@ -32,12 +32,12 @@ const DB_AUTHORS = [
   { id: "00000000-0000-4000-8000-000000000011", name: "Bob", slug: "bob", bio: "Writer", is_active: false, updated_at: "2026-01-02T00:00:00Z" },
 ];
 
-function makeChain(rows: typeof DB_AUTHORS) {
+function makeChain(rows: typeof DB_AUTHORS, dbError: unknown = null) {
   const chain: Record<string, unknown> = {};
   chain.from = vi.fn().mockReturnThis();
   chain.select = vi.fn().mockReturnThis();
   chain.eq = vi.fn().mockReturnThis();
-  chain.order = vi.fn().mockResolvedValue({ data: rows, error: null });
+  chain.order = vi.fn().mockResolvedValue({ data: dbError ? null : rows, error: dbError });
   (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(chain);
 }
 
@@ -76,6 +76,16 @@ describe("listAuthors — AC1", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe("not_allowed");
+  });
+
+  it("returns unknown on DB error", async () => {
+    (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
+    makeChain([], { message: "connection error" });
+
+    const result = await listAuthors({});
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("unknown");
   });
 
   it("maps DB snake_case to camelCase Author shape", async () => {
