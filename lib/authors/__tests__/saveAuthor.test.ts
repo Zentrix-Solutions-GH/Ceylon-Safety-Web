@@ -234,3 +234,22 @@ describe("saveAuthor — AC4/EC5 version conflict", () => {
     expect(result.code).toBe("not_found");
   });
 });
+
+describe("saveAuthor — slug check DB error", () => {
+  it("returns unknown when the slug-clash query fails", async () => {
+    (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
+
+    // eq() resolves with a DB error — clashSafeAuthorSlug throws, saveAuthor returns unknown
+    const eq = vi.fn().mockResolvedValue({ data: null, error: { message: "db error" } });
+    const slugChain = { select: vi.fn().mockReturnValue({ eq }) };
+
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn().mockReturnValue(slugChain),
+    });
+
+    const result = await saveAuthor({ name: "Alice Smith" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("unknown");
+  });
+});

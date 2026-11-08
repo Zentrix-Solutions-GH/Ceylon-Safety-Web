@@ -95,7 +95,12 @@ export async function saveAuthor(input: SaveAuthorInput): Promise<SaveAuthorResu
   }
 
   const baseSlug = generateSlug(name);
-  const slug = await clashSafeAuthorSlug(baseSlug, id ?? null, supabase);
+  let slug: string;
+  try {
+    slug = await clashSafeAuthorSlug(baseSlug, id ?? null, supabase);
+  } catch {
+    return { ok: false, code: "unknown" };
+  }
 
   let data: Record<string, unknown> | null = null;
   let dbErr: unknown = null;

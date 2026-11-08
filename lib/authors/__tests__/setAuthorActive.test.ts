@@ -146,3 +146,15 @@ describe("setAuthorActive — version conflict", () => {
     expect(result.code).toBe("not_found");
   });
 });
+
+describe("setAuthorActive — rate limit", () => {
+  it("returns unknown when rate limit is exceeded", async () => {
+    (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
+    (checkAdminWriteLimit as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false });
+
+    const result = await setAuthorActive({ id: AUTHOR_ID, active: false, updatedAt: UPDATED_AT });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("unknown");
+  });
+});
