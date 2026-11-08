@@ -36,5 +36,5 @@ export async function listAuthors(input: ListAuthorsInput): Promise<ListAuthorsR
 
   if (error) return { ok: false, code: "unknown" };
 
-  return { ok: true, authors: (data as Record<string, unknown>[]).map(mapRow) };
+  return { ok: true, authors: data.map(mapRow) };
 }

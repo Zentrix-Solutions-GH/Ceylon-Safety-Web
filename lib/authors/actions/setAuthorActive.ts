@@ -62,7 +62,7 @@ export async function setAuthorActive(input: {
 
   if (updateErr || !data) return { ok: false, code: "unknown" };
 
-  const author = mapRow(data as Record<string, unknown>);
+  const author = mapRow(data);
 
   try {
     await writeAuditRow({

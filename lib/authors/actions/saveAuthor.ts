@@ -8,7 +8,7 @@ import { generateSlug } from "@/lib/content/slug";
 import { saveAuthorSchema } from "@/lib/validation/author";
 import type { SaveAuthorInput, SaveAuthorResult } from "@/types/author";
 import { ANON_ACTOR } from "@/lib/engagement/actions/constants";
-import { mapRow } from "@/lib/authors/mapRow";
+import { mapRow, type AuthorRow } from "@/lib/authors/mapRow";
 
 async function clashSafeAuthorSlug(
   baseSlug: string,
@@ -80,7 +80,7 @@ export async function saveAuthor(input: SaveAuthorInput): Promise<SaveAuthorResu
     return { ok: false, code: "unknown" };
   }
 
-  let data: Record<string, unknown> | null = null;
+  let data: AuthorRow | null = null;
   let dbErr: unknown = null;
 
   if (id) {
@@ -91,7 +91,7 @@ export async function saveAuthor(input: SaveAuthorInput): Promise<SaveAuthorResu
       .eq("updated_at", updatedAt!) // atomic version guard (admin panel section 12)
       .select("id, name, slug, bio, is_active, updated_at")
       .single();
-    data = result.data as Record<string, unknown> | null;
+    data = result.data as AuthorRow | null;
     dbErr = result.error;
 
     if ((dbErr as { code?: string } | null)?.code === "PGRST116") {
@@ -110,7 +110,7 @@ export async function saveAuthor(input: SaveAuthorInput): Promise<SaveAuthorResu
       .insert({ name, bio: bio ?? null, slug, is_active: true })
       .select("id, name, slug, bio, is_active, updated_at")
       .single();
-    data = result.data as Record<string, unknown> | null;
+    data = result.data as AuthorRow | null;
     dbErr = result.error;
   }
 
