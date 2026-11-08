@@ -35,7 +35,7 @@ const TARGET_STATUS: Record<ModerateAction, string> = {
   restore: "approved",
 };
 
-const DESTRUCTIVE: ModerateAction[] = ["delete", "approve"];
+const DESTRUCTIVE: ModerateAction[] = ["delete"];
 
 export async function moderateComment(
   commentId: unknown,
@@ -50,7 +50,7 @@ export async function moderateComment(
   const auth = await requireStaff("comments.moderate");
   if (!auth.ok) {
     try {
-      await writeAuditRow({ action: "permission.denied", actorId, entityType: "comment", entityId: validCommentId, after: { permission: "comments.moderate" } });
+      await writeAuditRow({ action: "permission.denied", actorId: null as unknown as string, entityType: "comment", entityId: validCommentId, after: { permission: "comments.moderate" } });
     } catch {}
     return { ok: false, code: "not_allowed" };
   }

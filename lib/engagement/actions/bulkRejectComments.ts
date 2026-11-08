@@ -28,7 +28,7 @@ export async function bulkRejectComments(
   const auth = await requireStaff("comments.moderate");
   if (!auth.ok) {
     try {
-      await writeAuditRow({ action: "permission.denied", actorId, entityType: "comment", entityId: "", after: { permission: "comments.moderate" } });
+      await writeAuditRow({ action: "permission.denied", actorId: null as unknown as string, entityType: "comment", entityId: "", after: { permission: "comments.moderate" } });
     } catch {}
     return { ok: false, code: "not_allowed" };
   }

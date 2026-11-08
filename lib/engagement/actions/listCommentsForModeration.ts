@@ -103,11 +103,12 @@ export async function listCommentsForModeration(
     }
 
     const order = state === "pending" ? { ascending: true } : { ascending: false };
-    const { data, error } = await withCursor.order("created_at", order).range(0, PAGE_SIZE - 1);
+    const { data, error } = await withCursor.order("created_at", order).range(0, PAGE_SIZE);
 
     if (error) return { ok: false, code: "unknown" };
 
-    const rows: RawRow[] = data ?? [];
+    const rows: RawRow[] = (data ?? []).slice(0, PAGE_SIZE);
+    const hasNextPage = (data ?? []).length > PAGE_SIZE;
     const comments: ModerationRow[] = rows.map((r) => ({
       id: r.id,
       body: r.body,
@@ -121,10 +122,9 @@ export async function listCommentsForModeration(
       moderatedAt: r.moderated_at ?? null,
     }));
 
-    const nextCursor =
-      comments.length === PAGE_SIZE
-        ? { createdAt: comments[comments.length - 1].createdAt, id: comments[comments.length - 1].id }
-        : null;
+    const nextCursor = hasNextPage
+      ? { createdAt: comments[comments.length - 1].createdAt, id: comments[comments.length - 1].id }
+      : null;
 
     return { ok: true, comments, nextCursor };
   } catch {

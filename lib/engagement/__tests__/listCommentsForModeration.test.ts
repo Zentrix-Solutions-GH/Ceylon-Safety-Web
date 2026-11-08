@@ -123,14 +123,18 @@ describe("listCommentsForModeration", () => {
     if (result.ok) expect(result.comments[0].moderatorName).toBeNull();
   });
 
-  it("AC1: returns nextCursor when page is full (25 rows)", async () => {
-    const rows = Array.from({ length: 25 }, (_, i) =>
+  it("AC1: returns nextCursor when more than PAGE_SIZE rows exist (26 rows)", async () => {
+    // Fetch PAGE_SIZE+1 (26) to detect a next page; cursor is set only when the extra row exists.
+    const rows = Array.from({ length: 26 }, (_, i) =>
       makeRow({ id: `cmt-${i}`, created_at: `2026-10-${String(i + 1).padStart(2, "0")}T10:00:00Z` })
     );
     makeChain(rows);
     const result = await listCommentsForModeration({ state: "pending" });
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.nextCursor).not.toBeNull();
+    if (result.ok) {
+      expect(result.comments).toHaveLength(25);
+      expect(result.nextCursor).not.toBeNull();
+    }
   });
 
   it("AC1: returns null cursor when fewer than 25 rows", async () => {
