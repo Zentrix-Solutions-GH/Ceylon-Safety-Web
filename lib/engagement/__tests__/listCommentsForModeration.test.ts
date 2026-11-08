@@ -139,4 +139,11 @@ describe("listCommentsForModeration", () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.nextCursor).toBeNull();
   });
+
+  it("EC5: anonymised writer (profiles null) shows 'Deleted user'", async () => {
+    makeChain([makeRow({ profiles: null })]);
+    const result = await listCommentsForModeration({ state: "pending" });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.comments[0].writerDisplayName).toBe("Deleted user");
+  });
 });
