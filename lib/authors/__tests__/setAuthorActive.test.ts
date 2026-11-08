@@ -42,34 +42,45 @@ const EXISTING_ROW = {
   updated_at: UPDATED_AT,
 };
 
-// Build a supabase mock where from() always returns the same chain.
-// The chain distinguishes fetch (select path) vs update (update path)
-// by which method is called first after from().
+// Mock structure after atomic-update fix:
+//   Call 1: .update().eq("id",...).eq("updated_at",...).select().single()
+//           → returns updatedRow on success, or { code: "PGRST116" } on 0 rows
+//   Call 2 (only on PGRST116): .select("id").eq("id",...).maybeSingle()
+//           → returns { id } if author exists (version_conflict), null if not (not_found)
 function buildMock({
-  existingRow = EXISTING_ROW as Record<string, unknown> | null,
   updatedRow = { ...EXISTING_ROW, is_active: false } as Record<string, unknown>,
+  simulatePgrst116 = false,
+  existsAfterPgrst116 = true,
 } = {}) {
-  // --- Update path: .update({}).eq(...).select(...).single() ---
-  const updateSingle = vi.fn().mockResolvedValue({ data: updatedRow, error: null });
+  let fromCount = 0;
+
+  // Update chain: .update().eq().eq().select().single()
+  const updateSingle = vi.fn().mockResolvedValue(
+    simulatePgrst116
+      ? { data: null, error: { code: "PGRST116" } }
+      : { data: updatedRow, error: null }
+  );
   const updateSelect = vi.fn().mockReturnValue({ single: updateSingle });
-  const updateEq = vi.fn().mockReturnValue({ select: updateSelect, single: updateSingle });
-  const updateFn = vi.fn().mockReturnValue({ eq: updateEq });
+  const updateEq2 = vi.fn().mockReturnValue({ select: updateSelect, single: updateSingle });
+  const updateEq1 = vi.fn().mockReturnValue({ eq: updateEq2 });
+  const updateFn = vi.fn().mockReturnValue({ eq: updateEq1 });
 
-  // --- Fetch path: .select(...).eq(...).single() ---
-  const fetchSingle = vi.fn().mockResolvedValue({
-    data: existingRow,
-    error: existingRow ? null : { code: "PGRST116" },
+  // Existence check: .select("id").eq("id",...).maybeSingle()
+  const maybeSingle = vi.fn().mockResolvedValue({
+    data: existsAfterPgrst116 ? { id: AUTHOR_ID } : null,
+    error: null,
   });
-  const fetchEq = vi.fn().mockReturnValue({ single: fetchSingle });
-  const fetchSelect = vi.fn().mockReturnValue({ eq: fetchEq, single: fetchSingle });
+  const existsEq = vi.fn().mockReturnValue({ maybeSingle });
+  const existsSelect = vi.fn().mockReturnValue({ eq: existsEq });
 
-  // Single chain returned by every from() call; methods route to their own sub-chains
-  const chain = {
-    select: fetchSelect,
-    update: updateFn,
+  const supabase = {
+    from: vi.fn().mockImplementation(() => {
+      fromCount++;
+      if (fromCount === 1) return { update: updateFn };
+      return { select: existsSelect };
+    }),
   };
 
-  const supabase = { from: vi.fn().mockReturnValue(chain) };
   (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(supabase);
   return { supabase, updateFn };
 }
@@ -93,10 +104,7 @@ describe("setAuthorActive — AC3 deactivate", () => {
 
   it("reactivates a deactivated author", async () => {
     (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
-    buildMock({
-      existingRow: { ...EXISTING_ROW, is_active: false },
-      updatedRow: { ...EXISTING_ROW, is_active: true },
-    });
+    buildMock({ updatedRow: { ...EXISTING_ROW, is_active: true } });
 
     const result = await setAuthorActive({ id: AUTHOR_ID, active: true, updatedAt: UPDATED_AT });
     expect(result.ok).toBe(true);
@@ -128,7 +136,8 @@ describe("setAuthorActive — EC2 no delete path", () => {
 describe("setAuthorActive — version conflict", () => {
   it("returns version_conflict when updated_at is stale", async () => {
     (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
-    buildMock({ existingRow: { ...EXISTING_ROW, updated_at: "2026-02-01T00:00:00Z" } });
+    // Update returns 0 rows (PGRST116) because updated_at didn't match; author still exists.
+    buildMock({ simulatePgrst116: true, existsAfterPgrst116: true });
 
     const result = await setAuthorActive({ id: AUTHOR_ID, active: false, updatedAt: UPDATED_AT });
     expect(result.ok).toBe(false);
@@ -138,7 +147,8 @@ describe("setAuthorActive — version conflict", () => {
 
   it("returns not_found for unknown author id", async () => {
     (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
-    buildMock({ existingRow: null });
+    // Update returns 0 rows; existence check also finds nothing.
+    buildMock({ simulatePgrst116: true, existsAfterPgrst116: false });
 
     const result = await setAuthorActive({ id: "00000000-0000-4000-8000-000000000099", active: false, updatedAt: UPDATED_AT });
     expect(result.ok).toBe(false);

@@ -42,10 +42,13 @@ const SAVED_ROW = {
   updated_at: "2026-01-02T00:00:00Z",
 };
 
+// DML chain supports .insert().select().single() and .update().eq().eq().select().single()
+// eq is self-chainable so any number of .eq() calls works.
 function makeDmlChain(savedRow: Record<string, unknown>) {
   const single = vi.fn().mockResolvedValue({ data: savedRow, error: null });
   const select = vi.fn().mockReturnValue({ single });
-  const eq = vi.fn().mockReturnValue({ select, single });
+  const eq: ReturnType<typeof vi.fn> = vi.fn();
+  eq.mockReturnValue({ select, single, eq });
   return { insert: vi.fn().mockReturnValue({ select, single }), update: vi.fn().mockReturnValue({ eq }), select, single, eq };
 }
 
@@ -55,40 +58,22 @@ function makeSlugChain(rows: { id: string }[]) {
   return { select };
 }
 
-function makeFetchChain(existingRow: Record<string, unknown> | null) {
-  const single = vi.fn().mockResolvedValue({
-    data: existingRow,
-    error: existingRow ? null : { code: "PGRST116" },
-  });
-  const eq = vi.fn().mockReturnValue({ single });
-  const select = vi.fn().mockReturnValue({ eq, single });
-  return { select };
-}
-
 // Action call order for create: (1) slug check → (2) insert
-// Action call order for update: (1) version fetch → (2) slug check → (3) update
+// Action call order for update (success): (1) slug check → (2) update DML
+// Action call order for update (PGRST116): (1) slug check → (2) update DML → (3) existence check
 function setupMock({
   slugRows = [] as { id: string }[],
   savedRow = SAVED_ROW as Record<string, unknown>,
-  existingRow = undefined as Record<string, unknown> | null | undefined,
 } = {}) {
-  const isUpdate = existingRow !== undefined;
   let callCount = 0;
   const dmlChain = makeDmlChain(savedRow);
   const slugChain = makeSlugChain(slugRows);
-  const fetchChain = isUpdate ? makeFetchChain(existingRow!) : null;
 
   const supabase = {
     from: vi.fn().mockImplementation(() => {
       callCount++;
-      if (isUpdate) {
-        if (callCount === 1) return fetchChain; // version check
-        if (callCount === 2) return slugChain;  // slug check
-        return dmlChain;                        // update DML
-      }
-      // create
-      if (callCount === 1) return slugChain;    // slug check
-      return dmlChain;                          // insert DML
+      if (callCount === 1) return slugChain; // slug check
+      return dmlChain;                       // insert or update DML
     }),
   };
   (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(supabase);
@@ -206,7 +191,30 @@ describe("saveAuthor — EC4 blank name", () => {
 describe("saveAuthor — AC4/EC5 version conflict", () => {
   it("returns version_conflict when updated_at is stale", async () => {
     (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
-    setupMock({ existingRow: { id: AUTHOR_ID, updated_at: "2026-02-01T00:00:00Z" } });
+
+    // Slug check: no clash. Update DML: PGRST116 (updated_at mismatch). Existence: author found.
+    const slugEq = vi.fn().mockResolvedValue({ data: [], error: null });
+    const slugChain = { select: vi.fn().mockReturnValue({ eq: slugEq }) };
+
+    const updateSingle = vi.fn().mockResolvedValue({ data: null, error: { code: "PGRST116" } });
+    const updateSelect = vi.fn().mockReturnValue({ single: updateSingle });
+    const updateEq2 = vi.fn().mockReturnValue({ select: updateSelect, single: updateSingle });
+    const updateEq1 = vi.fn().mockReturnValue({ eq: updateEq2 });
+    const dmlChain = { update: vi.fn().mockReturnValue({ eq: updateEq1 }) };
+
+    const maybeSingle = vi.fn().mockResolvedValue({ data: { id: AUTHOR_ID }, error: null });
+    const existsEq = vi.fn().mockReturnValue({ maybeSingle });
+    const existsChain = { select: vi.fn().mockReturnValue({ eq: existsEq }) };
+
+    let fromCount = 0;
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn().mockImplementation(() => {
+        fromCount++;
+        if (fromCount === 1) return slugChain;
+        if (fromCount === 2) return dmlChain;
+        return existsChain;
+      }),
+    });
 
     const result = await saveAuthor({ id: AUTHOR_ID, name: "Alice Smith", updatedAt: UPDATED_AT });
     expect(result.ok).toBe(false);
@@ -216,7 +224,7 @@ describe("saveAuthor — AC4/EC5 version conflict", () => {
 
   it("returns version_conflict when id present but updatedAt absent", async () => {
     (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
-    setupMock({ existingRow: { id: AUTHOR_ID, updated_at: "2026-02-01T00:00:00Z" } });
+    // Early return before any DB call — no supabase mock needed
 
     const result = await saveAuthor({ id: AUTHOR_ID, name: "Alice Smith" });
     expect(result.ok).toBe(false);
@@ -226,7 +234,30 @@ describe("saveAuthor — AC4/EC5 version conflict", () => {
 
   it("returns not_found when updating an unknown author ID", async () => {
     (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
-    setupMock({ existingRow: null });
+
+    // Slug check: no clash. Update DML: PGRST116. Existence: author not found.
+    const slugEq = vi.fn().mockResolvedValue({ data: [], error: null });
+    const slugChain = { select: vi.fn().mockReturnValue({ eq: slugEq }) };
+
+    const updateSingle = vi.fn().mockResolvedValue({ data: null, error: { code: "PGRST116" } });
+    const updateSelect = vi.fn().mockReturnValue({ single: updateSingle });
+    const updateEq2 = vi.fn().mockReturnValue({ select: updateSelect, single: updateSingle });
+    const updateEq1 = vi.fn().mockReturnValue({ eq: updateEq2 });
+    const dmlChain = { update: vi.fn().mockReturnValue({ eq: updateEq1 }) };
+
+    const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    const existsEq = vi.fn().mockReturnValue({ maybeSingle });
+    const existsChain = { select: vi.fn().mockReturnValue({ eq: existsEq }) };
+
+    let fromCount = 0;
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn().mockImplementation(() => {
+        fromCount++;
+        if (fromCount === 1) return slugChain;
+        if (fromCount === 2) return dmlChain;
+        return existsChain;
+      }),
+    });
 
     const result = await saveAuthor({ id: "00000000-0000-4000-8000-000000000099", name: "Ghost", updatedAt: UPDATED_AT });
     expect(result.ok).toBe(false);

@@ -50,26 +50,25 @@ export async function setAuthorActive(input: {
 
   const supabase = createSupabaseServiceRoleClient();
 
-  // Fetch current row for version check (admin panel section 12)
-  const { data: existing, error: fetchErr } = await supabase
-    .from("authors")
-    .select("id, updated_at")
-    .eq("id", id)
-    .single();
-
-  if (fetchErr || !existing) return { ok: false, code: "not_found" };
-
-  const dbUpdatedAt = (existing as Record<string, unknown>).updated_at as string;
-  if (dbUpdatedAt !== updatedAt) {
-    return { ok: false, code: "version_conflict" };
-  }
-
+  // Atomic version guard: UPDATE WHERE id = $id AND updated_at = $expected
+  // If 0 rows (PGRST116): author not found or concurrently edited — distinguish below.
   const { data, error: updateErr } = await supabase
     .from("authors")
     .update({ is_active: active })
     .eq("id", id)
+    .eq("updated_at", updatedAt)
     .select("id, name, slug, bio, is_active, updated_at")
     .single();
+
+  if ((updateErr as { code?: string } | null)?.code === "PGRST116") {
+    const { data: exists } = await supabase
+      .from("authors")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+    if (!exists) return { ok: false, code: "not_found" };
+    return { ok: false, code: "version_conflict" };
+  }
 
   if (updateErr || !data) return { ok: false, code: "unknown" };
 

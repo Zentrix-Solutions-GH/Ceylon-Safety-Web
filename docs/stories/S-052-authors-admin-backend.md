@@ -140,7 +140,8 @@ pgTAP NOT verified — Supabase was not running during this session.
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `lib/authors/actions/saveAuthor.ts:82-115` and `lib/authors/actions/setAuthorActive.ts:50-80` — Non-atomic version-conflict guard (TOCTOU): fetch-then-update with no `updated_at` guard in the WHERE clause; a concurrent second edit can be silently overwritten. Fix: `UPDATE … WHERE id = $id AND updated_at = $expected RETURNING *`, treat 0 rows as `version_conflict`. (full-review 2026-11-08)
+- **P1** `lib/authors/actions/saveAuthor.ts:30-47` — `clashSafeAuthorSlug` while-loop has no iteration cap; add `if (attempt > 100) throw new Error("slug_max_attempts")`. (full-review 2026-11-08)
 
 ## After this merges, a user can:
 

@@ -61,21 +61,17 @@ function setupSaveMock() {
 }
 
 function setupActiveMock() {
-  const existingRow = { id: AUTHOR_ID, name: "Alice", slug: "alice", bio: null, is_active: false, updated_at: UPDATED_AT };
-  const updatedRow = { ...existingRow, is_active: false };
+  const updatedRow = { id: AUTHOR_ID, name: "Alice", slug: "alice", bio: null, is_active: false, updated_at: UPDATED_AT };
 
+  // After atomic-update fix: .update().eq("id",...).eq("updated_at",...).select().single()
   const updateSingle = vi.fn().mockResolvedValue({ data: updatedRow, error: null });
   const updateSelect = vi.fn().mockReturnValue({ single: updateSingle });
-  const updateEq = vi.fn().mockReturnValue({ select: updateSelect, single: updateSingle });
-  const updateFn = vi.fn().mockReturnValue({ eq: updateEq });
+  const updateEq2 = vi.fn().mockReturnValue({ select: updateSelect, single: updateSingle });
+  const updateEq1 = vi.fn().mockReturnValue({ eq: updateEq2 });
+  const updateFn = vi.fn().mockReturnValue({ eq: updateEq1 });
 
-  const fetchSingle = vi.fn().mockResolvedValue({ data: existingRow, error: null });
-  const fetchEq = vi.fn().mockReturnValue({ single: fetchSingle });
-  const fetchSelect = vi.fn().mockReturnValue({ eq: fetchEq, single: fetchSingle });
-
-  const chain = { select: fetchSelect, update: updateFn };
   (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({
-    from: vi.fn().mockReturnValue(chain),
+    from: vi.fn().mockReturnValue({ update: updateFn }),
   });
 }
 

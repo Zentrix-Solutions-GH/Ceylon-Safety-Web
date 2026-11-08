@@ -43,6 +43,7 @@ async function clashSafeAuthorSlug(
     if (!clash) return candidate;
 
     attempt++;
+    if (attempt > 100) throw new Error("slug_max_attempts");
     candidate = `${baseSlug}-${attempt}`;
   }
 }
@@ -73,26 +74,13 @@ export async function saveAuthor(input: SaveAuthorInput): Promise<SaveAuthorResu
 
   const { id, name, bio, updatedAt } = parsed.data;
 
+  // updatedAt is required for updates (admin panel section 12)
+  if (id && !updatedAt) return { ok: false, code: "version_conflict" };
+
   const limitResult = await checkAdminWriteLimit(actorId);
   if (!limitResult.ok) return { ok: false, code: "unknown" };
 
   const supabase = createSupabaseServiceRoleClient();
-
-  // Version check for updates (admin panel section 12)
-  if (id) {
-    const { data: existing, error: fetchErr } = await supabase
-      .from("authors")
-      .select("id, updated_at")
-      .eq("id", id)
-      .single();
-
-    if (fetchErr || !existing) return { ok: false, code: "not_found" };
-
-    const dbUpdatedAt = (existing as Record<string, unknown>).updated_at as string;
-    if (!updatedAt || dbUpdatedAt !== updatedAt) {
-      return { ok: false, code: "version_conflict" };
-    }
-  }
 
   const baseSlug = generateSlug(name);
   let slug: string;
@@ -110,10 +98,22 @@ export async function saveAuthor(input: SaveAuthorInput): Promise<SaveAuthorResu
       .from("authors")
       .update({ name, bio: bio ?? null, slug })
       .eq("id", id)
+      .eq("updated_at", updatedAt!) // atomic version guard (admin panel section 12)
       .select("id, name, slug, bio, is_active, updated_at")
       .single();
     data = result.data as Record<string, unknown> | null;
     dbErr = result.error;
+
+    if ((dbErr as { code?: string } | null)?.code === "PGRST116") {
+      // 0 rows: author not found or concurrently edited — distinguish with existence check
+      const { data: exists } = await supabase
+        .from("authors")
+        .select("id")
+        .eq("id", id)
+        .maybeSingle();
+      if (!exists) return { ok: false, code: "not_found" };
+      return { ok: false, code: "version_conflict" };
+    }
   } else {
     const result = await supabase
       .from("authors")
