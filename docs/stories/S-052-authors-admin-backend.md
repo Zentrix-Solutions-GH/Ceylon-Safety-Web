@@ -1,7 +1,7 @@
 ---
 id: S-052
 title: Authors admin backend
-status: ready
+status: in-progress
 owner: backend
 risk: normal
 branch: feature/S-052-authors-admin-backend
@@ -50,7 +50,9 @@ Server actions in `lib/authors/actions/`. Consumers: S-057 (author picker), S-05
 
 - An author photo and public author pages (no per-type row in the image table and no author pages in v1).
 - Trainers (Release 2 admin screen; separate table).
-- Cache clearing for a renamed author (not in the master purge table).
+- Cache clearing for a renamed author: content design section 15 lists "author or category change" as a purge trigger, but implementing per-article purge on every author rename is deferred to a follow-up story. Published articles will show the old name for up to 300 s after a rename. Owner acknowledged as a scope cut.
+- `order_index` handling in `saveAuthor` or `listAuthors` (no picker spec for ordering in v1).
+- Bio field sanitisation beyond plain-text storage (no HTML rendering path in v1).
 
 ## Assumptions accepted
 
@@ -75,16 +77,65 @@ Server actions in `lib/authors/actions/`. Consumers: S-057 (author picker), S-05
 
 ## Plan
 
-Prior art: Searched docs/ for "authors", "saveAuthor", "author.change", "setAuthorActive". Found content system design sections 12, 21 and 23, schema Group B (`authors`, used as is), admin panel design 4.3, file-structure `admin/authors/`. No code exists yet. The earlier draft S-058-type admin author parts (moved to scratch) are superseded.
+Prior art: Searched docs/ for "authors", "saveAuthor", "author.change", "setAuthorActive". Found content system design sections 12, 21 and 23, schema Group B (`authors`, used as is), admin panel design 4.3, file-structure `admin/authors/`. No code exists yet. The earlier draft S-058-type admin author parts (moved to scratch) are superseded. AC6 (deactivated author block at publish) already implemented in `lib/articles/actions/setArticleStatus.ts`; no change needed there.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+Decisions (from gap report):
+- `SaveAuthorResult` returns `{ ok: true; author: Author }` on success.
+- `setAuthorActive` checks `updated_at` per admin panel section 12 cross-cutting rule.
+- Cache purge on rename: out of scope (scope cut, deferred); note updated below.
+- `order_index`: out of scope (not in story, no picker spec).
+- `not_found` added for unknown IDs in `saveAuthor(update)` and `setAuthorActive`.
+
+Files to create:
+1. `types/author.ts` — `Author`, `SaveAuthorInput`, `SaveAuthorResult`
+2. `lib/validation/author.ts` — Zod schemas
+3. `lib/authors/actions/listAuthors.ts`
+4. `lib/authors/actions/saveAuthor.ts`
+5. `lib/authors/actions/setAuthorActive.ts`
+
+Test files:
+6. `lib/authors/__tests__/listAuthors.test.ts`
+7. `lib/authors/__tests__/saveAuthor.test.ts`
+8. `lib/authors/__tests__/setAuthorActive.test.ts`
+9. `lib/authors/__tests__/permissions.test.ts`
+10. `lib/authors/__tests__/audit.test.ts`
+11. `supabase/tests/authors.test.sql` (RLS: anon read active only, staff write)
+
+Step order: types → validation schema → tests (red) → actions (green) → check.sh
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh   # after all P0/P1/P2 fixes
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Test Files  119 passed | 9 skipped (128)
+     Tests  1335 passed | 27 skipped (1362)   # 29 new tests (28→29 after P2 permission fix)
+
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests
+── pgTAP seed suite ──
+⚠ Supabase not running — skipping seed tests
+── Types file freshness ──
+⚠ Supabase not running — skipping types check
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+════════════════════════════════
+  check.sh: 5 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
+
+pgTAP NOT verified — Supabase was not running during this session.
 ```
 
 ## Review notes
