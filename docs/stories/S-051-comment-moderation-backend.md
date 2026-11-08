@@ -1,11 +1,11 @@
 ---
 id: S-051
 title: Comment moderation backend
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-051-comment-moderation-backend
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/66
 depends_on: [S-038, S-050]
 reqs: [REQ-034, REQ-195]
 ---
@@ -23,24 +23,24 @@ Staff with `comments.moderate` can work the comment queue: list comments by stat
 
 ## Acceptance criteria
 
-- [ ] AC1: `listCommentsForModeration({ state, cursor })` requires `requireStaff('comments.moderate')`. `state` is `pending` (default, oldest first), `approved` or `rejected`. It returns the comment text, writer display name, an "writer suspended" flag, the article title and slug, created time, and for decided comments the moderator name and time. Page size 25, cursor validated. `no-store`.
-- [ ] AC2: `moderateComment(commentId, action)` with `action` in `approve`, `reject`, `delete`, `restore`. `approve` and `reject` apply to `pending` comments; `reject` also unpublishes an `approved` comment; `delete` applies to a published comment; `restore` moves a `rejected` comment back to `approved`.
-- [ ] AC3: Each decision sets `moderated_by` and `moderated_at` on the comment and writes one audit row: `comment.approve`, `comment.reject`, `comment.delete` or `comment.restore`.
-- [ ] AC4: A bulk reject takes a list of comment ids (at most 100 per call) and rejects the pending ones in one call, writing one audit row per comment or one batch row with the ids (decided in the Plan, one row per decided comment is the default).
-- [ ] AC5: After each decision the cached copies are cleared through `lib/cache/purge.ts` (S-048): that article page, the Home first page and the feed API (counts), per the content design 15 table. A failed purge is retried, writes `purge.failed` and returns `purge_failed` while the decision stays saved.
-- [ ] AC6: Repeating a decision that is already in that state returns `validation_failed` with reason `already_done` and changes nothing.
-- [ ] AC7: The comment count shown on cards and pages updates through the database counters (approved only) after a decision.
-- [ ] AC8: A caller without `comments.moderate` (customer, Maintainer, Admin without the row) gets `not_allowed` and a `permission.denied` audit row.
-- [ ] AC9: Staff action limits from the shared limiter (60 writes a minute, 10 a minute for approvals and deletes) apply and return `rate_limited`.
+- [x] AC1: `listCommentsForModeration({ state, cursor })` requires `requireStaff('comments.moderate')`. `state` is `pending` (default, oldest first), `approved` or `rejected`. It returns the comment text, writer display name, an "writer suspended" flag, the article title and slug, created time, and for decided comments the moderator name and time. Page size 25, cursor validated. `no-store`.
+- [x] AC2: `moderateComment(commentId, action)` with `action` in `approve`, `reject`, `delete`, `restore`. `approve` and `reject` apply to `pending` comments; `reject` also unpublishes an `approved` comment; `delete` applies to a published comment; `restore` moves a `rejected` comment back to `approved`.
+- [x] AC3: Each decision sets `moderated_by` and `moderated_at` on the comment and writes one audit row: `comment.approve`, `comment.reject`, `comment.delete` or `comment.restore`.
+- [x] AC4: A bulk reject takes a list of comment ids (at most 100 per call) and rejects the pending ones in one call, writing one audit row per comment or one batch row with the ids (decided in the Plan, one row per decided comment is the default).
+- [x] AC5: After each decision the cached copies are cleared through `lib/cache/purge.ts` (S-048): that article page, the Home first page and the feed API (counts), per the content design 15 table. A failed purge is retried, writes `purge.failed` and returns `purge_failed` while the decision stays saved.
+- [x] AC6: Repeating a decision that is already in that state returns `validation_failed` with reason `already_done` and changes nothing.
+- [x] AC7: The comment count shown on cards and pages updates through the database counters (approved only) after a decision.
+- [x] AC8: A caller without `comments.moderate` (customer, Maintainer, Admin without the row) gets `not_allowed` and a `permission.denied` audit row.
+- [x] AC9: Staff action limits from the shared limiter (60 writes a minute, 10 a minute for approvals and deletes) apply and return `rate_limited`.
 
 ## Edge cases
 
-- [ ] EC1: A comment whose writer is suspended stays in the queue and carries the suspended flag; a decision on it is allowed.
-- [ ] EC2: Two moderators act on the same comment at once: the first wins; the second gets `already_done`.
-- [ ] EC3: Moderating a comment whose article is hidden or deleted is allowed; the public pages stay unchanged.
-- [ ] EC4: A bulk list with unknown ids, already-decided ids or more than 100 ids: unknown and decided ones are skipped and reported, more than 100 returns `validation_failed`.
-- [ ] EC5: A writer deleted (anonymised) after approval: the comment stays and lists "Deleted user".
-- [ ] EC6: No reason text is stored for a rejection in Release 1; the writer sees "Not published" only.
+- [x] EC1: A comment whose writer is suspended stays in the queue and carries the suspended flag; a decision on it is allowed.
+- [x] EC2: Two moderators act on the same comment at once: the first wins; the second gets `already_done`.
+- [x] EC3: Moderating a comment whose article is hidden or deleted is allowed; the public pages stay unchanged.
+- [x] EC4: A bulk list with unknown ids, already-decided ids or more than 100 ids: unknown and decided ones are skipped and reported, more than 100 returns `validation_failed`.
+- [x] EC5: A writer deleted (anonymised) after approval: the comment stays and lists "Deleted user".
+- [x] EC6: No reason text is stored for a rejection in Release 1; the writer sees "Not published" only.
 
 ## Contract
 
