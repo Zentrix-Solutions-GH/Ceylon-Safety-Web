@@ -5,7 +5,7 @@ import { unstable_noStore } from "next/cache";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { requireStaff } from "@/lib/auth/server";
 import { writeAuditRow } from "@/lib/audit/index";
-import type { ModerationState, ModerationRow, ModerationListResult } from "@/types/comment";
+import type { ListableCommentState, ModerationRow, ModerationListResult } from "@/types/comment";
 
 import { ANON_ACTOR } from "@/lib/engagement/actions/constants";
 
@@ -17,7 +17,7 @@ const cursorSchema = z.object({
 });
 
 const listInputSchema = z.object({
-  state: z.enum(["pending", "approved", "rejected"]).default("pending"),
+  state: z.enum(["pending", "approved", "rejected"] as [ListableCommentState, ...ListableCommentState[]]).default("pending"),
   cursor: cursorSchema.optional(),
 });
 
@@ -114,7 +114,7 @@ export async function listCommentsForModeration(
     const comments: ModerationRow[] = rows.map((r) => ({
       id: r.id,
       body: r.body,
-      status: r.status as ModerationState,
+      status: r.status as ListableCommentState,
       writerDisplayName: r.profiles?.display_name ?? "Deleted user",
       writerSuspended: Boolean(r.writer_suspended),
       articleTitle: r.articles?.title ?? "",

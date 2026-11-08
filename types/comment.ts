@@ -61,12 +61,15 @@ export interface LikeStatusResult {
 
 export type ModerationState = "pending" | "approved" | "rejected" | "deleted";
 
+// Subset of ModerationState that the list endpoint accepts; "deleted" is not listable.
+export type ListableCommentState = "pending" | "approved" | "rejected";
+
 export type ModerateAction = "approve" | "reject" | "delete" | "restore";
 
 export interface ModerationRow {
   id: string;
   body: string;
-  status: ModerationState;
+  status: ListableCommentState;
   writerDisplayName: string;
   writerSuspended: boolean;
   articleTitle: string;

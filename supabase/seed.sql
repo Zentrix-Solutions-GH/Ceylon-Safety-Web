@@ -77,3 +77,16 @@ INSERT INTO public.site_settings (key, value, is_public, setting_group) VALUES
   ('owner_alert_email',          NULL,           false, 'system')
 
 ON CONFLICT (key) DO NOTHING;
+
+-- ── System sentinel profile (S-051) ──────────────────────────────────────────
+-- The zero UUID is used as actorId in permission.denied audit rows recorded
+-- before auth succeeds. admin_audit_log.actor_id REFERENCES profiles(id), so
+-- this row must exist or those audit inserts silently fail.
+INSERT INTO public.profiles (id, display_name, email, status)
+VALUES (
+  '00000000-0000-0000-0000-000000000000',
+  'System',
+  'system@ceylonsafety.internal',
+  'active'
+)
+ON CONFLICT (id) DO NOTHING;
