@@ -72,7 +72,7 @@ beforeEach(() => {
 describe("bulkRejectComments", () => {
   it("AC4: rejects pending comments and returns rejected ids", async () => {
     makeChain();
-    const result = await bulkRejectComments([CMT_1, CMT_2], STAFF_USER.id);
+    const result = await bulkRejectComments([CMT_1, CMT_2]);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.rejected).toHaveLength(2);
@@ -82,13 +82,13 @@ describe("bulkRejectComments", () => {
 
   it("AC4: writes one audit row per rejected comment", async () => {
     makeChain();
-    await bulkRejectComments([CMT_1, CMT_2], STAFF_USER.id);
+    await bulkRejectComments([CMT_1, CMT_2]);
     expect(writeAuditRow).toHaveBeenCalledTimes(2);
   });
 
   it("AC4/EC4: skips already-decided ids and reports them", async () => {
     makeChain({ selectRows: [{ id: CMT_1, status: "pending", article_id: ARTICLE_ID }] });
-    const result = await bulkRejectComments([CMT_1, CMT_APPROVED], STAFF_USER.id);
+    const result = await bulkRejectComments([CMT_1, CMT_APPROVED]);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.rejected).toContain(CMT_1);
@@ -98,7 +98,7 @@ describe("bulkRejectComments", () => {
 
   it("AC4/EC4: returns all skipped when all ids are non-pending", async () => {
     makeChain({ selectRows: [] });
-    const result = await bulkRejectComments([CMT_APPROVED, CMT_REJECTED], STAFF_USER.id);
+    const result = await bulkRejectComments([CMT_APPROVED, CMT_REJECTED]);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.rejected).toHaveLength(0);
@@ -112,14 +112,14 @@ describe("bulkRejectComments", () => {
     const ids = Array.from({ length: 101 }, (_, i) =>
       `${i.toString(16).padStart(8, "0")}-1234-4abc-8def-${i.toString(16).padStart(12, "0")}`
     );
-    const result = await bulkRejectComments(ids, STAFF_USER.id);
+    const result = await bulkRejectComments(ids);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("validation_failed");
   });
 
   it("EC4: empty ids array returns validation_failed", async () => {
     makeChain();
-    const result = await bulkRejectComments([], STAFF_USER.id);
+    const result = await bulkRejectComments([]);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("validation_failed");
   });
@@ -127,7 +127,7 @@ describe("bulkRejectComments", () => {
   it("AC9: returns rate_limited when write limit exceeded", async () => {
     makeChain();
     (checkAdminWriteLimit as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false, reason: "rate_limited" });
-    const result = await bulkRejectComments([CMT_1], STAFF_USER.id);
+    const result = await bulkRejectComments([CMT_1]);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("rate_limited");
   });
@@ -135,7 +135,7 @@ describe("bulkRejectComments", () => {
   it("AC5: returns purge_failed when purge fails for a rejected comment", async () => {
     makeChain();
     (purgeArticle as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false, code: "purge_failed" });
-    const result = await bulkRejectComments([CMT_1, CMT_2], STAFF_USER.id);
+    const result = await bulkRejectComments([CMT_1, CMT_2]);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("purge_failed");
   });

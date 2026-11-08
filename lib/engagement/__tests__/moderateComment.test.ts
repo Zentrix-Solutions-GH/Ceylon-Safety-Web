@@ -49,10 +49,19 @@ function makeChain(opts: {
   commentData?: Record<string, unknown> | null;
   commentError?: { message: string } | null;
   updateError?: { message: string } | null;
+  updateRows?: { id: string }[] | null;
 } = {}) {
-  const updateChain = {
-    eq: vi.fn().mockResolvedValue({ error: opts.updateError ?? null }),
+  // Update chain: .update({}).eq(id).eq(status).select("id") → { data, error }
+  const updateResult = {
+    data: opts.updateRows !== undefined ? opts.updateRows : [{ id: COMMENT_ID }],
+    error: opts.updateError ?? null,
   };
+  const updateChain = {
+    eq: vi.fn().mockReturnThis(),
+    select: vi.fn().mockResolvedValue(updateResult),
+  };
+  updateChain.eq.mockReturnValue(updateChain);
+
   const selectChain = {
     eq: vi.fn().mockReturnValue({
       single: vi.fn().mockResolvedValue({
@@ -83,7 +92,7 @@ beforeEach(() => {
 describe("moderateComment", () => {
   it("AC2/AC3: approve a pending comment and writes audit row", async () => {
     makeChain();
-    const result = await moderateComment(COMMENT_ID, "approve", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "approve");
     expect(result.ok).toBe(true);
     expect(writeAuditRow).toHaveBeenCalledWith(
       expect.objectContaining({ action: "comment.approve" })
@@ -92,7 +101,7 @@ describe("moderateComment", () => {
 
   it("AC2/AC3: reject a pending comment and writes audit row", async () => {
     makeChain();
-    const result = await moderateComment(COMMENT_ID, "reject", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "reject");
     expect(result.ok).toBe(true);
     expect(writeAuditRow).toHaveBeenCalledWith(
       expect.objectContaining({ action: "comment.reject" })
@@ -101,13 +110,13 @@ describe("moderateComment", () => {
 
   it("AC2/AC3: reject an approved comment (unpublish)", async () => {
     makeChain({ commentData: makePendingComment({ status: "approved" }) });
-    const result = await moderateComment(COMMENT_ID, "reject", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "reject");
     expect(result.ok).toBe(true);
   });
 
   it("AC2/AC3: delete an approved (published) comment and writes audit row", async () => {
     makeChain({ commentData: makePendingComment({ status: "approved" }) });
-    const result = await moderateComment(COMMENT_ID, "delete", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "delete");
     expect(result.ok).toBe(true);
     expect(writeAuditRow).toHaveBeenCalledWith(
       expect.objectContaining({ action: "comment.delete" })
@@ -116,7 +125,7 @@ describe("moderateComment", () => {
 
   it("AC2/AC3: restore a rejected comment and writes audit row", async () => {
     makeChain({ commentData: makePendingComment({ status: "rejected" }) });
-    const result = await moderateComment(COMMENT_ID, "restore", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "restore");
     expect(result.ok).toBe(true);
     expect(writeAuditRow).toHaveBeenCalledWith(
       expect.objectContaining({ action: "comment.restore" })
@@ -125,21 +134,33 @@ describe("moderateComment", () => {
 
   it("AC5: triggers purge after approval", async () => {
     makeChain();
-    await moderateComment(COMMENT_ID, "approve", STAFF_USER.id);
+    await moderateComment(COMMENT_ID, "approve");
     expect(purgeArticle).toHaveBeenCalledWith(ARTICLE_ID, expect.any(String), STAFF_USER.id);
   });
 
   it("AC5: returns purge_failed if purge fails but decision is saved", async () => {
     makeChain();
     (purgeArticle as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false, code: "purge_failed" });
-    const result = await moderateComment(COMMENT_ID, "approve", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "approve");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("purge_failed");
   });
 
   it("AC6/EC2: repeating the same decision returns already_done", async () => {
     makeChain({ commentData: makePendingComment({ status: "approved" }) });
-    const result = await moderateComment(COMMENT_ID, "approve", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "approve");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation_failed");
+      expect(result.reason).toBe("already_done");
+    }
+  });
+
+  it("EC2: concurrent update (0 rows updated) returns already_done", async () => {
+    // Both fetches see "pending" but the conditional UPDATE returns 0 rows —
+    // simulating the second concurrent call losing the race.
+    makeChain({ updateRows: [] });
+    const result = await moderateComment(COMMENT_ID, "approve");
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe("validation_failed");
@@ -149,19 +170,19 @@ describe("moderateComment", () => {
 
   it("EC1: allows moderation of a comment from a suspended writer", async () => {
     makeChain({ commentData: makePendingComment({ profiles: { suspended_at: "2026-10-01T00:00:00Z" } }) });
-    const result = await moderateComment(COMMENT_ID, "approve", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "approve");
     expect(result.ok).toBe(true);
   });
 
-  it("EC3: allows moderation when article is hidden", async () => {
+  it("EC3: allows moderation when article is hidden or deleted", async () => {
     makeChain({ commentData: makePendingComment({ status: "pending" }) });
-    const result = await moderateComment(COMMENT_ID, "approve", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "approve");
     expect(result.ok).toBe(true);
   });
 
   it("EC7: restore on a pending comment returns wrong_state", async () => {
     makeChain();
-    const result = await moderateComment(COMMENT_ID, "restore", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "restore");
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe("validation_failed");
@@ -171,7 +192,7 @@ describe("moderateComment", () => {
 
   it("EC7: delete on a pending comment returns wrong_state", async () => {
     makeChain();
-    const result = await moderateComment(COMMENT_ID, "delete", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "delete");
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe("validation_failed");
@@ -181,23 +202,40 @@ describe("moderateComment", () => {
 
   it("returns validation_failed for invalid commentId", async () => {
     makeChain();
-    const result = await moderateComment("not-a-uuid", "approve", STAFF_USER.id);
+    const result = await moderateComment("not-a-uuid", "approve");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("validation_failed");
   });
 
   it("returns not_found when comment does not exist", async () => {
     makeChain({ commentData: null, commentError: { message: "PGRST116" } });
-    const result = await moderateComment(COMMENT_ID, "approve", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "approve");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("not_found");
   });
 
-  it("AC9: returns rate_limited when destructive limit exceeded", async () => {
-    makeChain({ commentData: makePendingComment({ status: "approved" }) });
+  it("AC9: approve uses destructive (10/min) rate limit bucket", async () => {
+    makeChain();
     (checkAdminDestructiveLimit as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false, reason: "rate_limited" });
-    const result = await moderateComment(COMMENT_ID, "delete", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "approve");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("rate_limited");
+    expect(checkAdminDestructiveLimit).toHaveBeenCalled();
+    expect(checkAdminWriteLimit).not.toHaveBeenCalled();
+  });
+
+  it("AC9: returns rate_limited when destructive limit exceeded (delete)", async () => {
+    makeChain({ commentData: makePendingComment({ status: "approved" }) });
+    (checkAdminDestructiveLimit as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false, reason: "rate_limited" });
+    const result = await moderateComment(COMMENT_ID, "delete");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("rate_limited");
+  });
+
+  it("AC9: restore uses write (60/min) rate limit bucket, not destructive", async () => {
+    makeChain({ commentData: makePendingComment({ status: "rejected" }) });
+    await moderateComment(COMMENT_ID, "restore");
+    expect(checkAdminWriteLimit).toHaveBeenCalled();
+    expect(checkAdminDestructiveLimit).not.toHaveBeenCalled();
   });
 });

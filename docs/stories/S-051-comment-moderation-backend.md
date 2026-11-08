@@ -142,7 +142,11 @@ Tests  1298 passed | 27 skipped (1325)
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `lib/engagement/actions/moderateComment.ts:38` — `DESTRUCTIVE = ["delete"]` only after in-session fix; AC9 says 10/min for approvals **and** deletes. Revert to `["delete", "approve"]`. (full-review 2026-11-08)
+- **P0** `lib/engagement/actions/moderateComment.ts:65–101` — TOCTOU race; fetch-then-update not atomic; EC2 not enforced. Fix: conditional UPDATE with `WHERE status = currentStatus`; return `already_done` if 0 rows updated. (full-review 2026-11-08)
+- **P0** `lib/engagement/actions/moderateComment.ts:40`, `bulkRejectComments.ts:24` — `actorId` is caller-supplied parameter; should come from `auth.user.id` returned by `requireStaff`. Audit trail can be forged. Remove parameter; derive from auth result. (full-review 2026-11-08)
+- **P1** `listCommentsForModeration.ts:36`, `moderateComment.ts:51`, `bulkRejectComments.ts:31` — `null as unknown as string` for pre-auth `permission.denied` audit row will silently fail if column is NOT NULL; AC8 audit row never written for unauthenticated callers. Use sentinel UUID or omit write. (full-review 2026-11-08)
+- **P1** `types/comment.ts:58` — `ModerationState` missing `"deleted"` despite `TARGET_STATUS["delete"] = "deleted"`. Add or introduce separate `CommentStatus` union. (full-review 2026-11-08)
 
 ## After this merges, a user can:
 

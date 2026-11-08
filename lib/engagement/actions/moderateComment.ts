@@ -9,6 +9,8 @@ import { purgeArticle } from "@/lib/cache/purge";
 import type { ModerateAction, ModerateCommentResult } from "@/types/comment";
 import type { AuditEventName } from "@/types/audit";
 
+const ANON_ACTOR = "00000000-0000-0000-0000-000000000000";
+
 const moderateInputSchema = z.object({
   commentId: z.string().uuid(),
   action: z.enum(["approve", "reject", "delete", "restore"]),
@@ -35,27 +37,36 @@ const TARGET_STATUS: Record<ModerateAction, string> = {
   restore: "approved",
 };
 
-const DESTRUCTIVE: ModerateAction[] = ["delete"];
+// approve and delete both use the stricter 10/min destructive bucket (AC9)
+const DESTRUCTIVE: ModerateAction[] = ["delete", "approve"];
 
 export async function moderateComment(
   commentId: unknown,
-  action: unknown,
-  actorId: string
+  action: unknown
 ): Promise<ModerateCommentResult> {
+  // Auth first — actor identity must come from the verified session, not the caller
+  const auth = await requireStaff("comments.moderate");
+  if (!auth.ok) {
+    try {
+      await writeAuditRow({
+        action: "permission.denied",
+        actorId: ANON_ACTOR,
+        entityType: "comment",
+        entityId: "",
+        after: { permission: "comments.moderate" },
+      });
+    } catch {}
+    return { ok: false, code: "not_allowed" };
+  }
+
+  const actorId = auth.user.id;
+
   const parsed = moderateInputSchema.safeParse({ commentId, action });
   if (!parsed.success) return { ok: false, code: "validation_failed" };
   const validCommentId = parsed.data.commentId;
   const validAction = parsed.data.action as ModerateAction;
 
-  const auth = await requireStaff("comments.moderate");
-  if (!auth.ok) {
-    try {
-      await writeAuditRow({ action: "permission.denied", actorId: null as unknown as string, entityType: "comment", entityId: validCommentId, after: { permission: "comments.moderate" } });
-    } catch {}
-    return { ok: false, code: "not_allowed" };
-  }
-
-  // Rate limit: destructive actions use the stricter 10/min bucket
+  // Rate limit: destructive actions (approve + delete) use the stricter 10/min bucket
   const isDestructive = DESTRUCTIVE.includes(validAction);
   const limitResult = isDestructive
     ? await checkAdminDestructiveLimit(actorId)
@@ -89,17 +100,24 @@ export async function moderateComment(
 
   const now = new Date().toISOString();
 
-  // Apply decision
-  const { error: updateError } = await sb
+  // Atomic conditional UPDATE — guards EC2 (concurrent moderators).
+  // The WHERE status = currentStatus clause means only one concurrent call wins;
+  // the second gets 0 rows updated and returns already_done.
+  const { data: updated, error: updateError } = await (sb
     .from("article_comments")
     .update({
       status: TARGET_STATUS[validAction],
       moderated_by: actorId,
       moderated_at: now,
     })
-    .eq("id", validCommentId);
+    .eq("id", validCommentId)
+    .eq("status", currentStatus)
+    .select("id") as unknown as Promise<{ data: { id: string }[] | null; error: unknown }>);
 
   if (updateError) return { ok: false, code: "unknown" };
+  if (!updated || updated.length === 0) {
+    return { ok: false, code: "validation_failed", reason: "already_done" };
+  }
 
   // Write audit row
   try {

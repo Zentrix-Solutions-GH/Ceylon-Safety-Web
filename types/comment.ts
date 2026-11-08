@@ -59,7 +59,7 @@ export interface LikeStatusResult {
 
 // S-051: Comment moderation types (backend defines; frontend consumes in S-062)
 
-export type ModerationState = "pending" | "approved" | "rejected";
+export type ModerationState = "pending" | "approved" | "rejected" | "deleted";
 
 export type ModerateAction = "approve" | "reject" | "delete" | "restore";
 

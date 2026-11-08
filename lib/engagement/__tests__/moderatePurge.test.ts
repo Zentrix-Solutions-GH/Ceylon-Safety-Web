@@ -36,7 +36,11 @@ const COMMENT_ID = "fb6706be-63c7-438f-a12c-c3ed2e38f16e";
 const ARTICLE_ID = "b7a8fb35-b9c5-4f1a-bb6a-cad9648fe00a";
 
 function makeChain(commentData: Record<string, unknown>) {
-  const updateChain = { eq: vi.fn().mockResolvedValue({ error: null }) };
+  const updateChain = {
+    eq: vi.fn().mockReturnThis(),
+    select: vi.fn().mockResolvedValue({ data: [{ id: commentData.id }], error: null }),
+  };
+  updateChain.eq.mockReturnValue(updateChain);
   const sb = {
     from: vi.fn().mockImplementation(() => ({
       select: vi.fn().mockReturnValue({
@@ -62,26 +66,26 @@ beforeEach(() => {
 describe("moderateComment — purge (AC5)", () => {
   it("calls purgeArticle with correct articleId after approve", async () => {
     makeChain({ id: COMMENT_ID, status: "pending", article_id: ARTICLE_ID, profiles: { suspended_at: null } });
-    await moderateComment(COMMENT_ID, "approve", STAFF_USER.id);
+    await moderateComment(COMMENT_ID, "approve");
     expect(purgeArticle).toHaveBeenCalledWith(ARTICLE_ID, expect.any(String), STAFF_USER.id);
   });
 
   it("calls purgeArticle after reject", async () => {
     makeChain({ id: COMMENT_ID, status: "pending", article_id: ARTICLE_ID, profiles: { suspended_at: null } });
-    await moderateComment(COMMENT_ID, "reject", STAFF_USER.id);
+    await moderateComment(COMMENT_ID, "reject");
     expect(purgeArticle).toHaveBeenCalledWith(ARTICLE_ID, expect.any(String), STAFF_USER.id);
   });
 
   it("calls purgeArticle after delete", async () => {
     makeChain({ id: COMMENT_ID, status: "approved", article_id: ARTICLE_ID, profiles: { suspended_at: null } });
-    await moderateComment(COMMENT_ID, "delete", STAFF_USER.id);
+    await moderateComment(COMMENT_ID, "delete");
     expect(purgeArticle).toHaveBeenCalledWith(ARTICLE_ID, expect.any(String), STAFF_USER.id);
   });
 
   it("decision is saved and purge_failed is returned when purge fails", async () => {
     makeChain({ id: COMMENT_ID, status: "pending", article_id: ARTICLE_ID, profiles: { suspended_at: null } });
     (purgeArticle as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false, code: "purge_failed" });
-    const result = await moderateComment(COMMENT_ID, "approve", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "approve");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("purge_failed");
   });

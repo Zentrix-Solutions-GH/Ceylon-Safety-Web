@@ -8,6 +8,7 @@ import { writeAuditRow } from "@/lib/audit/index";
 import type { ModerationState, ModerationRow, ModerationListResult } from "@/types/comment";
 
 const PAGE_SIZE = 25;
+const ANON_ACTOR = "00000000-0000-0000-0000-000000000000";
 
 const cursorSchema = z.object({
   createdAt: z.string().datetime(),
@@ -34,7 +35,7 @@ export async function listCommentsForModeration(
     try {
       await writeAuditRow({
         action: "permission.denied",
-        actorId: null as unknown as string,
+        actorId: ANON_ACTOR,
         entityType: "comment",
         entityId: "",
         after: { permission: "comments.moderate" },

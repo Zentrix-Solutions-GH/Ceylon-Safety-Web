@@ -8,6 +8,7 @@ import { checkAdminWriteLimit } from "@/lib/ratelimit";
 import { purgeArticle } from "@/lib/cache/purge";
 import type { BulkRejectResult } from "@/types/comment";
 
+const ANON_ACTOR = "00000000-0000-0000-0000-000000000000";
 const MAX_IDS = 100;
 
 const bulkRejectInputSchema = z.object({
@@ -22,16 +23,24 @@ type BulkRejectActionResult =
   | { ok: false; code: "not_allowed" | "rate_limited" | "validation_failed" | "purge_failed" | "unknown" };
 
 export async function bulkRejectComments(
-  ids: unknown,
-  actorId: string
+  ids: unknown
 ): Promise<BulkRejectActionResult> {
+  // Auth first — actorId must come from the verified session
   const auth = await requireStaff("comments.moderate");
   if (!auth.ok) {
     try {
-      await writeAuditRow({ action: "permission.denied", actorId: null as unknown as string, entityType: "comment", entityId: "", after: { permission: "comments.moderate" } });
+      await writeAuditRow({
+        action: "permission.denied",
+        actorId: ANON_ACTOR,
+        entityType: "comment",
+        entityId: "",
+        after: { permission: "comments.moderate" },
+      });
     } catch {}
     return { ok: false, code: "not_allowed" };
   }
+
+  const actorId = auth.user.id;
 
   const parsed = bulkRejectInputSchema.safeParse({ ids });
   if (!parsed.success) return { ok: false, code: "validation_failed" };

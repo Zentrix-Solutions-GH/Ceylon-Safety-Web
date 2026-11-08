@@ -39,8 +39,12 @@ const STAFF_USER = { id: "7765b438-c85d-4489-8687-62317a39110f", claimedRole: "a
 const COMMENT_ID = "fb6706be-63c7-438f-a12c-c3ed2e38f16e";
 
 function makeChain() {
+  const updateChain: Record<string, unknown> = {};
+  updateChain.eq = vi.fn().mockReturnValue(updateChain);
+  updateChain.select = vi.fn().mockResolvedValue({ data: [{ id: COMMENT_ID }], error: null });
+
   const chain: Record<string, unknown> = {};
-  const methods = ["from", "select", "eq", "is", "order", "range", "single", "update"];
+  const methods = ["from", "select", "eq", "is", "order", "range", "single"];
   for (const m of methods) chain[m] = vi.fn().mockReturnThis();
   chain.range = vi.fn().mockResolvedValue({ data: [], error: null });
   chain.single = vi.fn().mockResolvedValue({
@@ -48,7 +52,7 @@ function makeChain() {
     error: null,
   });
   chain.eq = vi.fn().mockReturnValue(chain);
-  chain.update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
+  chain.update = vi.fn().mockReturnValue(updateChain);
   (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(chain);
 }
 
@@ -70,7 +74,7 @@ describe("permissions — AC8", () => {
 
   it("Admin with comments.moderate passes moderateComment", async () => {
     (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF_USER });
-    const result = await moderateComment(COMMENT_ID, "approve", STAFF_USER.id);
+    const result = await moderateComment(COMMENT_ID, "approve");
     expect(result.ok).toBe(true);
   });
 
@@ -80,7 +84,7 @@ describe("permissions — AC8", () => {
       ok: true,
       user: { id: editorId, claimedRole: "editor" as const },
     });
-    const result = await moderateComment(COMMENT_ID, "approve", editorId);
+    const result = await moderateComment(COMMENT_ID, "approve");
     expect(result.ok).toBe(true);
   });
 
@@ -102,8 +106,7 @@ describe("permissions — AC8", () => {
       ok: false,
       code: "not_allowed",
     });
-    const editorId = "de3f57a2-84ab-4c74-91bb-88ac21b1485d";
-    const result = await moderateComment(COMMENT_ID, "approve", editorId);
+    const result = await moderateComment(COMMENT_ID, "approve");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("not_allowed");
     expect(writeAuditRow).toHaveBeenCalledWith(
