@@ -146,4 +146,15 @@ describe("listCommentsForModeration", () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.comments[0].writerDisplayName).toBe("Deleted user");
   });
+
+  it("EC3: comment on a deleted article (articles null) still appears with empty title and slug", async () => {
+    makeChain([makeRow({ articles: null })]);
+    const result = await listCommentsForModeration({ state: "pending" });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.comments).toHaveLength(1);
+      expect(result.comments[0].articleTitle).toBe("");
+      expect(result.comments[0].articleSlug).toBe("");
+    }
+  });
 });
