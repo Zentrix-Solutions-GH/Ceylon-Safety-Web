@@ -1,11 +1,11 @@
 ---
 id: S-053
 title: Videos backend + thumbnail copy
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-053-videos-backend
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/68"
 depends_on: [S-014, S-047, S-048]
 reqs: [REQ-028, REQ-061, REQ-062, REQ-063, REQ-064, REQ-136, REQ-196]
 ---
