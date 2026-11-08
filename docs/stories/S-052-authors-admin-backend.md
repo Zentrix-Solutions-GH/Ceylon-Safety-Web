@@ -139,9 +139,10 @@ pgTAP authors.test.sql: VERIFIED PASS (Supabase running 2026-11-08)
 
 ## Review notes
 
-- **P1** `lib/authors/actions/saveAuthor.ts:82-115` and `lib/authors/actions/setAuthorActive.ts:50-80` — Non-atomic version-conflict guard (TOCTOU): fetch-then-update with no `updated_at` guard in the WHERE clause; a concurrent second edit can be silently overwritten. Fix: `UPDATE … WHERE id = $id AND updated_at = $expected RETURNING *`, treat 0 rows as `version_conflict`. (full-review 2026-11-08)
-- **P1** `lib/authors/actions/saveAuthor.ts:30-47` — `clashSafeAuthorSlug` while-loop has no iteration cap; add `if (attempt > 100) throw new Error("slug_max_attempts")`. (full-review 2026-11-08)
-- **P1** `supabase/tests/authors.test.sql` — pgTAP RLS suite not verified; Supabase was not running during this session. Must pass `supabase start && supabase test db` before merge. (full-review 2026-11-08)
+- **P1** `lib/authors/actions/saveAuthor.ts:82-115` and `lib/authors/actions/setAuthorActive.ts:50-80` — Non-atomic version-conflict guard (TOCTOU): fetch-then-update with no `updated_at` guard in the WHERE clause; a concurrent second edit can be silently overwritten. Fix: `UPDATE … WHERE id = $id AND updated_at = $expected RETURNING *`, treat 0 rows as `version_conflict`. (full-review 2026-11-08) — **RESOLVED in a0de08f** (full-review 2026-11-09)
+- **P1** `lib/authors/actions/saveAuthor.ts:30-47` — `clashSafeAuthorSlug` while-loop has no iteration cap; add `if (attempt > 100) throw new Error("slug_max_attempts")`. (full-review 2026-11-08) — **RESOLVED in a0de08f** (full-review 2026-11-09)
+- **P1** `supabase/tests/authors.test.sql` — pgTAP RLS suite not verified; Supabase was not running during this session. Must pass `supabase start && supabase test db` before merge. (full-review 2026-11-08) — **RESOLVED; verified pass 2026-11-08** (full-review 2026-11-09)
+- **P2** `lib/authors/actions/saveAuthor.ts:76-80` — No unit test for the `slug_max_attempts` throw path returning `code: "unknown"`. Not a merge blocker. (full-review 2026-11-09) — **RESOLVED in 6d5d1fa** (full-review 2026-11-09)
 
 ## After this merges, a user can:
 
