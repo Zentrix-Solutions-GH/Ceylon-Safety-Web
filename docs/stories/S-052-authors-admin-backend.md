@@ -1,11 +1,11 @@
 ---
 id: S-052
 title: Authors admin backend
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-052-authors-admin-backend
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/67
 depends_on: [S-013, S-038]
 reqs: [REQ-034, REQ-132]
 ---
@@ -22,21 +22,21 @@ Staff with `authors.*` can add, edit, deactivate and reactivate article authors.
 
 ## Acceptance criteria
 
-- [ ] AC1: `listAuthors({ includeInactive })` requires `requireStaff('authors.*')` and returns authors ordered by name; the editor passes `includeInactive = false` for its picker. `no-store`.
-- [ ] AC2: `saveAuthor(input)` creates or updates an author: name (required, trimmed), optional bio, slug made from the name with the shared slug helper (`lib/content/slug.ts`, S-048), unique. It writes one `author.change` audit row.
-- [ ] AC3: `setAuthorActive(id, active)` deactivates or reactivates; it never deletes. It writes `author.change`. Articles that already use the author keep the name.
-- [ ] AC4: Edits carry the row's `updated_at`; a stale form returns `version_conflict` (admin panel 12, "every edit form carries the row version").
-- [ ] AC5: A caller without `authors.*` gets `not_allowed` and a `permission.denied` audit row.
-- [ ] AC6: A deactivated author is refused by `setArticleStatus` publish (rule in S-048) and is absent from the editor picker list.
-- [ ] AC7: Input is validated with a schema in `lib/validation/`; a bad field returns `validation_failed` with `field`.
+- [x] AC1: `listAuthors({ includeInactive })` requires `requireStaff('authors.*')` and returns authors ordered by name; the editor passes `includeInactive = false` for its picker. `no-store`.
+- [x] AC2: `saveAuthor(input)` creates or updates an author: name (required, trimmed), optional bio, slug made from the name with the shared slug helper (`lib/content/slug.ts`, S-048), unique. It writes one `author.change` audit row.
+- [x] AC3: `setAuthorActive(id, active)` deactivates or reactivates; it never deletes. It writes `author.change`. Articles that already use the author keep the name.
+- [x] AC4: Edits carry the row's `updated_at`; a stale form returns `version_conflict` (admin panel 12, "every edit form carries the row version").
+- [x] AC5: A caller without `authors.*` gets `not_allowed` and a `permission.denied` audit row.
+- [x] AC6: A deactivated author is refused by `setArticleStatus` publish (rule in S-048) and is absent from the editor picker list.
+- [x] AC7: Input is validated with a schema in `lib/validation/`; a bad field returns `validation_failed` with `field`.
 
 ## Edge cases
 
-- [ ] EC1: Two authors with the same name get different slugs.
-- [ ] EC2: Author referenced by many articles: deactivating works; there is no delete path (the foreign key is RESTRICT).
-- [ ] EC3: Name with markup or script text is stored and returned as plain text only.
-- [ ] EC4: A name of only spaces returns `validation_failed`.
-- [ ] EC5: Two admins edit the same author: the second save returns `version_conflict`.
+- [x] EC1: Two authors with the same name get different slugs.
+- [x] EC2: Author referenced by many articles: deactivating works; there is no delete path (the foreign key is RESTRICT).
+- [x] EC3: Name with markup or script text is stored and returned as plain text only.
+- [x] EC4: A name of only spaces returns `validation_failed`.
+- [x] EC5: Two admins edit the same author: the second save returns `version_conflict`.
 
 ## Contract
 
