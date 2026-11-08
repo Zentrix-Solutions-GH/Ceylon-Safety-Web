@@ -9,7 +9,7 @@ import { purgeArticle } from "@/lib/cache/purge";
 import type { ModerateAction, ModerateCommentResult } from "@/types/comment";
 import type { AuditEventName } from "@/types/audit";
 
-const ANON_ACTOR = "00000000-0000-0000-0000-000000000000";
+import { ANON_ACTOR } from "@/lib/engagement/actions/constants";
 
 const moderateInputSchema = z.object({
   commentId: z.string().uuid(),

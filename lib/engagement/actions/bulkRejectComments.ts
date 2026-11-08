@@ -8,7 +8,8 @@ import { checkAdminWriteLimit } from "@/lib/ratelimit";
 import { purgeArticle } from "@/lib/cache/purge";
 import type { BulkRejectResult } from "@/types/comment";
 
-const ANON_ACTOR = "00000000-0000-0000-0000-000000000000";
+import { ANON_ACTOR } from "@/lib/engagement/actions/constants";
+
 const MAX_IDS = 100;
 
 const bulkRejectInputSchema = z.object({

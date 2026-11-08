@@ -7,8 +7,9 @@ import { requireStaff } from "@/lib/auth/server";
 import { writeAuditRow } from "@/lib/audit/index";
 import type { ModerationState, ModerationRow, ModerationListResult } from "@/types/comment";
 
+import { ANON_ACTOR } from "@/lib/engagement/actions/constants";
+
 const PAGE_SIZE = 25;
-const ANON_ACTOR = "00000000-0000-0000-0000-000000000000";
 
 const cursorSchema = z.object({
   createdAt: z.string().datetime(),
