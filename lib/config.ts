@@ -82,6 +82,7 @@ export const serverConfig = {
   cronSecret: vals["CRON_SECRET"],
   resendApiKey: vals["RESEND_API_KEY"],
   emailFrom: vals["EMAIL_FROM"],
+  videoPlaceholderKey: optional("VIDEO_PLACEHOLDER_KEY", "placeholders/video.jpg"),
 } as const;
 
 // Healthchecks config — optional; returns null when env vars are absent so the

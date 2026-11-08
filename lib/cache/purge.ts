@@ -1,6 +1,7 @@
 import "server-only";
 import { revalidateTag } from "next/cache";
 import { writeAuditRow } from "@/lib/audit/index";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import type { AuditEventName } from "@/types/audit";
 
 export type PurgeEvent = "publish" | "hide" | "delete" | "slug_change" | "author_change" | "category_change";
@@ -54,5 +55,48 @@ export async function purgeArticle(
       after: { event },
     });
   } catch {} // audit failure must not mask the purge result
+  return { ok: false, code: "purge_failed" };
+}
+
+/**
+ * Clear cached pages for a video hide or delete event (content design section 15).
+ * Clears: home-first-page, feed-api, counters, and every article that uses this video.
+ */
+export async function purgeVideo(
+  videoId: string,
+  actorId?: string
+): Promise<PurgeResult> {
+  // Find articles that reference this video through article_refs
+  const supabase = createSupabaseServiceRoleClient();
+  const { data: refs } = await supabase
+    .from("article_refs")
+    .select("article_id")
+    .eq("ref_type", "video")
+    .eq("ref_id", videoId);
+
+  const articleIds: string[] = (refs ?? []).map((r: { article_id: string }) => r.article_id);
+
+  const tags = [
+    "home-first-page",
+    "feed-api",
+    "counters",
+    ...articleIds.map(id => `article:${id}`),
+  ];
+
+  let failed = purgeTagSubset(tags);
+  if (failed.length === 0) return { ok: true };
+
+  failed = purgeTagSubset(failed);
+  if (failed.length === 0) return { ok: true };
+
+  try {
+    await writeAuditRow({
+      action: "purge.failed" as AuditEventName,
+      actorId: actorId ?? "system",
+      entityType: "video",
+      entityId: videoId,
+      after: { event: "video-status-change" },
+    });
+  } catch {}
   return { ok: false, code: "purge_failed" };
 }
