@@ -283,4 +283,21 @@ describe("saveAuthor — slug check DB error", () => {
     if (result.ok) return;
     expect(result.code).toBe("unknown");
   });
+
+  it("returns unknown when slug generation exceeds 100 attempts (slug_max_attempts)", async () => {
+    (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
+
+    // Always return a clash row — forces the loop past 100 iterations and throws slug_max_attempts.
+    const eq = vi.fn().mockResolvedValue({ data: [{ id: "other-author-id" }], error: null });
+    const slugChain = { select: vi.fn().mockReturnValue({ eq }) };
+
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn().mockReturnValue(slugChain),
+    });
+
+    const result = await saveAuthor({ name: "Alice Smith" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("unknown");
+  });
 });
