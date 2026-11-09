@@ -271,6 +271,10 @@ const en = {
   "admin.mfa.code_placeholder": "000000",
   "admin.mfa.submit_button": "Verify",
   "admin.mfa.submitting": "Verifying…",
+
+  // --- article full page (S-060) ---
+  "article.back_to_articles": "Back to articles",
+  "article.unavailable": "This article is not available.",
 } as const;
 
 export type MessageKey = keyof typeof en;
