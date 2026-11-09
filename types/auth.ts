@@ -12,6 +12,7 @@ export const AUTH_ERROR_CODES = [
   "weak_password",
   "captcha_failed",
   "account_suspended",
+  "already_enrolled",
 ] as const;
 
 export type AuthErrorCode = (typeof AUTH_ERROR_CODES)[number];

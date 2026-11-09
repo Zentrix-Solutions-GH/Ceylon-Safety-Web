@@ -45,6 +45,9 @@ function mockAuth(ok: boolean, hasTotpEnrolled = false) {
 }
 
 function makeSupabaseMock({
+  listData = { all: [], totp: [] } as unknown,
+  listError = null as unknown,
+  unenrollData = {} as unknown,
   enrollData = null as unknown,
   enrollError = null as unknown,
   challengeData = null as unknown,
@@ -52,13 +55,15 @@ function makeSupabaseMock({
   verifyData = null as unknown,
   verifyError = null as unknown,
 } = {}) {
+  const list = vi.fn().mockResolvedValue({ data: listData, error: listError });
+  const unenroll = vi.fn().mockResolvedValue({ data: unenrollData, error: null });
   const enroll = vi.fn().mockResolvedValue({ data: enrollData, error: enrollError });
   const challenge = vi.fn().mockResolvedValue({ data: challengeData, error: challengeError });
   const verify = vi.fn().mockResolvedValue({ data: verifyData, error: verifyError });
-  const mfa = { enroll, challenge, verify };
+  const mfa = { listFactors: list, unenroll, enroll, challenge, verify };
   const client = { auth: { mfa } };
   vi.mocked(createSupabaseServerClient).mockResolvedValue(client as never);
-  return { enroll, challenge, verify };
+  return { list, unenroll, enroll, challenge, verify };
 }
 
 beforeEach(() => {
@@ -68,9 +73,10 @@ beforeEach(() => {
 // ─── startMFAEnrolment ───────────────────────────────────────────────────────
 
 describe("startMFAEnrolment", () => {
-  it("AC1: returns totp uri and secret for unenrolled staff", async () => {
+  it("AC1: returns totp uri and secret for unenrolled staff (no pending factors)", async () => {
     mockAuth(true, false);
     makeSupabaseMock({
+      listData: { all: [], totp: [] },
       enrollData: {
         id: "factor-id-1",
         type: "totp",
@@ -88,7 +94,25 @@ describe("startMFAEnrolment", () => {
     }
   });
 
-  it("AC2: returns already_enrolled when staff already has TOTP", async () => {
+  it("cleans up stale pending factors before enrolling", async () => {
+    mockAuth(true, false);
+    const { unenroll, enroll } = makeSupabaseMock({
+      listData: { all: [{ id: "stale-factor-id", factor_type: "totp", status: "unverified" }], totp: [] },
+      enrollData: {
+        id: "factor-id-2",
+        type: "totp",
+        totp: { qr_code: "data:image/svg...", secret: "NEWSECRET3DPEHPK", uri: "otpauth://totp/..." },
+      },
+    });
+
+    const result = await startMFAEnrolment();
+
+    expect(unenroll).toHaveBeenCalledWith({ factorId: "stale-factor-id" });
+    expect(enroll).toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+  });
+
+  it("AC2: returns already_enrolled when staff already has verified TOTP", async () => {
     mockAuth(true, true);
     makeSupabaseMock();
 
@@ -96,7 +120,7 @@ describe("startMFAEnrolment", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.code).toBe("mfa_required");
+      expect(result.code).toBe("already_enrolled");
     }
   });
 
@@ -127,7 +151,7 @@ describe("startMFAEnrolment", () => {
 
   it("EC: returns unknown when Supabase enroll fails", async () => {
     mockAuth(true, false);
-    makeSupabaseMock({ enrollError: { message: "supabase error" } });
+    makeSupabaseMock({ listData: { all: [], totp: [] }, enrollError: { message: "supabase error" } });
 
     const result = await startMFAEnrolment();
 
@@ -144,6 +168,7 @@ describe("confirmMFAEnrolment", () => {
   it("AC1: confirms enrolment with valid code and returns ok", async () => {
     mockAuth(true, false);
     makeSupabaseMock({
+      listData: { all: [{ id: "factor-id-1", factor_type: "totp", status: "unverified" }], totp: [] },
       challengeData: { id: "challenge-id-1", type: "totp" },
       verifyData: { user: { id: STAFF_USER.id } },
     });
@@ -156,6 +181,7 @@ describe("confirmMFAEnrolment", () => {
   it("AC1: returns code_invalid for wrong TOTP code", async () => {
     mockAuth(true, false);
     makeSupabaseMock({
+      listData: { all: [{ id: "factor-id-1", factor_type: "totp", status: "unverified" }], totp: [] },
       challengeData: { id: "challenge-id-1", type: "totp" },
       verifyError: { message: "invalid TOTP", status: 422 },
     });
@@ -165,6 +191,37 @@ describe("confirmMFAEnrolment", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe("code_invalid");
+    }
+  });
+
+  it("returns code_attempts_exceeded on 429 from Supabase", async () => {
+    mockAuth(true, false);
+    makeSupabaseMock({
+      listData: { all: [{ id: "factor-id-1", factor_type: "totp", status: "unverified" }], totp: [] },
+      challengeData: { id: "challenge-id-1", type: "totp" },
+      verifyError: { message: "mfa_totp_challenge_expired", status: 429 },
+    });
+
+    const result = await confirmMFAEnrolment({ factorId: "factor-id-1", code: "123456" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("code_attempts_exceeded");
+    }
+  });
+
+  it("returns not_found when factorId does not belong to calling user", async () => {
+    mockAuth(true, false);
+    makeSupabaseMock({
+      // listFactors returns a different factor or empty — factorId not owned
+      listData: { all: [{ id: "other-factor-id", factor_type: "totp", status: "unverified" }], totp: [] },
+    });
+
+    const result = await confirmMFAEnrolment({ factorId: "factor-id-1", code: "123456" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("not_found");
     }
   });
 

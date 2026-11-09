@@ -37,6 +37,7 @@ const en = {
   "errors.weak_password": "Please choose a stronger password.",
   "errors.captcha_failed": "Security check failed. Please try again.",
   "errors.account_suspended": "This account has been suspended. Contact support",
+  "errors.already_enrolled": "An authenticator is already set up on this account.",
 
   // --- navigation and site chrome (S-025) ---
   "nav.home": "Home",

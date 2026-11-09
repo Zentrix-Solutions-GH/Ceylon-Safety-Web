@@ -17,17 +17,30 @@ const ConfirmSchema = z.object({
 /**
  * Start TOTP enrolment for the signed-in staff member.
  * Returns the TOTP URI (for QR code) and secret (for manual entry).
- * Returns mfa_required if the user already has a verified TOTP factor.
+ * Returns already_enrolled if the user already has a verified TOTP factor.
+ * Cleans up stale pending factors before enrolling to prevent accumulation.
  */
 export async function startMFAEnrolment(): Promise<StartMFAEnrolmentResult> {
   const auth = await requireStaffNoMfa();
   if (!auth.ok) return auth;
 
   if (auth.user.hasTotpEnrolled) {
-    return { ok: false, code: "mfa_required" };
+    return { ok: false, code: "already_enrolled" };
   }
 
   const supabase = await createSupabaseServerClient();
+
+  // Remove any stale unverified TOTP factors to prevent pending-factor accumulation.
+  // factors.totp only contains verified factors; unverified ones are in factors.all.
+  const { data: existing } = await supabase.auth.mfa.listFactors();
+  if (existing?.all) {
+    for (const factor of existing.all) {
+      if (factor.factor_type === "totp" && factor.status === "unverified") {
+        await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      }
+    }
+  }
+
   const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp" });
 
   if (error || !data?.totp) {
@@ -59,6 +72,16 @@ export async function confirmMFAEnrolment(input: {
 
   const supabase = await createSupabaseServerClient();
 
+  // Verify the factorId belongs to the calling user (defence-in-depth;
+  // Supabase also enforces this, but an explicit check prevents factor confusion).
+  // Unverified factors are in factors.all, not factors.totp (which only has verified ones).
+  const { data: factors, error: listErr } = await supabase.auth.mfa.listFactors();
+  if (listErr) return { ok: false, code: "unknown" };
+  const ownedFactor = factors?.all?.find(
+    (f) => f.id === factorId && f.factor_type === "totp" && f.status === "unverified"
+  );
+  if (!ownedFactor) return { ok: false, code: "not_found" };
+
   const { data: challengeData, error: challengeErr } =
     await supabase.auth.mfa.challenge({ factorId });
 
@@ -73,6 +96,8 @@ export async function confirmMFAEnrolment(input: {
   });
 
   if (verifyErr) {
+    const status = (verifyErr as { status?: number }).status;
+    if (status === 429) return { ok: false, code: "code_attempts_exceeded" };
     return { ok: false, code: "code_invalid" };
   }
 
