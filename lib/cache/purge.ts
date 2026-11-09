@@ -3,6 +3,13 @@ import { revalidateTag } from "next/cache";
 import { writeAuditRow } from "@/lib/audit/index";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import type { AuditEventName } from "@/types/audit";
+import {
+  FEED_TAG,
+  HOME_FIRST_PAGE_TAG,
+  COUNTERS_TAG,
+  SITEMAP_TAG,
+  ARTICLES_LIST_TAG,
+} from "@/lib/cache/tags";
 
 export type PurgeEvent = "publish" | "hide" | "delete" | "slug_change" | "author_change" | "category_change";
 
@@ -12,11 +19,11 @@ type PurgeResult = { ok: true } | { ok: false; code: "purge_failed" };
 function articleTags(articleId: string): string[] {
   return [
     `article:${articleId}`,
-    "articles-list",
-    "home-first-page",
-    "feed-api",
-    "counters",
-    "sitemap",
+    ARTICLES_LIST_TAG,
+    HOME_FIRST_PAGE_TAG,
+    FEED_TAG,
+    COUNTERS_TAG,
+    SITEMAP_TAG,
   ];
 }
 
@@ -91,9 +98,9 @@ export async function purgeVideo(
   const articleIds: string[] = (refs ?? []).map((r: { article_id: string }) => r.article_id);
 
   const tags = [
-    "home-first-page",
-    "feed-api",
-    "counters",
+    HOME_FIRST_PAGE_TAG,
+    FEED_TAG,
+    COUNTERS_TAG,
     ...articleIds.map(id => `article:${id}`),
   ];
 

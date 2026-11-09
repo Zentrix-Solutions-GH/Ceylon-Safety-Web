@@ -8,6 +8,7 @@ type PublicVideoRow = {
   title: string;
   description: string | null;
   thumbnail_key: string;
+  category_id: string | null;
 };
 
 /**
@@ -21,7 +22,7 @@ export async function getPublicVideo(id: string): Promise<GetPublicVideoResult> 
 
   const { data, error } = await supabase
     .from("videos")
-    .select("id, youtube_id, title, description, thumbnail_key")
+    .select("id, youtube_id, title, description, thumbnail_key, category_id")
     .eq("id", id)
     .eq("status", "published")
     .is("deleted_at", null)
@@ -37,6 +38,7 @@ export async function getPublicVideo(id: string): Promise<GetPublicVideoResult> 
     title: row.title,
     description: row.description,
     thumbnailKey: row.thumbnail_key,
+    categoryId: row.category_id ?? "",
   };
 
   return { ok: true, video };

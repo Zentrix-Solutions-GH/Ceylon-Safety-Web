@@ -36,3 +36,43 @@ export interface SearchResultItem {
 }
 
 export type SearchResponse = ActionResult<SearchResultItem[]>;
+
+// ── Feed (S-065) ────────────────────────────────────────────────────────────
+
+interface FeedItemBase {
+  kind: "article" | "video";
+  id: string;
+  slug: string | null;
+  title: string;
+  coverImageKey: string | null;
+  categoryId: string | null;
+  publishedAt: string;
+  likeCount: number;
+  commentCount: number;
+}
+
+export interface ArticleFeedItem extends FeedItemBase {
+  kind: "article";
+  excerpt: string | null;
+  authorName: string | null;
+}
+
+export interface VideoFeedItem extends FeedItemBase {
+  kind: "video";
+}
+
+export type FeedItem = ArticleFeedItem | VideoFeedItem;
+
+export interface FeedPage {
+  items: FeedItem[];
+  nextCursor: string | null;
+}
+
+// ── Counters (S-065) ────────────────────────────────────────────────────────
+
+export interface Counters {
+  articles: number | null;
+  documents: number | null;
+  users: number | null;
+  downloads: number | null;
+}
