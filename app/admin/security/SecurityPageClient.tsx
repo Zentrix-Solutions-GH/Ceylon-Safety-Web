@@ -7,7 +7,9 @@ import { t, errorMessage } from "@/messages/en";
 
 interface Props {
   factorId: string;
-  /** otpauth:// URI — rendered into QR code client-side (EC2: never sent to a third-party) */
+  /** otpauth:// URI — rendered into QR code client-side (EC2: never sent to a third-party).
+   *  uri and secret are serialised into __NEXT_DATA__; they are short-lived (one enrolment
+   *  session) and scoped to the authenticated staff member's own session. */
   uri: string;
   secret: string;
   /** Validated redirect target from the pending-redirect cookie (AC1). Falls back to /admin/dashboard. */

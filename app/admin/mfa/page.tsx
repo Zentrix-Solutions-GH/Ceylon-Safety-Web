@@ -16,7 +16,7 @@ export default async function MfaPage() {
   // AC4: requires staff claim, NOT authenticator level
   const auth = await requireStaffNoMfa();
   if (!auth.ok) {
-    return null;
+    redirect("/sign-in");
   }
 
   // AC4: no TOTP enrolled → redirect to enrolment page

@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { requireStaffNoMfa } from "@/lib/auth/server";
 import { startMFAEnrolment } from "@/lib/admin/actions/mfa-enrolment";
@@ -18,8 +19,7 @@ export default async function SecurityPage() {
   // AC2: requires staff claim, NOT authenticator level
   const auth = await requireStaffNoMfa();
   if (!auth.ok) {
-    // Middleware handles the redirect; server component returns nothing on auth failure.
-    return null;
+    redirect("/sign-in");
   }
 
   // AC2: already enrolled — show message, skip QR
