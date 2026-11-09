@@ -28,6 +28,9 @@ export type AuditEventName =
   | "settings.change"
   | "settings.contact_change"
   | "ads.settings_change"
+  // Documents
+  | "document.save"
+  | "document.slug_change"
   // Money and access
   | "order.grant"
   | "bank_transfer.approve"
