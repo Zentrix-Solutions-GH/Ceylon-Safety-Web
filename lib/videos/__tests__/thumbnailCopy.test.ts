@@ -23,7 +23,7 @@ vi.mock("@aws-sdk/client-s3", () => ({
   PutObjectCommand: vi.fn(),
 }));
 
-import { S3Client } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { copyYouTubeThumbnail } from "@/lib/videos/thumbnailCopy";
 
 const YOUTUBE_ID = "dQw4w9WgXcQ";
@@ -109,7 +109,7 @@ describe("copyYouTubeThumbnail — AC4/EC3: quality fallback", () => {
 });
 
 describe("copyYouTubeThumbnail — EC2: rejection rules", () => {
-  it("rejects response over 500 KB", async () => {
+  it("rejects response over 500 KB and does not call S3 for oversized image", async () => {
     const bigBody = new Uint8Array(600 * 1024);
     bigBody[0] = 0xff; bigBody[1] = 0xd8; bigBody[2] = 0xff;
     global.fetch = vi.fn().mockResolvedValue({
@@ -117,12 +117,15 @@ describe("copyYouTubeThumbnail — EC2: rejection rules", () => {
       headers: new Headers({ "content-type": "image/jpeg", "content-length": String(600 * 1024) }),
       arrayBuffer: () => Promise.resolve(bigBody.buffer),
     });
+    const mockSend = vi.fn().mockResolvedValue({});
+    vi.mocked(S3Client).mockImplementation(() => ({ send: mockSend }) as never);
+
     // All qualities return oversized — falls to placeholder
     const result = await copyYouTubeThumbnail(YOUTUBE_ID);
-    // Should not upload oversized image; either use placeholder or fail gracefully
-    if (result.ok) {
-      expect(result.thumbnailSource).toBe("youtube_copy");
-    }
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.placeholderUsed).toBe(true);
+    // S3 must NOT have been called for the oversized image
+    expect(mockSend).not.toHaveBeenCalledWith(expect.any(PutObjectCommand));
   });
 
   it("rejects non-image content-type", async () => {

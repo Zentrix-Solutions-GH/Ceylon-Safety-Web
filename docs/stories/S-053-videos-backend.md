@@ -191,7 +191,13 @@ $ bash scripts/check.sh
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **Fixed (this session)** `lib/videos/actions/setVideoStatus.ts:69` — `unhide` left `published_at` NULL (cleared by `hide`), making the video permanently invisible via `getPublicVideo`. Fixed: `unhide` now sets `published_at: new Date().toISOString()`. (full-review 2026-11-09)
+- **Fixed (this session)** `lib/videos/thumbnailCopy.ts:38` — dead `response.redirected` guard removed; `redirect:"error"` already throws before a Response is returned. (full-review 2026-11-09)
+- **P1** `lib/videos/actions/getPublicVideo.ts:19` and `listPickerItems.ts:24` — service_role used for public/picker reads; RLS bypassed. Use anon client for defence-in-depth. (full-review 2026-11-09)
+- **P1** `lib/videos/__tests__/addVideo.test.ts` — no test for `addVideo` with `customThumbnailMediaId`; AC6 addVideo path untested. (full-review 2026-11-09)
+- **P1** EC7 — no test passes `<script>` text as title/description and asserts plain-text round-trip. (full-review 2026-11-09)
+- **P1** `supabase/tests/videos.test.sql` — pgTAP did not run in CI; DB youtube_id CHECK and RLS policies unverified at merge time. Run locally before merging. (full-review 2026-11-09)
+- **P1** `lib/videos/__tests__/thumbnailCopy.test.ts` — EC2 oversized test does not assert `PutObjectCommand` was not called; would pass even if size check were removed. (full-review 2026-11-09)
 
 ## After this merges, a user can:
 

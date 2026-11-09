@@ -1,5 +1,5 @@
 import "server-only";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import type { GetPublicVideoResult, PublicVideo } from "@/types/video";
 
 type PublicVideoRow = {
@@ -12,10 +12,10 @@ type PublicVideoRow = {
 
 /**
  * Returns a published video by our own id for the Home popup (AC9).
- * Does not read the session — anon-safe, uses service role only for access rules.
+ * Uses the anon client so RLS applies as a second visibility guard.
  */
 export async function getPublicVideo(id: string): Promise<GetPublicVideoResult> {
-  const supabase = createSupabaseServiceRoleClient();
+  const supabase = createSupabaseAnonClient();
 
   const now = new Date().toISOString();
 

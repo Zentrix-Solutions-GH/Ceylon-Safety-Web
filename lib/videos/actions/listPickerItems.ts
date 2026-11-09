@@ -1,5 +1,5 @@
 import "server-only";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import { requireStaff } from "@/lib/auth/server";
 import { listPickerItemsSchema } from "@/lib/validation/video";
 import type { ListPickerItemsInput, ListPickerItemsResult, PickerItem } from "@/types/video";
@@ -19,7 +19,8 @@ export async function listPickerItems(input: ListPickerItemsInput): Promise<List
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE; // fetch PAGE_SIZE+1 to detect hasMore
 
-  const supabase = createSupabaseServiceRoleClient();
+  // Use anon client so RLS applies as a second published-only guard.
+  const supabase = createSupabaseAnonClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query: any = supabase

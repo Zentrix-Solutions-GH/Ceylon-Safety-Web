@@ -8,13 +8,13 @@ vi.mock("@/lib/config", () => ({
   publicConfig: { supabaseUrl: "https://test.supabase.co", supabaseAnonKey: "anon" },
 }));
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServiceRoleClient: vi.fn(),
+  createSupabaseAnonClient: vi.fn(),
 }));
 vi.mock("@/lib/auth/server", () => ({
   requireStaff: vi.fn(),
 }));
 
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import { requireStaff } from "@/lib/auth/server";
 import { listPickerItems } from "@/lib/videos/actions/listPickerItems";
 
@@ -36,12 +36,12 @@ function makeSupabase(rows: unknown[], error: unknown = null) {
   const eq: ReturnType<typeof vi.fn> = vi.fn();
   eq.mockReturnValue({ ilike, range, eq, is, lte });
   const select = vi.fn().mockReturnValue({ eq, is, range, lte });
-  return { from: vi.fn().mockReturnValue({ select }) } as unknown as ReturnType<typeof createSupabaseServiceRoleClient>;
+  return { from: vi.fn().mockReturnValue({ select }) } as unknown as ReturnType<typeof createSupabaseAnonClient>;
 }
 
 beforeEach(() => {
   vi.mocked(requireStaff).mockResolvedValue(STAFF as never);
-  vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeSupabase(makeRows(5)));
+  vi.mocked(createSupabaseAnonClient).mockReturnValue(makeSupabase(makeRows(5)));
 });
 
 describe("listPickerItems — AC10", () => {
@@ -58,14 +58,14 @@ describe("listPickerItems — AC10", () => {
   });
 
   it("returns 20 items per page", async () => {
-    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeSupabase(makeRows(21)));
+    vi.mocked(createSupabaseAnonClient).mockReturnValue(makeSupabase(makeRows(21)));
     const result = await listPickerItems({ kind: "video" });
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.items.length).toBeLessThanOrEqual(20);
   });
 
   it("sets hasMore = true when more than 20 items returned from DB", async () => {
-    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeSupabase(makeRows(21)));
+    vi.mocked(createSupabaseAnonClient).mockReturnValue(makeSupabase(makeRows(21)));
     const result = await listPickerItems({ kind: "video" });
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.hasMore).toBe(true);

@@ -8,10 +8,10 @@ vi.mock("@/lib/config", () => ({
   publicConfig: { supabaseUrl: "https://test.supabase.co", supabaseAnonKey: "anon" },
 }));
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServiceRoleClient: vi.fn(),
+  createSupabaseAnonClient: vi.fn(),
 }));
 
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import { getPublicVideo } from "@/lib/videos/actions/getPublicVideo";
 
 const VIDEO_ID = "00000000-0000-4000-8000-000000000030";
@@ -38,11 +38,11 @@ function makeSupabase(row: Record<string, unknown> | null, error: unknown = null
   const eq: ReturnType<typeof vi.fn> = vi.fn();
   eq.mockReturnValue({ is: isFilter, eq, lte, maybeSingle });
   const select = vi.fn().mockReturnValue({ eq, is: isFilter });
-  return { from: vi.fn().mockReturnValue({ select }) } as unknown as ReturnType<typeof createSupabaseServiceRoleClient>;
+  return { from: vi.fn().mockReturnValue({ select }) } as unknown as ReturnType<typeof createSupabaseAnonClient>;
 }
 
 beforeEach(() => {
-  vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeSupabase(makePublicRow()));
+  vi.mocked(createSupabaseAnonClient).mockReturnValue(makeSupabase(makePublicRow()));
 });
 
 describe("getPublicVideo — AC9: visibility", () => {
@@ -56,28 +56,28 @@ describe("getPublicVideo — AC9: visibility", () => {
   });
 
   it("returns not_found when video is hidden", async () => {
-    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeSupabase(null));
+    vi.mocked(createSupabaseAnonClient).mockReturnValue(makeSupabase(null));
     const result = await getPublicVideo(VIDEO_ID);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("not_found");
   });
 
   it("returns not_found when video is deleted", async () => {
-    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeSupabase(null));
+    vi.mocked(createSupabaseAnonClient).mockReturnValue(makeSupabase(null));
     const result = await getPublicVideo(VIDEO_ID);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("not_found");
   });
 
   it("returns not_found for unknown id", async () => {
-    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeSupabase(null));
+    vi.mocked(createSupabaseAnonClient).mockReturnValue(makeSupabase(null));
     const result = await getPublicVideo("nonexistent-id");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("not_found");
   });
 
   it("returns not_found for future-dated video", async () => {
-    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeSupabase(null));
+    vi.mocked(createSupabaseAnonClient).mockReturnValue(makeSupabase(null));
     const result = await getPublicVideo(VIDEO_ID);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("not_found");
@@ -87,6 +87,6 @@ describe("getPublicVideo — AC9: visibility", () => {
     // getPublicVideo uses service role client (anon read path), not user session
     await getPublicVideo(VIDEO_ID);
     // If it called requireSession it would throw or use auth client; just verify service role used
-    expect(createSupabaseServiceRoleClient).toHaveBeenCalled();
+    expect(createSupabaseAnonClient).toHaveBeenCalled();
   });
 });

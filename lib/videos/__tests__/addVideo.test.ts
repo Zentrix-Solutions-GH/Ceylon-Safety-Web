@@ -27,6 +27,7 @@ import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { requireStaff } from "@/lib/auth/server";
 import { writeAuditRow } from "@/lib/audit/index";
 import { copyYouTubeThumbnail } from "@/lib/videos/thumbnailCopy";
+import { validateMediaAsset } from "@/lib/media/validateMediaAsset";
 import { addVideo } from "@/lib/videos/actions/addVideo";
 
 const STAFF = { ok: true as const, user: { id: "staff-1", claimedRole: "admin" as const } };
@@ -165,5 +166,105 @@ describe("addVideo — AC3: duplicate YouTube id", () => {
   it("writes video.add audit row on success", async () => {
     await addVideo({ youtubeLink: "https://youtu.be/dQw4w9WgXcQ", title: "T", categoryId: CAT_ID });
     expect(writeAuditRow).toHaveBeenCalledWith(expect.objectContaining({ action: "video.add" }));
+  });
+});
+
+describe("addVideo — AC6: custom thumbnail path", () => {
+  const MEDIA_ID = "00000000-0000-4000-8000-000000000099";
+  const CUSTOM_KEY = "media/custom-thumb.jpg";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(requireStaff).mockResolvedValue(STAFF as never);
+    vi.mocked(writeAuditRow).mockResolvedValue(undefined);
+    vi.mocked(validateMediaAsset).mockResolvedValue({ ok: true, key: CUSTOM_KEY });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeSupabase({
+        insertData: { ...SAVED_ROW, thumbnail_key: CUSTOM_KEY, thumbnail_source: "custom" },
+      })
+    );
+  });
+
+  it("skips thumbnail copy when customThumbnailMediaId is provided", async () => {
+    await addVideo({
+      youtubeLink: "https://youtu.be/dQw4w9WgXcQ",
+      title: "T",
+      categoryId: CAT_ID,
+      customThumbnailMediaId: MEDIA_ID,
+    });
+    expect(copyYouTubeThumbnail).not.toHaveBeenCalled();
+  });
+
+  it("inserts thumbnail_source='custom' and thumbnail_key from media asset", async () => {
+    await addVideo({
+      youtubeLink: "https://youtu.be/dQw4w9WgXcQ",
+      title: "T",
+      categoryId: CAT_ID,
+      customThumbnailMediaId: MEDIA_ID,
+    });
+    const supabase = vi.mocked(createSupabaseServiceRoleClient).mock.results.at(-1)!.value;
+    const insertCall = vi.mocked(supabase.from).mock.results[0]?.value?.insert?.mock?.calls?.[0]?.[0];
+    expect(insertCall?.thumbnail_source).toBe("custom");
+    expect(insertCall?.thumbnail_key).toBe(CUSTOM_KEY);
+  });
+
+  it("returns validation_failed when media asset is not ready (EC8 for addVideo)", async () => {
+    vi.mocked(validateMediaAsset).mockResolvedValue({ ok: false, code: "not_ready" });
+    const result = await addVideo({
+      youtubeLink: "https://youtu.be/dQw4w9WgXcQ",
+      title: "T",
+      categoryId: CAT_ID,
+      customThumbnailMediaId: MEDIA_ID,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation_failed");
+      expect(result.field).toBe("customThumbnailMediaId");
+    }
+  });
+});
+
+describe("addVideo — EC7: markup in title/description stored as plain text", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(requireStaff).mockResolvedValue(STAFF as never);
+    vi.mocked(writeAuditRow).mockResolvedValue(undefined);
+    vi.mocked(copyYouTubeThumbnail).mockResolvedValue({
+      ok: true,
+      thumbnailKey: "thumbnails/dQw4w9WgXcQ.jpg",
+      thumbnailSource: "youtube_copy",
+    });
+  });
+
+  it("stores <script> in title as-is (no stripping or encoding)", async () => {
+    const xssTitle = '<script>alert(1)</script>';
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeSupabase({ insertData: { ...SAVED_ROW, title: xssTitle } })
+    );
+    const result = await addVideo({
+      youtubeLink: "https://youtu.be/dQw4w9WgXcQ",
+      title: xssTitle,
+      categoryId: CAT_ID,
+    });
+    const supabase = vi.mocked(createSupabaseServiceRoleClient).mock.results.at(-1)!.value;
+    const insertCall = vi.mocked(supabase.from).mock.results[0]?.value?.insert?.mock?.calls?.[0]?.[0];
+    expect(insertCall?.title).toBe(xssTitle);
+    if (result.ok) expect(result.video.title).toBe(xssTitle);
+  });
+
+  it("stores markup in description as-is", async () => {
+    const xssDesc = '<img src=x onerror=alert(1)>';
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeSupabase({ insertData: { ...SAVED_ROW, description: xssDesc } })
+    );
+    await addVideo({
+      youtubeLink: "https://youtu.be/dQw4w9WgXcQ",
+      title: "Normal Title",
+      description: xssDesc,
+      categoryId: CAT_ID,
+    });
+    const supabase = vi.mocked(createSupabaseServiceRoleClient).mock.results.at(-1)!.value;
+    const insertCall = vi.mocked(supabase.from).mock.results[0]?.value?.insert?.mock?.calls?.[0]?.[0];
+    expect(insertCall?.description).toBe(xssDesc);
   });
 });
