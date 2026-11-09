@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     include: ["**/__tests__/**/*.test.{ts,tsx}", "**/*.test.{ts,tsx}"],
-    exclude: ["**/__tests__/integration/**", "node_modules/**", ".next/**", ".claude/**", ".worktrees/**"],
+    exclude: ["**/__tests__/integration/**", "supabase/tests/**", "node_modules/**", ".next/**", ".claude/**", ".worktrees/**"],
     environment: "jsdom",
     environmentOptions: {
       jsdom: { url: "https://localhost" },

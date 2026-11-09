@@ -37,6 +37,7 @@ const en = {
   "errors.weak_password": "Please choose a stronger password.",
   "errors.captcha_failed": "Security check failed. Please try again.",
   "errors.account_suspended": "This account has been suspended. Contact support",
+  "errors.already_enrolled": "An authenticator is already set up on this account.",
 
   // --- navigation and site chrome (S-025) ---
   "nav.home": "Home",
@@ -285,6 +286,7 @@ const en = {
   "admin.security.confirming": "Confirming…",
   "admin.security.already_enrolled": "You already have an authenticator. To reset it, contact your Super Admin.",
   "admin.security.success": "Authenticator set up successfully.",
+
   "admin.mfa.title": "Two-factor authentication",
   "admin.mfa.heading": "Enter your authenticator code",
   "admin.mfa.instructions": "Open your authenticator app and enter the 6-digit code.",
