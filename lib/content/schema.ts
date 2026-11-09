@@ -166,6 +166,9 @@ export function validateBody(body: unknown): ValidationResult {
   if (typeof b?.schema_version !== "number") {
     return { ok: false, reason: "schema_version is required" };
   }
+  if (b.schema_version !== SCHEMA_VERSION) {
+    return { ok: false, reason: `unsupported schema_version: ${b.schema_version}` };
+  }
 
   if (b.type !== "doc") {
     return { ok: false, reason: "body must have type 'doc'" };

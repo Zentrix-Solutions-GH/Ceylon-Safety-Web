@@ -1,4 +1,4 @@
-// S-054: RichTextEditor component — AC1 render, AC2 named styles, AC3 paste, AC6 font
+// S-054: RichTextEditor component — AC1 render, AC2 named styles, AC3 paste, AC4 tab depth, AC6 font
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
@@ -15,7 +15,8 @@ vi.mock("@tiptap/extension-underline", () => ({ default: {} }));
 vi.mock("@tiptap/extension-link", () => ({ default: { configure: vi.fn(() => ({})) } }));
 vi.mock("@tiptap/core", () => ({ Mark: { create: vi.fn(() => ({})) } }));
 
-import { RichTextEditor, countUnknownPastedNodes } from "@/components/admin/ArticleEditor/RichTextEditor";
+import { RichTextEditor, countUnknownPastedNodes, getListDepthFromResolvedPos } from "@/components/admin/ArticleEditor/RichTextEditor";
+import { MAX_LIST_DEPTH } from "@/lib/content/schema";
 
 describe("RichTextEditor — AC1: renders without crashing", () => {
   it("renders the editor container", () => {
@@ -40,7 +41,6 @@ describe("RichTextEditor — AC1: renders without crashing", () => {
     render(<RichTextEditor onChange={vi.fn()} />);
     const styleSelect = screen.getByRole("combobox", { name: /style/i });
     expect(styleSelect).toBeInTheDocument();
-    // Options: Body, Heading 2, Heading 3, Quote
     expect(screen.getByRole("option", { name: /heading 2/i })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /heading 3/i })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /body/i })).toBeInTheDocument();
@@ -49,17 +49,14 @@ describe("RichTextEditor — AC1: renders without crashing", () => {
 
   it("renders font selector dropdown (AC6)", () => {
     render(<RichTextEditor onChange={vi.fn()} />);
-    const fontSelect = screen.getByRole("combobox", { name: /font/i });
+    const fontSelect = screen.getByRole("combobox", { name: /^font$/i });
     expect(fontSelect).toBeInTheDocument();
-    // Should have at least one font option besides default
     expect(screen.getByRole("option", { name: /default font/i })).toBeInTheDocument();
   });
 
   it("style option labels use t() — no raw hardcoded English in option text", () => {
     render(<RichTextEditor onChange={vi.fn()} />);
-    // The style dropdown must NOT have raw literals like "h2" as option text
     const options = screen.getAllByRole("option");
-    // Values are the internal keys (paragraph, h2, h3, blockquote) — but labels must not equal the values
     const h2Option = options.find((o) => (o as HTMLOptionElement).value === "h2");
     expect(h2Option?.textContent).not.toBe("h2");
     expect(h2Option?.textContent).toMatch(/heading 2/i);
@@ -77,7 +74,7 @@ describe("countUnknownPastedNodes — AC3: paste cleaning utility", () => {
     expect(countUnknownPastedNodes(html)).toBeGreaterThan(0);
   });
 
-  it("counts <script> as unknown", () => {
+  it("counts <script> as a cleaned element (discarded, not promoted)", () => {
     const html = "<p>text</p><script>alert(1)</script>";
     expect(countUnknownPastedNodes(html)).toBeGreaterThan(0);
   });
@@ -85,5 +82,59 @@ describe("countUnknownPastedNodes — AC3: paste cleaning utility", () => {
   it("does not count known elements", () => {
     const html = "<h2>Title</h2><ul><li>item</li></ul><blockquote><p>quote</p></blockquote>";
     expect(countUnknownPastedNodes(html)).toBe(0);
+  });
+
+  it("counts only root-level unknowns, not each descendant separately", () => {
+    // <table> is unknown; <tr> and <td> are descendants — count should be 1 (the table), not 3
+    const html = "<table><tr><td>cell</td></tr></table>";
+    expect(countUnknownPastedNodes(html)).toBe(1);
+  });
+});
+
+describe("getListDepthFromResolvedPos — AC4: Tab key depth limiting", () => {
+  function makeResolvedPos(nodeNames: string[]) {
+    return {
+      depth: nodeNames.length - 1,
+      node: (i: number) => ({ type: { name: nodeNames[i] } }),
+    };
+  }
+
+  it("returns 0 for a paragraph outside any list", () => {
+    const resolved = makeResolvedPos(["doc", "paragraph"]);
+    expect(getListDepthFromResolvedPos(resolved)).toBe(0);
+  });
+
+  it("returns 1 for one level of list nesting", () => {
+    const resolved = makeResolvedPos(["doc", "bulletList", "listItem", "paragraph"]);
+    expect(getListDepthFromResolvedPos(resolved)).toBe(1);
+  });
+
+  it("returns MAX_LIST_DEPTH for the maximum allowed nesting", () => {
+    const resolved = makeResolvedPos([
+      "doc",
+      "bulletList", "listItem",
+      "bulletList", "listItem",
+      "bulletList", "listItem",
+      "paragraph",
+    ]);
+    expect(getListDepthFromResolvedPos(resolved)).toBe(MAX_LIST_DEPTH);
+  });
+
+  it("Tab should be blocked when depth >= MAX_LIST_DEPTH", () => {
+    const resolved = makeResolvedPos([
+      "doc",
+      "bulletList", "listItem",
+      "bulletList", "listItem",
+      "bulletList", "listItem",
+      "paragraph",
+    ]);
+    const depth = getListDepthFromResolvedPos(resolved);
+    expect(depth >= MAX_LIST_DEPTH).toBe(true);
+  });
+
+  it("Tab should be allowed when depth is below MAX_LIST_DEPTH", () => {
+    const resolved = makeResolvedPos(["doc", "bulletList", "listItem", "paragraph"]);
+    const depth = getListDepthFromResolvedPos(resolved);
+    expect(depth >= MAX_LIST_DEPTH).toBe(false);
   });
 });

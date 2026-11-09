@@ -189,6 +189,7 @@ const en = {
   "editor.toolbar.numbered_symbol": "1.",
   "editor.paste_cleaned": "Cleaned {count} item(s) from pasted content",
   "editor.link.invalid_scheme": "Links must start with https:// or http://",
+  "editor.link.invalid_url": "This link address is not allowed.",
   "editor.link.too_long": "Link address is too long (max 2048 characters)",
   "editor.link.placeholder": "https://",
   "editor.link.url_label": "Link URL",

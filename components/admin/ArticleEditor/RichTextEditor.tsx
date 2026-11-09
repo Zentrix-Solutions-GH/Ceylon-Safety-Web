@@ -7,7 +7,7 @@ import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import { Mark, type Extensions } from "@tiptap/core";
 import { t, type MessageKey } from "@/messages/en";
-import { MAX_LINK_LENGTH, MAX_TOP_BLOCKS, MAX_LIST_DEPTH, ALLOWED_FONTS, type AllowedFont, validateLinkHref } from "@/lib/content/schema";
+import { SCHEMA_VERSION, MAX_LINK_LENGTH, MAX_TOP_BLOCKS, MAX_LIST_DEPTH, ALLOWED_FONTS, type AllowedFont, validateLinkHref } from "@/lib/content/schema";
 
 // Custom mark for named fonts (AC6)
 const NamedFont = Mark.create({
@@ -19,7 +19,7 @@ const NamedFont = Mark.create({
     return [{ tag: "span[data-font]", getAttrs: (el) => ({ font: (el as HTMLElement).getAttribute("data-font") }) }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["span", { "data-font": HTMLAttributes.font }, 0];
+    return ["span", { "data-font": HTMLAttributes.font, style: `font-family: ${HTMLAttributes.font}` }, 0];
   },
 });
 
@@ -53,16 +53,33 @@ const FONT_LABEL_KEYS: Record<AllowedFont, MessageKey> = {
 
 const KNOWN_PASTE_TAGS = new Set(["P", "H1", "H2", "H3", "H4", "H5", "H6", "STRONG", "EM", "U", "A", "UL", "OL", "LI", "BLOCKQUOTE", "BR", "SPAN", "DIV", "B", "I"]);
 
-/** Count elements in pasted HTML that are not in the basic allowed set. */
+/**
+ * Count structural elements in pasted HTML that will be cleaned.
+ * Includes discarded elements (script/style) and root-level unknown elements.
+ */
 export function countUnknownPastedNodes(html: string): number {
   if (typeof document === "undefined") return 0;
   const div = document.createElement("div");
   div.innerHTML = html;
-  let count = 0;
-  div.querySelectorAll("*").forEach((el) => {
-    if (!KNOWN_PASTE_TAGS.has(el.tagName)) count++;
-  });
-  return count;
+  const discardCount = div.querySelectorAll("script, style, noscript, meta, link").length;
+  div.querySelectorAll("script, style, noscript, meta, link").forEach((el) => el.remove());
+  const unknownEls = Array.from(div.querySelectorAll("*")).filter(
+    (el) => !KNOWN_PASTE_TAGS.has(el.tagName)
+  );
+  const rootUnknownCount = unknownEls.filter(
+    (el) => !el.parentElement || el.parentElement === div || KNOWN_PASTE_TAGS.has(el.parentElement.tagName)
+  ).length;
+  return discardCount + rootUnknownCount;
+}
+
+/** Returns the list nesting depth at a ProseMirror resolved position. */
+export function getListDepthFromResolvedPos(resolvedPos: { depth: number; node: (i: number) => { type: { name: string } } }): number {
+  let depth = 0;
+  for (let i = 0; i <= resolvedPos.depth; i++) {
+    const node = resolvedPos.node(i);
+    if (node.type.name === "bulletList" || node.type.name === "orderedList") depth++;
+  }
+  return depth;
 }
 
 interface RichTextEditorProps {
@@ -79,26 +96,33 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Always up-to-date reference — avoids stale closure in onUpdate
   const onChangeRef = useRef(onChange);
-  const contentSeededRef = useRef(false);
+  // Skip the seed effect when initialContent is already passed to useEditor (sync case)
+  const contentSeededRef = useRef(!!initialContent);
+  const prevInitialContentRef = useRef<object | undefined>(initialContent);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
   // F4 fix: cancel toast timer on unmount
   useEffect(() => () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); }, []);
 
-  // F1 fix: strip unknown nodes from pasted HTML
   const handlePasteTransform = useCallback((html: string): string => {
     if (typeof document === "undefined") return html;
     const div = document.createElement("div");
     div.innerHTML = html;
+    // Remove elements whose text must not be promoted into the article body
+    div.querySelectorAll("script, style, noscript, meta, link").forEach((el) => el.remove());
     const unknownEls = Array.from(div.querySelectorAll("*")).filter(
       (el) => !KNOWN_PASTE_TAGS.has(el.tagName)
     );
+    // Count root-level structural unknowns for toast BEFORE DOM mutations change parentElement
+    const count = unknownEls.filter(
+      (el) => !el.parentElement || el.parentElement === div || KNOWN_PASTE_TAGS.has(el.parentElement.tagName)
+    ).length;
     for (const el of unknownEls) {
       el.replaceWith(...Array.from(el.childNodes));
     }
-    if (unknownEls.length > 0) {
-      setPasteToast(t("editor.paste_cleaned", { count: String(unknownEls.length) }));
+    if (count > 0) {
+      setPasteToast(t("editor.paste_cleaned", { count: String(count) }));
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
       toastTimeoutRef.current = setTimeout(() => setPasteToast(null), 4000);
     }
@@ -113,17 +137,10 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
       handleKeyDown: (_view, event) => {
         // AC4: Block Tab from nesting lists beyond MAX_LIST_DEPTH
         if (event.key === "Tab" && !event.shiftKey) {
-          if (!editor) return false;
-          const { state } = editor;
-          let listDepth = 0;
-          const resolved = state.doc.resolve(state.selection.from);
-          for (let i = 0; i <= resolved.depth; i++) {
-            const node = resolved.node(i);
-            if (node.type.name === "bulletList" || node.type.name === "orderedList") {
-              listDepth++;
-            }
-          }
-          if (listDepth >= MAX_LIST_DEPTH) {
+          // Use _view.state (not editor) to avoid stale closure on first render
+          const { state } = _view;
+          const depth = getListDepthFromResolvedPos(state.doc.resolve(state.selection.from));
+          if (depth >= MAX_LIST_DEPTH) {
             event.preventDefault();
             return true;
           }
@@ -133,20 +150,28 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
     },
     onUpdate: ({ editor: e }) => {
       const json = e.getJSON();
-      onChangeRef.current(json);
-      // EC2: track top-level block count
+      onChangeRef.current({ ...json, schema_version: SCHEMA_VERSION });
       const topBlocks = Array.isArray(json.content) ? json.content.length : 0;
-      setIsAtBlockLimit(topBlocks >= MAX_TOP_BLOCKS);
+      setIsAtBlockLimit(topBlocks > MAX_TOP_BLOCKS);
     },
   });
 
-  // Seed content when it arrives after mount (async load / edit-article flow)
+  // Seed content on async arrival or article swap; skip if already seeded synchronously
   useEffect(() => {
-    if (editor && initialContent && !contentSeededRef.current) {
-      contentSeededRef.current = true;
-      editor.commands.setContent(initialContent as JSONContent);
-    }
+    if (!editor || !initialContent) return;
+    if (contentSeededRef.current && initialContent === prevInitialContentRef.current) return;
+    prevInitialContentRef.current = initialContent;
+    contentSeededRef.current = true;
+    editor.commands.setContent(initialContent as JSONContent);
   }, [editor, initialContent]);
+
+  // Initialise isAtBlockLimit from seeded content (onUpdate won't fire until a user edit)
+  useEffect(() => {
+    if (!editor) return;
+    const json = editor.getJSON();
+    const topBlocks = Array.isArray(json.content) ? json.content.length : 0;
+    setIsAtBlockLimit(topBlocks > MAX_TOP_BLOCKS);
+  }, [editor]);
 
   function applyStyle(value: StyleValue) {
     if (!editor) return;
@@ -196,7 +221,8 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
     }
     const error = validateLinkHref(url);
     if (error) {
-      setLinkError(t("editor.link.invalid_scheme"));
+      const isSchemeOrFormatError = error.includes("scheme") || error.includes("not a valid URL");
+      setLinkError(isSchemeOrFormatError ? t("editor.link.invalid_scheme") : t("editor.link.invalid_url"));
       return;
     }
     editor?.chain().focus().setLink({ href: url }).run();
