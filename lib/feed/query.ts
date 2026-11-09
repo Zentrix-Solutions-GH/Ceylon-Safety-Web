@@ -180,43 +180,53 @@ export function validateYoutubeId(id: string): boolean {
   return YOUTUBE_ID_RE.test(id);
 }
 
-const fetchVideo = (videoId: string) =>
-  unstable_cache(
-    async (): Promise<GetPublicVideoResult> => {
-      const supabase = createSupabaseServiceRoleClient();
-      const now = new Date().toISOString();
+// Module-level Map so each videoId gets one stable cache closure — avoids
+// creating a new wrapper on every call (which breaks request coalescing).
+const videoFetcherCache = new Map<string, () => Promise<GetPublicVideoResult>>();
 
-      const { data, error } = await supabase
-        .from("videos")
-        .select("id, youtube_id, title, description, thumbnail_key, category_id")
-        .eq("id", videoId)
-        .eq("status", "published")
-        .lte("published_at", now)
-        .is("deleted_at", null)
-        .single();
+function getVideoFetcher(videoId: string): () => Promise<GetPublicVideoResult> {
+  let fetcher = videoFetcherCache.get(videoId);
+  if (!fetcher) {
+    fetcher = unstable_cache(
+      async (): Promise<GetPublicVideoResult> => {
+        const supabase = createSupabaseServiceRoleClient();
+        const now = new Date().toISOString();
 
-      if (error || !data) return { ok: false, code: "not_found" };
+        const { data, error } = await supabase
+          .from("videos")
+          .select("id, youtube_id, title, description, thumbnail_key, category_id")
+          .eq("id", videoId)
+          .eq("status", "published")
+          .lte("published_at", now)
+          .is("deleted_at", null)
+          .single();
 
-      if (!validateYoutubeId(data.youtube_id)) return { ok: false, code: "not_found" };
+        if (error || !data) return { ok: false, code: "not_found" };
 
-      return {
-        ok: true,
-        video: {
-          id: data.id,
-          youtubeId: data.youtube_id,
-          title: data.title,
-          description: data.description ?? null,
-          thumbnailKey: data.thumbnail_key,
-          categoryId: data.category_id ?? "",
-        },
-      };
-    },
-    [`video-public-${videoId}`],
-    { revalidate: 60, tags: [`video:${videoId}`] }
-  )();
+        if (!validateYoutubeId(data.youtube_id)) return { ok: false, code: "not_found" };
+
+        return {
+          ok: true,
+          video: {
+            id: data.id,
+            youtubeId: data.youtube_id,
+            title: data.title,
+            description: data.description ?? null,
+            thumbnailKey: data.thumbnail_key,
+            categoryId: data.category_id ?? "",
+          },
+        };
+      },
+      [`video-public-${videoId}`],
+      { revalidate: 60, tags: [`video:${videoId}`] }
+    );
+    videoFetcherCache.set(videoId, fetcher);
+  }
+  return fetcher;
+}
 
 export async function getPublishedVideo(videoId: string): Promise<GetPublicVideoResult> {
-  return fetchVideo(videoId);
+  return getVideoFetcher(videoId)();
 }
 
 // ---------------------------------------------------------------------------
@@ -237,14 +247,3 @@ export async function applyFeedRateLimit(ip: string): Promise<RateLimitCheckResu
   return { ok: true };
 }
 
-export async function applyCountersRateLimit(ip: string): Promise<RateLimitCheckResult> {
-  const result = await checkRateLimit({
-    limitName: "counters",
-    key: ip,
-    maxCount: serverConfig.countersRateLimitPerMinute,
-    windowSeconds: 60,
-    mode: "open",
-  });
-  if (!result.ok) return { ok: false, code: "rate_limited" };
-  return { ok: true };
-}

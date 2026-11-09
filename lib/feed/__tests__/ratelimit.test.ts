@@ -18,7 +18,8 @@ vi.mock("@/lib/ratelimit", () => ({
 }));
 
 import { checkRateLimit } from "@/lib/ratelimit";
-import { applyFeedRateLimit, applyCountersRateLimit } from "../query";
+import { applyFeedRateLimit } from "../query";
+import { applyCountersRateLimit } from "@/lib/counters";
 
 const mockCheckRateLimit = vi.mocked(checkRateLimit);
 

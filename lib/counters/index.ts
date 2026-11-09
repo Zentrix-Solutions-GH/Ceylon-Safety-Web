@@ -1,6 +1,8 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/ratelimit";
+import { serverConfig } from "@/lib/config";
 import { COUNTERS_TAG } from "@/lib/cache/tags";
 import type { Counters } from "@/types/api";
 
@@ -89,4 +91,22 @@ const fetchCounters = unstable_cache(
 
 export async function getCounters(): Promise<Counters> {
   return fetchCounters();
+}
+
+// ---------------------------------------------------------------------------
+// Rate limit
+// ---------------------------------------------------------------------------
+
+type RateLimitCheckResult = { ok: true } | { ok: false; code: "rate_limited" };
+
+export async function applyCountersRateLimit(ip: string): Promise<RateLimitCheckResult> {
+  const result = await checkRateLimit({
+    limitName: "counters",
+    key: ip,
+    maxCount: serverConfig.countersRateLimitPerMinute,
+    windowSeconds: 60,
+    mode: "open",
+  });
+  if (!result.ok) return { ok: false, code: "rate_limited" };
+  return { ok: true };
 }

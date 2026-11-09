@@ -55,6 +55,22 @@ describe("getPublishedVideo — AC8 (bad youtube_id in DB → not_found)", () =>
   });
 });
 
+describe("getPublishedVideo — AC8 (DB row absent → not_found)", () => {
+  it("returns not_found when no row matches the video id", async () => {
+    const notFoundChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: { code: "PGRST116", message: "not found" } }),
+    };
+    mockCreate.mockReturnValue({ from: vi.fn(() => notFoundChain) } as never);
+    const result = await getPublishedVideo("550e8400-e29b-41d4-a716-000000000000");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_found");
+  });
+});
+
 describe("validateYoutubeId — AC8", () => {
   it("accepts a valid 11-char alphanumeric id", () => {
     expect(validateYoutubeId("dQw4w9WgXcW")).toBe(true);

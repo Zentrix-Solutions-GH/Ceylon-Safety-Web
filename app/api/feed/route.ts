@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getFeed, applyFeedRateLimit } from "@/lib/feed/query";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const rateResult = await applyFeedRateLimit(ip);
-  if (!rateResult.ok) {
-    return NextResponse.json({ ok: false, code: "rate_limited" }, { status: 429 });
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (ip) {
+    const rateResult = await applyFeedRateLimit(ip);
+    if (!rateResult.ok) {
+      return NextResponse.json({ ok: false, code: "rate_limited" }, { status: 429 });
+    }
   }
 
   const cursorParam = req.nextUrl.searchParams.get("cursor") ?? undefined;
