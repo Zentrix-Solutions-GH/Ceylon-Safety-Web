@@ -84,9 +84,8 @@ describe("getPublicVideo — AC9: visibility", () => {
   });
 
   it("does not read the session", async () => {
-    // getPublicVideo uses service role client (anon read path), not user session
+    // getPublicVideo uses the anon client so RLS applies as a second visibility guard
     await getPublicVideo(VIDEO_ID);
-    // If it called requireSession it would throw or use auth client; just verify service role used
     expect(createSupabaseAnonClient).toHaveBeenCalled();
   });
 });
