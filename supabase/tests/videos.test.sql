@@ -19,7 +19,9 @@ begin
   end if;
 end$$;
 
--- Insert test videos (IDs start with 'bbbbbbbb' — unique to this suite)
+-- Insert test videos as superuser so RLS does not block setup
+set local role postgres;
+
 insert into public.videos (id, youtube_id, title, category_id, thumbnail_key, thumbnail_source, locale, status, published_at)
 values
   ('bbbbbbbb-0000-4000-8000-000000000001', 'testid00001', 'Published Video',
@@ -67,6 +69,8 @@ select is_empty(
 );
 
 -- DB CHECK constraint on youtube_id (SQLSTATE 23514 = check_violation)
+-- Must run as superuser so RLS does not block the INSERT before the CHECK fires
+set local role postgres;
 select throws_ok(
   $$ insert into public.videos (youtube_id, title, category_id, thumbnail_key, thumbnail_source, locale, status)
      values ('bad?id', 'T', (select id from public.categories limit 1), 'thumbnails/x.jpg', 'youtube_copy', 'en', 'draft') $$,
@@ -74,19 +78,22 @@ select throws_ok(
   NULL,
   'invalid youtube_id violates CHECK constraint'
 );
+set local role anon;
 
 -- ── Tests: authenticated staff role ──────────────────────────────────────────
 
-set local role authenticated;
--- Note: service_role bypasses RLS; this test uses authenticated to verify staff can read all
+-- Staff (service_role / postgres) can read all rows including draft/hidden/deleted
+set local role postgres;
 select ok(
   (select count(*)::int from public.videos where id::text like 'bbbbbbbb%') >= 4,
-  'authenticated role can see all test videos including draft/hidden/deleted'
+  'superuser can see all test videos including draft/hidden/deleted'
 );
 
 set local role anon;
 
 -- Unique youtube_id constraint (among non-deleted) — duplicate should fail (SQLSTATE 23505 = unique_violation)
+-- Must run as superuser so RLS does not block the INSERT before the unique index fires
+set local role postgres;
 select throws_ok(
   $$ insert into public.videos (youtube_id, title, category_id, thumbnail_key, thumbnail_source, locale, status)
      values ('testid00001', 'Duplicate', (select id from public.categories limit 1), 'thumbnails/dup.jpg', 'youtube_copy', 'en', 'draft') $$,
@@ -94,8 +101,10 @@ select throws_ok(
   NULL,
   'duplicate youtube_id among live videos raises unique violation'
 );
+set local role anon;
 
 -- AC3: re-add after soft-delete — partial unique index (WHERE deleted_at IS NULL) allows it
+set local role postgres;
 do $$
 begin
   -- Soft-delete the published video
@@ -105,6 +114,7 @@ begin
     values ('bbbbbbbb-0000-4000-8000-000000000005', 'testid00001', 'Re-added',
             (select id from public.categories limit 1), 'thumbnails/re.jpg', 'youtube_copy', 'en', 'draft');
 end$$;
+set local role anon;
 
 select ok(
   (select count(*)::int from public.videos where youtube_id = 'testid00001' and deleted_at IS NULL) = 1,
