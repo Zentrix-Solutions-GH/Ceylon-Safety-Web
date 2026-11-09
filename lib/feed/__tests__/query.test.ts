@@ -191,6 +191,49 @@ describe("getFeed keyset paging — EC3 / EC4", () => {
   });
 });
 
+describe("getFeed tie-break stability — EC3 (identical published_at)", () => {
+  it("cursor from page 1 carries the id of the boundary item; page 2 uses that id in the OR condition and does not repeat the boundary item", async () => {
+    // DB returns newest-first, ties broken by id DESC.
+    // 11 rows with distinct dates + 2 rows sharing sharedTs ("0012" > "0011" so "0012" is page-1's last item).
+    const sharedTs = "2026-01-05T10:00:00.000Z";
+    const page1Rows = [
+      ...Array.from({ length: 11 }, (_, i) =>
+        makeRow({ id: `550e8400-e29b-41d4-a716-${String(i).padStart(12, "0")}`, published_at: `2026-01-${String(15 - i).padStart(2, "0")}T10:00:00.000Z` })
+      ),
+      // 12th item: higher id comes first with DESC ordering
+      makeRow({ id: "aaaaaaaa-0000-0000-0000-000000000012", published_at: sharedTs }),
+      // 13th item: lower id goes to page 2
+      makeRow({ id: "aaaaaaaa-0000-0000-0000-000000000011", published_at: sharedTs }),
+    ];
+
+    makeSupabaseMock(page1Rows);
+    const page1 = await getFeed();
+    expect(page1.ok).toBe(true);
+    if (!page1.ok) return;
+    expect(page1.page.items).toHaveLength(12);
+    expect(page1.page.items[11].id).toBe("aaaaaaaa-0000-0000-0000-000000000012");
+    expect(page1.page.items[11].publishedAt).toBe(sharedTs);
+    const cursor = page1.page.nextCursor;
+    expect(cursor).not.toBeNull();
+
+    // Page 2: only the lower-id twin remains
+    const { feedChain: page2Chain } = makeSupabaseMock([
+      makeRow({ id: "aaaaaaaa-0000-0000-0000-000000000011", published_at: sharedTs }),
+    ]);
+    const page2 = await getFeed(cursor!);
+
+    // Cursor must include the boundary item's id so the keyset skips it
+    expect(page2Chain.or).toHaveBeenCalledWith(
+      expect.stringContaining("aaaaaaaa-0000-0000-0000-000000000012")
+    );
+    expect(page2.ok).toBe(true);
+    if (!page2.ok) return;
+    // Page 2 must NOT repeat the boundary item; only the lower-id twin appears
+    expect(page2.page.items).toHaveLength(1);
+    expect(page2.page.items[0].id).toBe("aaaaaaaa-0000-0000-0000-000000000011");
+  });
+});
+
 describe("getFeed scheduled-item filter — EC5", () => {
   it("applies lte filter on published_at to exclude future items", async () => {
     const { feedChain } = makeSupabaseMock([]);
