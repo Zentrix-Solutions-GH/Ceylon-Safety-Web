@@ -66,7 +66,8 @@ export async function setVideoStatus(input: SetVideoStatusInput): Promise<SetVid
   } else if (action === "hide") {
     updates = { status: "hidden", published_at: null };
   } else {
-    updates = { status: "published" };
+    // unhide: restore published_at so getPublicVideo's .lte("published_at", now) passes
+    updates = { status: "published", published_at: new Date().toISOString() };
   }
 
   const query = supabase

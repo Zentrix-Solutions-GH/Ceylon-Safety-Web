@@ -35,7 +35,6 @@ async function fetchThumbnail(url: string): Promise<{ bytes: Uint8Array; mime: s
     });
 
     if (!response.ok) { clearTimeout(timer); return null; }
-    if (response.redirected) { clearTimeout(timer); return null; }
 
     // Check content-length header first to avoid downloading oversized files
     const contentLength = response.headers.get("content-length");
