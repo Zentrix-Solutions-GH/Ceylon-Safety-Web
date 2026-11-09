@@ -11,7 +11,48 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/ratelimit", () => ({ checkRateLimit: vi.fn() }));
 vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn }));
 
-import { parseCursor, encodeCursor, PAGE_SIZE } from "../query";
+import { parseCursor, encodeCursor, PAGE_SIZE, getFeed } from "../query";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+
+const mockCreate = vi.mocked(createSupabaseServiceRoleClient);
+
+function makeRow(overrides: Record<string, unknown> = {}) {
+  return {
+    kind: "article",
+    id: "550e8400-e29b-41d4-a716-446655440000",
+    title: "Article",
+    summary: null,
+    image: null,
+    category_id: "cat-1",
+    published_at: "2026-01-15T10:00:00.000Z",
+    like_count: 0,
+    comment_count: 0,
+    status: "published",
+    deleted_at: null,
+    locale: "en",
+    ...overrides,
+  };
+}
+
+function makeSupabaseMock(feedRows: unknown[]) {
+  const articlesChain = {
+    select: vi.fn().mockReturnThis(),
+    in: vi.fn().mockResolvedValue({ data: [], error: null }),
+  };
+  const feedChain = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    lte: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue({ data: feedRows, error: null }),
+  };
+  mockCreate.mockReturnValue({
+    from: vi.fn((table: string) => (table === "articles" ? articlesChain : feedChain)),
+  } as never);
+  return { feedChain };
+}
 
 describe("PAGE_SIZE — AC1", () => {
   it("is 12", () => {
@@ -75,5 +116,40 @@ describe("encodeCursor / parseCursor round-trip — EC3", () => {
       expect(result.publishedAt).toBe(t);
       expect(result.id).toBe(id);
     }
+  });
+});
+
+describe("getFeed paging boundary — EC2", () => {
+  it("13 rows → nextCursor is non-null", async () => {
+    const rows = Array.from({ length: 13 }, (_, i) =>
+      makeRow({ id: `550e8400-e29b-41d4-a716-${String(i).padStart(12, "0")}`, published_at: `2026-01-${String(15 - i).padStart(2, "0")}T10:00:00.000Z` })
+    );
+    makeSupabaseMock(rows);
+    const result = await getFeed();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.page.items).toHaveLength(12);
+    expect(result.page.nextCursor).not.toBeNull();
+  });
+
+  it("12 rows → nextCursor is null", async () => {
+    const rows = Array.from({ length: 12 }, (_, i) =>
+      makeRow({ id: `550e8400-e29b-41d4-a716-${String(i).padStart(12, "0")}`, published_at: `2026-01-${String(15 - i).padStart(2, "0")}T10:00:00.000Z` })
+    );
+    makeSupabaseMock(rows);
+    const result = await getFeed();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.page.items).toHaveLength(12);
+    expect(result.page.nextCursor).toBeNull();
+  });
+});
+
+describe("getFeed scheduled-item filter — EC5", () => {
+  it("applies lte filter on published_at to exclude future items", async () => {
+    const { feedChain } = makeSupabaseMock([]);
+    await getFeed();
+    // The query must call .lte("published_at", <iso-string>) before .limit()
+    expect(feedChain.lte).toHaveBeenCalledWith("published_at", expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/));
   });
 });
