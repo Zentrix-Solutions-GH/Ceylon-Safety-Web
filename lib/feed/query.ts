@@ -182,11 +182,17 @@ export function validateYoutubeId(id: string): boolean {
 
 // Module-level Map so each videoId gets one stable cache closure — avoids
 // creating a new wrapper on every call (which breaks request coalescing).
+// Capped at 500 entries: on overflow the Map is cleared so stale closures
+// do not accumulate in long-lived server processes.
+const VIDEO_FETCHER_CACHE_MAX = 500;
 const videoFetcherCache = new Map<string, () => Promise<GetPublicVideoResult>>();
 
 function getVideoFetcher(videoId: string): () => Promise<GetPublicVideoResult> {
   let fetcher = videoFetcherCache.get(videoId);
   if (!fetcher) {
+    if (videoFetcherCache.size >= VIDEO_FETCHER_CACHE_MAX) {
+      videoFetcherCache.clear();
+    }
     fetcher = unstable_cache(
       async (): Promise<GetPublicVideoResult> => {
         const supabase = createSupabaseServiceRoleClient();
