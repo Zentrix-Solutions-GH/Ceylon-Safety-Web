@@ -1,7 +1,7 @@
 ---
 id: S-064
 title: Search backend (articles + documents)
-status: ready
+status: in-progress
 owner: backend
 risk: normal
 branch: feature/S-064-search-backend
@@ -78,15 +78,31 @@ Types added in `types/api.ts` (shared API shapes): `SearchScope`, `SearchResultI
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
 Prior art: read in full `content-system-design` section 11 (search), `database-schema` (search vectors, `search_all`, A20), `file-structure` (`api/search`, `lib/search/query.ts`), requirements REQ-171 to 174. Extends the schema work in S-014 and S-015 (vectors and indexes); supersedes nothing.
+
+**Scope resolution — `home` vs `all`:** Schema doc decision A20 names the DB function scope `all`; story AC1 and file-structure doc expose `home` to callers. Schema doc page-to-data map confirms: scope `all` from Home. Resolution: `searchContent` accepts `home | articles | documents` from callers; the lib layer maps `home → all` before calling `search_all`. Migration defines the function with `all | articles | documents`.
+
+**Files:**
+1. `supabase/migrations/20261109000001_search_all.sql` — `public.search_all(query, scope, lim)` function. SECURITY INVOKER, 2s timeout, `websearch_to_tsquery`, ranks with `ts_rank`, cap 50, filters published/not-deleted/not-future.
+2. `types/api.ts` — append `SearchScope`, `SearchResultItem`, `SearchResponse`.
+3. `lib/search/searchContent.ts` — server action. Validates scope, trims+caps query at 100 chars, early-exits empty query, rate-limits (30/min/IP, open), maps `home→all`, calls `supabase.rpc('search_all')`, handles timeout (57014) → `unknown`.
+4. `app/api/search/route.ts` — GET handler. Reads `scope` and `q`, calls `searchContent`, sets `no-store`. Non-GET → 405.
+5. Test files: `lib/search/__tests__/searchContent.test.ts`, `app/api/search/__tests__/route.test.ts`.
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh   # after all P1 fixes (EC7 logging, EC2/EC3/EC4 assertions, 405 test, pgTAP integration test, perf.db.test.ts todo)
+✓ ESLint passed
+✓ TypeScript passed
+✓ Vitest (unit): 29 passed + 1 todo in S-064 test files; full suite passed (pre-existing failure lib/cache/__tests__/purge.test.ts on dev branch)
+✗ pgTAP RLS suite FAILED (pre-existing: rename_maintainer_to_editor migration conflict in local DB)
+✗ pgTAP seed suite FAILED (pre-existing: same)
+✗ pgTAP dev seed suite FAILED (pre-existing: same)
+✓ Types file freshness passed
+✓ Public pages session check passed
+✓ Dev seed guard passed
+check.sh: 6 passed, 4 failed (all 4 failures pre-existing on dev branch, confirmed before this story)
 ```
 
 ## Review notes

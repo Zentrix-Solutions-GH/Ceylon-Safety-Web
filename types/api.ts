@@ -20,3 +20,19 @@ export const COMMON_ERROR_CODES = [
 ] as const;
 
 export type CommonErrorCode = (typeof COMMON_ERROR_CODES)[number];
+
+// ── Search (S-064) ─────────────────────────────────────────────────────────
+
+export type SearchScope = "home" | "articles" | "documents";
+
+export interface SearchResultItem {
+  kind: "article" | "document";
+  id: string;
+  slug: string;
+  title: string;
+  shortText: string;
+  coverImageKey: string | null;
+  categoryName: string | null;
+}
+
+export type SearchResponse = ActionResult<SearchResultItem[]>;
