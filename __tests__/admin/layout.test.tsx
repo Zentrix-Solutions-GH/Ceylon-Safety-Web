@@ -235,7 +235,7 @@ describe("AC4: badge chips (EC2: zero on API failure)", () => {
     expect(screen.getByRole("navigation")).toBeInTheDocument();
   });
 
-  it("renders badge chip for non-zero count", () => {
+  it("renders badge chip for non-zero comments count", () => {
     render(
       <AdminShell
         {...BASE_PROPS}
@@ -245,6 +245,30 @@ describe("AC4: badge chips (EC2: zero on API failure)", () => {
       </AdminShell>
     );
     expect(screen.getByText("3")).toBeInTheDocument();
+  });
+
+  it("renders badge chip for non-zero bankTransfers count", () => {
+    render(
+      <AdminShell
+        {...BASE_PROPS}
+        badgeCounts={{ comments: 0, bankTransfers: 7, downloadRequests: 0 }}
+      >
+        <div />
+      </AdminShell>
+    );
+    expect(screen.getByText("7")).toBeInTheDocument();
+  });
+
+  it("renders badge chip for non-zero downloadRequests count", () => {
+    render(
+      <AdminShell
+        {...BASE_PROPS}
+        badgeCounts={{ comments: 0, bankTransfers: 0, downloadRequests: 2 }}
+      >
+        <div />
+      </AdminShell>
+    );
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 
   it("EC2: badge API failure — renders zero badges without crashing", () => {

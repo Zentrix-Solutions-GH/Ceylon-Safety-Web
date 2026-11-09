@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { t } from "@/messages/en";
 import type { MessageKey } from "@/messages/en";
@@ -140,7 +141,8 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ role, badgeCounts, open, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
-  const groups = buildGroups();
+  // buildGroups() calls t() which returns static strings — memoize to avoid rebuilding the array on every render.
+  const groups = useMemo(() => buildGroups(), []);
 
   return (
     <>

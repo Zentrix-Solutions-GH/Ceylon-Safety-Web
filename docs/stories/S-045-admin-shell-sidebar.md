@@ -24,16 +24,16 @@ Every admin page needs a consistent layout: a left sidebar that shows only the n
 - [x] AC1: `app/admin/layout.tsx` wraps all admin pages with a sidebar and topbar; the sidebar renders nav groups from admin-panel-design section 3.3 with each item visible only when the signed-in user's token claims include the required permission
 - [x] AC2: Topbar shows display name and role label ("Admin", "Editor", or "Super Admin" — only the signed-in Super Admin sees "Super Admin"; Admins see "Admin", Editors see "Editor"); Sign out link calls `signOut` action
 - [x] AC3: On a narrow screen (≤768 px) the sidebar collapses via a hamburger button; main content is not obscured
-- [x] AC4: Badge counts (pending comments, pending bank transfers, pending download requests) are fetched client-side from the Today-list API (S-101); rendered as small red chips on the matching sidebar items
+- [ ] AC4: Badge counts (pending comments, pending bank transfers, pending download requests) are fetched client-side from the Today-list API (S-101); rendered as small red chips on the matching sidebar items — **deferred to S-101**: this story ships a zero-stub only; the fetch will be wired when S-101 delivers the API
 - [x] AC5: `app/admin/error.tsx` catches unexpected errors within the admin shell and shows a plain "Something went wrong" page with a retry button; does NOT expose stack traces
 - [x] AC6: The admin layout never loads ad scripts or analytics scripts (auth design section 16)
-- [x] AC7: An unhandled navigation to a path the user's role cannot reach (e.g. an Editor without `settings.site`) renders the normal 404 page, not an error (enforced by page-level `requireStaff(permission)` calls; layout does not interfere)
+- [ ] AC7: An unhandled navigation to a path the user's role cannot reach (e.g. an Editor without `settings.site`) renders the normal 404 page, not an error (enforced by page-level `requireStaff(permission)` calls; layout does not interfere) — **deferred to individual page stories** (S-046+); layout is confirmed neutral (no interference)
 
 ## Edge cases
 
-- [x] EC1: JWT claims expire mid-session — the sidebar hides items based on stale claims for up to one hour; the backend always re-checks, so a hidden item that is somehow reached returns 403 from the server action
+- [ ] EC1: JWT claims expire mid-session — the sidebar hides items based on stale claims for up to one hour; the backend always re-checks, so a hidden item that is somehow reached returns 403 from the server action — **design decision only** (auth design §8 decision 2); no layout-level test possible; backend enforcement tested in individual route stories
 - [x] EC2: Badge API call fails — badges render as zero (no error visible to staff)
-- [x] EC3: Staff member signs out from another tab — next navigation in this tab hits the middleware, which redirects to sign-in; no crash in the layout
+- [ ] EC3: Staff member signs out from another tab — next navigation in this tab hits the middleware, which redirects to sign-in; no crash in the layout — **middleware-owned**; layout has no component-level crash path; tested via middleware integration tests (S-033)
 
 ## Contract
 
@@ -134,6 +134,11 @@ Public-pages session check: not applicable (admin layout is not a public page).
 - **P1 fixed** `__tests__/admin/layout.test.tsx` — added assertion that zero badgeCounts renders no badge chip (full-review 2026-11-09)
 - **P2 fixed** `app/admin/AdminTopbar.tsx` — ROLE_LABELS typed as Record<UserRole, MessageKey>, cast removed (full-review 2026-11-09)
 - **P2 fixed** `app/admin/AdminSidebar.tsx` — BADGE_ARIA typed as Record<keyof AdminBadgeCounts, MessageKey>, cast removed (full-review 2026-11-09)
+- **P1 fixed** `app/admin/layout.tsx` — auth guard now explicitly checks claimedRole against STAFF_ROLES allowlist; future UserRole values cannot pass through (full-review 2026-11-09)
+- **P1 fixed** `docs/stories/S-045-admin-shell-sidebar.md` — unchecked AC4/AC7/EC1/EC3 with deferral notes; false-evidence claim corrected (full-review 2026-11-09)
+- **P2 fixed** `app/admin/AdminTopbar.tsx` — added aria-busy={pending} to sign-out button; added truncate class to display name (full-review 2026-11-09)
+- **P2 fixed** `app/admin/AdminSidebar.tsx` — buildGroups() wrapped in useMemo (full-review 2026-11-09)
+- **P2 fixed** `__tests__/admin/layout.test.tsx` — added bankTransfers and downloadRequests non-zero badge chip tests (full-review 2026-11-09)
 
 ## After this merges
 

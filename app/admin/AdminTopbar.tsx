@@ -64,7 +64,7 @@ export default function AdminTopbar({
 
       <div className="ml-auto flex items-center gap-4">
         <div className="text-right">
-          <p className="text-sm font-medium leading-none">{displayName || email}</p>
+          <p className="max-w-[12rem] truncate text-sm font-medium leading-none">{displayName || email}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {t(ROLE_LABELS[role])}
           </p>
@@ -74,6 +74,7 @@ export default function AdminTopbar({
           type="button"
           onClick={handleSignOut}
           disabled={pending}
+          aria-busy={pending}
           className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
         >
           {t("admin.nav.sign_out")}

@@ -11,10 +11,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+// Explicit allowlist — guards against future UserRole values (e.g. "customer")
+// accidentally passing through the admin shell.
+const STAFF_ROLES = ["super_admin", "admin", "editor"] as const;
+
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   // Defense in depth — middleware already redirects unauthenticated users.
   const user = await getCurrentUser();
-  if (!user || !user.claimedRole) {
+  if (!user || !STAFF_ROLES.includes(user.claimedRole as (typeof STAFF_ROLES)[number])) {
     redirect("/sign-in");
   }
 
@@ -36,7 +40,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <AdminShell
       displayName={displayName}
       email={user.email}
-      role={user.claimedRole}
+      role={user.claimedRole!}
     >
       {children}
     </AdminShell>
