@@ -65,7 +65,7 @@ const fetchCounters = unstable_cache(
         let ladder = DEFAULT_LADDER;
         if (ladderVal) {
           const parsedLadder = JSON.parse(ladderVal);
-          if (Array.isArray(parsedLadder) && parsedLadder.every((v: unknown) => typeof v === "number")) {
+          if (Array.isArray(parsedLadder) && parsedLadder.length > 0 && parsedLadder.every((v: unknown) => typeof v === "number")) {
             ladder = parsedLadder;
           }
         }

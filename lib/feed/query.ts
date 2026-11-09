@@ -31,7 +31,7 @@ export function parseCursor(raw: string | undefined): ParseCursorOk | ParseCurso
     if (typeof t !== "string" || typeof i !== "string") return { ok: false, code: "validation_failed" };
     // Validate ISO timestamp
     const d = new Date(t);
-    if (isNaN(d.getTime()) || d.toISOString() !== t) return { ok: false, code: "validation_failed" };
+    if (isNaN(d.getTime())) return { ok: false, code: "validation_failed" };
     // Validate UUID
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(i)) {
       return { ok: false, code: "validation_failed" };
