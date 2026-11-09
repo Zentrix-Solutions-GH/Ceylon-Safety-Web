@@ -8,11 +8,15 @@ type PublicVideoRow = {
   title: string;
   description: string | null;
   thumbnail_key: string;
+  category_id: string | null;
 };
 
 /**
- * Returns a published video by our own id for the Home popup (AC9).
- * Uses the anon client so RLS applies as a second visibility guard.
+ * @deprecated Use `getPublishedVideo` from `lib/feed/query.ts` instead.
+ * That function validates the YouTube ID (AC8), caches the result 60 s,
+ * and is the correct entry point for S-068 and any future video popup work.
+ * This function remains for backwards compatibility but will be removed once
+ * all callers are migrated.
  */
 export async function getPublicVideo(id: string): Promise<GetPublicVideoResult> {
   const supabase = createSupabaseAnonClient();
@@ -21,7 +25,7 @@ export async function getPublicVideo(id: string): Promise<GetPublicVideoResult> 
 
   const { data, error } = await supabase
     .from("videos")
-    .select("id, youtube_id, title, description, thumbnail_key")
+    .select("id, youtube_id, title, description, thumbnail_key, category_id")
     .eq("id", id)
     .eq("status", "published")
     .is("deleted_at", null)
@@ -37,6 +41,7 @@ export async function getPublicVideo(id: string): Promise<GetPublicVideoResult> 
     title: row.title,
     description: row.description,
     thumbnailKey: row.thumbnail_key,
+    categoryId: row.category_id ?? "",
   };
 
   return { ok: true, video };

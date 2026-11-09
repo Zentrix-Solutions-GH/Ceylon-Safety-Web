@@ -19,13 +19,14 @@ export interface Video {
   createdAt: string;
 }
 
-/** Returned by getPublicVideo — visible fields only, no admin data */
+/** Returned by getPublishedVideo — visible fields only, no admin data */
 export interface PublicVideo {
   id: string;
   youtubeId: string;
   title: string;
   description: string | null;
   thumbnailKey: string;
+  categoryId: string;
 }
 
 export interface AddVideoInput {
