@@ -1,11 +1,11 @@
 ---
 id: S-059
 title: Articles page with filters + article preview
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-059-articles-page-filters
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/65
 depends_on: [S-027, S-049]
 reqs: [REQ-032, REQ-173]
 ---
@@ -21,21 +21,21 @@ Build the public articles listing page at `/articles` with date and category fil
 
 ## Acceptance criteria
 
-- [ ] AC1: `/articles` renders a grid of `ArticleCard` components (cover image, category, title, excerpt, author, date, like count, comment count) sorted newest published first
-- [ ] AC2: Date filter (Newest / Last week / Last month) and category filter update the grid and the URL (`?range=week&category=safety`) without a full page reload; selecting "Newest" removes the range param from the URL
-- [ ] AC3: Clearing all filters via "Clear filters" removes all query params and restores the full list
-- [ ] AC4: Zero-results state shows exactly "No articles match these filters." and a "Clear filters" button
-- [ ] AC5: Articles-only search field (`/search?scope=articles&q=<query>`) is present on the page; pressing Enter or clicking Search navigates to `/search`
-- [ ] AC6: The `ArticleFilters` component is a client component; the article grid is a server component (fetched by calling the S-049 list endpoint from the server)
-- [ ] AC7: Clicking any article card navigates to `/articles/[slug]` (full page, not a popup)
-- [ ] AC8: Filtered listing pages are `noindex` (meta robots); the base `/articles` page is indexable
+- [x] AC1: `/articles` renders a grid of `ArticleCard` components (cover image, category, title, excerpt, author, date, like count, comment count) sorted newest published first
+- [x] AC2: Date filter (Newest / Last week / Last month) and category filter update the grid and the URL (`?range=week&category=safety`) without a full page reload; selecting "Newest" removes the range param from the URL
+- [x] AC3: Clearing all filters via "Clear filters" removes all query params and restores the full list
+- [x] AC4: Zero-results state shows exactly "No articles match these filters." and a "Clear filters" button
+- [x] AC5: Articles-only search field (`/search?scope=articles&q=<query>`) is present on the page; pressing Enter or clicking Search navigates to `/search`
+- [x] AC6: The `ArticleFilters` component is a client component; the article grid is a server component (fetched by calling the S-049 list endpoint from the server)
+- [x] AC7: Clicking any article card navigates to `/articles/[slug]` (full page, not a popup)
+- [x] AC8: Filtered listing pages are `noindex` (meta robots); the base `/articles` page is indexable
 
 ## Edge cases
 
-- [ ] EC1: URL has an unknown category slug — treated as "no category filter", shows the full list
-- [ ] EC2: URL has an unrecognised range value — treated as "Newest", shows the full list
-- [ ] EC3: Article cover image fails to load — `ArticleCard` shows the CeylonSafety placeholder image
-- [ ] EC4: No articles published yet — shows "Nothing published yet. Please come back soon."
+- [x] EC1: URL has an unknown category slug — treated as "no category filter", shows the full list
+- [x] EC2: URL has an unrecognised range value — treated as "Newest", shows the full list
+- [x] EC3: Article cover image fails to load — `ArticleCard` shows the CeylonSafety placeholder image
+- [x] EC4: No articles published yet — shows "Nothing published yet. Please come back soon."
 
 ## Contract
 
