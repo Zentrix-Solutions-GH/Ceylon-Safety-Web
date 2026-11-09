@@ -80,28 +80,31 @@ VALUES (
 
 -- ── Document seed ────────────────────────────────────────────────────────────
 
-INSERT INTO public.documents (id, slug, title, description, status, published_at, category_id, search_vector)
+INSERT INTO public.documents (id, slug, title, description, file_format, doc_kind, price_cents, status, published_at, category_id, search_vector)
 VALUES (
   '99000003-0000-4000-8000-000000000001',
   's064-pub-doc', 'S064 Published Document', 'Published doc description',
+  'pptx', 'checklist', 100,
   'published', now() - interval '1 hour',
   '99000001-0000-4000-8000-000000000001',
   to_tsvector('english', 'S064 Published Document Published doc description')
 ) ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.documents (id, slug, title, description, status, published_at, category_id, search_vector)
+INSERT INTO public.documents (id, slug, title, description, file_format, doc_kind, price_cents, status, published_at, category_id, search_vector)
 VALUES (
   '99000003-0000-4000-8000-000000000002',
   's064-draft-doc', 'S064 Draft Document', 'Draft doc description',
-  'draft', now() - interval '1 hour',
+  'pptx', 'checklist', 100,
+  'draft', NULL,
   '99000001-0000-4000-8000-000000000001',
   to_tsvector('english', 'S064 Draft Document Draft doc description')
 ) ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.documents (id, slug, title, description, status, published_at, deleted_at, category_id, search_vector)
+INSERT INTO public.documents (id, slug, title, description, file_format, doc_kind, price_cents, status, published_at, deleted_at, category_id, search_vector)
 VALUES (
   '99000003-0000-4000-8000-000000000003',
   's064-deleted-doc', 'S064 Deleted Document', 'Deleted doc description',
+  'pptx', 'checklist', 100,
   'published', now() - interval '1 hour', now() - interval '30 minutes',
   '99000001-0000-4000-8000-000000000001',
   to_tsvector('english', 'S064 Deleted Document Deleted doc description')
