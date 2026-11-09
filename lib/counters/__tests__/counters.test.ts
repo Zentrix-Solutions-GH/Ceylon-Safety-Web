@@ -54,6 +54,20 @@ describe("getCounters — AC6", () => {
     expect(result.downloads).toBe(100); // 100 === ladder top → 100
   });
 
+  it("applies valid min even when ladder is a bare number (not array)", async () => {
+    // counters_rounding="100" is not a JSON array → ladder falls back to DEFAULT_LADDER
+    // but counters_min_visible="5" is valid and must still be applied (min=5, not 10)
+    makeSupabaseMock(
+      { published_articles: 7, published_documents: 10, registered_users: 4, total_downloads: 55 },
+      [{ key: "counters_min_visible", value: "5" }, { key: "counters_rounding", value: "100" }]
+    );
+    const result = await getCounters();
+    expect(result.articles).toBe(5);    // 7 >= min(5); no ladder step <= 7 → returns min(5)
+    expect(result.documents).toBe(10);  // 10 >= min(5); ladder step 10 <= 10 → 10
+    expect(result.users).toBeNull();    // 4 < min(5) → null
+    expect(result.downloads).toBe(50);  // 55 >= min(5); largest ladder step <= 55 is 50
+  });
+
   it("falls back to defaults when site_settings values are malformed (EC8)", async () => {
     makeSupabaseMock(
       { published_articles: 55, published_documents: 10, registered_users: 9, total_downloads: 1234 },

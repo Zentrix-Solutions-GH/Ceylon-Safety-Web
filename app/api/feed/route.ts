@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFeed, applyFeedRateLimit, parseCursor } from "@/lib/feed/query";
+import { getFeed, applyFeedRateLimit } from "@/lib/feed/query";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -9,13 +9,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   const cursorParam = req.nextUrl.searchParams.get("cursor") ?? undefined;
-
-  if (cursorParam !== undefined) {
-    const parsed = parseCursor(cursorParam);
-    if (!parsed.ok) {
-      return NextResponse.json({ ok: false, code: "validation_failed" }, { status: 400 });
-    }
-  }
 
   const result = await getFeed(cursorParam);
   if (!result.ok) {

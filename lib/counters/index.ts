@@ -58,11 +58,19 @@ const fetchCounters = unstable_cache(
         const ladderRow = settingsRows.find((r) => r.key === "counters_rounding");
         const minVal = minRow ? String(minRow.value ?? "") : "";
         const ladderVal = ladderRow ? String(ladderRow.value ?? "") : "";
-        const min = minVal ? parseInt(minVal, 10) : DEFAULT_MIN;
-        const ladder = ladderVal ? JSON.parse(ladderVal) : DEFAULT_LADDER;
-        if (!isNaN(min) && Array.isArray(ladder) && ladder.every((v: unknown) => typeof v === "number")) {
-          settings = { min, ladder };
+
+        const parsedMin = minVal ? parseInt(minVal, 10) : DEFAULT_MIN;
+        const min = !isNaN(parsedMin) ? parsedMin : DEFAULT_MIN;
+
+        let ladder = DEFAULT_LADDER;
+        if (ladderVal) {
+          const parsedLadder = JSON.parse(ladderVal);
+          if (Array.isArray(parsedLadder) && parsedLadder.every((v: unknown) => typeof v === "number")) {
+            ladder = parsedLadder;
+          }
         }
+
+        settings = { min, ladder };
       } catch {
         // malformed settings — use defaults (EC8)
       }
