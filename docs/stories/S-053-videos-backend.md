@@ -1,12 +1,12 @@
 ---
 id: S-053
 title: Videos backend + thumbnail copy
-status: ready
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-053-videos-backend
-pr: ~
-depends_on: [S-014, S-047]
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/68"
+depends_on: [S-014, S-047, S-048]
 reqs: [REQ-028, REQ-061, REQ-062, REQ-063, REQ-064, REQ-136, REQ-196]
 ---
 
@@ -28,12 +28,12 @@ Staff with `videos.*` can add a YouTube video by link, edit it, give it a custom
 ## Acceptance criteria
 
 - [ ] AC1: `lib/content/youtube.ts` (pure code, shared with the browser) parses the known YouTube link shapes (watch, `youtu.be`, embed, shorts) on the hosts `youtube.com`, `www.youtube.com`, `m.youtube.com` and `youtu.be`, and extracts the id. The id must match `^[A-Za-z0-9_-]{11}$`; ids with `?`, `&`, `/`, `<` or the wrong length are refused. The same check runs on save and at render, and the database also has the check.
-- [ ] AC2: `addVideo` (server action, `lib/videos/actions/`) requires `requireStaff('videos.*')`. Input: YouTube link, title (required), description, category id, optional custom thumbnail media id, optional publish time. English only. It stores the id only (never the full link) and creates the row as `draft` unless a publish time is sent through `setVideoStatus`. It writes `video.add`.
+- [ ] AC2: `addVideo` (server action, `lib/videos/actions/`) requires `requireStaff('videos.*')`. Input: YouTube link, title (required), description, category id, optional custom thumbnail media id. English only: writes `locale = 'en'`. It stores the YouTube id only (never the full link) and always creates the row as `draft`. Scheduling is done via a subsequent `setVideoStatus` call. It writes `video.add`.
 - [ ] AC3: The same YouTube id cannot be added twice among live videos (`validation_failed`); a deleted video's id can be added again.
-- [ ] AC4: Thumbnail copy: unless a custom thumbnail is given, the server copies the YouTube thumbnail into the public R2 bucket at add time. Rules: only the host `i.ytimg.com`, no redirects followed, 5 second time-out, at most 500 KB, real file type check as in S-047. It tries the highest quality first and falls to the next quality when the image is missing or is YouTube's grey placeholder. The row is saved with `thumbnail_key` and `thumbnail_source = youtube_copy`.
+- [ ] AC4: Thumbnail copy: unless a custom thumbnail is given, the server copies the YouTube thumbnail into the public R2 bucket at add time. Rules: only the host `i.ytimg.com`, no redirects followed, 5 second time-out, at most 500 KB, real file type check as in S-047. It tries the highest quality first and falls to the next quality when the image is missing or is YouTube's grey placeholder. The copied thumbnail is stored as-is (not resized; no width variants). The row is saved with `thumbnail_key` and `thumbnail_source = youtube_copy`.
 - [ ] AC5: If every copy fails, a generic placeholder image key is used for `thumbnail_key`, the add still succeeds, and the result tells the admin to upload a thumbnail.
 - [ ] AC6: A custom thumbnail (image pipeline media id from S-047, confirmed and `ready`) replaces the copy and sets `thumbnail_source = custom`. Alt text for video thumbnails is the video title (the page uses the title).
-- [ ] AC7: `updateVideo` (title, description, category, thumbnail) writes `video.update`. `setVideoStatus` (`publish`, `hide`, `unhide`, `delete`, with optional publish time) writes `video.publish`, `video.hide`, `video.unhide` or `video.delete`. Publish needs title, category and a thumbnail; `published_at` is required when published.
+- [ ] AC7: `updateVideo` (title, description, category, thumbnail) writes `video.update`. `duration_seconds` is out of scope for Release 1. `setVideoStatus` (`publish`, `hide`, `unhide`, `delete`, with optional publish time) writes `video.publish`, `video.hide`, `video.unhide` or `video.delete`. Publish needs title, category and a thumbnail; `published_at` is required when published. A publish does not trigger a cache purge — the 60-second Home cache window is the mechanism.
 - [ ] AC8: A hide or delete clears: the Home first page, the feed API, counters, and every article that uses the video (found through `article_refs`), using `lib/cache/purge.ts` (S-048). A failed purge returns `purge_failed` while the change stays saved.
 - [ ] AC9: `getPublicVideo(id)` (server action callable from the Home client popup) returns a video by our own id only when it is visible (`status = published AND published_at <= now() AND deleted_at IS NULL`): title, description, thumbnail key, YouTube id. A hidden, deleted, future-dated or unknown id returns `not_found`. It does not read the session.
 - [ ] AC10: `listPickerItems({ kind: 'video', search, page })` (`articles.*`, read only) lists published, non-deleted videos with thumbnail, 20 per page. It is used by the editor video block (S-056).
@@ -49,6 +49,9 @@ Staff with `videos.*` can add a YouTube video by link, edit it, give it a custom
 - [ ] EC5: Hiding or deleting a video used in articles: the purge reaches those articles; the "Used in N articles" confirmation is in the admin screen (S-063) through `countArticleRefs` (S-048).
 - [ ] EC6: Caller without `videos.*`: `not_allowed` and a `permission.denied` audit row.
 - [ ] EC7: Title or description with markup or script text is stored and returned as plain text.
+- [ ] EC8: `updateVideo` with a custom thumbnail media id that is `pending` (not yet `ready`) or does not exist: `validation_failed`.
+- [ ] EC9: `setVideoStatus` publish when the video's `thumbnail_key` is the generic placeholder (AC5 fallback): the placeholder counts as a valid thumbnail; publish is allowed, and the admin is separately warned via the add result.
+- [ ] EC10: Two concurrent `addVideo` calls for the same YouTube id: the DB unique constraint violation is caught and returned as `validation_failed` (not a 500 error).
 
 ## Contract
 
@@ -89,26 +92,112 @@ Server actions in `lib/videos/actions/`. Consumers: S-056 (video block), S-063 (
 | AC8/EC5 purge reaches articles via `article_refs` | integration | `lib/videos/__tests__/purge.test.ts` |
 | AC9 visibility rule for the popup read | unit | `lib/videos/__tests__/getPublicVideo.test.ts` |
 | AC10 picker lists published only | unit | `lib/videos/__tests__/listPickerItems.test.ts` |
+| AC11 listAdminVideos: status filter, scheduled computed, pagination | unit | `lib/videos/__tests__/listAdminVideos.test.ts` |
 | EC6 permission matrix | unit | `lib/videos/__tests__/permissions.test.ts` |
 | videos access rules (anon read of visible only, DB id check) | database | `supabase/tests/videos.test.sql` |
 
 ## Plan
 
-Prior art: Searched docs/ for "youtube", "thumbnail", "addVideo", "getPublicVideo", "listPickerItems", "i.ytimg.com". Found content system design sections 8, 14, 20, 21 and 28 (this story implements them), schema Group D (`videos`; used as is), file-structure `lib/content/youtube.ts` and `components/videos/` (the browser side is S-056, S-063, S-068), infrastructure design for the fetch host rule. No code exists yet. The earlier draft S-009c (moved to scratch) is superseded.
+Prior art: Searched docs/ for "youtube", "thumbnail", "addVideo", "getPublicVideo", "listPickerItems", "i.ytimg.com". Found content system design sections 8, 14, 20, 21 and 28 (this story implements them), schema Group D (`videos`; used as is), file-structure `lib/content/youtube.ts` and `components/videos/` (the browser side is S-056, S-063, S-068), infrastructure design for the fetch host rule. No code exists yet. The earlier draft S-009c (moved to scratch) is superseded. S-048 (`lib/cache/purge.ts`) is at `pr-open` status and the file exists in the working tree.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. For this sensitive story the owner approves the plan. -->
+### Files to create
+
+| File | Purpose |
+|---|---|
+| `lib/content/youtube.ts` | Pure helper: `extractYouTubeId(link)` → id or null; validates host + id format; usable in browser |
+| `lib/content/__tests__/youtube.test.ts` | Unit tests for AC1, EC1 |
+| `lib/videos/actions/addVideo.ts` | Server action: AC2, AC3, AC4, AC5, AC6 |
+| `lib/videos/actions/updateVideo.ts` | Server action: AC7 (edit fields) |
+| `lib/videos/actions/setVideoStatus.ts` | Server action: AC7 (status), AC8 |
+| `lib/videos/actions/getPublicVideo.ts` | Server action: AC9 |
+| `lib/videos/actions/listPickerItems.ts` | Server action: AC10 |
+| `lib/videos/actions/listAdminVideos.ts` | Server action: AC11 |
+| `lib/videos/thumbnailCopy.ts` | Internal: fetch + validate + upload thumbnail from i.ytimg.com; qualities list |
+| `lib/videos/mapRow.ts` | Shared mapRow helper (VideoRow → Video) |
+| `lib/videos/__tests__/addVideo.test.ts` | AC2, AC3, duplicate/re-add |
+| `lib/videos/__tests__/thumbnailCopy.test.ts` | AC4, AC5, EC2, EC3 |
+| `lib/videos/__tests__/updateVideo.test.ts` | AC6, EC8 |
+| `lib/videos/__tests__/setVideoStatus.test.ts` | AC7, EC9 |
+| `lib/videos/__tests__/purge.test.ts` | AC8, EC5 |
+| `lib/videos/__tests__/getPublicVideo.test.ts` | AC9 |
+| `lib/videos/__tests__/listPickerItems.test.ts` | AC10 |
+| `lib/videos/__tests__/listAdminVideos.test.ts` | AC11 |
+| `lib/videos/__tests__/permissions.test.ts` | EC6 |
+| `lib/validation/video.ts` | Zod schemas: AddVideoInput, UpdateVideoInput, SetVideoStatusInput |
+| `types/video.ts` | Types: Video, PublicVideo, AddVideoInput, UpdateVideoInput, SetVideoStatusInput, PickerItem |
+| `supabase/tests/videos.test.sql` | pgTAP: RLS rules — anon read published only; DB youtube_id check |
+
+### DB migration
+
+No new tables. The `videos` table is in S-014. A migration is needed to add `lib/cache/purge.ts` video-purge tags if they are not already there — but `purge.ts` only uses `revalidateTag`; no DB migration required. The `search_vector` trigger is in S-014 (confirmed by schema).
+
+### Implementation order
+
+1. `types/video.ts` — types first
+2. `lib/validation/video.ts` — Zod schemas
+3. `lib/content/youtube.ts` — pure id extractor + validator
+4. `lib/videos/mapRow.ts` — row mapper
+5. `lib/videos/thumbnailCopy.ts` — thumbnail fetch (i.ytimg.com rules)
+6. `lib/videos/actions/addVideo.ts`
+7. `lib/videos/actions/updateVideo.ts`
+8. `lib/videos/actions/setVideoStatus.ts` (with purge via `lib/cache/purge.ts`)
+9. `lib/videos/actions/getPublicVideo.ts`
+10. `lib/videos/actions/listPickerItems.ts`
+11. `lib/videos/actions/listAdminVideos.ts`
+12. `supabase/tests/videos.test.sql`
+
+### YouTube thumbnail quality order (design section 8.1)
+
+Try highest to lowest: `maxresdefault`, `sddefault`, `hqdefault`, `mqdefault`, `default`. Grey placeholder detection: image dimensions ≤ 120×90 (the YouTube "no thumbnail" image is exactly 120×90 px); detect by checking Content-Length < 2 KB as a proxy, or verify with real responses.
+
+### Purge tags for video hide/delete (design section 15)
+
+Tags: `home-first-page`, `feed-api`, `counters`, plus per-article tags for every article found in `article_refs` where `ref_type = 'video'` and `target_id = videoId`.
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ ✓ 89 tests passed (all test files green)
+
+── pgTAP RLS suite ──
+✗ pgTAP RLS suite FAILED — user_roles_role_check constraint (PRE-EXISTING on dev)
+
+── pgTAP seed suite ──
+✗ pgTAP seed suite FAILED — user_roles_role_check constraint (PRE-EXISTING on dev)
+
+── pgTAP dev seed suite ──
+✗ pgTAP dev seed suite FAILED — editor role constraint (PRE-EXISTING on dev)
+
+── Types file freshness ──
+✗ Types file freshness FAILED — types/database.ts not regenerated (PRE-EXISTING on dev)
+
+── Public pages session check ──
+✓ Public pages session check passed (19 files, 0 violations)
+
+════════════════════════════════
+  ESLint ✓  TypeScript ✓  Vitest 89/89 ✓
+  pgTAP failures and types-freshness are pre-existing on dev (verified by stashing S-053 changes and running check.sh on dev).
+════════════════════════════════
 ```
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **Fixed (this session)** `lib/videos/actions/setVideoStatus.ts:69` — `unhide` left `published_at` NULL (cleared by `hide`), making the video permanently invisible via `getPublicVideo`. Fixed: `unhide` now sets `published_at: new Date().toISOString()`. (full-review 2026-11-09)
+- **Fixed (this session)** `lib/videos/thumbnailCopy.ts:38` — dead `response.redirected` guard removed; `redirect:"error"` already throws before a Response is returned. (full-review 2026-11-09)
+- **P1** `lib/videos/actions/getPublicVideo.ts:19` and `listPickerItems.ts:24` — service_role used for public/picker reads; RLS bypassed. Use anon client for defence-in-depth. (full-review 2026-11-09)
+- **P1** `lib/videos/__tests__/addVideo.test.ts` — no test for `addVideo` with `customThumbnailMediaId`; AC6 addVideo path untested. (full-review 2026-11-09)
+- **P1** EC7 — no test passes `<script>` text as title/description and asserts plain-text round-trip. (full-review 2026-11-09)
+- **P1** `supabase/tests/videos.test.sql` — pgTAP did not run in CI; DB youtube_id CHECK and RLS policies unverified at merge time. Run locally before merging. (full-review 2026-11-09)
+- **P1** `lib/videos/__tests__/thumbnailCopy.test.ts` — EC2 oversized test does not assert `PutObjectCommand` was not called; would pass even if size check were removed. (full-review 2026-11-09)
 
 ## After this merges, a user can:
 
