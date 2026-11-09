@@ -108,6 +108,11 @@ check.sh: 6 passed, 4 failed (failures pre-existing, not introduced by S-044)
 
 ## Review notes
 
+- **P1** `lib/admin/actions/mfa-enrolment.ts:63` — `confirmMFAEnrolment` does not verify the client-supplied `factorId` belongs to the calling user before calling `mfa.challenge`. Supabase enforces this server-side, but no explicit guard or test exists. Fix: call `mfa.listFactors()` after auth and validate the factor ID before challenging. (full-review 2026-11-09)
+- **P1** `app/admin/security/page.tsx:48` — `startMFAEnrolment` → `mfa.enroll()` called on every page load with no idempotency check. Repeated refreshes accumulate stale pending TOTP factors, potentially exhausting the per-user pending-factor limit. Fix: check for an existing pending factor first and return it. (full-review 2026-11-09)
+- **P1** `lib/admin/actions/mfa-enrolment.ts:68-73` — `confirmMFAEnrolment` maps all verify errors to `code_invalid`, missing the 429/too-many-attempts case that `submitMFAChallenge` correctly handles. Add `status === 429 → code_attempts_exceeded` check. (full-review 2026-11-09)
+- **P1** `lib/admin/actions/mfa-enrolment.ts:34` — `startMFAEnrolment` returns `mfa_required` for an already-enrolled user — semantically misleading code. The page-level guard prevents this reaching the client, but future callers could misinterpret it. Consider `already_enrolled` or document the invariant. (full-review 2026-11-09)
+
 ## After this merges
 
 - S-045 (admin shell) can add the MFA redirect handling in the layout
