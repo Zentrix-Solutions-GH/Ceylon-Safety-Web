@@ -68,11 +68,25 @@ export async function purgeVideo(
 ): Promise<PurgeResult> {
   // Find articles that reference this video through article_refs
   const supabase = createSupabaseServiceRoleClient();
-  const { data: refs } = await supabase
+  const { data: refs, error: refsError } = await supabase
     .from("article_refs")
     .select("article_id")
     .eq("ref_type", "video")
     .eq("ref_id", videoId);
+
+  // If the lookup fails we cannot purge article caches — treat as purge_failed
+  if (refsError) {
+    try {
+      await writeAuditRow({
+        action: "purge.failed" as AuditEventName,
+        actorId: actorId ?? "system",
+        entityType: "video",
+        entityId: videoId,
+        after: { event: "article-refs-lookup-failed", error: refsError.message },
+      });
+    } catch {}
+    return { ok: false, code: "purge_failed" };
+  }
 
   const articleIds: string[] = (refs ?? []).map((r: { article_id: string }) => r.article_id);
 

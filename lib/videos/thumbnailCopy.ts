@@ -22,30 +22,29 @@ function thumbnailUrl(youtubeId: string, quality: string): string {
 }
 
 async function fetchThumbnail(url: string): Promise<{ bytes: Uint8Array; mime: string } | null> {
+  const controller = new AbortController();
+  // Timer covers both headers and body — cleared only after arrayBuffer() completes.
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
   let response: Response;
+  let buffer: ArrayBuffer;
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     response = await fetch(url, {
       redirect: "error",
       signal: controller.signal,
     });
+
+    if (!response.ok) { clearTimeout(timer); return null; }
+    if (response.redirected) { clearTimeout(timer); return null; }
+
+    // Check content-length header first to avoid downloading oversized files
+    const contentLength = response.headers.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > MAX_SIZE) { clearTimeout(timer); return null; }
+
+    buffer = await response.arrayBuffer();
     clearTimeout(timer);
   } catch {
-    return null;
-  }
-
-  if (!response.ok) return null;
-  if (response.redirected) return null;
-
-  // Check content-length header first to avoid downloading oversized files
-  const contentLength = response.headers.get("content-length");
-  if (contentLength && parseInt(contentLength, 10) > MAX_SIZE) return null;
-
-  let buffer: ArrayBuffer;
-  try {
-    buffer = await response.arrayBuffer();
-  } catch {
+    clearTimeout(timer);
     return null;
   }
 
