@@ -105,4 +105,11 @@ describe("listAdminVideos — AC11", () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.videos[0].computedStatus).toBe("draft");
   });
+
+  it("returns ok:false code:unknown on DB error", async () => {
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeSupabase([], { message: "PGRST" }));
+    const result = await listAdminVideos({});
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("unknown");
+  });
 });
