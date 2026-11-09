@@ -76,3 +76,10 @@ export interface Counters {
   users: number | null;
   downloads: number | null;
 }
+
+// S-045: stub until S-101 ships the Today-list API and fills real counts.
+export interface AdminBadgeCounts {
+  comments: number;
+  bankTransfers: number;
+  downloadRequests: number;
+}
