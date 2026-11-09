@@ -171,7 +171,7 @@ describe("EC4 — stop-words-only query returns empty result", () => {
     // at the unit level the rpc returns [] which mapRow turns into [].
     const result = await searchContent({ scope: "home", query: "the and or is" }, "1.2.3.4");
     expect(result.ok).toBe(true);
-    if (result.ok) expect(Array.isArray(result.data)).toBe(true);
+    if (result.ok) expect(result.data).toEqual([]);
   });
 });
 

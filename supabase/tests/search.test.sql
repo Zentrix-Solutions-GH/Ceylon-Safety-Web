@@ -6,7 +6,7 @@
 
 BEGIN;
 
-SELECT plan(15);
+SELECT plan(16);
 
 -- ── Seed helpers ─────────────────────────────────────────────────────────────
 
@@ -230,6 +230,13 @@ SELECT is(
    WHERE kind = 'article'),
   1,
   'AC1: scope=all returns articles'
+);
+
+SELECT is(
+  (SELECT count(*)::int FROM public.search_all('S064 Published Document', 'all', 50)
+   WHERE kind = 'document'),
+  1,
+  'AC1: scope=all returns documents'
 );
 
 -- ── AC4: document visibility ─────────────────────────────────────────────────
