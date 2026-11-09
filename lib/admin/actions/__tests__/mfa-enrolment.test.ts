@@ -112,6 +112,19 @@ describe("startMFAEnrolment", () => {
     }
   });
 
+  it("S17: returns not_allowed for a suspended account (requireStaffNoMfa blocked)", async () => {
+    // requireStaffNoMfa → requireActiveAccount returns not_allowed for suspended users
+    vi.mocked(requireStaffNoMfa).mockResolvedValue({ ok: false, code: "not_allowed" });
+    makeSupabaseMock();
+
+    const result = await startMFAEnrolment();
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("not_allowed");
+    }
+  });
+
   it("EC: returns unknown when Supabase enroll fails", async () => {
     mockAuth(true, false);
     makeSupabaseMock({ enrollError: { message: "supabase error" } });
@@ -169,6 +182,18 @@ describe("confirmMFAEnrolment", () => {
 
   it("returns not_allowed when no staff session", async () => {
     mockAuth(false);
+    makeSupabaseMock();
+
+    const result = await confirmMFAEnrolment({ factorId: "factor-id-1", code: "123456" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("not_allowed");
+    }
+  });
+
+  it("S17: returns not_allowed for a suspended account (requireStaffNoMfa blocked)", async () => {
+    vi.mocked(requireStaffNoMfa).mockResolvedValue({ ok: false, code: "not_allowed" });
     makeSupabaseMock();
 
     const result = await confirmMFAEnrolment({ factorId: "factor-id-1", code: "123456" });

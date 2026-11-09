@@ -118,6 +118,19 @@ describe("submitMFAChallenge", () => {
     }
   });
 
+  it("S17: returns not_allowed for a suspended account (requireStaffNoMfa blocked)", async () => {
+    // requireStaffNoMfa → requireActiveAccount returns not_allowed for suspended users
+    vi.mocked(requireStaffNoMfa).mockResolvedValue({ ok: false, code: "not_allowed" });
+    makeSupabaseMock();
+
+    const result = await submitMFAChallenge({ code: "123456" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("not_allowed");
+    }
+  });
+
   it("returns validation_failed for non-6-digit code", async () => {
     mockAuth(true, true);
     makeSupabaseMock();
