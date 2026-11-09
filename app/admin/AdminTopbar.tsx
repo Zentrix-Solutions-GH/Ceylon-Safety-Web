@@ -2,10 +2,11 @@
 
 import { useTransition } from "react";
 import { t } from "@/messages/en";
+import type { MessageKey } from "@/messages/en";
 import { signOut } from "@/lib/auth/actions";
 import type { UserRole } from "@/types/auth";
 
-const ROLE_LABELS: Record<UserRole, string> = {
+const ROLE_LABELS: Record<UserRole, MessageKey> = {
   super_admin: "admin.role.super_admin",
   admin: "admin.role.admin",
   editor: "admin.role.editor",
@@ -65,7 +66,7 @@ export default function AdminTopbar({
         <div className="text-right">
           <p className="text-sm font-medium leading-none">{displayName || email}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {t(ROLE_LABELS[role] as Parameters<typeof t>[0])}
+            {t(ROLE_LABELS[role])}
           </p>
         </div>
 

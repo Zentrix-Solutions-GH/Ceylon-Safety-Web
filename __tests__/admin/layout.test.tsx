@@ -83,6 +83,12 @@ describe("AC2: topbar role labels", () => {
     render(<AdminShell {...BASE_PROPS} role="editor"><div /></AdminShell>);
     expect(screen.queryByText("Super Admin")).not.toBeInTheDocument();
   });
+
+  it("clicking Sign out calls the signOut action", () => {
+    render(<AdminShell {...BASE_PROPS}><div /></AdminShell>);
+    fireEvent.click(screen.getByRole("button", { name: /sign out/i }));
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: "this" });
+  });
 });
 
 // ─── AC1: permission-aware menu groups ───────────────────────────────────────
@@ -203,12 +209,20 @@ describe("AC3: sidebar hamburger toggle", () => {
     expect(toggle).toBeInTheDocument();
   });
 
-  it("toggle button opens/closes sidebar", () => {
+  it("toggle button starts with aria-expanded=false and becomes true after click", () => {
+    render(<AdminShell {...BASE_PROPS}><div /></AdminShell>);
+    const toggle = screen.getByRole("button", { name: /toggle.*sidebar|open.*menu|close.*menu/i });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("clicking toggle twice returns aria-expanded to false", () => {
     render(<AdminShell {...BASE_PROPS}><div /></AdminShell>);
     const toggle = screen.getByRole("button", { name: /toggle.*sidebar|open.*menu|close.*menu/i });
     fireEvent.click(toggle);
-    // After click, sidebar state changes — just verify no crash
-    expect(screen.getByRole("navigation")).toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
 });
 
@@ -240,6 +254,19 @@ describe("AC4: badge chips (EC2: zero on API failure)", () => {
       </AdminShell>
     );
     expect(screen.getByRole("navigation")).toBeInTheDocument();
+  });
+
+  it("zero badge counts render no badge chip elements", () => {
+    render(
+      <AdminShell
+        {...BASE_PROPS}
+        badgeCounts={{ comments: 0, bankTransfers: 0, downloadRequests: 0 }}
+      >
+        <div />
+      </AdminShell>
+    );
+    // Badge chips only render when count > 0
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
 });
 

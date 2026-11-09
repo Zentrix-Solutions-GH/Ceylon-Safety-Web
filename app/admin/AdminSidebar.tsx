@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { t } from "@/messages/en";
+import type { MessageKey } from "@/messages/en";
+import { PERMISSION_MAP } from "@/lib/auth/permissions";
 import type { UserRole } from "@/types/auth";
 import type { AdminBadgeCounts } from "./AdminShell";
 
@@ -10,23 +12,7 @@ import type { AdminBadgeCounts } from "./AdminShell";
 
 function hasPermission(role: UserRole, permission: string): boolean {
   if (role === "super_admin") return true;
-  const perms: Record<string, readonly string[]> = {
-    admin: [
-      "articles.*", "videos.*", "authors.*", "media.upload",
-      "comments.moderate", "documents.*", "courses.*", "trainers.*",
-      "pages.publish", "settings.site", "banners.read", "banners.write",
-      "coupons.*", "bank_transfers.review", "download_requests.review",
-      "orders.read", "users.read", "users.suspend",
-    ],
-    editor: [
-      "articles.*", "videos.*", "authors.*", "media.upload",
-      "comments.moderate", "documents.*", "courses.*", "trainers.*",
-      "pages.publish", "banners.read", "banners.write",
-      "coupons.*", "bank_transfers.review", "download_requests.review",
-      "orders.read",
-    ],
-  };
-  const list = perms[role] ?? [];
+  const list: readonly string[] = PERMISSION_MAP[role] ?? [];
   return list.some((p) => {
     if (p.endsWith(".*")) {
       return permission.startsWith(p.slice(0, -2));
@@ -37,7 +23,7 @@ function hasPermission(role: UserRole, permission: string): boolean {
 
 // ─── Menu structure (admin-panel-design section 3.3) ─────────────────────────
 
-const BADGE_ARIA: Record<keyof AdminBadgeCounts, string> = {
+const BADGE_ARIA: Record<keyof AdminBadgeCounts, MessageKey> = {
   comments: "admin.badge.comments_aria",
   bankTransfers: "admin.badge.bank_transfers_aria",
   downloadRequests: "admin.badge.download_requests_aria",
@@ -218,7 +204,7 @@ export default function AdminSidebar({ role, badgeCounts, open, onClose }: Admin
                           <span>{item.label}</span>
                           {count > 0 && (
                             <span
-                              aria-label={`${count} ${item.badge ? t(BADGE_ARIA[item.badge] as "admin.badge.comments_aria") : ""}`}
+                              aria-label={`${count} ${item.badge ? t(BADGE_ARIA[item.badge]) : ""}`}
                               className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground"
                             >
                               {count > 99 ? "99+" : count}
