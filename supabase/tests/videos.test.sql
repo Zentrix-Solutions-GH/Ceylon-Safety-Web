@@ -114,12 +114,12 @@ begin
     values ('bbbbbbbb-0000-4000-8000-000000000005', 'testid00001', 'Re-added',
             (select id from public.categories limit 1), 'thumbnails/re.jpg', 'youtube_copy', 'en', 'draft');
 end$$;
-set local role anon;
-
 select ok(
   (select count(*)::int from public.videos where youtube_id = 'testid00001' and deleted_at IS NULL) = 1,
   'AC3: same youtube_id can be re-added after soft-delete'
 );
+
+set local role anon;
 
 select * from finish();
 rollback;
