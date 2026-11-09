@@ -160,7 +160,11 @@ unrelated to S-065 (no migration changes in this story).
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `lib/feed/query.ts` (fetchVideo closure) — `fetchVideo` constructs a new `unstable_cache` wrapper and immediately invokes it on every `getPublishedVideo` call; no request coalescing for concurrent first-calls for the same video id. Define the closure once at module level (like `fetchCounters`/`fetchFirstPage`). (full-review 2026-11-09)
+- **P1** `lib/videos/actions/getPublicVideo.ts` vs `lib/feed/query.ts` — two public-video functions with different security postures (anon client / no YouTube-ID check vs service_role / YouTube-ID validated / cached). S-068 will find `getPublicVideo` first by name and miss AC8 safety. Supersede or add a deprecation comment directing to `getPublishedVideo`. (full-review 2026-11-09)
+- **P1** `lib/feed/query.ts:applyCountersRateLimit` — counters rate-limit helper exported from the feed module; belongs in `lib/counters/` or a shared `lib/ratelimit/helpers.ts`. (full-review 2026-11-09)
+- **P1** `app/api/feed/route.ts:12`, `app/api/counters/route.ts:12` — IP fallback `"unknown"` collapses all headerless traffic into one rate-limit bucket. Skip limiting or use a path-scoped sentinel when header is absent. (full-review 2026-11-09)
+- **P1** `lib/feed/__tests__/video.test.ts` — no test for `getPublishedVideo` when the DB returns no matching row (`.single()` error/null → `not_found`). (full-review 2026-11-09)
 
 ## After this merges, a user can:
 
