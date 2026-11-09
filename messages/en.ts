@@ -231,6 +231,27 @@ const en = {
   "profile.delete.blocked": "Please try again later — you have a pending order or download request",
   "profile.delete.too_many_attempts": "Too many attempts. A new code has been sent automatically",
 
+  // --- articles page (S-059) ---
+  "articles.page.title": "Articles",
+  "articles.page.description": "Health and safety articles, guides, and checklists for the Sri Lankan workplace.",
+  "articles.filter.range.label": "Date",
+  "articles.filter.range.newest": "Newest",
+  "articles.filter.range.week": "Last week",
+  "articles.filter.range.month": "Last month",
+  "articles.filter.category.label": "Category",
+  "articles.filter.category.all": "All categories",
+  "articles.filter.clear": "Clear filters",
+  "articles.filter.search.placeholder": "Search articles…",
+  "articles.filter.search.button": "Search",
+  "articles.empty.filtered": "No articles match these filters.",
+  "articles.empty.all": "Nothing published yet. Please come back soon.",
+  "articles.load_more": "Load more",
+  "articles.load_more.loading": "Loading…",
+  "articles.load_more.error": "Could not load more. Try again.",
+  "articles.load_more.retry": "Try again",
+  "articles.card.likes": "{count} likes",
+  "articles.card.comments": "{count} comments",
+
   // ─── S-044: Admin MFA pages ───────────────────────────────────────────────
   "admin.security.title": "Set up authenticator",
   "admin.security.heading": "Set up your authenticator app",

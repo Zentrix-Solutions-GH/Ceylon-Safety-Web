@@ -96,7 +96,7 @@ function validateLinkHref(href: string): string | null {
     return `link contains credentials and is not allowed`;
   }
   // Refuse control characters
-  if (/[\x00-\x1f\x7f]/.test(href)) {
+  if (/[\x00-\x1f\x7f]/u.test(href)) {
     return `link contains control characters and is not allowed`;
   }
   return null;
