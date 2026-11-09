@@ -34,20 +34,28 @@ function makeRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function makeSupabaseMock(feedRows: unknown[]) {
-  const articlesChain = {
-    select: vi.fn().mockReturnThis(),
-    in: vi.fn().mockResolvedValue({ data: [], error: null }),
-  };
-  const feedChain = {
+function makeQueryChain(resolvedData: unknown[]) {
+  // Thenable chain: every builder method returns `this`; awaiting resolves to { data, error }.
+  const p = Promise.resolve({ data: resolvedData, error: null });
+  const chain = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     lte: vi.fn().mockReturnThis(),
     is: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     or: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockResolvedValue({ data: feedRows, error: null }),
+    limit: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    then: p.then.bind(p),
+    catch: p.catch.bind(p),
+    finally: p.finally.bind(p),
   };
+  return chain;
+}
+
+function makeSupabaseMock(feedRows: unknown[]) {
+  const feedChain = makeQueryChain(feedRows);
+  const articlesChain = makeQueryChain([]);
   mockCreate.mockReturnValue({
     from: vi.fn((table: string) => (table === "articles" ? articlesChain : feedChain)),
   } as never);
@@ -119,6 +127,17 @@ describe("encodeCursor / parseCursor round-trip — EC3", () => {
   });
 });
 
+describe("getFeed empty feed — EC1", () => {
+  it("0 rows → {items: [], nextCursor: null}", async () => {
+    makeSupabaseMock([]);
+    const result = await getFeed();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.page.items).toEqual([]);
+    expect(result.page.nextCursor).toBeNull();
+  });
+});
+
 describe("getFeed paging boundary — EC2", () => {
   it("13 rows → nextCursor is non-null", async () => {
     const rows = Array.from({ length: 13 }, (_, i) =>
@@ -141,6 +160,33 @@ describe("getFeed paging boundary — EC2", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.page.items).toHaveLength(12);
+    expect(result.page.nextCursor).toBeNull();
+  });
+});
+
+describe("getFeed keyset paging — EC3 / EC4", () => {
+  it("EC3: when cursor provided, keyset OR condition is applied to the query", async () => {
+    const { feedChain } = makeSupabaseMock([]);
+    const cursor = encodeCursor("2026-01-10T10:00:00.000Z", "550e8400-e29b-41d4-a716-446655440000");
+    await getFeed(cursor);
+    // The keyset must use an OR filter: published_at < t OR (published_at = t AND id < i)
+    expect(feedChain.or).toHaveBeenCalledWith(
+      expect.stringContaining("published_at.lt.")
+    );
+    expect(feedChain.or).toHaveBeenCalledWith(
+      expect.stringContaining("published_at.eq.")
+    );
+  });
+
+  it("EC4: cursor pointing at a hidden item still returns ok (paging continues from key)", async () => {
+    // The keyset filter uses (published_at, id) arithmetic — it does not fetch the cursor row.
+    // Even if that row is later hidden, the query returns whatever comes after the key.
+    makeSupabaseMock([makeRow({ id: "660e8400-e29b-41d4-a716-446655440001", published_at: "2026-01-05T10:00:00.000Z" })]);
+    const cursor = encodeCursor("2026-01-10T10:00:00.000Z", "550e8400-e29b-41d4-a716-446655440000");
+    const result = await getFeed(cursor);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.page.items).toHaveLength(1);
     expect(result.page.nextCursor).toBeNull();
   });
 });
