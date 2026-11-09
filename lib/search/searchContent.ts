@@ -1,5 +1,6 @@
 import "server-only";
 
+import { z } from "zod";
 import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/ratelimit/index";
 import type { SearchScope, SearchResponse, SearchResultItem } from "@/types/api";
@@ -13,15 +14,17 @@ function toDbScope(scope: SearchScope): "all" | "articles" | "documents" {
   return scope === "home" ? "all" : scope;
 }
 
-type RawRow = {
-  kind: string;
-  id: string;
-  slug: string;
-  title: string;
-  short_text: string | null;
-  cover_image_key: string | null;
-  category_name: string | null;
-};
+const RawRowSchema = z.object({
+  kind: z.string(),
+  id: z.string(),
+  slug: z.string(),
+  title: z.string(),
+  short_text: z.string().nullable(),
+  cover_image_key: z.string().nullable(),
+  category_name: z.string().nullable(),
+});
+
+type RawRow = z.infer<typeof RawRowSchema>;
 
 function mapRow(row: RawRow): SearchResultItem {
   return {
@@ -79,6 +82,10 @@ export async function searchContent(
     return { ok: false, code: "unknown" };
   }
 
-  const rows = (data as RawRow[] | null) ?? [];
-  return { ok: true, data: rows.map(mapRow) };
+  const parsed = z.array(RawRowSchema).safeParse(data ?? []);
+  if (!parsed.success) {
+    console.error("[searchContent] unexpected db shape:", parsed.error.issues[0]?.message);
+    return { ok: false, code: "unknown" };
+  }
+  return { ok: true, data: parsed.data.map(mapRow) };
 }
