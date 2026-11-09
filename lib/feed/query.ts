@@ -182,16 +182,19 @@ export function validateYoutubeId(id: string): boolean {
 
 // Module-level Map so each videoId gets one stable cache closure — avoids
 // creating a new wrapper on every call (which breaks request coalescing).
-// Capped at 500 entries: on overflow the Map is cleared so stale closures
-// do not accumulate in long-lived server processes.
+// Capped at 500 entries: on overflow the oldest entry is evicted so a burst
+// of 500+ unique IDs does not trigger a full-Map thundering herd.
 const VIDEO_FETCHER_CACHE_MAX = 500;
 const videoFetcherCache = new Map<string, () => Promise<GetPublicVideoResult>>();
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function getVideoFetcher(videoId: string): () => Promise<GetPublicVideoResult> {
   let fetcher = videoFetcherCache.get(videoId);
   if (!fetcher) {
     if (videoFetcherCache.size >= VIDEO_FETCHER_CACHE_MAX) {
-      videoFetcherCache.clear();
+      const oldestKey = videoFetcherCache.keys().next().value;
+      if (oldestKey !== undefined) videoFetcherCache.delete(oldestKey);
     }
     fetcher = unstable_cache(
       async (): Promise<GetPublicVideoResult> => {
@@ -232,6 +235,7 @@ function getVideoFetcher(videoId: string): () => Promise<GetPublicVideoResult> {
 }
 
 export async function getPublishedVideo(videoId: string): Promise<GetPublicVideoResult> {
+  if (!UUID_RE.test(videoId)) return { ok: false, code: "not_found" };
   return getVideoFetcher(videoId)();
 }
 
