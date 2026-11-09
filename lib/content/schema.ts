@@ -96,7 +96,6 @@ export function validateLinkHref(href: string): string | null {
     return `link contains credentials and is not allowed`;
   }
   // Refuse control characters
-  // eslint-disable-next-line no-control-regex
   if (/[\x00-\x1f\x7f]/.test(href)) {
     return `link contains control characters and is not allowed`;
   }
@@ -172,10 +171,11 @@ export function validateBody(body: unknown): ValidationResult {
     return { ok: false, reason: "body must have type 'doc'" };
   }
 
-  // Size check on the JSON text length
+  // Size check on UTF-8 byte length (matches PostgreSQL octet_length)
   const jsonText = JSON.stringify(body);
-  if (jsonText.length > MAX_BODY_BYTES) {
-    return { ok: false, reason: `body size (${jsonText.length} bytes) exceeds ${MAX_BODY_BYTES} byte limit` };
+  const byteLength = new TextEncoder().encode(jsonText).length;
+  if (byteLength > MAX_BODY_BYTES) {
+    return { ok: false, reason: `body size (${byteLength} bytes) exceeds ${MAX_BODY_BYTES} byte limit` };
   }
 
   const content = Array.isArray(b.content) ? (b.content as Record<string, unknown>[]) : [];

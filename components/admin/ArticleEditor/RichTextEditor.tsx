@@ -1,12 +1,12 @@
 ﻿"use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useEditor, EditorContent, type Extensions } from "@tiptap/react";
+import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
-import { Mark } from "@tiptap/core";
-import { t } from "@/messages/en";
+import { Mark, type Extensions } from "@tiptap/core";
+import { t, type MessageKey } from "@/messages/en";
 import { MAX_LINK_LENGTH, MAX_TOP_BLOCKS, MAX_LIST_DEPTH, ALLOWED_FONTS, type AllowedFont, validateLinkHref } from "@/lib/content/schema";
 
 // Custom mark for named fonts (AC6)
@@ -23,14 +23,33 @@ const NamedFont = Mark.create({
   },
 });
 
-const STYLES = [
-  { value: "paragraph", label: () => t("editor.style.body") },
-  { value: "h2", label: () => t("editor.style.h2") },
-  { value: "h3", label: () => t("editor.style.h3") },
-  { value: "blockquote", label: () => t("editor.style.quote") },
-] as const;
+// Module-level constant — not recreated on render (prevents editor teardown on re-render)
+const EXTENSIONS: Extensions = [
+  StarterKit.configure({ heading: { levels: [2, 3] } }),
+  Underline,
+  Link.configure({
+    openOnClick: false,
+    validate: (href) => validateLinkHref(href) === null,
+  }),
+  NamedFont,
+];
+
+const STYLES: Array<{ value: "paragraph" | "h2" | "h3" | "blockquote"; labelKey: MessageKey }> = [
+  { value: "paragraph", labelKey: "editor.style.body" },
+  { value: "h2", labelKey: "editor.style.h2" },
+  { value: "h3", labelKey: "editor.style.h3" },
+  { value: "blockquote", labelKey: "editor.style.quote" },
+];
 
 type StyleValue = (typeof STYLES)[number]["value"];
+
+const FONT_LABEL_KEYS: Record<AllowedFont, MessageKey> = {
+  Georgia: "editor.font.georgia",
+  Arial: "editor.font.arial",
+  Roboto: "editor.font.roboto",
+  "Open Sans": "editor.font.open_sans",
+  Lato: "editor.font.lato",
+};
 
 const KNOWN_PASTE_TAGS = new Set(["P", "H1", "H2", "H3", "H4", "H5", "H6", "STRONG", "EM", "U", "A", "UL", "OL", "LI", "BLOCKQUOTE", "BR", "SPAN", "DIV", "B", "I"]);
 
@@ -54,12 +73,20 @@ interface RichTextEditorProps {
 export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps) {
   const [pasteToast, setPasteToast] = useState<string | null>(null);
   const [isAtBlockLimit, setIsAtBlockLimit] = useState(false);
+  const [linkInputOpen, setLinkInputOpen] = useState(false);
+  const [linkDraft, setLinkDraft] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Always up-to-date reference — avoids stale closure in onUpdate
+  const onChangeRef = useRef(onChange);
+  const contentSeededRef = useRef(false);
+
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
   // F4 fix: cancel toast timer on unmount
   useEffect(() => () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); }, []);
 
-  // F1 fix: actually strip unknown nodes from pasted HTML, not just count them
+  // F1 fix: strip unknown nodes from pasted HTML
   const handlePasteTransform = useCallback((html: string): string => {
     if (typeof document === "undefined") return html;
     const div = document.createElement("div");
@@ -78,19 +105,9 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
     return div.innerHTML;
   }, []);
 
-  const extensions: Extensions = [
-    StarterKit.configure({ heading: { levels: [2, 3] } }),
-    Underline,
-    Link.configure({
-      openOnClick: false,
-      validate: (href) => validateLinkHref(href) === null,
-    }),
-    NamedFont,
-  ];
-
   const editor = useEditor({
-    extensions,
-    content: initialContent as never,
+    extensions: EXTENSIONS,
+    content: initialContent as JSONContent | undefined,
     editorProps: {
       transformPastedHTML: handlePasteTransform,
       handleKeyDown: (_view, event) => {
@@ -98,7 +115,6 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
         if (event.key === "Tab" && !event.shiftKey) {
           if (!editor) return false;
           const { state } = editor;
-          // F3 fix: i <= resolved.depth includes the cursor's immediate parent node
           let listDepth = 0;
           const resolved = state.doc.resolve(state.selection.from);
           for (let i = 0; i <= resolved.depth; i++) {
@@ -117,12 +133,20 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
     },
     onUpdate: ({ editor: e }) => {
       const json = e.getJSON();
-      onChange(json);
+      onChangeRef.current(json);
       // EC2: track top-level block count
       const topBlocks = Array.isArray(json.content) ? json.content.length : 0;
       setIsAtBlockLimit(topBlocks >= MAX_TOP_BLOCKS);
     },
   });
+
+  // Seed content when it arrives after mount (async load / edit-article flow)
+  useEffect(() => {
+    if (editor && initialContent && !contentSeededRef.current) {
+      contentSeededRef.current = true;
+      editor.commands.setContent(initialContent as JSONContent);
+    }
+  }, [editor, initialContent]);
 
   function applyStyle(value: StyleValue) {
     if (!editor) return;
@@ -162,9 +186,28 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
     }
   }
 
+  function handleLinkApply(e: React.FormEvent) {
+    e.preventDefault();
+    const url = linkDraft.trim();
+    if (!url) return;
+    if (url.length > MAX_LINK_LENGTH) {
+      setLinkError(t("editor.link.too_long"));
+      return;
+    }
+    const error = validateLinkHref(url);
+    if (error) {
+      setLinkError(t("editor.link.invalid_scheme"));
+      return;
+    }
+    editor?.chain().focus().setLink({ href: url }).run();
+    setLinkInputOpen(false);
+    setLinkDraft("");
+    setLinkError(null);
+  }
+
   return (
-    <div className="rich-text-editor" role="group" aria-label="Article editor">
-      <div className="editor-toolbar" role="toolbar" aria-label="Formatting toolbar">
+    <div className="rich-text-editor" role="group" aria-label={t("editor.container_label")}>
+      <div className="editor-toolbar" role="toolbar" aria-label={t("editor.toolbar_label")}>
         {/* Style dropdown (AC2) */}
         <label htmlFor="style-select" className="sr-only">
           {t("editor.style.select_label")}
@@ -177,7 +220,7 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
         >
           {STYLES.map((s) => (
             <option key={s.value} value={s.value}>
-              {s.label()}
+              {t(s.labelKey)}
             </option>
           ))}
         </select>
@@ -195,7 +238,7 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
           <option value="">{t("editor.font.default")}</option>
           {ALLOWED_FONTS.map((font) => (
             <option key={font} value={font}>
-              {font}
+              {t(FONT_LABEL_KEYS[font])}
             </option>
           ))}
         </select>
@@ -232,18 +275,9 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
           aria-label={t("editor.toolbar.link")}
           aria-pressed={editor?.isActive("link") ?? false}
           onClick={() => {
-            const url = window.prompt(t("editor.link.placeholder"));
-            if (!url) return;
-            if (url.length > MAX_LINK_LENGTH) {
-              window.alert(t("editor.link.too_long"));
-              return;
-            }
-            const error = validateLinkHref(url);
-            if (error) {
-              window.alert(t("editor.link.invalid_scheme"));
-              return;
-            }
-            editor?.chain().focus().setLink({ href: url }).run();
+            setLinkDraft(editor?.getAttributes("link").href ?? "");
+            setLinkError(null);
+            setLinkInputOpen((open) => !open);
           }}
         >
           {t("editor.toolbar.link_text")}
@@ -269,6 +303,25 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
           {t("editor.toolbar.numbered_symbol")}
         </button>
       </div>
+
+      {/* Inline link input — replaces window.prompt */}
+      {linkInputOpen && (
+        <form onSubmit={handleLinkApply} className="editor-link-form">
+          <input
+            type="url"
+            value={linkDraft}
+            onChange={(e) => { setLinkDraft(e.target.value); setLinkError(null); }}
+            placeholder={t("editor.link.placeholder")}
+            aria-label={t("editor.link.url_label")}
+            autoFocus
+          />
+          {linkError && <span role="alert" className="editor-link-error">{linkError}</span>}
+          <button type="submit">{t("editor.link.apply")}</button>
+          <button type="button" onClick={() => { setLinkInputOpen(false); setLinkError(null); }}>
+            {t("editor.link.cancel")}
+          </button>
+        </form>
+      )}
 
       {/* EC2: block limit warning */}
       {isAtBlockLimit && (

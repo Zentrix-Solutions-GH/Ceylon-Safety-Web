@@ -1,11 +1,11 @@
 const en = {
   // --- auth flows ---
-  // auth.code_sent has an {email} parameter â€" used by t() parameter tests.
+  // auth.code_sent has an {email} parameter — used by t() parameter tests.
   "auth.code_sent": "We sent a code to {email}. Check your inbox.",
   "auth.already_registered":
     "If this email can be registered, we have sent a code. Already registered? Sign in or reset your password",
 
-  // --- error codes: common (auth design Â§17, M19) ---
+  // --- error codes: common (auth design §17, M19) ---
   "errors.validation_failed": "This value is not valid.",
   "errors.validation_failed.already_done": "This has already been done.",
   "errors.validation_failed.files_missing": "One or more required files are missing.",
@@ -28,7 +28,7 @@ const en = {
   "errors.mfa_required": "A second factor is required. Please check your authenticator.",
   "errors.unknown": "Something went wrong. Please try again.",
 
-  // --- error codes: auth-only (auth design Â§17) ---
+  // --- error codes: auth-only (auth design §17) ---
   "errors.invalid_credentials": "Email or password is not correct",
   "errors.email_not_verified": "Please verify your email address before signing in.",
   "errors.code_invalid": "That code is not right",
@@ -82,11 +82,11 @@ const en = {
   "auth.sign_in.forgot_password": "Forgot password?",
   "auth.sign_in.submit": "Sign in",
   "auth.sign_in.submitting": "Signing in…",
-  "auth.sign_in.no_account": "Don’t have an account?",
+  "auth.sign_in.no_account": "Don't have an account?",
   "auth.sign_in.sign_up_link": "Create one",
   "auth.sign_in.or": "or",
   "auth.sign_in.google_button": "Continue with Google",
-  "auth.sign_in.social_app_hint": "For Google sign-in, open this page in your phone’s normal browser",
+  "auth.sign_in.social_app_hint": "For Google sign-in, open this page in your phone's normal browser",
   "auth.sign_in.copy_link": "Copy link",
   "auth.sign_in.link_copied": "Link copied!",
 
@@ -160,6 +160,8 @@ const en = {
   "auth.verify_email.enter_email_submit": "Send code",
 
   // --- article editor (S-054) ---
+  "editor.container_label": "Article editor",
+  "editor.toolbar_label": "Formatting toolbar",
   "editor.style.h2": "Heading 2",
   "editor.style.h3": "Heading 3",
   "editor.style.body": "Body",
@@ -167,6 +169,11 @@ const en = {
   "editor.style.select_label": "Style",
   "editor.font.select_label": "Font",
   "editor.font.default": "Default font",
+  "editor.font.georgia": "Georgia",
+  "editor.font.arial": "Arial",
+  "editor.font.roboto": "Roboto",
+  "editor.font.open_sans": "Open Sans",
+  "editor.font.lato": "Lato",
   "editor.toolbar.bold": "Bold",
   "editor.toolbar.italic": "Italic",
   "editor.toolbar.underline": "Underline",
@@ -183,6 +190,9 @@ const en = {
   "editor.link.invalid_scheme": "Links must start with https:// or http://",
   "editor.link.too_long": "Link address is too long (max 2048 characters)",
   "editor.link.placeholder": "https://",
+  "editor.link.url_label": "Link URL",
+  "editor.link.apply": "Apply",
+  "editor.link.cancel": "Cancel",
   "editor.blocks_limit": "Maximum block count reached. Remove a block to add more.",
 
   // --- cookie banner (S-029) ---
@@ -230,7 +240,7 @@ const en = {
   "profile.delete.description": "Permanently delete your account and all your data. This cannot be undone.",
   "profile.delete.button": "Delete account",
   "profile.delete.modal_heading": "Confirm account deletion",
-  "profile.delete.modal_description": "This will permanently delete your account. We’ll send a verification code to your email to confirm.",
+  "profile.delete.modal_description": "This will permanently delete your account. We'll send a verification code to your email to confirm.",
   "profile.delete.send_code": "Send code",
   "profile.delete.code_label": "Verification code",
   "profile.delete.confirm": "Delete my account",
@@ -238,11 +248,29 @@ const en = {
   "profile.delete.cancel": "Cancel",
   "profile.delete.blocked": "Please try again later — you have a pending order or download request",
   "profile.delete.too_many_attempts": "Too many attempts. A new code has been sent automatically",
+
+  // --- articles page (S-059) ---
+  "articles.page.title": "Articles",
+  "articles.page.description": "Health and safety articles, guides, and checklists for the Sri Lankan workplace.",
+  "articles.filter.range.newest": "Newest",
+  "articles.filter.range.week": "Last week",
+  "articles.filter.range.month": "Last month",
+  "articles.filter.category.all": "All categories",
+  "articles.filter.clear": "Clear filters",
+  "articles.filter.search.placeholder": "Search articles…",
+  "articles.filter.search.button": "Search",
+  "articles.empty.filtered": "No articles match these filters.",
+  "articles.empty.all": "Nothing published yet. Please come back soon.",
+  "articles.load_more": "Load more",
+  "articles.load_more.error": "Could not load more. Try again.",
+  "articles.load_more.retry": "Try again",
+  "articles.card.likes": "{count} likes",
+  "articles.card.comments": "{count} comments",
 } as const;
 
 export type MessageKey = keyof typeof en;
 
-// AC1: typed key â€" unknown keys are compile errors.
+// AC1: typed key — unknown keys are compile errors.
 // EC1: one pass of replacement per param key; no recursion, no HTML interpretation.
 export function t(key: MessageKey, params?: Record<string, string>): string {
   let text: string = en[key];

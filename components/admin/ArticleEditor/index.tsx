@@ -4,17 +4,18 @@ import dynamic from "next/dynamic";
 
 const RichTextEditor = dynamic(
   () => import("./RichTextEditor").then((m) => ({ default: m.RichTextEditor })),
-  { ssr: false }
+  { ssr: false, loading: () => null }
 );
 
 interface ArticleEditorProps {
+  initialContent?: object;
   onChange?: (body: object) => void;
 }
 
-export default function ArticleEditor({ onChange }: ArticleEditorProps) {
+export default function ArticleEditor({ initialContent, onChange }: ArticleEditorProps) {
   return (
     <div className="article-editor">
-      <RichTextEditor onChange={onChange ?? (() => {})} />
+      <RichTextEditor initialContent={initialContent} onChange={onChange ?? (() => {})} />
     </div>
   );
 }
