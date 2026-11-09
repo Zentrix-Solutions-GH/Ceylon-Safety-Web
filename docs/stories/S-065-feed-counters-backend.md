@@ -1,11 +1,11 @@
 ---
 id: S-065
 title: Home feed + counters backend
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-065-feed-counters-backend
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/71
 depends_on: [S-019, S-049, S-053]
 reqs: [REQ-015, REQ-015d, REQ-016, REQ-017, REQ-062, REQ-063]
 ---
