@@ -5,13 +5,11 @@ import { getArticle } from "@/lib/articles/getArticle";
 import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import ArticleBody from "@/components/articles/ArticleBody";
 import { t } from "@/messages/en";
+import { publicConfig } from "@/lib/config.public";
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
-
-const MEDIA_BASE = process.env.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL ?? "";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
 /** Look up slug_redirects; returns new_slug or null. At most one hop (EC3). */
 async function findRedirect(oldSlug: string): Promise<string | null> {
@@ -36,8 +34,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { title, excerpt, seoTitle, seoDescription, coverImageKey } = result.data;
   const pageTitle = seoTitle ?? title;
   const description = seoDescription ?? excerpt ?? undefined;
-  const canonicalUrl = `${APP_URL}/articles/${slug}`;
-  const ogImage = coverImageKey ? `${MEDIA_BASE}/${coverImageKey}` : undefined;
+  const canonicalUrl = `${publicConfig.appUrl}/articles/${slug}`;
+  const ogImage = coverImageKey ? `${publicConfig.mediaCdnUrl}/${coverImageKey}` : undefined;
 
   return {
     title: pageTitle,
@@ -76,7 +74,7 @@ export default async function ArticleSlugPage({ params }: Props) {
         {article.coverImageKey && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={`${MEDIA_BASE}/${article.coverImageKey}`}
+            src={`${publicConfig.mediaCdnUrl}/${article.coverImageKey}`}
             alt={article.coverImageAlt ?? ""}
           />
         )}
@@ -100,7 +98,8 @@ export default async function ArticleSlugPage({ params }: Props) {
   );
 }
 
-// 300 s CDN cache; purgeArticle() calls revalidateTag(articleCacheTag(id)) on publish/hide.
+// 300 s CDN cache. purge-on-publish via revalidateTag requires the fetch to be
+// tagged with unstable_cache/cacheTag — not yet wired; only the TTL applies today.
 export const revalidate = 300;
 export function generateStaticParams() {
   return [];

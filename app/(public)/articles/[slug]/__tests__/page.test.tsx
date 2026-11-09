@@ -10,6 +10,7 @@ vi.mock("@/lib/config.public", () => ({
     supabaseAnonKey: "anon",
     appUrl: "https://ceylonsafety.com",
     turnstileSiteKey: "test-key",
+    mediaCdnUrl: "https://cdn.test",
   },
 }));
 
@@ -116,6 +117,16 @@ describe("generateMetadata — AC2", () => {
     expect((meta.alternates as { canonical: string }).canonical).toMatch(/\/articles\/test-slug$/);
     expect(meta.title).toBe("Test Article");
     expect(meta.description).toBe("An excerpt");
+    expect((meta.openGraph as { title: string }).title).toBe("Test Article");
+    expect((meta.openGraph as { description: string }).description).toBe("An excerpt");
+  });
+
+  it("includes og:image when coverImageKey is set — AC2", async () => {
+    const withCover: PublicArticle = { ...ARTICLE, coverImageKey: "imgs/cover.jpg" };
+    mockGetArticle.mockResolvedValue({ ok: true, data: withCover });
+    const meta = await generateMetadata({ params: Promise.resolve({ slug: "test-slug" }) });
+    const images = (meta.openGraph as { images?: { url: string }[] }).images;
+    expect(images?.[0]?.url).toBe("https://cdn.test/imgs/cover.jpg");
   });
 
   it("returns noindex for an unknown slug — AC4", async () => {
