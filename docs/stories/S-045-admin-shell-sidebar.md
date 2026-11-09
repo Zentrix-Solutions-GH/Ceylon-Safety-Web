@@ -1,11 +1,11 @@
 ---
 id: S-045
 title: Admin shell + permission-aware sidebar
-status: in-progress
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-045-admin-shell-sidebar
-pr: ~
+pr: 72
 depends_on: [S-027, S-044]
 reqs: [REQ-130, REQ-150]
 ---
