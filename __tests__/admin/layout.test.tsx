@@ -6,7 +6,7 @@ import * as React from "react";
 import AdminShell from "@/app/admin/AdminShell";
 
 const mockSignOut = vi.fn();
-vi.mock("@/lib/auth/actions", () => ({
+vi.mock("@/lib/auth/actions/sign-out", () => ({
   signOut: (...args: unknown[]) => mockSignOut(...args),
 }));
 

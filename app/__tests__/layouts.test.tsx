@@ -43,7 +43,7 @@ vi.mock("@/app/admin/layout", async () => {
       ),
   };
 });
-vi.mock("@/lib/auth/actions", () => ({
+vi.mock("@/lib/auth/actions/sign-out", () => ({
   signOut: vi.fn(),
 }));
 

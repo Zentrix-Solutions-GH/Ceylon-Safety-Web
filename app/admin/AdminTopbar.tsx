@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { t } from "@/messages/en";
 import type { MessageKey } from "@/messages/en";
-import { signOut } from "@/lib/auth/actions";
+import { signOut } from "@/lib/auth/actions/sign-out";
 import type { UserRole } from "@/types/auth";
 
 const ROLE_LABELS: Record<UserRole, MessageKey> = {
