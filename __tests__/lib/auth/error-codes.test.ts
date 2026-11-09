@@ -17,6 +17,7 @@ describe("AUTH_ERROR_CODES (AC10)", () => {
     "weak_password",
     "captcha_failed",
     "account_suspended",
+    "already_enrolled",
   ] as const;
 
   it("contains exactly the auth-only codes listed in the story", () => {

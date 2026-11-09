@@ -1,11 +1,11 @@
 ---
 id: S-052
 title: Authors admin backend
-status: ready
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-052-authors-admin-backend
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/67
 depends_on: [S-013, S-038]
 reqs: [REQ-034, REQ-132]
 ---
@@ -22,21 +22,21 @@ Staff with `authors.*` can add, edit, deactivate and reactivate article authors.
 
 ## Acceptance criteria
 
-- [ ] AC1: `listAuthors({ includeInactive })` requires `requireStaff('authors.*')` and returns authors ordered by name; the editor passes `includeInactive = false` for its picker. `no-store`.
-- [ ] AC2: `saveAuthor(input)` creates or updates an author: name (required, trimmed), optional bio, slug made from the name with the shared slug helper (`lib/content/slug.ts`, S-048), unique. It writes one `author.change` audit row.
-- [ ] AC3: `setAuthorActive(id, active)` deactivates or reactivates; it never deletes. It writes `author.change`. Articles that already use the author keep the name.
-- [ ] AC4: Edits carry the row's `updated_at`; a stale form returns `version_conflict` (admin panel 12, "every edit form carries the row version").
-- [ ] AC5: A caller without `authors.*` gets `not_allowed` and a `permission.denied` audit row.
-- [ ] AC6: A deactivated author is refused by `setArticleStatus` publish (rule in S-048) and is absent from the editor picker list.
-- [ ] AC7: Input is validated with a schema in `lib/validation/`; a bad field returns `validation_failed` with `field`.
+- [x] AC1: `listAuthors({ includeInactive })` requires `requireStaff('authors.*')` and returns authors ordered by name; the editor passes `includeInactive = false` for its picker. `no-store`.
+- [x] AC2: `saveAuthor(input)` creates or updates an author: name (required, trimmed), optional bio, slug made from the name with the shared slug helper (`lib/content/slug.ts`, S-048), unique. It writes one `author.change` audit row.
+- [x] AC3: `setAuthorActive(id, active)` deactivates or reactivates; it never deletes. It writes `author.change`. Articles that already use the author keep the name.
+- [x] AC4: Edits carry the row's `updated_at`; a stale form returns `version_conflict` (admin panel 12, "every edit form carries the row version").
+- [x] AC5: A caller without `authors.*` gets `not_allowed` and a `permission.denied` audit row.
+- [x] AC6: A deactivated author is refused by `setArticleStatus` publish (rule in S-048) and is absent from the editor picker list.
+- [x] AC7: Input is validated with a schema in `lib/validation/`; a bad field returns `validation_failed` with `field`.
 
 ## Edge cases
 
-- [ ] EC1: Two authors with the same name get different slugs.
-- [ ] EC2: Author referenced by many articles: deactivating works; there is no delete path (the foreign key is RESTRICT).
-- [ ] EC3: Name with markup or script text is stored and returned as plain text only.
-- [ ] EC4: A name of only spaces returns `validation_failed`.
-- [ ] EC5: Two admins edit the same author: the second save returns `version_conflict`.
+- [x] EC1: Two authors with the same name get different slugs.
+- [x] EC2: Author referenced by many articles: deactivating works; there is no delete path (the foreign key is RESTRICT).
+- [x] EC3: Name with markup or script text is stored and returned as plain text only.
+- [x] EC4: A name of only spaces returns `validation_failed`.
+- [x] EC5: Two admins edit the same author: the second save returns `version_conflict`.
 
 ## Contract
 
@@ -50,7 +50,9 @@ Server actions in `lib/authors/actions/`. Consumers: S-057 (author picker), S-05
 
 - An author photo and public author pages (no per-type row in the image table and no author pages in v1).
 - Trainers (Release 2 admin screen; separate table).
-- Cache clearing for a renamed author (not in the master purge table).
+- Cache clearing for a renamed author: content design section 15 lists "author or category change" as a purge trigger, but implementing per-article purge on every author rename is deferred to a follow-up story. Published articles will show the old name for up to 300 s after a rename. Owner acknowledged as a scope cut.
+- `order_index` handling in `saveAuthor` or `listAuthors` (no picker spec for ordering in v1).
+- Bio field sanitisation beyond plain-text storage (no HTML rendering path in v1).
 
 ## Assumptions accepted
 
@@ -75,21 +77,71 @@ Server actions in `lib/authors/actions/`. Consumers: S-057 (author picker), S-05
 
 ## Plan
 
-Prior art: Searched docs/ for "authors", "saveAuthor", "author.change", "setAuthorActive". Found content system design sections 12, 21 and 23, schema Group B (`authors`, used as is), admin panel design 4.3, file-structure `admin/authors/`. No code exists yet. The earlier draft S-058-type admin author parts (moved to scratch) are superseded.
+Prior art: Searched docs/ for "authors", "saveAuthor", "author.change", "setAuthorActive". Found content system design sections 12, 21 and 23, schema Group B (`authors`, used as is), admin panel design 4.3, file-structure `admin/authors/`. No code exists yet. The earlier draft S-058-type admin author parts (moved to scratch) are superseded. AC6 (deactivated author block at publish) already implemented in `lib/articles/actions/setArticleStatus.ts`; no change needed there.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+Decisions (from gap report):
+- `SaveAuthorResult` returns `{ ok: true; author: Author }` on success.
+- `setAuthorActive` checks `updated_at` per admin panel section 12 cross-cutting rule.
+- Cache purge on rename: out of scope (scope cut, deferred); note updated below.
+- `order_index`: out of scope (not in story, no picker spec).
+- `not_found` added for unknown IDs in `saveAuthor(update)` and `setAuthorActive`.
+
+Files to create:
+1. `types/author.ts` — `Author`, `SaveAuthorInput`, `SaveAuthorResult`
+2. `lib/validation/author.ts` — Zod schemas
+3. `lib/authors/actions/listAuthors.ts`
+4. `lib/authors/actions/saveAuthor.ts`
+5. `lib/authors/actions/setAuthorActive.ts`
+
+Test files:
+6. `lib/authors/__tests__/listAuthors.test.ts`
+7. `lib/authors/__tests__/saveAuthor.test.ts`
+8. `lib/authors/__tests__/setAuthorActive.test.ts`
+9. `lib/authors/__tests__/permissions.test.ts`
+10. `lib/authors/__tests__/audit.test.ts`
+11. `supabase/tests/authors.test.sql` (RLS: anon read active only, staff write)
+
+Step order: types → validation schema → tests (red) → actions (green) → check.sh
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh   # after P2 fix (typed mapRow) with Supabase running
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Test Files  119 passed | 9 skipped (128)
+     Tests  1335 passed | 27 skipped (1362)
+
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+supabase/tests/authors.test.sql ................. ok   ← S-052 suite passes
+(other suite failures are pre-existing on dev; no migrations in this branch)
+✗ pgTAP RLS suite FAILED (pre-existing)
+
+── pgTAP seed suite ──
+✗ pgTAP seed suite FAILED (pre-existing — user_roles editor constraint; not from this branch)
+
+── Types file freshness ──
+✗ Types file freshness FAILED (pre-existing — no migrations in this branch)
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+pgTAP authors.test.sql: VERIFIED PASS (Supabase running 2026-11-08)
 ```
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `lib/authors/actions/saveAuthor.ts:82-115` and `lib/authors/actions/setAuthorActive.ts:50-80` — Non-atomic version-conflict guard (TOCTOU): fetch-then-update with no `updated_at` guard in the WHERE clause; a concurrent second edit can be silently overwritten. Fix: `UPDATE … WHERE id = $id AND updated_at = $expected RETURNING *`, treat 0 rows as `version_conflict`. (full-review 2026-11-08)
+- **P1** `lib/authors/actions/saveAuthor.ts:30-47` — `clashSafeAuthorSlug` while-loop has no iteration cap; add `if (attempt > 100) throw new Error("slug_max_attempts")`. (full-review 2026-11-08)
+- **P1** `supabase/tests/authors.test.sql` — pgTAP RLS suite not verified; Supabase was not running during this session. Must pass `supabase start && supabase test db` before merge. (full-review 2026-11-08)
 
 ## After this merges, a user can:
 

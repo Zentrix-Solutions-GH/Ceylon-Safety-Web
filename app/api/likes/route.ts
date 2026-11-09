@@ -1,2 +1,68 @@
-import { NextResponse } from 'next/server';
-export async function GET() { return NextResponse.json(null, { status: 501 }); }
+import { NextRequest, NextResponse } from "next/server";
+import { requireActiveAccount, getCurrentUser } from "@/lib/auth/server";
+import { toggleLike, getLikeStatus } from "@/lib/engagement/toggleLike";
+import { likeBodySchema, likeQuerySchema } from "@/lib/validation/comment";
+
+// App Router does not honour export const config bodyParser; guard via Content-Length (AC11).
+const LIKES_MAX_BYTES = 512;
+
+// POST /api/likes — toggle a like (AC1)
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  const contentLength = request.headers.get("content-length");
+  if (!contentLength) {
+    return NextResponse.json({ error: "validation_failed" }, { status: 411 });
+  }
+  if (parseInt(contentLength, 10) > LIKES_MAX_BYTES) {
+    return NextResponse.json({ error: "validation_failed" }, { status: 413 });
+  }
+
+  const auth = await requireActiveAccount();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.code }, { status: 401 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "validation_failed" }, { status: 400 });
+  }
+
+  const parsed = likeBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "validation_failed" }, { status: 400 });
+  }
+
+  const { id } = parsed.data;
+
+  const result = await toggleLike(auth.user.id, id);
+
+  if (!result.ok) {
+    const status = result.code === "rate_limited" ? 429 : result.code === "not_allowed" ? 403 : 400;
+    return NextResponse.json({ error: result.code }, { status });
+  }
+
+  return NextResponse.json({ liked: result.liked, count: result.count });
+}
+
+// GET /api/likes?kind=article&id=... — read like status (AC2)
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const { searchParams } = request.nextUrl;
+  const rawQuery = Object.fromEntries(searchParams.entries());
+
+  const parsed = likeQuerySchema.safeParse(rawQuery);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "validation_failed" }, { status: 400 });
+  }
+
+  const { id } = parsed.data;
+
+  // Try to get current user (optional auth)
+  const user = await getCurrentUser();
+
+  const result = await getLikeStatus(user?.id ?? null, id);
+
+  return NextResponse.json(result, {
+    headers: { "Cache-Control": "private, no-store" },
+  });
+}
