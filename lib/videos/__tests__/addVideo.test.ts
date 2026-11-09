@@ -154,6 +154,14 @@ describe("addVideo — AC3: duplicate YouTube id", () => {
     }
   });
 
+  it("succeeds when re-adding a soft-deleted video's YouTube id (AC3)", async () => {
+    // The DB partial unique index (WHERE deleted_at IS NULL) allows re-insert after soft delete.
+    // addVideo does a plain INSERT; no unique violation fires for a deleted row's youtube_id.
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeSupabase());
+    const result = await addVideo({ youtubeLink: "https://youtu.be/dQw4w9WgXcQ", title: "Re-add", categoryId: CAT_ID });
+    expect(result.ok).toBe(true);
+  });
+
   it("writes video.add audit row on success", async () => {
     await addVideo({ youtubeLink: "https://youtu.be/dQw4w9WgXcQ", title: "T", categoryId: CAT_ID });
     expect(writeAuditRow).toHaveBeenCalledWith(expect.objectContaining({ action: "video.add" }));

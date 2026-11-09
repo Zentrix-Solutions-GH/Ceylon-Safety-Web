@@ -3,7 +3,7 @@
 -- Run via: supabase test db
 
 begin;
-select plan(8);
+select plan(9);
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -93,6 +93,22 @@ select throws_ok(
   '23505',
   NULL,
   'duplicate youtube_id among live videos raises unique violation'
+);
+
+-- AC3: re-add after soft-delete — partial unique index (WHERE deleted_at IS NULL) allows it
+do $$
+begin
+  -- Soft-delete the published video
+  update public.videos set deleted_at = now() where id = 'bbbbbbbb-0000-4000-8000-000000000001';
+  -- Re-insert the same youtube_id — must succeed (no unique violation)
+  insert into public.videos (id, youtube_id, title, category_id, thumbnail_key, thumbnail_source, locale, status)
+    values ('bbbbbbbb-0000-4000-8000-000000000005', 'testid00001', 'Re-added',
+            (select id from public.categories limit 1), 'thumbnails/re.jpg', 'youtube_copy', 'en', 'draft');
+end$$;
+
+select ok(
+  (select count(*)::int from public.videos where youtube_id = 'testid00001' and deleted_at IS NULL) = 1,
+  'AC3: same youtube_id can be re-added after soft-delete'
 );
 
 select * from finish();
