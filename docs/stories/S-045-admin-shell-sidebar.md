@@ -128,10 +128,12 @@ Public-pages session check: not applicable (admin layout is not a public page).
 
 - **P1 fixed** `app/admin/AdminShell.tsx` — `AdminBadgeCounts` moved to `types/api.ts` and re-exported from AdminShell (full-review 2026-11-09)
 - **P2 fixed** `app/admin/AdminSidebar.tsx` — added `id="admin-sidebar"` to `<nav>` so `aria-controls` in topbar resolves correctly (full-review 2026-11-09)
-- **P1 open** `app/admin/AdminSidebar.tsx:12-30` — `hasPermission()` duplicates permission arrays instead of importing from `lib/auth/permissions.ts`; will silently diverge when permissions seed changes (full-review 2026-11-09)
-- **P1 open** `__tests__/admin/layout.test.tsx` — hamburger toggle test does not assert `aria-expanded` state changes after click (full-review 2026-11-09)
-- **P1 open** `__tests__/admin/layout.test.tsx` — no test clicks Sign-out and asserts `signOut` was called (full-review 2026-11-09)
-- **P1 open** `__tests__/admin/layout.test.tsx` — no assertion that zero `badgeCounts` renders no badge chip (full-review 2026-11-09)
+- **P1 fixed** `app/admin/AdminSidebar.tsx:12-30` — `hasPermission()` now imports from `lib/auth/permissions.ts` PERMISSION_MAP (full-review 2026-11-09)
+- **P1 fixed** `__tests__/admin/layout.test.tsx` — added aria-expanded state assertion for hamburger toggle (full-review 2026-11-09)
+- **P1 fixed** `__tests__/admin/layout.test.tsx` — added test that Sign-out click calls signOut({ scope: "this" }) (full-review 2026-11-09)
+- **P1 fixed** `__tests__/admin/layout.test.tsx` — added assertion that zero badgeCounts renders no badge chip (full-review 2026-11-09)
+- **P2 fixed** `app/admin/AdminTopbar.tsx` — ROLE_LABELS typed as Record<UserRole, MessageKey>, cast removed (full-review 2026-11-09)
+- **P2 fixed** `app/admin/AdminSidebar.tsx` — BADGE_ARIA typed as Record<keyof AdminBadgeCounts, MessageKey>, cast removed (full-review 2026-11-09)
 
 ## After this merges
 
