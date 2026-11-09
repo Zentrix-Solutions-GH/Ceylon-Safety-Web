@@ -10,68 +10,69 @@ SELECT plan(10);
 
 -- Insert a known published article into a category so search_all can find it.
 DO $$
-DECLARE
-  _cat_id uuid := '99000001-0000-4000-8000-000000000001';
-  _author_id uuid := '99000001-0000-4000-8000-000000000002';
-  _art_base uuid := '99000001-0000-4000-8000-00000000000';
 BEGIN
   -- category
   INSERT INTO public.categories (id, name, slug, kind)
-  VALUES (_cat_id, 'S064 Test', 's064-test', 'article')
+  VALUES ('99000001-0000-4000-8000-000000000001', 'S064 Test', 's064-test', 'article')
   ON CONFLICT (id) DO NOTHING;
 
   -- author
   INSERT INTO public.authors (id, display_name, slug, is_active)
-  VALUES (_author_id, 'S064 Author', 's064-author', true)
+  VALUES ('99000001-0000-4000-8000-000000000002', 'S064 Author', 's064-author', true)
   ON CONFLICT (id) DO NOTHING;
 
   -- published article
   INSERT INTO public.articles (id, slug, title, excerpt, status, published_at, author_id, category_id, search_vector)
   VALUES (
-    _art_base || '3'::text,
+    '99000001-0000-4000-8000-000000000003',
     's064-published', 'S064 Published Article', 'Test excerpt for s064',
     'published', now() - interval '1 hour',
-    _author_id, _cat_id,
+    '99000001-0000-4000-8000-000000000002',
+    '99000001-0000-4000-8000-000000000001',
     to_tsvector('english', 'S064 Published Article Test excerpt for s064')
   ) ON CONFLICT (id) DO NOTHING;
 
   -- draft article (should NOT appear)
   INSERT INTO public.articles (id, slug, title, excerpt, status, published_at, author_id, category_id, search_vector)
   VALUES (
-    _art_base || '4'::text,
+    '99000001-0000-4000-8000-000000000004',
     's064-draft', 'S064 Draft Article', 'Draft excerpt',
     'draft', now() - interval '1 hour',
-    _author_id, _cat_id,
+    '99000001-0000-4000-8000-000000000002',
+    '99000001-0000-4000-8000-000000000001',
     to_tsvector('english', 'S064 Draft Article Draft excerpt')
   ) ON CONFLICT (id) DO NOTHING;
 
   -- hidden article (should NOT appear)
   INSERT INTO public.articles (id, slug, title, excerpt, status, published_at, author_id, category_id, search_vector)
   VALUES (
-    _art_base || '5'::text,
+    '99000001-0000-4000-8000-000000000005',
     's064-hidden', 'S064 Hidden Article', 'Hidden excerpt',
     'hidden', now() - interval '1 hour',
-    _author_id, _cat_id,
+    '99000001-0000-4000-8000-000000000002',
+    '99000001-0000-4000-8000-000000000001',
     to_tsvector('english', 'S064 Hidden Article Hidden excerpt')
   ) ON CONFLICT (id) DO NOTHING;
 
   -- scheduled (future published_at) article (should NOT appear)
   INSERT INTO public.articles (id, slug, title, excerpt, status, published_at, author_id, category_id, search_vector)
   VALUES (
-    _art_base || '6'::text,
+    '99000001-0000-4000-8000-000000000006',
     's064-scheduled', 'S064 Scheduled Article', 'Scheduled excerpt',
     'published', now() + interval '1 hour',
-    _author_id, _cat_id,
+    '99000001-0000-4000-8000-000000000002',
+    '99000001-0000-4000-8000-000000000001',
     to_tsvector('english', 'S064 Scheduled Article Scheduled excerpt')
   ) ON CONFLICT (id) DO NOTHING;
 
   -- soft-deleted article (should NOT appear)
   INSERT INTO public.articles (id, slug, title, excerpt, status, published_at, deleted_at, author_id, category_id, search_vector)
   VALUES (
-    _art_base || '7'::text,
+    '99000001-0000-4000-8000-000000000007',
     's064-deleted', 'S064 Deleted Article', 'Deleted excerpt',
     'published', now() - interval '1 hour', now() - interval '30 minutes',
-    _author_id, _cat_id,
+    '99000001-0000-4000-8000-000000000002',
+    '99000001-0000-4000-8000-000000000001',
     to_tsvector('english', 'S064 Deleted Article Deleted excerpt')
   ) ON CONFLICT (id) DO NOTHING;
 END $$;
@@ -118,8 +119,6 @@ SELECT is(
 -- Insert 60 published articles with the same title prefix to test the 50-cap
 DO $$
 DECLARE
-  _cat_id uuid := '99000001-0000-4000-8000-000000000001';
-  _author_id uuid := '99000001-0000-4000-8000-000000000002';
   i int;
 BEGIN
   FOR i IN 1..60 LOOP
@@ -128,7 +127,8 @@ BEGIN
       ('99000002-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
       's064-cap-' || i, 'S064 CapTest Article ' || i, 'cap excerpt',
       'published', now() - interval '1 hour',
-      _author_id, _cat_id,
+      '99000001-0000-4000-8000-000000000002',
+      '99000001-0000-4000-8000-000000000001',
       to_tsvector('english', 'S064 CapTest Article cap excerpt')
     ) ON CONFLICT (id) DO NOTHING;
   END LOOP;
