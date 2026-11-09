@@ -72,18 +72,30 @@ export async function saveAuthor(input: SaveAuthorInput): Promise<SaveAuthorResu
 
   const supabase = createSupabaseServiceRoleClient();
 
-  const baseSlug = generateSlug(name);
-  let slug: string;
-  try {
-    slug = await clashSafeAuthorSlug(baseSlug, id ?? null, supabase);
-  } catch {
-    return { ok: false, code: "unknown" };
-  }
-
   let data: AuthorRow | null = null;
   let dbErr: unknown = null;
 
   if (id) {
+    // Fetch current row to decide whether the name (and therefore slug) changed.
+    // Skip slug regeneration when name is unchanged to preserve stable slugs.
+    const { data: current } = await supabase
+      .from("authors")
+      .select("name, slug")
+      .eq("id", id)
+      .maybeSingle();
+
+    let slug: string;
+    if (!current || current.name !== name) {
+      const baseSlug = generateSlug(name);
+      try {
+        slug = await clashSafeAuthorSlug(baseSlug, id, supabase);
+      } catch {
+        return { ok: false, code: "unknown" };
+      }
+    } else {
+      slug = current.slug as string;
+    }
+
     const result = await supabase
       .from("authors")
       .update({ name, bio: bio ?? null, slug })
@@ -105,9 +117,17 @@ export async function saveAuthor(input: SaveAuthorInput): Promise<SaveAuthorResu
       return { ok: false, code: "version_conflict" };
     }
   } else {
+    const baseSlug = generateSlug(name);
+    let newSlug: string;
+    try {
+      newSlug = await clashSafeAuthorSlug(baseSlug, null, supabase);
+    } catch {
+      return { ok: false, code: "unknown" };
+    }
+
     const result = await supabase
       .from("authors")
-      .insert({ name, bio: bio ?? null, slug, is_active: true })
+      .insert({ name, bio: bio ?? null, slug: newSlug, is_active: true })
       .select("id, name, slug, bio, is_active, updated_at")
       .single();
     data = result.data as AuthorRow | null;
@@ -124,7 +144,7 @@ export async function saveAuthor(input: SaveAuthorInput): Promise<SaveAuthorResu
       actorId,
       entityType: "author",
       entityId: author.id,
-      after: { name, slug, bio: bio ?? null },
+      after: { name, slug: author.slug, bio: bio ?? null },
     });
   } catch {}
 

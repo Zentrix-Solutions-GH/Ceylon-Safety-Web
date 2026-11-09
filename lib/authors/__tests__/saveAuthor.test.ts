@@ -189,12 +189,24 @@ describe("saveAuthor — EC4 blank name", () => {
 });
 
 describe("saveAuthor — AC4/EC5 version conflict", () => {
+  // For update paths the action now first fetches the current row to check whether the
+  // name changed (to avoid slug regeneration). Call order:
+  //   from() #1 → currentRowChain (.select().eq().maybeSingle())
+  //   from() #2 → dmlChain (update)
+  //   from() #3 → existsChain (PGRST116 existence check, when needed)
+
+  function makeCurrentRowChain(currentName: string, currentSlug: string) {
+    const maybeSingle = vi.fn().mockResolvedValue({ data: { name: currentName, slug: currentSlug }, error: null });
+    const eq = vi.fn().mockReturnValue({ maybeSingle });
+    return { select: vi.fn().mockReturnValue({ eq }) };
+  }
+
   it("returns version_conflict when updated_at is stale", async () => {
     (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
 
-    // Slug check: no clash. Update DML: PGRST116 (updated_at mismatch). Existence: author found.
-    const slugEq = vi.fn().mockResolvedValue({ data: [], error: null });
-    const slugChain = { select: vi.fn().mockReturnValue({ eq: slugEq }) };
+    // Name unchanged → slug kept → no slug check step.
+    // Update DML: PGRST116 (updated_at mismatch). Existence: author found.
+    const currentRowChain = makeCurrentRowChain("Alice Smith", "alice-smith");
 
     const updateSingle = vi.fn().mockResolvedValue({ data: null, error: { code: "PGRST116" } });
     const updateSelect = vi.fn().mockReturnValue({ single: updateSingle });
@@ -202,15 +214,15 @@ describe("saveAuthor — AC4/EC5 version conflict", () => {
     const updateEq1 = vi.fn().mockReturnValue({ eq: updateEq2 });
     const dmlChain = { update: vi.fn().mockReturnValue({ eq: updateEq1 }) };
 
-    const maybeSingle = vi.fn().mockResolvedValue({ data: { id: AUTHOR_ID }, error: null });
-    const existsEq = vi.fn().mockReturnValue({ maybeSingle });
+    const existsMaybeSingle = vi.fn().mockResolvedValue({ data: { id: AUTHOR_ID }, error: null });
+    const existsEq = vi.fn().mockReturnValue({ maybeSingle: existsMaybeSingle });
     const existsChain = { select: vi.fn().mockReturnValue({ eq: existsEq }) };
 
     let fromCount = 0;
     (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({
       from: vi.fn().mockImplementation(() => {
         fromCount++;
-        if (fromCount === 1) return slugChain;
+        if (fromCount === 1) return currentRowChain;
         if (fromCount === 2) return dmlChain;
         return existsChain;
       }),
@@ -235,7 +247,14 @@ describe("saveAuthor — AC4/EC5 version conflict", () => {
   it("returns not_found when updating an unknown author ID", async () => {
     (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
 
-    // Slug check: no clash. Update DML: PGRST116. Existence: author not found.
+    // Current row fetch returns null (author not found at fetch time).
+    // Name is treated as changed → slug check → update DML → PGRST116 → existence: null.
+    const currentRowChain = (() => {
+      const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+      const eq = vi.fn().mockReturnValue({ maybeSingle });
+      return { select: vi.fn().mockReturnValue({ eq }) };
+    })();
+
     const slugEq = vi.fn().mockResolvedValue({ data: [], error: null });
     const slugChain = { select: vi.fn().mockReturnValue({ eq: slugEq }) };
 
@@ -245,17 +264,18 @@ describe("saveAuthor — AC4/EC5 version conflict", () => {
     const updateEq1 = vi.fn().mockReturnValue({ eq: updateEq2 });
     const dmlChain = { update: vi.fn().mockReturnValue({ eq: updateEq1 }) };
 
-    const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
-    const existsEq = vi.fn().mockReturnValue({ maybeSingle });
+    const existsMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    const existsEq = vi.fn().mockReturnValue({ maybeSingle: existsMaybeSingle });
     const existsChain = { select: vi.fn().mockReturnValue({ eq: existsEq }) };
 
     let fromCount = 0;
     (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({
       from: vi.fn().mockImplementation(() => {
         fromCount++;
-        if (fromCount === 1) return slugChain;
-        if (fromCount === 2) return dmlChain;
-        return existsChain;
+        if (fromCount === 1) return currentRowChain; // fetch current row
+        if (fromCount === 2) return slugChain;        // slug check (name changed)
+        if (fromCount === 3) return dmlChain;         // update DML
+        return existsChain;                           // existence check
       }),
     });
 

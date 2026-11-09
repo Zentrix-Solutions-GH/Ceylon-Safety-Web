@@ -3,7 +3,7 @@
 -- Run via: supabase test db
 
 begin;
-select plan(6);
+select plan(8);
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,7 +56,15 @@ select results_eq(
   'authenticated non-staff can read only active test authors'
 );
 
--- ── Tests: service_role (bypasses RLS) ───────────────────────────────────────
+-- authenticated non-staff cannot insert (RLS write policy blocks them)
+select throws_ok(
+  $$ insert into public.authors (name, slug, is_active)
+     values ('NonStaffHacker', 'non-staff-hacker-s052', true) $$,
+  NULL,
+  'authenticated non-staff insert rejected by RLS'
+);
+
+-- ── Tests: service_role (bypasses RLS; this is what staff actions use) ───────
 
 set local role service_role;
 
@@ -65,6 +73,13 @@ select results_eq(
      where id::text like 'aaaaaaaa%' $$,
   $$ values(2) $$,
   'service_role can read all test authors including inactive'
+);
+
+-- service_role can insert (staff actions use service_role after requireStaff check)
+select lives_ok(
+  $$ insert into public.authors (id, name, slug, is_active)
+     values ('aaaaaaaa-0000-4000-8000-000000000003', 'Staff Written', 'staff-written-s052', true) $$,
+  'service_role can insert an author row (staff write path)'
 );
 
 select finish();

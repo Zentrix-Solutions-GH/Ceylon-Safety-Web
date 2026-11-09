@@ -59,6 +59,34 @@ describe("listAuthors — AC1", () => {
     expect(result.authors[0].isActive).toBe(true);
   });
 
+  it("applies is_active=true filter to DB query when includeInactive=false", async () => {
+    (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
+    // Provide both rows — the action must pass .eq("is_active", true) to Supabase,
+    // not filter client-side. We verify the spy was called with the correct args.
+    const chain: Record<string, unknown> = {};
+    chain.from = vi.fn().mockReturnThis();
+    chain.select = vi.fn().mockReturnThis();
+    chain.eq = vi.fn().mockReturnThis();
+    chain.order = vi.fn().mockResolvedValue({ data: [DB_AUTHORS[0]], error: null });
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+
+    await listAuthors({ includeInactive: false });
+    expect(chain.eq).toHaveBeenCalledWith("is_active", true);
+  });
+
+  it("does NOT apply is_active filter when includeInactive=true", async () => {
+    (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
+    const chain: Record<string, unknown> = {};
+    chain.from = vi.fn().mockReturnThis();
+    chain.select = vi.fn().mockReturnThis();
+    chain.eq = vi.fn().mockReturnThis();
+    chain.order = vi.fn().mockResolvedValue({ data: DB_AUTHORS, error: null });
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+
+    await listAuthors({ includeInactive: true });
+    expect(chain.eq).not.toHaveBeenCalledWith("is_active", true);
+  });
+
   it("returns all authors when includeInactive=true (admin screen)", async () => {
     (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, user: STAFF });
     makeChain(DB_AUTHORS);

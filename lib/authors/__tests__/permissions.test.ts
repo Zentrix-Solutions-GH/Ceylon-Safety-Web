@@ -112,4 +112,25 @@ describe("permissions — AC5", () => {
       expect(result.ok).toBe(true);
     });
   });
+
+  describe("requireStaff called with exact permission string", () => {
+    beforeEach(() => {
+      (requireStaff as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false });
+    });
+
+    it("listAuthors passes authors.* to requireStaff", async () => {
+      await listAuthors({});
+      expect(requireStaff).toHaveBeenCalledWith("authors.*");
+    });
+
+    it("saveAuthor passes authors.* to requireStaff", async () => {
+      await saveAuthor({ name: "Eve" });
+      expect(requireStaff).toHaveBeenCalledWith("authors.*");
+    });
+
+    it("setAuthorActive passes authors.* to requireStaff", async () => {
+      await setAuthorActive({ id: AUTHOR_ID, active: false, updatedAt: UPDATED_AT });
+      expect(requireStaff).toHaveBeenCalledWith("authors.*");
+    });
+  });
 });
