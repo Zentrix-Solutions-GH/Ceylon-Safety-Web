@@ -1,11 +1,11 @@
 ---
 id: S-069
 title: Documents admin backend: CRUD + prices
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-069-documents-admin-backend
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/74
 depends_on: [S-015, S-038]
 reqs: [REQ-133, REQ-134, REQ-042, REQ-043, REQ-056, REQ-060c]
 ---
