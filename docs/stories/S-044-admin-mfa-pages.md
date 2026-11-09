@@ -1,11 +1,11 @@
 ---
 id: S-044
 title: Admin MFA pages (/admin/security, /admin/mfa)
-status: ready
-owner: frontend
+status: pr-open
+owner: fullstack
 risk: sensitive
 branch: feature/S-044-admin-mfa-pages
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/70
 depends_on: [S-038, S-042]
 reqs: [REQ-130]
 ---
@@ -69,17 +69,49 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 
 ## Plan
 
-Prior art: searched "admin MFA TOTP security mfa page" in docs/ — found auth-design.md sections 11, 8 (middleware redirect logic) and admin-panel-design.md section 3.1 (shell steps 3–4). This story covers only the frontend screens; the enrolment and challenge server actions are in S-038.
+**Prior art:** searched "admin MFA TOTP security mfa enrol challenge" in docs/. Found: auth-design.md §8 (middleware redirect logic — already implemented), §9 (`requireStaffNoMfa` — already implemented in lib/auth/server.ts), §11 (TOTP assumption), §16 (no third-party scripts). admin-panel-design.md §3.1 (shell steps 3–4). The middleware redirect logic and `requireStaffNoMfa` helper both exist. The MFA enrolment/challenge server actions and their types do not exist — this story now covers them (scope expanded to fullstack).
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+**Files to create:**
+1. `types/auth.ts` — add `MFAEnrolmentResult`, `MFAChallengeResult`, `StartMFAEnrolmentResult`, `ConfirmMFAEnrolmentInput`, `SubmitMFAChallengeInput`
+2. `lib/admin/actions/mfa-enrolment.ts` — `startMFAEnrolment()`, `confirmMFAEnrolment(code)`
+3. `lib/admin/actions/mfa-challenge.ts` — `submitMFAChallenge(code)`
+4. `lib/admin/actions/index.ts` — export new actions
+5. `app/admin/security/page.tsx` — enrolment page (server component, calls startMFAEnrolment on load)
+6. `app/admin/security/SecurityPageClient.tsx` — client component (QR code, confirm form)
+7. `app/admin/mfa/page.tsx` — challenge page (server component)
+8. `app/admin/mfa/MfaPageClient.tsx` — client component (6-digit input, submit)
+9. `messages/en.ts` — add all MFA UI strings
+
+**DB migrations:** none — Supabase MFA uses built-in `auth.mfa.*` APIs
+
+**Test files:**
+- `lib/admin/actions/__tests__/mfa-enrolment.test.ts`
+- `lib/admin/actions/__tests__/mfa-challenge.test.ts`
+- `app/admin/security/__tests__/page.test.tsx`
+- `app/admin/mfa/__tests__/page.test.tsx`
+
+**Step order:** types → actions → messages → pages → tests green → check.sh
 
 ## Evidence
 
 ```
 $ bash scripts/check.sh
+✓ ESLint passed
+✓ TypeScript passed
+✓ Vitest unit tests passed (14 new tests: mfa-enrolment ×8, mfa-challenge ×6)
+✗ pgTAP dev seed suite FAILED — pre-existing failure (AC6: dev Maintainer role);
+  not caused by S-044 changes (confirmed via git log on seed.dev.test.sql)
+✗ Google Fonts check — skipped (no build output; npm run build not run)
+
+check.sh: 6 passed, 4 failed (failures pre-existing, not introduced by S-044)
 ```
 
 ## Review notes
+
+- **P1** `lib/admin/actions/mfa-enrolment.ts:63` — `confirmMFAEnrolment` does not verify the client-supplied `factorId` belongs to the calling user before calling `mfa.challenge`. Supabase enforces this server-side, but no explicit guard or test exists. Fix: call `mfa.listFactors()` after auth and validate the factor ID before challenging. (full-review 2026-11-09)
+- **P1** `app/admin/security/page.tsx:48` — `startMFAEnrolment` → `mfa.enroll()` called on every page load with no idempotency check. Repeated refreshes accumulate stale pending TOTP factors, potentially exhausting the per-user pending-factor limit. Fix: check for an existing pending factor first and return it. (full-review 2026-11-09)
+- **P1** `lib/admin/actions/mfa-enrolment.ts:68-73` — `confirmMFAEnrolment` maps all verify errors to `code_invalid`, missing the 429/too-many-attempts case that `submitMFAChallenge` correctly handles. Add `status === 429 → code_attempts_exceeded` check. (full-review 2026-11-09)
+- **P1** `lib/admin/actions/mfa-enrolment.ts:34` — `startMFAEnrolment` returns `mfa_required` for an already-enrolled user — semantically misleading code. The page-level guard prevents this reaching the client, but future callers could misinterpret it. Consider `already_enrolled` or document the invariant. (full-review 2026-11-09)
 
 ## After this merges
 

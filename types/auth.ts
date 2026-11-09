@@ -12,6 +12,7 @@ export const AUTH_ERROR_CODES = [
   "weak_password",
   "captcha_failed",
   "account_suspended",
+  "already_enrolled",
 ] as const;
 
 export type AuthErrorCode = (typeof AUTH_ERROR_CODES)[number];
@@ -153,6 +154,28 @@ export interface ConfirmReverificationInput {
 }
 
 export type ConfirmReverificationResult = ActionResult;
+
+// ─── S-044: MFA enrolment / challenge input / output types ───────────────────
+
+export interface ConfirmMFAEnrolmentInput {
+  factorId: string;
+  code: string;
+}
+
+export interface SubmitMFAChallengeInput {
+  code: string;
+}
+
+/** Returned by startMFAEnrolment on success — consumed by /admin/security page. */
+export type StartMFAEnrolmentResult =
+  | { ok: true; factorId: string; uri: string; secret: string }
+  | { ok: false; code: ErrorCode };
+
+/** Returned by confirmMFAEnrolment. */
+export type MFAEnrolmentResult = ActionResult;
+
+/** Returned by submitMFAChallenge. */
+export type MFAChallengeResult = ActionResult;
 
 // ─── S-039: Staff role action input / output types ───────────────────────────
 
