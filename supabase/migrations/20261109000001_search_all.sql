@@ -58,6 +58,7 @@ BEGIN
     FROM   public.articles a
     LEFT   JOIN public.categories c ON c.id = a.category_id
     WHERE  (scope = 'all' OR scope = 'articles')
+      AND  a.locale = 'en'
       AND  a.status = 'published'
       AND  a.published_at <= now()
       AND  a.deleted_at IS NULL

@@ -67,8 +67,7 @@ export async function searchContent(
 
   const supabase = createSupabaseAnonClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc("search_all", {
+  const { data, error } = await supabase.rpc("search_all", {
     query: trimmed,
     scope: toDbScope(scope),
     lim: RESULT_LIMIT,
@@ -80,6 +79,6 @@ export async function searchContent(
     return { ok: false, code: "unknown" };
   }
 
-  const rows = ((data as unknown) as RawRow[] | null) ?? [];
+  const rows = (data as RawRow[] | null) ?? [];
   return { ok: true, data: rows.map(mapRow) };
 }

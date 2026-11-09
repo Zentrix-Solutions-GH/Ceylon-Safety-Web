@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const query = searchParams.get("q") ?? "";
 
   const remoteAddr = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined;
-  const ip = getClientIp(req.headers, remoteAddr) ?? "unknown";
+  const ip = getClientIp(req.headers, remoteAddr) ?? crypto.randomUUID();
 
   const result = await searchContent({ scope, query }, ip);
 
