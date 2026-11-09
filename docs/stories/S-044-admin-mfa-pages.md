@@ -1,11 +1,11 @@
 ---
 id: S-044
 title: Admin MFA pages (/admin/security, /admin/mfa)
-status: in-progress
+status: pr-open
 owner: fullstack
 risk: sensitive
 branch: feature/S-044-admin-mfa-pages
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/70
 depends_on: [S-038, S-042]
 reqs: [REQ-130]
 ---
