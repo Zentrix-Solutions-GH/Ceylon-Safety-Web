@@ -27,7 +27,10 @@ export async function GET(
     mode: "closed",
   });
   if (!rl.ok) {
-    return NextResponse.json({ ok: false, code: "rate_limited" }, { status: 429 });
+    return NextResponse.json(
+      { ok: false, code: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds ?? 60) } }
+    );
   }
 
   const { documentId } = await params;

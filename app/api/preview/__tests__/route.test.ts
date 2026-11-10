@@ -87,11 +87,11 @@ describe("GET /api/preview/[documentId] — happy path (AC5)", () => {
 });
 
 describe("GET /api/preview/[documentId] — rate limit (EC7)", () => {
-  it("returns 429 when rate limit is exceeded", async () => {
+  it("returns 429 with Retry-After header when rate limit is exceeded", async () => {
     mockCheckRateLimit.mockResolvedValue({
       ok: false,
       reason: "rate_limited",
-      retryAfterSeconds: 60,
+      retryAfterSeconds: 42,
     });
 
     const req = makeRequest("550e8400-e29b-41d4-a716-446655440000", {
@@ -102,6 +102,7 @@ describe("GET /api/preview/[documentId] — rate limit (EC7)", () => {
     });
 
     expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("42");
   });
 });
 
