@@ -23,8 +23,9 @@ vi.mock("@/lib/r2/storage", () => ({
 }));
 
 const mockFrom = vi.fn();
+const mockRpc = vi.fn().mockResolvedValue({ error: null });
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServiceRoleClient: vi.fn(() => ({ from: mockFrom })),
+  createSupabaseServiceRoleClient: vi.fn(() => ({ from: mockFrom, rpc: mockRpc })),
 }));
 
 vi.mock("@/lib/auth/server", () => ({
@@ -54,27 +55,18 @@ const DOC_ID = "11111111-1111-4111-8111-111111111111";
 const FILE_ID = "22222222-2222-4222-8222-222222222222";
 const FILE_KEY = "documents/11111111-1111-4111-8111-111111111111/en/v1/secret.pptx";
 
-function makeDeepEq(resolvedValue: unknown) {
-  const eqFn: ReturnType<typeof vi.fn> = vi.fn();
-  const chain: Record<string, unknown> = {
-    eq: eqFn,
-    neq: vi.fn().mockResolvedValue({ error: null }),
-    single: vi.fn().mockResolvedValue(resolvedValue),
-  };
-  eqFn.mockReturnValue(chain);
-  return chain;
-}
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockPresignedPut.mockResolvedValue("https://r2.test/presigned");
   mockHeadObject.mockResolvedValue({ contentLength: 5_000_000 });
   mockGetObjectBytes.mockResolvedValue(new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0, 0, 0, 0]));
+  mockRpc.mockResolvedValue({ error: null });
 
   const rowData = {
     id: FILE_ID, document_id: DOC_ID, kind: "full", language: "en",
     sort_order: 1, format: "pptx", file_key: FILE_KEY,
-    status: "pending", is_current: true, version: 1,
+    status: "pending", is_current: false, version: 1,
   };
 
   const versionChain = { eq: vi.fn(), order: vi.fn().mockReturnValue({ limit: vi.fn().mockReturnValue({ maybeSingle: vi.fn().mockResolvedValue({ data: null }) }) }) };
@@ -90,7 +82,7 @@ beforeEach(() => {
         }),
       };
     }
-    // document_files: return a mock that handles select (with chained eq) + insert + update
+    // document_files: handles select (version lookup + complete fetch) and insert
     return {
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -103,7 +95,7 @@ beforeEach(() => {
           single: vi.fn().mockResolvedValue({ data: { id: FILE_ID }, error: null }),
         }),
       }),
-      update: vi.fn().mockReturnValue(makeDeepEq({ error: null })),
+      update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
     };
   });
 });

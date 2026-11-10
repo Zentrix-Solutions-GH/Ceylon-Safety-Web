@@ -241,32 +241,21 @@ export async function completeDocumentFileUpload(fileId: string): Promise<Upload
     return { ok: false, code: "validation_failed", reason: "file_type" };
   }
 
-  // AC4: switch off previous current row of same (document, kind, language, sort_order)
-  const { error: switchErr } = await supabase
-    .from("document_files")
-    .update({ is_current: false })
-    .eq("document_id", row.document_id)
-    .eq("kind", row.kind)
-    .eq("language", row.language)
-    .eq("sort_order", row.sort_order)
-    .eq("is_current", true)
-    .neq("id", fileId);
-
-  if (switchErr) return { ok: false, code: "unknown", reason: switchErr.message };
-
-  // Compute checksum (AC3)
+  // Compute checksum before entering the atomic DB step (AC3)
   const fullBytes = await getObjectBytes(cfg.bucketPrivate, row.file_key, meta.contentLength);
   const checksum = fullBytes
     ? createHash("sha256").update(fullBytes).digest("hex")
     : null;
 
-  // Mark ready (AC3)
-  const { error: updateErr } = await supabase
-    .from("document_files")
-    .update({ status: "ready", size_bytes: meta.contentLength, checksum_sha256: checksum })
-    .eq("id", fileId);
+  // AC4: flip old current row + mark new row ready in one Postgres transaction
+  // via complete_document_file RPC (migration 20261110000003).
+  const { error: rpcErr } = await supabase.rpc("complete_document_file", {
+    p_file_id:          fileId,
+    p_size_bytes:       meta.contentLength,
+    p_checksum_sha256:  checksum,
+  });
 
-  if (updateErr) return { ok: false, code: "unknown", reason: updateErr.message };
+  if (rpcErr) return { ok: false, code: "unknown", reason: rpcErr.message };
 
   // Audit (AC8)
   await writeAuditRow({

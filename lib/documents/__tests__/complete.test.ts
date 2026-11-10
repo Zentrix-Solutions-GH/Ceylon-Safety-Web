@@ -23,8 +23,9 @@ vi.mock("@/lib/r2/storage", () => ({
 }));
 
 const mockFrom = vi.fn();
+const mockRpc = vi.fn().mockResolvedValue({ error: null });
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServiceRoleClient: vi.fn(() => ({ from: mockFrom })),
+  createSupabaseServiceRoleClient: vi.fn(() => ({ from: mockFrom, rpc: mockRpc })),
 }));
 
 vi.mock("@/lib/auth/server", () => ({
@@ -57,34 +58,26 @@ const EXE_MAGIC  = new Uint8Array([0x4d, 0x5a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0
 const FILE_ID = "33333333-3333-4333-8333-333333333333";
 const KEY = "documents/doc1/en/v1/file.pptx";
 
-function makeEqChain(resolvedValue: unknown) {
-  const eqFn: ReturnType<typeof vi.fn> = vi.fn();
-  const chain: Record<string, unknown> = {
-    eq: eqFn,
-    neq: vi.fn().mockResolvedValue({ error: null }),
-    single: vi.fn().mockResolvedValue(resolvedValue),
-  };
-  eqFn.mockReturnValue(chain);
-  return chain;
-}
 
 function setupPendingRow(kind: "full" | "preview", format: string, key: string = KEY) {
   const rowData = {
     id: FILE_ID, document_id: "doc1", kind, language: "en",
-    sort_order: 1, format, file_key: key, status: "pending", is_current: true, version: 1,
+    sort_order: 1, format, file_key: key, status: "pending", is_current: false, version: 1,
   };
+  const updateChain = { eq: vi.fn().mockResolvedValue({ error: null }) };
   mockFrom.mockReturnValue({
     select: vi.fn().mockReturnValue({
       eq: vi.fn().mockReturnValue({
         single: vi.fn().mockResolvedValue({ data: rowData, error: null }),
       }),
     }),
-    update: vi.fn().mockReturnValue(makeEqChain({ error: null })),
+    update: vi.fn().mockReturnValue(updateChain),
   });
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockRpc.mockResolvedValue({ error: null });
 });
 
 describe("completeDocumentFileUpload — AC3 real-type check", () => {
@@ -214,7 +207,6 @@ describe("completeDocumentFileUpload — EC9, EC10, EC11", () => {
           }),
         }),
       }),
-      update: vi.fn().mockReturnValue(makeEqChain({ error: null })),
     });
 
     const result = await completeDocumentFileUpload(FILE_ID);

@@ -54,7 +54,7 @@ Upload the three PowerPoint language files and the preview of a document into th
 
 ## Contract
 
-Types changed in `types/document.ts`: `DocumentFileKind`, `DocumentLanguage`, `UploadStart`, `UploadStatus`. Audit events: `document.file_upload`, `document.publish`, `document.hide`, `purge.failed`. Reason values on `validation_failed`: `file_type`, `file_too_large`, `files_missing`. Permission: `documents.*`.
+Types changed in `types/document.ts`: `DocumentFileKind`, `DocumentLanguage`, `UploadStart`, `UploadStatus`. `startDocumentFileUpload` now requires a `format` field (`"pptx"` for full files; `"png"`, `"jpg"`, or `"pdf"` for previews) — the frontend must supply this. Audit events: `document.file_upload`, `document.publish`, `document.hide`, `purge.failed`. Reason values on `validation_failed`: `file_type`, `file_too_large`, `files_missing`. Permission: `documents.*`.
 
 ## Out of scope
 
