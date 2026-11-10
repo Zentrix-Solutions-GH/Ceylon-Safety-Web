@@ -148,6 +148,11 @@ on unknown action, so saveDocument would have failed in production).
 - **P1** `lib/admin/actions/documents.ts:519–549` — TOCTOU in daily drop limit: check and increment are separated by multiple awaits; two concurrent requests at count=1 both pass. Move increment before the price update or combine atomically. (full-review 2026-11-10)
 - **P1** `lib/admin/actions/__tests__/documents.save.test.ts` — No unit test for Maintainer or unauthenticated caller being refused on `listDocuments` / `getDocument` (EC6 on read path). (full-review 2026-11-10)
 - **P1** `lib/admin/actions/__tests__/price.test.ts` — No unit assertion that `changeDocumentPrice` never touches the orders table (AC9). (full-review 2026-11-10)
+- **P0** `lib/admin/actions/documents.ts` (`clashSafeDocumentSlug`) — Unbounded `while (true)` with no iteration cap; persistent DB error loops forever. Add a max-attempts guard (e.g. 20). (full-review 2026-11-10)
+- **P0** `lib/admin/actions/__tests__/documents.save.test.ts` — EC4 reserved-slug guard fires on edit path but has no unit test. Add: edit existing doc title "Admin", assert slug is `doc-admin`. (full-review 2026-11-10)
+- **P1** `lib/admin/actions/documents.ts` (`writeSlugRedirect`) — Flatten `update` result unchecked; a DB error leaves orphaned redirect rows before the INSERT runs. Check and propagate the error. (full-review 2026-11-10)
+- **P1** `lib/admin/actions/__tests__/documents.save.test.ts` — AC6 `version_conflict` has no unit test (only skipped DB test). Mock zero-row update and assert `version_conflict`. (full-review 2026-11-10)
+- **P1** `lib/admin/actions/__tests__/documents.shape.test.ts` — AC12 tested against internal mappers only. Add one test calling `listDocuments`/`getDocument` and asserting no `file_key` in JSON output. (full-review 2026-11-10)
 
 ## After this merges, a user can:
 
