@@ -38,7 +38,7 @@ const mockNotFound = vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); });
 const mockRedirect = vi.fn((url: string): never => { throw new Error(`NEXT_REDIRECT:${url}`); });
 vi.mock("next/navigation", () => ({
   notFound: () => mockNotFound(),
-  redirect: (url: string) => mockRedirect(url),
+  permanentRedirect: (url: string) => mockRedirect(url),
 }));
 
 vi.mock("next/link", () => ({

@@ -1,4 +1,4 @@
-﻿import { notFound, redirect } from "next/navigation";
+﻿import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getArticle } from "@/lib/articles/getArticle";
@@ -57,7 +57,7 @@ export default async function ArticleSlugPage({ params }: Props) {
     // Check slug_redirects before 404
     const newSlug = await findRedirect(slug);
     if (newSlug) {
-      redirect(`/articles/${newSlug}`);
+      permanentRedirect(`/articles/${newSlug}`);
     }
     notFound();
   }
