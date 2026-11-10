@@ -3,7 +3,7 @@
 -- Requires Docker + local Supabase stack.
 
 BEGIN;
-SELECT plan(78);
+SELECT plan(79);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Helpers

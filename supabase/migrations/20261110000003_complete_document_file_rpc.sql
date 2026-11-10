@@ -54,5 +54,7 @@ BEGIN
 END;
 $$;
 
--- Allow the service role (used by all admin server actions) to call this function.
+-- Strip the default PUBLIC grant (Postgres grants EXECUTE to PUBLIC by default).
+-- Only the service role (used by all admin server actions) may call this function.
+REVOKE EXECUTE ON FUNCTION complete_document_file(uuid, bigint, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION complete_document_file(uuid, bigint, text) TO service_role;
