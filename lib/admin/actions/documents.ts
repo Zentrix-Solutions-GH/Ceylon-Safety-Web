@@ -246,7 +246,13 @@ export async function getDocument(id: string): Promise<GetDocumentResult> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .single() as any;
 
-  if (error || !data) return { ok: false, code: "not_found" };
+  if (error) {
+    if ((error as { code?: string })?.code === "PGRST116") {
+      return { ok: false, code: "not_found" };
+    }
+    return { ok: false, code: "unknown", reason: (error as Error).message };
+  }
+  if (!data) return { ok: false, code: "not_found" };
 
   return { ok: true, document: mapDocumentDetail(data as DocQueryRow) };
 }
@@ -320,16 +326,11 @@ export async function saveDocument(input: SaveDocumentInput): Promise<SaveDocume
   }
 
   // ── Slug (AC5, EC4) ──────────────────────────────────────────────────────
-  let slug: string;
-  if (existing?.slug) {
-    // On edit, keep the existing slug — never regenerate from the title.
-    slug = existing.slug;
-  } else {
-    slug = generateSlug(data.title);
-    // Reserved-slug guard only on create (never on edit — existing slug is already safe).
-    if (RESERVED_SLUGS.has(slug)) {
-      slug = `doc-${slug}`;
-    }
+  // Regenerate from title on every save. Reserved-slug guard only on create
+  // (an existing slug already passed the guard when it was first created).
+  let slug = generateSlug(data.title);
+  if (!existing && RESERVED_SLUGS.has(slug)) {
+    slug = `doc-${slug}`;
   }
 
   slug = await clashSafeDocumentSlug(slug, existing?.id ?? null, supabase);
