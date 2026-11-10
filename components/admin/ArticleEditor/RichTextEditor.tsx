@@ -1,11 +1,12 @@
 ﻿"use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
+import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper, type JSONContent, type NodeViewProps } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
-import { Mark, type Extensions } from "@tiptap/core";
+import { Mark, Node, type Extensions } from "@tiptap/core";
+import ImageBlock from "@/components/admin/ArticleEditor/blocks/ImageBlock";
 import { t, type MessageKey } from "@/messages/en";
 import { SCHEMA_VERSION, MAX_LINK_LENGTH, MAX_TOP_BLOCKS, MAX_LIST_DEPTH, ALLOWED_FONTS, type AllowedFont, validateLinkHref } from "@/lib/content/schema";
 
@@ -25,6 +26,58 @@ const NamedFont = Mark.create({
   },
 });
 
+// NodeView wrapper — renders ImageBlock inside the Tiptap canvas (AC2)
+function ImageNodeView({ node, deleteNode }: NodeViewProps) {
+  const { previewSrc, alt, decorative, caption, key: mediaKey } = node.attrs as {
+    previewSrc: string;
+    alt: string;
+    decorative: boolean;
+    caption: string;
+    key: string;
+    node_id: string;
+  };
+  return (
+    <NodeViewWrapper>
+      <ImageBlock
+        mediaId={(mediaKey as string) ?? null}
+        previewSrc={(previewSrc as string) ?? ""}
+        alt={(alt as string) ?? ""}
+        decorative={!!(decorative as boolean)}
+        caption={(caption as string) ?? ""}
+        status="ready"
+        onRemove={deleteNode}
+        onRetry={() => {}}
+      />
+    </NodeViewWrapper>
+  );
+}
+
+// Custom node for image blocks (AC1 — stores mediaId, key, previewSrc, alt, decorative, caption)
+const ImageExtension = Node.create({
+  name: "image",
+  group: "block",
+  atom: true,
+  addAttributes() {
+    return {
+      node_id: { default: null },
+      key: { default: null },
+      previewSrc: { default: "" },
+      alt: { default: "" },
+      decorative: { default: false },
+      caption: { default: "" },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "figure[data-image-node]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["figure", { "data-image-node": "true", ...HTMLAttributes }];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageNodeView);
+  },
+});
+
 // Module-level constant — not recreated on render (prevents editor teardown on re-render)
 const EXTENSIONS: Extensions = [
   StarterKit.configure({ heading: { levels: [2, 3] } }),
@@ -34,6 +87,7 @@ const EXTENSIONS: Extensions = [
     validate: (href) => validateLinkHref(href) === null,
   }),
   NamedFont,
+  ImageExtension,
 ];
 
 const STYLES: Array<{ value: "paragraph" | "h2" | "h3" | "blockquote"; labelKey: MessageKey }> = [
@@ -83,12 +137,22 @@ export function getListDepthFromResolvedPos(resolvedPos: { depth: number; node: 
   return depth;
 }
 
+export interface ImageAttrs {
+  node_id: string;
+  key: string;
+  previewSrc: string;
+  alt: string;
+  decorative: boolean;
+  caption: string;
+}
+
 interface RichTextEditorProps {
   initialContent?: object;
   onChange: (json: object) => void;
+  onEditorReady?: (helpers: { insertImage: (attrs: ImageAttrs) => void }) => void;
 }
 
-export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps) {
+export function RichTextEditor({ initialContent, onChange, onEditorReady }: RichTextEditorProps) {
   const [pasteToast, setPasteToast] = useState<string | null>(null);
   const [isAtBlockLimit, setIsAtBlockLimit] = useState(false);
   const [linkInputOpen, setLinkInputOpen] = useState(false);
@@ -102,6 +166,8 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
   const prevInitialContentRef = useRef<object | undefined>(initialContent);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  const onEditorReadyRef = useRef(onEditorReady);
+  useEffect(() => { onEditorReadyRef.current = onEditorReady; }, [onEditorReady]);
 
   // F4 fix: cancel toast timer on unmount
   useEffect(() => () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); }, []);
@@ -172,6 +238,16 @@ export function RichTextEditor({ initialContent, onChange }: RichTextEditorProps
     const json = editor.getJSON();
     const topBlocks = Array.isArray(json.content) ? json.content.length : 0;
     setIsAtBlockLimit(topBlocks > MAX_TOP_BLOCKS);
+  }, [editor]);
+
+  // Expose insertImage helper to parent (ArticleEditor)
+  useEffect(() => {
+    if (!editor || !onEditorReadyRef.current) return;
+    onEditorReadyRef.current({
+      insertImage: (attrs: ImageAttrs) => {
+        editor.chain().focus().insertContent({ type: "image", attrs }).run();
+      },
+    });
   }, [editor]);
 
   function applyStyle(value: StyleValue) {

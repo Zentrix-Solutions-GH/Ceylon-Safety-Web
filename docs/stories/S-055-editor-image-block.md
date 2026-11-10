@@ -1,7 +1,7 @@
 ---
 id: S-055
 title: Editor image block + upload hook
-status: ready
+status: in-progress
 owner: frontend
 risk: normal
 branch: feature/S-055-editor-image-block
@@ -27,7 +27,7 @@ Add an image block to the article editor. The admin picks a file, the browser re
 - [ ] AC4: Alt text field is required; the editor refuses to close the image dialog with an empty alt field unless the admin explicitly checks "This image is decorative"
 - [ ] AC5: Uploading a file > 5 MB shows "File too large (max 5 MB)" and does not call the server
 - [ ] AC6: Uploading an SVG or GIF shows "File type not allowed" and does not call the server
-- [ ] AC7: If the R2 confirm step reports the real file type does not match JPEG/PNG/WebP, the block is removed from the editor and an error toast is shown
+- [ ] AC7: If the R2 confirm step returns an upload failure (type mismatch, size cap exceeded, etc.), the image dialog shows "Image upload failed" and the block is NOT inserted into the editor. The admin can dismiss the dialog or retry.
 - [ ] AC8: The resize step shows "Resizing image…"; a resize failure (browser cannot encode WebP) falls back to JPEG and proceeds; if both fail, "Could not process this image. Try a smaller one." is shown
 
 ## Edge cases
@@ -69,16 +69,68 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 
 ## Plan
 
-Prior art: `grep -ril "image.*upload\|presign\|image-resize" docs/` → content design section 14, file-structure section 3 (`lib/content/image-resize.ts`, `api/upload/image-link`, `api/upload/image-confirm`). S-047 implements the backend routes; this story implements the FE hook and block.
+Prior art: `grep -ril "image.*upload\|presign\|image-resize" docs/` → content design section 14, file-structure section 3. S-047 (merged) already delivered: `lib/content/image-resize.ts`, `lib/media/actions/getImageUploadLink.ts`, `lib/media/actions/confirmImageUpload.ts`, `types/media.ts`. `types/article.ts` already has `ImageNode` with `node_id`, `key`, `alt`, `decorative`, `caption`. This story adds the FE hook and components only.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+### Files to create / edit
+
+| File | Action |
+|---|---|
+| `hooks/useMediaUpload.ts` | Implement (currently stub `export {}`) |
+| `components/admin/ArticleEditor/ImageUploadField.tsx` | Implement (currently stub) |
+| `components/admin/ArticleEditor/blocks/ImageBlock.tsx` | Implement (currently stub) |
+| `components/admin/ArticleEditor/index.tsx` | Add "Insert image" toolbar button; wire ImageBlock into editor |
+| `components/admin/ArticleEditor/RichTextEditor.tsx` | Add custom Tiptap `ImageExtension` node so editor stores image attrs |
+| `messages/en.ts` | Add image-upload i18n keys |
+| `types/media.ts` | Add `MediaRow` type (id, status, key, width, height) as required by story Contract |
+
+### No DB migrations needed
+All backend tables and server actions exist from S-047.
+
+### Test files
+
+| File | Tests |
+|---|---|
+| `__tests__/hooks/useMediaUpload.test.ts` | presign→PUT→confirm order; network failure retry state; rate_limited error; confirm upload_failed removes block |
+| `__tests__/components/admin/ArticleEditor/blocks/ImageBlock.test.tsx` | renders with alt text; decorative indicator; blocks alt-less dialog close; publish blocked while pending |
+
+### Step order
+
+1. Add i18n keys to `messages/en.ts`
+2. Add `MediaRow` to `types/media.ts`
+3. Implement `hooks/useMediaUpload.ts`
+4. Add `ImageExtension` Tiptap node to `RichTextEditor.tsx`
+5. Implement `ImageUploadField.tsx` (file-pick dialog with alt/decorative/caption)
+6. Implement `ImageBlock.tsx` (preview, pending/ready/error/retry states)
+7. Wire "Insert image" button in `ArticleEditor/index.tsx`
+8. Write tests (TDD: write first, then implement in steps 3–7)
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh   # after all P0/P1 reviewer fixes applied
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Test Files  1 failed | 155 passed | 8 skipped (164)
+  FAIL  lib/cache/__tests__/purge.test.ts  ← pre-existing failure on dev (S-048, missing env vars)
+✗ Vitest (unit) FAILED (pre-existing only — not introduced by S-055)
+
+── pgTAP ──
+⚠ Supabase not running — skipped
+
+── Public pages session check ──
+✓ passed (20 files checked)
+
+── Dev seed guard ──
+✓ passed
+
+check.sh: 4 passed, 1 failed (pre-existing lib/cache purge env-var failure, not introduced by S-055)
+S-055 test files: 27 tests across 3 files — all green
 ```
 
 ## Review notes

@@ -8,12 +8,14 @@ vi.mock("@tiptap/react", () => ({
   useEditor: vi.fn(() => null),
   EditorContent: ({ editor }: { editor: unknown }) =>
     editor ? <div data-testid="editor-content" /> : <div data-testid="editor-loading" />,
+  ReactNodeViewRenderer: vi.fn(() => () => null),
+  NodeViewWrapper: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock("@tiptap/starter-kit", () => ({ default: { configure: vi.fn(() => ({})) } }));
 vi.mock("@tiptap/extension-underline", () => ({ default: {} }));
 vi.mock("@tiptap/extension-link", () => ({ default: { configure: vi.fn(() => ({})) } }));
-vi.mock("@tiptap/core", () => ({ Mark: { create: vi.fn(() => ({})) } }));
+vi.mock("@tiptap/core", () => ({ Mark: { create: vi.fn(() => ({})) }, Node: { create: vi.fn(() => ({})) } }));
 
 import { RichTextEditor, countUnknownPastedNodes, getListDepthFromResolvedPos } from "@/components/admin/ArticleEditor/RichTextEditor";
 import { MAX_LIST_DEPTH } from "@/lib/content/schema";
