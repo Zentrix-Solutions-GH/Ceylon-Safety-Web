@@ -56,14 +56,13 @@ const FONT_LABEL_KEYS: Record<AllowedFont, MessageKey> = {
 const KNOWN_PASTE_TAGS = new Set(["P", "H1", "H2", "H3", "H4", "H5", "H6", "STRONG", "EM", "U", "A", "UL", "OL", "LI", "BLOCKQUOTE", "BR", "SPAN", "DIV", "B", "I"]);
 
 /**
- * Count structural elements in pasted HTML that will be cleaned.
- * Includes discarded elements (script/style) and root-level unknown elements.
+ * Count root-level structural elements in pasted HTML that will be unwrapped.
+ * Script/style/noscript/meta/link are silently discarded and not counted.
  */
 export function countUnknownPastedNodes(html: string): number {
   if (typeof document === "undefined") return 0;
   const div = document.createElement("div");
   div.innerHTML = html;
-  const discardCount = div.querySelectorAll("script, style, noscript, meta, link").length;
   div.querySelectorAll("script, style, noscript, meta, link").forEach((el) => el.remove());
   const unknownEls = Array.from(div.querySelectorAll("*")).filter(
     (el) => !KNOWN_PASTE_TAGS.has(el.tagName)
