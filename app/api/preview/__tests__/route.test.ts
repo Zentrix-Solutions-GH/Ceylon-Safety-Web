@@ -164,7 +164,7 @@ describe("GET /api/preview/[documentId] — input validation", () => {
     expect(res.status).toBe(404);
   });
 
-  it("never returns a full file even if servePreviewFile contract is violated (AC5 guard)", async () => {
+  it("not_found response does not return binary content (AC5)", async () => {
     // The route must never return a 'full' kind row. This is enforced in servePreviewFile itself,
     // but the route should return 500 if the internal call returns an unexpected code.
     mockServePreviewFile.mockResolvedValue({ ok: false, code: "not_found" });

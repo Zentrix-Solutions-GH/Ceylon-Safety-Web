@@ -104,12 +104,13 @@ describe.skipIf(!ENABLED)("servePreviewFile — DB integration (AC5, EC2, EC3)",
     }, { onConflict: "id" });
 
     const { servePreviewFile } = await import("@/lib/documents/public");
-    const result = await servePreviewFile(hiddenId, "en", 1);
-
-    await adminClient.from("document_files").delete().eq("id", "02000051-ffff-0000-0000-000000000090");
-    await adminClient.from("documents").delete().eq("id", hiddenId);
-
-    expect(result.ok).toBe(false);
-    expect((result as { code: string }).code).toBe("not_found");
+    try {
+      const result = await servePreviewFile(hiddenId, "en", 1);
+      expect(result.ok).toBe(false);
+      expect((result as { code: string }).code).toBe("not_found");
+    } finally {
+      await adminClient.from("document_files").delete().eq("id", "02000051-ffff-0000-0000-000000000090");
+      await adminClient.from("documents").delete().eq("id", hiddenId);
+    }
   });
 });

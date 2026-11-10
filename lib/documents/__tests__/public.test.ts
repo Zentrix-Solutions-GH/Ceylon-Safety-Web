@@ -106,12 +106,11 @@ describe("getPublicDocument — not_found and redirect (AC3, EC5)", () => {
   });
 
   it("EC5: returns redirect code when slug found in slug_redirects", async () => {
-    // The new unstable_cache mock (seen Map) calls queryPublicDocument exactly
-    // once per cache key — so twice total: foundCached then notFoundCached.
-    // Each run makes 2 from("documents") calls:
+    // Single-wrapper design: queryPublicDocument is called once per cache key.
+    // queryPublicDocument("old-slug") makes 2 from("documents") calls:
     //   1st: main slug lookup → null (not found)
-    //   2nd: current slug lookup (after redirect entity found) → {slug}
-    // Total from("documents") calls = 4. Odd calls → null, even → slug.
+    //   2nd: current slug lookup (after redirect entity found) → {slug: "new-slug"}
+    // Total from("documents") calls = 2. Odd calls → null, even → slug.
     let docCallCount = 0;
     mockAnonClient.mockReturnValue({
       from: vi.fn((table: string) => {

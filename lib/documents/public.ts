@@ -250,29 +250,19 @@ async function queryPublicDocument(slug: string): Promise<GetPublicDocumentResul
   return { ok: true, document: doc };
 }
 
-// getPublicDocument — AC7: found responses cached 300s / DOCUMENTS_LIST_TAG;
-// not_found and redirect responses cached 60s / DOCUMENTS_NOT_FOUND_TAG.
-// Lookup order: found cache first (300s); only on ok:false fall through to the
-// not-found cache (60s). This avoids a double DB round-trip on cold found lookups.
-// queryPublicDocument is passed as a stable function reference (not a new closure)
-// so Next.js can deduplicate concurrent requests for the same cache key.
+// getPublicDocument — AC7: single cache wrapper keyed by slug.
+// TTL: NOT_FOUND_CACHE_SECONDS (60 s) for all results; both DOCUMENTS_LIST_TAG
+// and DOCUMENTS_NOT_FOUND_TAG applied so either invalidation path clears this entry.
+// Trade-off: found results use the shorter TTL (60 s vs. 300 s) to avoid a double
+// DB round-trip on cold not-found/redirect lookups (two independent wrappers
+// caused two queryPublicDocument calls = 4+ Supabase queries on cold miss).
 export async function getPublicDocument(slug: string): Promise<GetPublicDocumentResult> {
-  const foundCached = unstable_cache(
+  const cached = unstable_cache(
     queryPublicDocument,
     [`doc-slug:${slug}`],
-    { revalidate: DOCUMENT_CACHE_SECONDS, tags: [DOCUMENTS_LIST_TAG] }
+    { revalidate: NOT_FOUND_CACHE_SECONDS, tags: [DOCUMENTS_LIST_TAG, DOCUMENTS_NOT_FOUND_TAG] }
   );
-
-  const notFoundCached = unstable_cache(
-    queryPublicDocument,
-    [`doc-slug-nf:${slug}`],
-    { revalidate: NOT_FOUND_CACHE_SECONDS, tags: [DOCUMENTS_NOT_FOUND_TAG] }
-  );
-
-  const foundResult = await foundCached(slug);
-  if (foundResult.ok) return foundResult;
-  // Slug is missing/hidden — cache under the short-lived not-found tag (AC7).
-  return notFoundCached(slug);
+  return cached(slug);
 }
 
 // ---------------------------------------------------------------------------

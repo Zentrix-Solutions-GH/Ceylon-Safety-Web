@@ -125,6 +125,21 @@ describe.skipIf(!ENABLED)("getPublicDocument — single read and redirect (AC3, 
     }
   });
 
+  it("AC8: downloadCount reflects the per-document value across all language files", async () => {
+    // download_count is a column on the documents table (denormalized counter).
+    // It must not be multiplied or aggregated per document_files row.
+    await adminClient.from("documents").update({ download_count: 77 }).eq("id", DOC_FIRE_ID);
+    try {
+      const { getPublicDocument } = await import("@/lib/documents/public");
+      const result = await getPublicDocument(DOC_FIRE_SLUG);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.document.downloadCount).toBe(77);
+    } finally {
+      await adminClient.from("documents").update({ download_count: 0 }).eq("id", DOC_FIRE_ID);
+    }
+  });
+
   it("EC1: soft-deleted document does not appear in single read", async () => {
     const deletedId = "02000050-ffff-0000-0000-000000000095";
     const deletedSlug = "deleted-doc-s071-test-ec1";
