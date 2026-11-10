@@ -29,6 +29,9 @@ export function useMediaUpload(options: UseMediaUploadOptions): UseMediaUploadRe
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
+  // Monotonic counter — incremented each runUpload call so stale responses are ignored
+  const uploadIdRef = useRef(0);
+
   // Keep last upload args for retry
   const lastVariantsRef = useRef<ResizedVariant[] | null>(null);
   const lastMimeRef = useRef<AllowedImageMime | null>(null);
@@ -36,6 +39,9 @@ export function useMediaUpload(options: UseMediaUploadOptions): UseMediaUploadRe
 
   const runUpload = useCallback(
     async (variants: ResizedVariant[], originalMime: AllowedImageMime, existingMediaId?: string) => {
+      uploadIdRef.current += 1;
+      const thisUploadId = uploadIdRef.current;
+
       setStatus("uploading");
       setErrorCode(null);
 
@@ -87,6 +93,9 @@ export function useMediaUpload(options: UseMediaUploadOptions): UseMediaUploadRe
       setStatus("pending");
 
       const confirmResult = await confirmImageUpload(mediaId);
+
+      // Discard result if a newer upload has started (rapid file re-pick)
+      if (uploadIdRef.current !== thisUploadId) return;
 
       if (!confirmResult.ok) {
         setStatus("upload_failed");

@@ -97,7 +97,11 @@ export default function ImageUploadField({ onInsert, onCancel }: ImageUploadFiel
       return;
     }
     if (!pendingMediaId) return;
-    onInsert({ mediaId: pendingMediaId, previewSrc, alt, decorative, caption });
+    // Transfer blob URL ownership to the inserted node before unmounting —
+    // clearing blobUrlRef prevents the cleanup from revoking a URL the editor still needs.
+    const src = previewSrc;
+    blobUrlRef.current = null;
+    onInsert({ mediaId: pendingMediaId, previewSrc: src, alt, decorative, caption });
   }
 
   const canInsert = pendingMediaId !== null && uploadStatus === "ready";

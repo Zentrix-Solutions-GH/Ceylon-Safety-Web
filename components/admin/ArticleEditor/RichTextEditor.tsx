@@ -27,7 +27,7 @@ const NamedFont = Mark.create({
 });
 
 // NodeView wrapper — renders ImageBlock inside the Tiptap canvas (AC2)
-function ImageNodeView({ node, deleteNode }: NodeViewProps) {
+export function ImageNodeView({ node, deleteNode }: NodeViewProps) {
   const { previewSrc, alt, decorative, caption, key: mediaKey } = node.attrs as {
     previewSrc: string;
     alt: string;

@@ -48,6 +48,9 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 - Bulk image import
 - Image cropping (display-only CSS crop is in the renderer, not the editor block)
 - Orphan-media cleanup job (later item per content design section 14)
+- **[Scope cut — AC7]** Original AC7 said "block removed from the editor and an error toast shown" on confirm failure. Implemented as "block is never inserted on failure" — simpler UX, same end state. No pending node is left in the doc; the user can re-pick a file. Flagged by external reviewer (abevicrama 2026-11-10); accepted.
+- **[Deferred — P1.2/P1.3]** `ImageNodeView.onRetry` is a no-op and node attrs cannot represent `"error"` / `"upload_failed"` states. These states are unreachable via normal flow (AC7: failed uploads are never inserted), so the visual gap is moot in practice. If retry-from-node is ever needed, a `status` attr and a re-upload mechanism should be added.
+- **[Deferred — P0.3 from external review]** Integration test for `hasPendingImageNode` wired into a publish action is intentionally deferred to S-057, which owns the save/publish flow.
 
 ## Assumptions accepted
 
@@ -137,8 +140,11 @@ S-055 test files: 27 tests across 3 files — all green
 
 <!-- Filled in by reviewer/security-reviewer agents and /full-review -->
 
-- **P1** `components/admin/ArticleEditor/RichTextEditor.tsx:54` (`ImageNodeView`) — `status="ready"` hardcoded regardless of node state. If article is reopened with a pending image, block renders as ready with broken `<img>` and no visual hint, though `hasPendingImageNode` still blocks publish correctly. Fix: derive status from `node.attrs` — `key === null → "pending"`, `previewSrc === "" && key !== null → "uploading"`, otherwise `"ready"`. (full-review 2026-11-10)
-- **P1** `components/admin/ArticleEditor/ImageUploadField.tsx:84` — `URL.createObjectURL(smallest.blob)` called but `URL.revokeObjectURL` never invoked on unmount or re-pick. Memory leak per file pick. Fix: store previous URL in a `useRef`, revoke before assigning new one, and revoke on unmount in a `useEffect` cleanup. (full-review 2026-11-10)
+- **P1** `components/admin/ArticleEditor/RichTextEditor.tsx:54` (`ImageNodeView`) — `status="ready"` hardcoded regardless of node state. → **fixed** ae07983 (full-review 2026-11-10)
+- **P1** `components/admin/ArticleEditor/ImageUploadField.tsx:84` — blob URL leak. → **fixed** ae07983 (full-review 2026-11-10)
+- **P0** `components/admin/ArticleEditor/ImageUploadField.tsx:handleInsert` + `index.tsx:handleInsertImage` — blob URL revoked on `ImageUploadField` unmount before the inserted Tiptap node renders it → broken `<img>` on every insertion. → **fixed**: null `blobUrlRef` before calling `onInsert` to transfer URL ownership. (abevicrama 2026-11-10)
+- **P0** `hooks/useMediaUpload.ts:runUpload` — race condition: rapid file re-pick starts two concurrent uploads; whichever confirm resolves last wins, associating wrong `mediaId` with the node. → **fixed**: `uploadIdRef` stale-check; confirm result discarded if a newer upload has started. (abevicrama 2026-11-10)
+- **P0** `RichTextEditor.tsx:ImageNodeView` — no test for status derivation with `key: null`. → **fixed**: `ImageNodeView` exported; 3 unit tests added in `RichTextEditor.test.tsx`. (abevicrama 2026-11-10)
 
 ## After this merges
 
