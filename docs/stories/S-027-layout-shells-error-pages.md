@@ -1,7 +1,7 @@
 ---
 id: S-027
 title: Layout shells + loading/error/not-found
-status: pr-open
+status: merged
 owner: frontend
 risk: normal
 branch: feature/S-027-layout-shells-error-pages

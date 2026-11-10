@@ -1,7 +1,7 @@
 ---
 id: S-059
 title: Articles page with filters + article preview
-status: pr-open
+status: merged
 owner: frontend
 risk: normal
 branch: feature/S-059-articles-page-filters

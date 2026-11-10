@@ -1,7 +1,7 @@
 ---
 id: S-066
 title: Home feed + Load more + counters
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-066-home-feed-ui

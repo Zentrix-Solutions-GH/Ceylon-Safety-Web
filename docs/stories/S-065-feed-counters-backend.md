@@ -1,7 +1,7 @@
 ---
 id: S-065
 title: Home feed + counters backend
-status: pr-open
+status: merged
 owner: backend
 risk: normal
 branch: feature/S-065-feed-counters-backend

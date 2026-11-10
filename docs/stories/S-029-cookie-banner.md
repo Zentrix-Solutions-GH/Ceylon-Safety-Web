@@ -1,7 +1,7 @@
 ---
 id: S-029
 title: Cookie banner + "Cookie settings" link
-status: pr-open
+status: merged
 owner: frontend
 risk: normal
 branch: feature/S-029-cookie-banner

@@ -1,7 +1,7 @@
 ---
 id: S-045
 title: Admin shell + permission-aware sidebar
-status: pr-open
+status: merged
 owner: frontend
 risk: normal
 branch: feature/S-045-admin-shell-sidebar

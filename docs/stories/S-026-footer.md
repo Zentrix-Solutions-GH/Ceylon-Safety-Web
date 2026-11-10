@@ -1,7 +1,7 @@
 ---
 id: S-026
 title: Footer
-status: pr-open
+status: merged
 owner: frontend
 risk: normal
 branch: feature/S-026-footer
