@@ -47,6 +47,12 @@ async function incrementDailyDropCount(actorId: string): Promise<void> {
   _dailyDrops.set(key, (_dailyDrops.get(key) ?? 0) + 1);
 }
 
+async function decrementDailyDropCount(actorId: string): Promise<void> {
+  const key = todayKey(actorId);
+  const current = _dailyDrops.get(key) ?? 0;
+  if (current > 0) _dailyDrops.set(key, current - 1);
+}
+
 /** @internal Reset per-actor daily drop counter between tests. Never call in production. */
 export function _resetDailyDropCountForTest(actorId: string): void {
   const key = todayKey(actorId);
@@ -326,10 +332,10 @@ export async function saveDocument(input: SaveDocumentInput): Promise<SaveDocume
   }
 
   // ── Slug (AC5, EC4) ──────────────────────────────────────────────────────
-  // Regenerate from title on every save. Reserved-slug guard only on create
-  // (an existing slug already passed the guard when it was first created).
+  // Regenerate from title on every save. Reserved-slug guard fires on both
+  // create and edit — a rename to "admin" or "api" must also be blocked.
   let slug = generateSlug(data.title);
-  if (!existing && RESERVED_SLUGS.has(slug)) {
+  if (RESERVED_SLUGS.has(slug)) {
     slug = `doc-${slug}`;
   }
 
@@ -380,15 +386,24 @@ export async function saveDocument(input: SaveDocumentInput): Promise<SaveDocume
 
     // ── Slug redirect + audit for published documents (AC5, AC10) ──────────
     if (existing.status === "published" && existing.slug && existing.slug !== savedSlug) {
-      await writeSlugRedirect(supabase, savedId, existing.slug, savedSlug);
-      await writeAuditRow({
-        action: "document.slug_change" as AuditEventName,
-        actorId: auth.user.id,
-        entityType: "document",
-        entityId: savedId,
-        before: { slug: existing.slug },
-        after: { slug: savedSlug },
-      });
+      try {
+        await writeSlugRedirect(supabase, savedId, existing.slug, savedSlug);
+        await writeAuditRow({
+          action: "document.slug_change" as AuditEventName,
+          actorId: auth.user.id,
+          entityType: "document",
+          entityId: savedId,
+          before: { slug: existing.slug },
+          after: { slug: savedSlug },
+        });
+      } catch (redirectErr) {
+        // Slug redirect or audit failure must not silently succeed — surface it.
+        return {
+          ok: false,
+          code: "unknown",
+          reason: (redirectErr as Error).message ?? "slug redirect failed",
+        };
+      }
     }
   } else {
     // ── Create ──────────────────────────────────────────────────────────────
@@ -517,12 +532,17 @@ export async function changeDocumentPrice(input: {
   }
 
   // ── Daily drop limit (EC9) ────────────────────────────────────────────────
+  // Increment BEFORE the update to close the TOCTOU window: two concurrent
+  // requests at count=1 would otherwise both pass the check and both succeed.
+  // If the update fails we decrement (rollback). False positives on rollback
+  // are acceptable; false negatives (over-limit drops) are not.
   const isDrop = newPriceCents < oldPriceCents;
   if (isDrop && isLargeChange) {
     const withinLimit = await checkDailyDropLimit(actorId);
     if (!withinLimit) {
       return { ok: false, code: "rate_limited" };
     }
+    await incrementDailyDropCount(actorId);
   }
 
   // ── Update price ──────────────────────────────────────────────────────────
@@ -536,6 +556,8 @@ export async function changeDocumentPrice(input: {
     .single() as any;
 
   if (updateErr || !updated) {
+    // Roll back the counter if the DB update failed.
+    if (isDrop && isLargeChange) await decrementDailyDropCount(actorId);
     if (!updated || (updateErr as { code?: string } | null)?.code === "PGRST116") {
       return { ok: false, code: "version_conflict" };
     }
@@ -543,11 +565,6 @@ export async function changeDocumentPrice(input: {
   }
 
   const u = updated as { id: string; price_cents: number; updated_at: string };
-
-  // ── Increment daily drop counter after a successful large drop ────────────
-  if (isDrop && isLargeChange) {
-    await incrementDailyDropCount(actorId);
-  }
 
   // ── Audit row (AC10) ──────────────────────────────────────────────────────
   await writeAuditRow({

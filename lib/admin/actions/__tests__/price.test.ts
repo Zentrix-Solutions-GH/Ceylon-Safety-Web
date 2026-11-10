@@ -341,6 +341,43 @@ describe("changeDocumentPrice — EC6: role removed", () => {
   });
 });
 
+describe("changeDocumentPrice — AC9: orders table never touched", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(requireStaff).mockResolvedValue({ ok: true, user: MOCK_USER });
+    vi.mocked(requireStepUp).mockResolvedValue(undefined);
+  });
+
+  it("never calls supabase.from('order_items') or supabase.from('orders')", async () => {
+    setupDocMock(makeDocRow({ price_cents: 100000 }), {
+      data: { id: DOC_ID, price_cents: 120000, updated_at: "2026-01-02T00:00:00.000Z" },
+      error: null,
+    });
+
+    const calledTables: string[] = [];
+    const originalMockFrom = mockFrom.getMockImplementation();
+    mockFrom.mockImplementation((table: string) => {
+      calledTables.push(table);
+      return originalMockFrom ? originalMockFrom(table) : {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      };
+    });
+
+    await changeDocumentPrice({
+      documentId: DOC_ID,
+      newPriceLkr: 1200,
+      confirmedLargeChange: false,
+      authenticatorCode: "123456",
+    });
+
+    expect(calledTables).not.toContain("orders");
+    expect(calledTables).not.toContain("order_items");
+  });
+});
+
 describe("changeDocumentPrice — AC11: rate limit", () => {
   beforeEach(() => {
     vi.clearAllMocks();

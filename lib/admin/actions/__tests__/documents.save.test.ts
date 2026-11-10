@@ -42,7 +42,7 @@ vi.mock("@/lib/auth/step-up", () => ({
   _resetCacheForTest: vi.fn(),
 }));
 
-import { saveDocument, getDocument } from "@/lib/admin/actions/documents";
+import { saveDocument, getDocument, listDocuments } from "@/lib/admin/actions/documents";
 import { requireStaff } from "@/lib/auth/server";
 import { checkAdminWriteLimit } from "@/lib/ratelimit/index";
 import { writeAuditRow } from "@/lib/audit/index";
@@ -329,6 +329,124 @@ describe("getDocument — AC2: not_found", () => {
     const result = await getDocument(DOC_ID);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("not_found");
+  });
+});
+
+describe("listDocuments / getDocument — EC6: role gate on read path", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("listDocuments returns not_allowed for a Maintainer (no documents.* permission)", async () => {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" } as never);
+    const { listDocuments } = await import("@/lib/admin/actions/documents");
+    const result = await listDocuments({});
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_allowed");
+  });
+
+  it("getDocument returns not_allowed for an unauthenticated caller", async () => {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" } as never);
+    const result = await getDocument(DOC_ID);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_allowed");
+  });
+});
+
+describe("saveDocument — AC10: document.slug_change audit row on published rename", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(requireStaff).mockResolvedValue({
+      ok: true,
+      user: {
+        id: "actor-uuid-0001",
+        email: "admin@test.com",
+        claimedRole: "admin",
+        hasAuthenticatorLevel: true,
+        hasTotpEnrolled: true,
+      },
+    });
+    vi.mocked(checkAdminWriteLimit).mockResolvedValue({ ok: true });
+  });
+
+  it("writes document.slug_change audit row when a published doc's slug changes", async () => {
+    // published existing row with slug "old-title"
+    const PUBLISHED_ROW = {
+      id: DOC_ID,
+      slug: "old-title",
+      status: "published",
+      updated_at: "2026-01-01T00:00:00.000Z",
+      price_cents: 100000,
+    };
+
+    const docCalls = { count: 0 };
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "documents") {
+        docCalls.count++;
+        if (docCalls.count === 1) {
+          // Fetch existing row
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: PUBLISHED_ROW, error: null }),
+          };
+        }
+        if (docCalls.count === 2) {
+          // Slug clash check — no clash
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+        // Update — returns new slug
+        return {
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { id: DOC_ID, slug: "new-title", updated_at: "2026-01-02T00:00:00.000Z" },
+              error: null,
+            }),
+          }),
+        };
+      }
+      if (table === "categories") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          is: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: CAT_ID }, error: null }),
+        };
+      }
+      if (table === "slug_redirects") {
+        return {
+          update: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnThis() }),
+          insert: vi.fn().mockResolvedValue({ error: null }),
+        };
+      }
+      return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), is: vi.fn().mockReturnThis() };
+    });
+
+    const result = await saveDocument({
+      documentId: DOC_ID,
+      title: "New Title",
+      docKind: "checklist",
+      categoryId: CAT_ID,
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+
+    expect(result.ok).toBe(true);
+    // AC10: both document.save and document.slug_change must be written
+    expect(vi.mocked(writeAuditRow)).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "document.save" })
+    );
+    expect(vi.mocked(writeAuditRow)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "document.slug_change",
+        before: { slug: "old-title" },
+        after: { slug: "new-title" },
+      })
+    );
   });
 });
 

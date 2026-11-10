@@ -142,7 +142,12 @@ on unknown action, so saveDocument would have failed in production).
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `lib/admin/actions/__tests__/documents.save.test.ts` — No unit test asserts `document.slug_change` audit row is written when a published document's slug changes. AC10 unit coverage is for `document.save` only; the slug_change path has no mock assertion. Add a test with `existing.status = "published"`, title rename, and assert `writeAuditRow` called with `action: "document.slug_change"`. (full-review 2026-11-10)
+- **P1** `lib/admin/actions/documents.ts:331` — Reserved-slug guard (`RESERVED_SLUGS.has(slug)`) only fires on create (`if (!existing && ...)`). Admin can rename an existing document to title "admin" / "api" and get that slug directly, colliding with Next.js route segments. Guard must fire on edit path too. (full-review 2026-11-10)
+- **P1** `lib/admin/actions/documents.ts:383–392` — `writeSlugRedirect` and the `document.slug_change` audit write have no error handling. A constraint violation on `slug_redirects` insert returns `ok: true` while both the redirect and the audit row are silently lost. Wrap in try/catch or propagate the error. (full-review 2026-11-10)
+- **P1** `lib/admin/actions/documents.ts:519–549` — TOCTOU in daily drop limit: check and increment are separated by multiple awaits; two concurrent requests at count=1 both pass. Move increment before the price update or combine atomically. (full-review 2026-11-10)
+- **P1** `lib/admin/actions/__tests__/documents.save.test.ts` — No unit test for Maintainer or unauthenticated caller being refused on `listDocuments` / `getDocument` (EC6 on read path). (full-review 2026-11-10)
+- **P1** `lib/admin/actions/__tests__/price.test.ts` — No unit assertion that `changeDocumentPrice` never touches the orders table (AC9). (full-review 2026-11-10)
 
 ## After this merges, a user can:
 
