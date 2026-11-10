@@ -202,6 +202,7 @@ export type GrantRoleResult = ActionResult;
 export type RemoveRoleResult = ActionResult;
 export type RemoveAuthenticatorResult = ActionResult;
 export type ListStaffResult = ActionResult<{ staff: StaffListItem[] }>;
+export type FindUserByEmailResult = ActionResult<{ userId: string }>;
 
 // ─── Session user (what auth helpers return) ──────────────────────────────────
 
