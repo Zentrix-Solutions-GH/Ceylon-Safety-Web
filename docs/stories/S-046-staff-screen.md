@@ -132,6 +132,8 @@ check.sh: 4 passed, 1 failed (pre-existing — not introduced by this story)
 - **P1** `lib/admin/actions/staff-roles.ts:findUserByEmail` — No `requireStepUp` call; inconsistent with every other action in the file. The deliberate omission (read-only lookup) must be documented with a comment explaining why step-up is not required here. (full-review 2026-11-10)
 - **P1** `lib/admin/actions/staff-roles.ts:findUserByEmail` — `listUsers({ perPage: 1000 })` is a hard cap. Sites with >1000 Auth users will silently miss valid lookups. Add a pagination loop or at minimum a TODO comment noting the limitation. (full-review 2026-11-10)
 
+- **P1** `components/admin/AddStaffDialog.tsx:49–51` — All `findUserByEmail` failure codes (`not_allowed`, `unknown`, `not_found`) mapped to `not_found` message; expired session shows "No account found" instead of a generic error. Fixed in `716f1fb`: `not_allowed`/`unknown` now map to `admin.staff.error.unknown`. (external review abevicrama 2026-11-10)
+
 ## After this merges
 
 ### A user can:
