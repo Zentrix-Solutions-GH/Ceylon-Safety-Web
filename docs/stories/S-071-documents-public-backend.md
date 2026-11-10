@@ -126,7 +126,7 @@ Prior art: Searched `docs/` for "public document", "listPickerItems", "preview r
 ## Evidence
 
 ```
-$ bash scripts/check.sh   # after P1 fixes (round 2)
+$ bash scripts/check.sh   # after missing tests added (round 3)
 
 ── ESLint ──
 ✓ ESLint passed
@@ -135,8 +135,8 @@ $ bash scripts/check.sh   # after P1 fixes (round 2)
 ✓ TypeScript passed
 
 ── Vitest (unit) ──
- Test Files  162 passed | 15 skipped (177)
-      Tests  1745 passed | 52 skipped (1797)
+ Test Files  165 passed | 15 skipped (180)
+      Tests  1761 passed | 52 skipped (1813)
 ✓ Vitest (unit) passed
 
 ── pgTAP RLS suite ──
