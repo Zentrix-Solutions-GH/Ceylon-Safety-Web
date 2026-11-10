@@ -33,18 +33,20 @@ function ImageNodeView({ node, deleteNode }: NodeViewProps) {
     alt: string;
     decorative: boolean;
     caption: string;
-    key: string;
+    key: string | null;
     node_id: string;
   };
+  // Derive visual status from node attrs so a reopened pending image shows correctly
+  const status = mediaKey === null ? "pending" : (previewSrc === "" ? "uploading" : "ready");
   return (
     <NodeViewWrapper>
       <ImageBlock
-        mediaId={(mediaKey as string) ?? null}
+        mediaId={mediaKey ?? null}
         previewSrc={(previewSrc as string) ?? ""}
         alt={(alt as string) ?? ""}
         decorative={!!(decorative as boolean)}
         caption={(caption as string) ?? ""}
-        status="ready"
+        status={status}
         onRemove={deleteNode}
         onRetry={() => {}}
       />

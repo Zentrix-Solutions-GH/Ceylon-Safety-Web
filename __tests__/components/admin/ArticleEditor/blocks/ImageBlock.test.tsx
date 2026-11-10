@@ -123,7 +123,8 @@ describe("ImageBlock — AC7: upload_failed removes block", () => {
         onRetry={vi.fn()}
       />
     );
-    // Block should auto-signal removal; a dismiss button also acceptable
-    expect(screen.getByText(/could not be accepted|upload failed/i)).toBeInTheDocument();
+    expect(screen.getByText(/upload failed/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /remove/i }));
+    expect(onRemove).toHaveBeenCalled();
   });
 });

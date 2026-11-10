@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { resizeImage } from "@/lib/content/image-resize";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
 import { t } from "@/messages/en";
@@ -33,6 +33,10 @@ export default function ImageUploadField({ onInsert, onCancel }: ImageUploadFiel
   const [pendingMediaId, setPendingMediaId] = useState<string | null>(null);
   const originalMimeRef = useRef<AllowedImageMime>("image/jpeg");
   const variantsRef = useRef<Awaited<ReturnType<typeof resizeImage>> | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
+
+  // Revoke any outstanding blob URL on unmount
+  useEffect(() => () => { if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current); }, []);
 
   const { status: uploadStatus, errorCode, upload, retry } = useMediaUpload({
     onSuccess: (mediaId) => {
@@ -62,9 +66,12 @@ export default function ImageUploadField({ onInsert, onCancel }: ImageUploadFiel
       variantsRef.current = variants;
       originalMimeRef.current = file.type as AllowedImageMime;
 
-      // Build local preview from the smallest variant
+      // Build local preview from the smallest variant; revoke the previous blob URL
       const smallest = variants.reduce((a, b) => (a.width <= b.width ? a : b));
-      setPreviewSrc(URL.createObjectURL(smallest.blob));
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+      const newUrl = URL.createObjectURL(smallest.blob);
+      blobUrlRef.current = newUrl;
+      setPreviewSrc(newUrl);
 
       setResizeStatus("idle");
       await upload(variants, file.type as AllowedImageMime);

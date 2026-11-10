@@ -26,6 +26,9 @@ export function useMediaUpload(options: UseMediaUploadOptions): UseMediaUploadRe
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [errorCode, setErrorCode] = useState<UploadErrorCode>(null);
 
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
   // Keep last upload args for retry
   const lastVariantsRef = useRef<ResizedVariant[] | null>(null);
   const lastMimeRef = useRef<AllowedImageMime | null>(null);
@@ -52,7 +55,7 @@ export function useMediaUpload(options: UseMediaUploadOptions): UseMediaUploadRe
         const code = linkResult.code as UploadErrorCode;
         setStatus("error");
         setErrorCode(code);
-        options.onError?.(code);
+        optionsRef.current.onError?.(code);
         return;
       }
 
@@ -77,7 +80,7 @@ export function useMediaUpload(options: UseMediaUploadOptions): UseMediaUploadRe
       } catch {
         setStatus("error");
         setErrorCode("network");
-        options.onError?.("network");
+        optionsRef.current.onError?.("network");
         return;
       }
 
@@ -88,14 +91,14 @@ export function useMediaUpload(options: UseMediaUploadOptions): UseMediaUploadRe
       if (!confirmResult.ok) {
         setStatus("upload_failed");
         setErrorCode(confirmResult.code as UploadErrorCode);
-        options.onUploadFailed?.();
+        optionsRef.current.onUploadFailed?.();
         return;
       }
 
       setStatus("ready");
-      options.onSuccess?.(mediaId);
+      optionsRef.current.onSuccess?.(mediaId);
     },
-    [options]
+    []
   );
 
   const upload = useCallback(

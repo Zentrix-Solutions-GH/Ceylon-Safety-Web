@@ -137,6 +137,9 @@ S-055 test files: 27 tests across 3 files — all green
 
 <!-- Filled in by reviewer/security-reviewer agents and /full-review -->
 
+- **P1** `components/admin/ArticleEditor/RichTextEditor.tsx:54` (`ImageNodeView`) — `status="ready"` hardcoded regardless of node state. If article is reopened with a pending image, block renders as ready with broken `<img>` and no visual hint, though `hasPendingImageNode` still blocks publish correctly. Fix: derive status from `node.attrs` — `key === null → "pending"`, `previewSrc === "" && key !== null → "uploading"`, otherwise `"ready"`. (full-review 2026-11-10)
+- **P1** `components/admin/ArticleEditor/ImageUploadField.tsx:84` — `URL.createObjectURL(smallest.blob)` called but `URL.revokeObjectURL` never invoked on unmount or re-pick. Memory leak per file pick. Fix: store previous URL in a `useRef`, revoke before assigning new one, and revoke on unmount in a `useEffect` cleanup. (full-review 2026-11-10)
+
 ## After this merges
 
 - S-057 (save flow) can use the `isDirty` + pending-media state

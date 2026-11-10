@@ -62,10 +62,12 @@ export default function ArticleEditor({ initialContent, onChange }: ArticleEdito
       </div>
 
       {showImageDialog && (
-        <ImageUploadField
-          onInsert={handleInsertImage}
-          onCancel={() => setShowImageDialog(false)}
-        />
+        <div role="dialog" aria-modal="true" aria-label={t("editor.toolbar.insert_image")}>
+          <ImageUploadField
+            onInsert={handleInsertImage}
+            onCancel={() => setShowImageDialog(false)}
+          />
+        </div>
       )}
 
       <RichTextEditor
