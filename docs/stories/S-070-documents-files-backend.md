@@ -207,6 +207,9 @@ Round 1 review (security-reviewer + adversarial reviewer) found 3 P0 findings; f
 - **P1** `lib/documents/upload.ts:178` — `presignedPut` throw not caught; pending DB row already inserted when R2 call fails; caller gets unhandled 500. Wrap in try/catch, delete pending row on error, return `upload_failed`. (full-review round 3 2026-11-10)
 - **P1** `lib/documents/__tests__/perm.db.test.ts` — `setDocumentStatus` not_allowed path not tested. (full-review round 3 2026-11-10)
 - **P1** `lib/documents/publish.ts:85-98` — TOCTOU fix (zero-row UPDATE → `version_conflict`) has no test. (full-review round 3 2026-11-10)
+- **P1** `lib/documents/publish.ts:46` — `!doc.price_cents` is falsy for 0; free docs (price_cents=0) always fail publish with `files_missing`. Fix: use `doc.price_cents == null`. (full-review round 4 2026-11-10) **FIXED**
+- **P1** `supabase/migrations/20261110000003_complete_document_file_rpc.sql:42` — step-2 UPDATE has no `AND status = 'pending'` guard; a second `completeUpload` call could overwrite an already-completed or upload_failed row. (full-review round 4 2026-11-10) **FIXED**
+- **P1** `lib/cache/__tests__/purge.test.ts` — purgeDocument's top-level supabase import caused config env-var error; missing `@/lib/supabase/server` mock in test. (full-review round 4 2026-11-10) **FIXED**
 
 ## After this merges, a user can:
 
