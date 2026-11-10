@@ -1121,7 +1121,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "create_profile_for":
+            "complete_document_file":
+{ Args: { "p_checksum_sha256": string,"p_file_id": string,"p_size_bytes": number }; Returns: undefined
+                           },
+"create_profile_for":
 { Args: { "p_user": unknown }; Returns: undefined
                            },
 "ensure_profile_for_user":
@@ -1149,9 +1152,6 @@ isOneToOne: false
                            },
 "show_trgm":
 { Args: { "": string }; Returns: (string)[]
-                           },
-"complete_document_file":
-{ Args: { "p_file_id": string; "p_size_bytes": number; "p_checksum_sha256": string | null }; Returns: undefined
                            }
           }
           Enums: {
