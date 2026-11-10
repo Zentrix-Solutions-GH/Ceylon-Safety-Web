@@ -1,7 +1,7 @@
 ---
 id: S-071
 title: Documents public backend (no file keys)
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-071-documents-public-backend
@@ -83,15 +83,88 @@ Types changed in `types/document.ts`: `PublicDocumentCard`, `PublicDocument`, `D
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
-Prior art: read in full `commerce-design` sections 3.2, 7.5, 12, 13; `content-system-design` sections 15, 19, 21 (`listPickerItems`); `database-schema` Group E and access rules (`document_files` hidden); `file-structure` (`api/preview/`). Extends S-015; supersedes nothing.
+Prior art: Searched `docs/` for "public document", "listPickerItems", "preview route". Found: S-053/S-056 established `listPickerItems` for videos in `lib/videos/actions/listPickerItems.ts` with `PickerItem` type in `types/video.ts`. Commerce-design 3.2 and schema Group E confirm document RLS. S-069 and S-070 established the admin CRUD and file-upload patterns. `app/api/preview/[documentId]/route.ts` stub exists (501). This story extends S-069/S-070 patterns and mirrors the video picker shape.
+
+### Files to create
+
+1. `lib/documents/public.ts` — `listPublicDocuments`, `getPublicDocument`, `listDocumentPickerItems` server actions
+2. `lib/documents/__tests__/public-shape.test.ts` — unit: no file keys in any response (AC2, analyst note)
+3. `lib/documents/__tests__/cache.test.ts` — unit: correct cache tags applied (AC7)
+4. `app/api/documents/route.ts` — GET handler: parse filters, call `listPublicDocuments`, apply cache tags
+5. `app/api/preview/__tests__/route.test.ts` — unit: rate limit, page range (EC7, AC5 out-of-range)
+
+### Files to edit
+
+6. `app/api/preview/[documentId]/route.ts` — replace 501 stub with full implementation (AC5, EC2, EC3, EC7)
+7. `types/document.ts` — add `PublicDocumentCard`, `PublicDocument`, `DocumentFilters`, `DocumentsPage`
+8. `lib/documents/index.ts` — export new public functions
+9. `lib/config.ts` — add `documentsPageSize` (12), `previewRateLimitPerMinute` (60)
+10. `lib/cache/tags.ts` — add `NOT_FOUND_DOCUMENTS_TAG` (separate tag for not-found caching, AC7)
+11. `lib/validation/document.ts` — add `publicDocumentsQuerySchema`, `previewRouteSchema`
+12. `supabase/tests/documents.rls.test.sql` — add: anon cannot read `document_files` directly (Access rules section)
+
+### Notes from analyst gaps (resolved here)
+
+- **AC3 `getDocument` language param**: returns `previewLanguages` — a record `{en, si, ta}` each with count of ready current preview rows (0–3). No single-language param needed; the overlay picks.
+- **AC5 rate limit**: 60 req/min per IP, `mode: "closed"` (preview images are the actual product preview). Config key: `previewRateLimitPerMinute`.
+- **Anonymous access**: `GET /api/documents` uses anon Supabase client so RLS enforces visibility. No auth check.
+- **`getDocument` is a server library call** (no HTTP route for single-doc by slug — the public page at `app/(public)/documents/[slug]/page.tsx` calls it server-side). Contract section already reflects this.
+
+### Step order
+
+1. Add types → `types/document.ts`
+2. Add config keys → `lib/config.ts`
+3. Add cache tag → `lib/cache/tags.ts`
+4. Add validation schemas → `lib/validation/document.ts`
+5. Write failing tests (Step 4)
+6. Implement `lib/documents/public.ts` (Step 5)
+7. Implement `app/api/documents/route.ts`
+8. Implement `app/api/preview/[documentId]/route.ts` (replace stub)
+9. Export from `lib/documents/index.ts`
+10. Add RLS test to `supabase/tests/documents.rls.test.sql`
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh   # after P1 fixes (round 2)
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  162 passed | 15 skipped (177)
+      Tests  1745 passed | 52 skipped (1797)
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests (run supabase start first)
+
+── pgTAP seed suite ──
+⚠ Supabase not running — skipping seed tests (run supabase start first)
+
+── pgTAP dev seed suite ──
+⚠ Supabase not running — skipping dev seed tests (run supabase start first)
+
+── Types file freshness ──
+⚠ Supabase not running — skipping types check (run supabase start first)
+
+── Public pages session check (AC11) ──
+check-public-pages: OK — checked 20 file(s), no violations.
+✓ Public pages session check (AC11) passed
+
+── Google Fonts check (AC5) ──
+⚠ No build output found — skipping Google Fonts check (run npm run build first)
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 5 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
 ```
 
 ## Review notes

@@ -103,6 +103,23 @@ export async function deleteObject(bucket: string, key: string): Promise<void> {
 /** Returns object metadata or null if the object does not exist (NoSuchKey / 404).
  *  Throws for all other errors (network, 5xx) so callers can distinguish a missing
  *  object from a transient R2 failure. */
+/** Stream an entire R2 object as a Web ReadableStream. Returns null when the object does not exist. */
+export async function getObjectStream(
+  bucket: string,
+  key: string
+): Promise<ReadableStream<Uint8Array> | null> {
+  try {
+    const client = getClient();
+    const res = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+    if (!res.Body) return null;
+    return res.Body.transformToWebStream() as ReadableStream<Uint8Array>;
+  } catch (err: unknown) {
+    const e = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+    if (e.name === "NoSuchKey" || e.$metadata?.httpStatusCode === 404) return null;
+    throw err;
+  }
+}
+
 export async function headObject(
   bucket: string,
   key: string
