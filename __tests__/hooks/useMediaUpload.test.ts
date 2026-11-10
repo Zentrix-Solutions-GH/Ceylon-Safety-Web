@@ -144,6 +144,36 @@ describe("useMediaUpload — rate_limited", () => {
   });
 });
 
+describe("useMediaUpload — EC4: confirm location_data_found", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("sets status to upload_failed and errorCode to location_data_found when confirm returns location_data_found", async () => {
+    mockGetLink.mockResolvedValue({
+      ok: true,
+      mediaId: "media-gps",
+      links: [{ width: 480, url: "https://r2.example.com/put-480", mimeType: "image/webp" }],
+    } satisfies GetImageUploadLinkResult);
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
+
+    mockConfirm.mockResolvedValue({
+      ok: false,
+      code: "location_data_found",
+    } satisfies ConfirmImageUploadResult);
+
+    const onUploadFailed = vi.fn();
+    const { result } = renderHook(() => useMediaUpload({ onUploadFailed }));
+
+    await act(async () => {
+      await result.current.upload([fakeVariant(480)], "image/webp");
+    });
+
+    expect(result.current.status).toBe("upload_failed");
+    expect(result.current.errorCode).toBe("location_data_found");
+    expect(onUploadFailed).toHaveBeenCalled();
+  });
+});
+
 describe("useMediaUpload — AC7: confirm upload_failed", () => {
   beforeEach(() => vi.clearAllMocks());
 
