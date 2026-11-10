@@ -47,7 +47,10 @@ export function AddStaffDialog({ onSuccess, onClose }: AddStaffDialogProps) {
         // Step 1: resolve email → userId
         const lookupResult = await findUserByEmail({ email });
         if (!lookupResult.ok) {
-          setError("admin.staff.error.not_found");
+          const lookupCodeMap: Record<string, ErrorKey> = {
+            not_found: "admin.staff.error.not_found",
+          };
+          setError(lookupCodeMap[lookupResult.code ?? "unknown"] ?? "admin.staff.error.unknown");
           return;
         }
 

@@ -170,6 +170,25 @@ describe("AC3: add staff member", () => {
     });
   });
 
+  it("shows unknown error when findUserByEmail returns not_allowed (expired session)", async () => {
+    mockFindUserByEmail.mockResolvedValue({ ok: false, code: "not_allowed" });
+
+    const { AddStaffDialog } = await import(
+      "@/components/admin/AddStaffDialog"
+    );
+    render(<AddStaffDialog onSuccess={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /add staff/i }));
+    await userEvent.type(screen.getByLabelText(/email/i), "someone@example.com");
+    await userEvent.type(screen.getByLabelText(/authenticator code/i), "123456");
+    fireEvent.click(screen.getByRole("button", { name: /grant role/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/the person must sign up first/i)).not.toBeInTheDocument();
+  });
+
   it("shows validation_failed error message for existing staff", async () => {
     mockGrantRole.mockResolvedValue({ ok: false, code: "validation_failed" });
 
