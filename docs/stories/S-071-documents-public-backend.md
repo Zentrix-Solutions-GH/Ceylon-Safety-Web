@@ -1,11 +1,11 @@
 ---
 id: S-071
 title: Documents public backend (no file keys)
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-071-documents-public-backend
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/79
 depends_on: [S-015]
 reqs: [REQ-041, REQ-042, REQ-047, REQ-055, REQ-058, REQ-059, REQ-060c]
 ---
