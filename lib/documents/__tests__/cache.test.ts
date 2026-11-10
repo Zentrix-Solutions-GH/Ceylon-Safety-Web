@@ -66,12 +66,17 @@ describe("Cache TTL wiring — unstable_cache called with correct revalidate (AC
 
   it("listPublicDocuments wires LIST_CACHE_SECONDS as revalidate with DOCUMENTS_LIST_TAG", async () => {
     const { listPublicDocuments, LIST_CACHE_SECONDS } = await import("@/lib/documents/public");
+    const { DOCUMENTS_LIST_TAG, DOCUMENTS_NOT_FOUND_TAG } = await import("@/lib/cache/tags");
     await listPublicDocuments({});
     expect(mockUnstableCache).toHaveBeenCalled();
-    const opts = mockUnstableCache.mock.calls[0]?.[2];
-    expect(opts?.revalidate).toBe(LIST_CACHE_SECONDS);
-    const { DOCUMENTS_LIST_TAG } = await import("@/lib/cache/tags");
-    expect(opts?.tags).toContain(DOCUMENTS_LIST_TAG);
+    // Match by tags to avoid relying on call order (same pattern as getPublicDocument tests below)
+    const allOpts = mockUnstableCache.mock.calls.map((c) => c[2]);
+    const listCallOpts = allOpts.find(
+      (o) => o?.tags?.includes(DOCUMENTS_LIST_TAG) && !o?.tags?.includes(DOCUMENTS_NOT_FOUND_TAG)
+    );
+    expect(listCallOpts).toBeDefined();
+    expect(listCallOpts?.revalidate).toBe(LIST_CACHE_SECONDS);
+    expect(listCallOpts?.tags).toContain(DOCUMENTS_LIST_TAG);
   });
 
   it("getPublicDocument found path wires DOCUMENT_CACHE_SECONDS with DOCUMENTS_LIST_TAG", async () => {

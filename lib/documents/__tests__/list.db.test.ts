@@ -112,4 +112,53 @@ describe.skipIf(!ENABLED)("listPublicDocuments — filters and sort (AC1, EC4)",
     expect(result.data.pageSize).toBe(12);
     expect(result.data.documents.length).toBeLessThanOrEqual(result.data.pageSize);
   });
+
+  it("AC1: sort=popular returns documents in descending download_count order", async () => {
+    // Seed has DOC_FIRE (download_count from seed) and DOC_AID. We set counts explicitly
+    // so the assertion is deterministic regardless of seed values.
+    await adminClient.from("documents").update({ download_count: 50 }).eq("id", DOC_FIRE_ID);
+    await adminClient.from("documents").update({ download_count: 5 }).eq("id", DOC_AID_ID);
+
+    try {
+      const { listPublicDocuments } = await import("@/lib/documents/public");
+      const result = await listPublicDocuments({ sort: "popular" });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const ids = result.data.documents.map((d) => d.id);
+      // DOC_FIRE has the higher download_count → must appear before DOC_AID
+      expect(ids.indexOf(DOC_FIRE_ID)).toBeLessThan(ids.indexOf(DOC_AID_ID));
+    } finally {
+      // Restore to original counts so other tests are unaffected
+      await adminClient.from("documents").update({ download_count: 0 }).eq("id", DOC_FIRE_ID);
+      await adminClient.from("documents").update({ download_count: 0 }).eq("id", DOC_AID_ID);
+    }
+  });
+
+  it("EC1: soft-deleted document (deleted_at IS NOT NULL) does not appear in list", async () => {
+    const softDeletedId = "02000050-ffff-0000-0000-000000000094";
+    const catRes = await adminClient.from("categories").select("id").eq("slug", "fire-safety").single();
+    await adminClient.from("documents").upsert({
+      id: softDeletedId,
+      slug: "soft-deleted-s071-test",
+      title: "Soft Deleted Test Doc",
+      doc_kind: "checklist",
+      file_format: "pptx",
+      price_cents: 1000,
+      category_id: catRes.data?.id,
+      status: "published",
+      published_at: new Date(Date.now() - 86400000).toISOString(),
+      deleted_at: new Date().toISOString(),
+    }, { onConflict: "id" });
+
+    try {
+      const { listPublicDocuments } = await import("@/lib/documents/public");
+      const result = await listPublicDocuments({});
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const ids = result.data.documents.map((d) => d.id);
+      expect(ids).not.toContain(softDeletedId);
+    } finally {
+      await adminClient.from("documents").delete().eq("id", softDeletedId);
+    }
+  });
 });
