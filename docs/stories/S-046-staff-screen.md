@@ -1,11 +1,11 @@
 ---
 id: S-046
 title: Staff screen
-status: in-progress
+status: pr-open
 owner: frontend
 risk: sensitive
 branch: feature/S-046-staff-screen
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/77"
 depends_on: [S-039, S-045]
 reqs: [REQ-130, REQ-130c, REQ-130e, REQ-130f]
 ---
