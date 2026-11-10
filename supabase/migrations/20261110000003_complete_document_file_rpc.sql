@@ -54,7 +54,10 @@ BEGIN
 END;
 $$;
 
--- Strip the default PUBLIC grant (Postgres grants EXECUTE to PUBLIC by default).
--- Only the service role (used by all admin server actions) may call this function.
-REVOKE EXECUTE ON FUNCTION complete_document_file(uuid, bigint, text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION complete_document_file(uuid, bigint, text) TO service_role;
+-- Lock down function access: Supabase init grants anon/authenticated explicitly,
+-- so revoke from PUBLIC, anon, and authenticated individually (pattern from
+-- 20261101000001_ensure_profile_rpc.sql). Only service_role may call this.
+REVOKE ALL ON FUNCTION public.complete_document_file(uuid, bigint, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.complete_document_file(uuid, bigint, text) FROM anon;
+REVOKE ALL ON FUNCTION public.complete_document_file(uuid, bigint, text) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.complete_document_file(uuid, bigint, text) TO service_role;
