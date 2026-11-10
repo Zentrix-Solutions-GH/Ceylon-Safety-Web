@@ -1,11 +1,11 @@
 const en = {
   // --- auth flows ---
-  // auth.code_sent has an {email} parameter â€" used by t() parameter tests.
+  // auth.code_sent has an {email} parameter — used by t() parameter tests.
   "auth.code_sent": "We sent a code to {email}. Check your inbox.",
   "auth.already_registered":
     "If this email can be registered, we have sent a code. Already registered? Sign in or reset your password",
 
-  // --- error codes: common (auth design Â§17, M19) ---
+  // --- error codes: common (auth design §17, M19) ---
   "errors.validation_failed": "This value is not valid.",
   "errors.validation_failed.already_done": "This has already been done.",
   "errors.validation_failed.files_missing": "One or more required files are missing.",
@@ -28,7 +28,7 @@ const en = {
   "errors.mfa_required": "A second factor is required. Please check your authenticator.",
   "errors.unknown": "Something went wrong. Please try again.",
 
-  // --- error codes: auth-only (auth design Â§17) ---
+  // --- error codes: auth-only (auth design §17) ---
   "errors.invalid_credentials": "Email or password is not correct",
   "errors.email_not_verified": "Please verify your email address before signing in.",
   "errors.code_invalid": "That code is not right",
@@ -83,11 +83,11 @@ const en = {
   "auth.sign_in.forgot_password": "Forgot password?",
   "auth.sign_in.submit": "Sign in",
   "auth.sign_in.submitting": "Signing in…",
-  "auth.sign_in.no_account": "Don’t have an account?",
+  "auth.sign_in.no_account": "Don't have an account?",
   "auth.sign_in.sign_up_link": "Create one",
   "auth.sign_in.or": "or",
   "auth.sign_in.google_button": "Continue with Google",
-  "auth.sign_in.social_app_hint": "For Google sign-in, open this page in your phone’s normal browser",
+  "auth.sign_in.social_app_hint": "For Google sign-in, open this page in your phone's normal browser",
   "auth.sign_in.copy_link": "Copy link",
   "auth.sign_in.link_copied": "Link copied!",
 
@@ -161,21 +161,41 @@ const en = {
   "auth.verify_email.enter_email_submit": "Send code",
 
   // --- article editor (S-054) ---
+  "editor.container_label": "Article editor",
+  "editor.toolbar_label": "Formatting toolbar",
   "editor.style.h2": "Heading 2",
   "editor.style.h3": "Heading 3",
   "editor.style.body": "Body",
   "editor.style.quote": "Quote",
+  "editor.style.select_label": "Style",
+  "editor.font.select_label": "Font",
+  "editor.font.default": "Default font",
+  "editor.font.georgia": "Georgia",
+  "editor.font.arial": "Arial",
+  "editor.font.roboto": "Roboto",
+  "editor.font.open_sans": "Open Sans",
+  "editor.font.lato": "Lato",
   "editor.toolbar.bold": "Bold",
   "editor.toolbar.italic": "Italic",
   "editor.toolbar.underline": "Underline",
   "editor.toolbar.link": "Link",
   "editor.toolbar.bullet_list": "Bullet list",
   "editor.toolbar.numbered_list": "Numbered list",
+  "editor.toolbar.bold_symbol": "B",
+  "editor.toolbar.italic_symbol": "I",
+  "editor.toolbar.underline_symbol": "U",
+  "editor.toolbar.link_text": "Link",
+  "editor.toolbar.bullet_symbol": "•",
+  "editor.toolbar.numbered_symbol": "1.",
   "editor.paste_cleaned": "Cleaned {count} item(s) from pasted content",
   "editor.link.invalid_scheme": "Links must start with https:// or http://",
+  "editor.link.invalid_url": "This link address is not allowed.",
   "editor.link.too_long": "Link address is too long (max 2048 characters)",
   "editor.link.placeholder": "https://",
-  "editor.blocks_limit": "Maximum block count reached",
+  "editor.link.url_label": "Link URL",
+  "editor.link.apply": "Apply",
+  "editor.link.cancel": "Cancel",
+  "editor.blocks_limit": "Maximum block count reached. Remove a block to add more.",
 
   // --- cookie banner (S-029) ---
   "cookie.banner_label": "Cookie consent",
@@ -222,7 +242,7 @@ const en = {
   "profile.delete.description": "Permanently delete your account and all your data. This cannot be undone.",
   "profile.delete.button": "Delete account",
   "profile.delete.modal_heading": "Confirm account deletion",
-  "profile.delete.modal_description": "This will permanently delete your account. We’ll send a verification code to your email to confirm.",
+  "profile.delete.modal_description": "This will permanently delete your account. We'll send a verification code to your email to confirm.",
   "profile.delete.send_code": "Send code",
   "profile.delete.code_label": "Verification code",
   "profile.delete.confirm": "Delete my account",
@@ -252,7 +272,11 @@ const en = {
   "articles.card.likes": "{count} likes",
   "articles.card.comments": "{count} comments",
 
-  // ─── S-044: Admin MFA pages ───────────────────────────────────────────────
+  // --- article full page (S-060) ---
+  "article.back_to_articles": "Back to articles",
+  "article.unavailable": "This article is not available.",
+
+  // --- admin MFA pages (S-044) ---
   "admin.security.title": "Set up authenticator",
   "admin.security.heading": "Set up your authenticator app",
   "admin.security.instructions": "Scan the QR code with an authenticator app (e.g. Google Authenticator, Authy), then enter the 6-digit code to confirm.",
@@ -314,7 +338,7 @@ const en = {
 
 export type MessageKey = keyof typeof en;
 
-// AC1: typed key â€" unknown keys are compile errors.
+// AC1: typed key — unknown keys are compile errors.
 // EC1: one pass of replacement per param key; no recursion, no HTML interpretation.
 export function t(key: MessageKey, params?: Record<string, string>): string {
   let text: string = en[key];
