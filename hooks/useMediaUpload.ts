@@ -87,9 +87,7 @@ export function useMediaUpload(options: UseMediaUploadOptions): UseMediaUploadRe
 
       if (!confirmResult.ok) {
         setStatus("upload_failed");
-        if (confirmResult.code === "location_data_found") {
-          setErrorCode("location_data_found");
-        }
+        setErrorCode(confirmResult.code as UploadErrorCode);
         options.onUploadFailed?.();
         return;
       }
