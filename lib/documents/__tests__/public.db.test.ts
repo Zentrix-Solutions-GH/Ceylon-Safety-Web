@@ -45,21 +45,22 @@ describe.skipIf(!ENABLED)("getPublicDocument — single read and redirect (AC3, 
 
   it("EC5: returns redirect code for a slug found only in slug_redirects", async () => {
     const OLD_SLUG = "old-fire-safety-slug-s071-test";
-    // Insert a redirect row
     await adminClient.from("slug_redirects").upsert({
       old_slug: OLD_SLUG,
       entity_type: "document",
       entity_id: DOC_FIRE_ID,
     }, { onConflict: "old_slug,entity_type" });
 
-    const { getPublicDocument } = await import("@/lib/documents/public");
-    const result = await getPublicDocument(OLD_SLUG);
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.code).toBe("redirect");
-    expect((result as { newSlug: string }).newSlug).toBe(DOC_FIRE_SLUG);
-
-    await adminClient.from("slug_redirects").delete().eq("old_slug", OLD_SLUG).eq("entity_type", "document");
+    try {
+      const { getPublicDocument } = await import("@/lib/documents/public");
+      const result = await getPublicDocument(OLD_SLUG);
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.code).toBe("redirect");
+      expect((result as { newSlug: string }).newSlug).toBe(DOC_FIRE_SLUG);
+    } finally {
+      await adminClient.from("slug_redirects").delete().eq("old_slug", OLD_SLUG).eq("entity_type", "document");
+    }
   });
 
   it("returns not_found for unknown slug", async () => {
@@ -71,9 +72,9 @@ describe.skipIf(!ENABLED)("getPublicDocument — single read and redirect (AC3, 
   });
 
   it("AC4: document with no ready full file is listed as unavailable", async () => {
-    // Insert a published document with no document_files rows
     const noFileId = "02000050-ffff-0000-0000-000000000097";
     const noFileSlug = "no-file-doc-s071-test";
+    const catRes = await adminClient.from("categories").select("id").eq("slug", "fire-safety").single();
     await adminClient.from("documents").upsert({
       id: noFileId,
       slug: noFileSlug,
@@ -81,24 +82,27 @@ describe.skipIf(!ENABLED)("getPublicDocument — single read and redirect (AC3, 
       doc_kind: "checklist",
       file_format: "pptx",
       price_cents: 1000,
-      category_id: (await adminClient.from("categories").select("id").eq("slug", "fire-safety").single()).data?.id,
+      category_id: catRes.data?.id,
       status: "published",
       published_at: new Date(Date.now() - 86400000).toISOString(),
     }, { onConflict: "id" });
 
-    const { getPublicDocument } = await import("@/lib/documents/public");
-    const result = await getPublicDocument(noFileSlug);
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.document.unavailable).toBe(true);
-    expect(result.document.languages).toHaveLength(0);
-
-    await adminClient.from("documents").delete().eq("id", noFileId);
+    try {
+      const { getPublicDocument } = await import("@/lib/documents/public");
+      const result = await getPublicDocument(noFileSlug);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.document.unavailable).toBe(true);
+      expect(result.document.languages).toHaveLength(0);
+    } finally {
+      await adminClient.from("documents").delete().eq("id", noFileId);
+    }
   });
 
   it("EC1: document with status=draft does not appear in single read", async () => {
     const hiddenId = "02000050-ffff-0000-0000-000000000096";
     const hiddenSlug = "hidden-doc-s071-test-ec1";
+    const catRes = await adminClient.from("categories").select("id").eq("slug", "fire-safety").single();
     await adminClient.from("documents").upsert({
       id: hiddenId,
       slug: hiddenSlug,
@@ -106,22 +110,25 @@ describe.skipIf(!ENABLED)("getPublicDocument — single read and redirect (AC3, 
       doc_kind: "checklist",
       file_format: "pptx",
       price_cents: 1000,
-      category_id: (await adminClient.from("categories").select("id").eq("slug", "fire-safety").single()).data?.id,
+      category_id: catRes.data?.id,
       status: "draft",
     }, { onConflict: "id" });
 
-    const { getPublicDocument } = await import("@/lib/documents/public");
-    const result = await getPublicDocument(hiddenSlug);
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.code).toBe("not_found");
-
-    await adminClient.from("documents").delete().eq("id", hiddenId);
+    try {
+      const { getPublicDocument } = await import("@/lib/documents/public");
+      const result = await getPublicDocument(hiddenSlug);
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.code).toBe("not_found");
+    } finally {
+      await adminClient.from("documents").delete().eq("id", hiddenId);
+    }
   });
 
   it("EC1: soft-deleted document does not appear in single read", async () => {
     const deletedId = "02000050-ffff-0000-0000-000000000095";
     const deletedSlug = "deleted-doc-s071-test-ec1";
+    const catRes = await adminClient.from("categories").select("id").eq("slug", "fire-safety").single();
     await adminClient.from("documents").upsert({
       id: deletedId,
       slug: deletedSlug,
@@ -129,18 +136,20 @@ describe.skipIf(!ENABLED)("getPublicDocument — single read and redirect (AC3, 
       doc_kind: "checklist",
       file_format: "pptx",
       price_cents: 1000,
-      category_id: (await adminClient.from("categories").select("id").eq("slug", "fire-safety").single()).data?.id,
+      category_id: catRes.data?.id,
       status: "published",
       published_at: new Date(Date.now() - 86400000).toISOString(),
       deleted_at: new Date().toISOString(),
     }, { onConflict: "id" });
 
-    const { getPublicDocument } = await import("@/lib/documents/public");
-    const result = await getPublicDocument(deletedSlug);
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.code).toBe("not_found");
-
-    await adminClient.from("documents").delete().eq("id", deletedId);
+    try {
+      const { getPublicDocument } = await import("@/lib/documents/public");
+      const result = await getPublicDocument(deletedSlug);
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.code).toBe("not_found");
+    } finally {
+      await adminClient.from("documents").delete().eq("id", deletedId);
+    }
   });
 });

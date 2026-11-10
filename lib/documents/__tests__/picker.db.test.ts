@@ -46,7 +46,8 @@ describe.skipIf(!ENABLED)("listDocumentPickerItems — picker permission (AC6)",
     }
   });
 
-  it("customer (no staff role) cannot list picker items", async () => {
+  it("customer (authenticated but no staff role) cannot list picker items", async () => {
+    // requireStaff checks permissions server-side; a customer session is rejected
     mockRequireStaff.mockResolvedValue({ ok: false, code: "not_allowed" });
 
     const { listDocumentPickerItems } = await import("@/lib/documents/public");
@@ -54,9 +55,12 @@ describe.skipIf(!ENABLED)("listDocumentPickerItems — picker permission (AC6)",
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe("not_allowed");
+    // The mock must have been called — confirming the library delegates auth to requireStaff
+    expect(mockRequireStaff).toHaveBeenCalledOnce();
   });
 
   it("unauthenticated user cannot list picker items", async () => {
+    // requireStaff treats missing session the same as insufficient role
     mockRequireStaff.mockResolvedValue({ ok: false, code: "not_allowed" });
 
     const { listDocumentPickerItems } = await import("@/lib/documents/public");
@@ -64,5 +68,6 @@ describe.skipIf(!ENABLED)("listDocumentPickerItems — picker permission (AC6)",
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe("not_allowed");
+    expect(mockRequireStaff).toHaveBeenCalledOnce();
   });
 });

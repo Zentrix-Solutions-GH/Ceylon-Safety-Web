@@ -3,7 +3,7 @@
  * Run with: DOCUMENTS_PUBLIC_DB_TEST=1 npx vitest run lib/documents/__tests__/list.db.test.ts
  * Requires: local Supabase running with dev seed applied.
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
@@ -12,8 +12,6 @@ vi.mock("next/cache", () => ({
   unstable_cache: vi.fn((fn: unknown) => fn),
   revalidateTag: vi.fn(),
 }));
-
-import { vi } from "vitest";
 
 const ENABLED = process.env.DOCUMENTS_PUBLIC_DB_TEST === "1";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321";
@@ -31,8 +29,8 @@ describe.skipIf(!ENABLED)("listPublicDocuments — filters and sort (AC1, EC4)",
   });
 
   it("returns only published, non-deleted documents", async () => {
-    // Insert a hidden document, verify it does not appear
     const hiddenId = "02000050-ffff-0000-0000-000000000099";
+    const catRes = await adminClient.from("categories").select("id").eq("slug", "fire-safety").single();
     await adminClient.from("documents").upsert({
       id: hiddenId,
       slug: "hidden-doc-s071-test",
@@ -40,24 +38,27 @@ describe.skipIf(!ENABLED)("listPublicDocuments — filters and sort (AC1, EC4)",
       doc_kind: "checklist",
       file_format: "pptx",
       price_cents: 1000,
-      category_id: (await adminClient.from("categories").select("id").eq("slug", "fire-safety").single()).data?.id,
+      category_id: catRes.data?.id,
       status: "draft",
     }, { onConflict: "id" });
 
-    const { listPublicDocuments } = await import("@/lib/documents/public");
-    const result = await listPublicDocuments({});
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const ids = result.data.documents.map((d) => d.id);
-    expect(ids).toContain(DOC_FIRE_ID);
-    expect(ids).toContain(DOC_AID_ID);
-    expect(ids).not.toContain(hiddenId);
-
-    await adminClient.from("documents").delete().eq("id", hiddenId);
+    try {
+      const { listPublicDocuments } = await import("@/lib/documents/public");
+      const result = await listPublicDocuments({});
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const ids = result.data.documents.map((d) => d.id);
+      expect(ids).toContain(DOC_FIRE_ID);
+      expect(ids).toContain(DOC_AID_ID);
+      expect(ids).not.toContain(hiddenId);
+    } finally {
+      await adminClient.from("documents").delete().eq("id", hiddenId);
+    }
   });
 
   it("returns only documents where published_at is not in the future", async () => {
     const futureId = "02000050-ffff-0000-0000-000000000098";
+    const catRes = await adminClient.from("categories").select("id").eq("slug", "fire-safety").single();
     await adminClient.from("documents").upsert({
       id: futureId,
       slug: "future-doc-s071-test",
@@ -65,19 +66,21 @@ describe.skipIf(!ENABLED)("listPublicDocuments — filters and sort (AC1, EC4)",
       doc_kind: "checklist",
       file_format: "pptx",
       price_cents: 1000,
-      category_id: (await adminClient.from("categories").select("id").eq("slug", "fire-safety").single()).data?.id,
+      category_id: catRes.data?.id,
       status: "published",
       published_at: new Date(Date.now() + 86400000).toISOString(),
     }, { onConflict: "id" });
 
-    const { listPublicDocuments } = await import("@/lib/documents/public");
-    const result = await listPublicDocuments({});
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const ids = result.data.documents.map((d) => d.id);
-    expect(ids).not.toContain(futureId);
-
-    await adminClient.from("documents").delete().eq("id", futureId);
+    try {
+      const { listPublicDocuments } = await import("@/lib/documents/public");
+      const result = await listPublicDocuments({});
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const ids = result.data.documents.map((d) => d.id);
+      expect(ids).not.toContain(futureId);
+    } finally {
+      await adminClient.from("documents").delete().eq("id", futureId);
+    }
   });
 
   it("filters by type (doc_kind)", async () => {
