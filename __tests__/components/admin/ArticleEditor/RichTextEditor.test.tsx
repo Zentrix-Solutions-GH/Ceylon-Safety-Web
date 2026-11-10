@@ -74,9 +74,9 @@ describe("countUnknownPastedNodes — AC3: paste cleaning utility", () => {
     expect(countUnknownPastedNodes(html)).toBeGreaterThan(0);
   });
 
-  it("counts <script> as a cleaned element (discarded, not promoted)", () => {
+  it("does not count <script> — it is silently discarded, not reported in the toast", () => {
     const html = "<p>text</p><script>alert(1)</script>";
-    expect(countUnknownPastedNodes(html)).toBeGreaterThan(0);
+    expect(countUnknownPastedNodes(html)).toBe(0);
   });
 
   it("does not count known elements", () => {

@@ -19,7 +19,9 @@ const NamedFont = Mark.create({
     return [{ tag: "span[data-font]", getAttrs: (el) => ({ font: (el as HTMLElement).getAttribute("data-font") }) }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["span", { "data-font": HTMLAttributes.font, style: `font-family: ${HTMLAttributes.font}` }, 0];
+    const font = (ALLOWED_FONTS as readonly string[]).includes(HTMLAttributes.font) ? HTMLAttributes.font : null;
+    if (!font) return ["span", {}, 0];
+    return ["span", { "data-font": font, style: `font-family: ${font}` }, 0];
   },
 });
 
@@ -69,7 +71,7 @@ export function countUnknownPastedNodes(html: string): number {
   const rootUnknownCount = unknownEls.filter(
     (el) => !el.parentElement || el.parentElement === div || KNOWN_PASTE_TAGS.has(el.parentElement.tagName)
   ).length;
-  return discardCount + rootUnknownCount;
+  return rootUnknownCount;
 }
 
 /** Returns the list nesting depth at a ProseMirror resolved position. */
