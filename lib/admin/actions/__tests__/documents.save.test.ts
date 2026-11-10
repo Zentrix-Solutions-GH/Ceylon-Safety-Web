@@ -337,7 +337,6 @@ describe("listDocuments / getDocument — EC6: role gate on read path", () => {
 
   it("listDocuments returns not_allowed for a Maintainer (no documents.* permission)", async () => {
     vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" } as never);
-    const { listDocuments } = await import("@/lib/admin/actions/documents");
     const result = await listDocuments({});
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("not_allowed");
