@@ -161,3 +161,24 @@ describe("AC7 — permission: unauthenticated refused", () => {
     expect(result.code).toBe("not_allowed");
   });
 });
+
+describe("S17 — suspended user blocked", () => {
+  it("startDocumentFileUpload returns not_allowed for a suspended user", async () => {
+    // requireStaff returns not_allowed when the user is suspended (handled centrally)
+    mockRequireStaff.mockResolvedValue({ ok: false, code: "not_allowed" });
+    const result = await startDocumentFileUpload({
+      documentId: DOC_ID, kind: "full", language: "en", sortOrder: 1, format: "pptx", sizeBytes: 5_000_000,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("not_allowed");
+  });
+
+  it("completeDocumentFileUpload returns not_allowed for a suspended user", async () => {
+    mockRequireStaff.mockResolvedValue({ ok: false, code: "not_allowed" });
+    const result = await completeDocumentFileUpload(FILE_ID);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("not_allowed");
+  });
+});
