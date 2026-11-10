@@ -450,3 +450,26 @@ describe("EC6: unknown error", () => {
     });
   });
 });
+
+// ─── P2: formatDate helper ────────────────────────────────────────────────────
+
+describe("formatDate via StaffTable render", () => {
+  it("shows 'Never' when lastSignInAt is null", async () => {
+    const { StaffTable } = await import("@/components/admin/StaffTable");
+    const neverRow: StaffListItem[] = [
+      { userId: "u1", email: "x@example.com", role: "editor", lastSignInAt: null, hasTotpEnrolled: true },
+    ];
+    render(<StaffTable staff={neverRow} currentUserId="other" onRefresh={vi.fn()} />);
+    expect(screen.getByText(/never/i)).toBeInTheDocument();
+  });
+
+  it("formats a known ISO date as a locale string", async () => {
+    const { StaffTable } = await import("@/components/admin/StaffTable");
+    const dateRow: StaffListItem[] = [
+      { userId: "u2", email: "y@example.com", role: "admin", lastSignInAt: "2026-11-09T10:00:00Z", hasTotpEnrolled: true },
+    ];
+    render(<StaffTable staff={dateRow} currentUserId="other" onRefresh={vi.fn()} />);
+    // toLocaleDateString with en-GB produces "09 Nov 2026" — verify year is present
+    expect(screen.getByText(/2026/)).toBeInTheDocument();
+  });
+});
