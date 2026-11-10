@@ -150,7 +150,7 @@ $ npx vitest run lib/documents/__tests__
 Supabase not running — pgTAP and types-freshness checks skipped per CLAUDE.md.
 ```
 
-Round 2 gap analysis and fixes (2026-11-10 — context continuation):
+Full-review P0/P1/P2 fixes (2026-11-10 — context continuation):
 
 ```
 $ npx tsc --noEmit
@@ -170,6 +170,26 @@ $ npx vitest run lib/documents/__tests__
       Tests  39 passed | 6 skipped (45)
 
 lib/cache/__tests__/purge.test.ts fails due to missing config mock — pre-existing failure from S-048, not in this branch's diff.
+```
+
+Post-fix run (2026-11-10):
+
+```
+$ npx tsc --noEmit
+(exit 0 — no output)
+
+$ npx vitest run lib/documents/__tests__
+ ↓ lib/documents/__tests__/publish.db.test.ts (4 tests | 4 skipped — requires Supabase)
+ ↓ lib/documents/__tests__/versions.db.test.ts (2 tests | 2 skipped — requires Supabase)
+ ✓ lib/documents/__tests__/audit.db.test.ts (9 tests)
+ ✓ lib/documents/__tests__/perm.db.test.ts (8 tests)
+ ✓ lib/documents/__tests__/shape.test.ts (3 tests)
+ ✓ lib/documents/__tests__/upload.test.ts (13 tests)
+ ✓ lib/documents/__tests__/purge.test.ts (3 tests)
+ ✓ lib/documents/__tests__/complete.test.ts (12 tests)
+
+ Test Files  6 passed | 2 skipped (8)
+      Tests  48 passed | 6 skipped (54)
 ```
 
 Round 1 review (security-reviewer + adversarial reviewer) found 3 P0 findings; fixed:
