@@ -17,7 +17,7 @@ vi.mock("@tiptap/extension-underline", () => ({ default: {} }));
 vi.mock("@tiptap/extension-link", () => ({ default: { configure: vi.fn(() => ({})) } }));
 vi.mock("@tiptap/core", () => ({ Mark: { create: vi.fn(() => ({})) }, Node: { create: vi.fn(() => ({})) } }));
 
-import { RichTextEditor, countUnknownPastedNodes, getListDepthFromResolvedPos } from "@/components/admin/ArticleEditor/RichTextEditor";
+import { RichTextEditor, countUnknownPastedNodes, getListDepthFromResolvedPos, hasPendingImageNode } from "@/components/admin/ArticleEditor/RichTextEditor";
 import { MAX_LIST_DEPTH } from "@/lib/content/schema";
 
 describe("RichTextEditor — AC1: renders without crashing", () => {
@@ -138,5 +138,35 @@ describe("getListDepthFromResolvedPos — AC4: Tab key depth limiting", () => {
     const resolved = makeResolvedPos(["doc", "bulletList", "listItem", "paragraph"]);
     const depth = getListDepthFromResolvedPos(resolved);
     expect(depth >= MAX_LIST_DEPTH).toBe(false);
+  });
+});
+
+describe("hasPendingImageNode — AC3: publish blocked while upload incomplete", () => {
+  it("returns false for a doc with no image nodes", () => {
+    expect(hasPendingImageNode({ type: "doc", content: [{ type: "paragraph" }] })).toBe(false);
+  });
+
+  it("returns false for a doc with an image node that has a key (upload complete)", () => {
+    expect(hasPendingImageNode({
+      type: "doc",
+      content: [{ type: "image", attrs: { key: "media/abc123/480.webp", node_id: "x" } }],
+    })).toBe(false);
+  });
+
+  it("returns true for a doc with an image node whose key is null (upload in-progress or pending)", () => {
+    expect(hasPendingImageNode({
+      type: "doc",
+      content: [{ type: "image", attrs: { key: null, node_id: "x" } }],
+    })).toBe(true);
+  });
+
+  it("detects a pending image nested inside another block", () => {
+    expect(hasPendingImageNode({
+      type: "doc",
+      content: [
+        { type: "paragraph" },
+        { type: "image", attrs: { key: null, node_id: "y" } },
+      ],
+    })).toBe(true);
   });
 });

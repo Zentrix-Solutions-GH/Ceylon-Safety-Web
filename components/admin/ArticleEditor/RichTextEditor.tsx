@@ -113,6 +113,15 @@ const KNOWN_PASTE_TAGS = new Set(["P", "H1", "H2", "H3", "H4", "H5", "H6", "STRO
  * Count root-level structural elements in pasted HTML that will be unwrapped.
  * Script/style/noscript/meta/link are silently discarded and not counted.
  */
+/** Returns true if the editor doc contains any image node whose upload is not yet complete (key is null). Used by S-057 save flow to block publish. */
+export function hasPendingImageNode(doc: JSONContent): boolean {
+  if (!doc.content) return false;
+  return doc.content.some((node) => {
+    if (node.type === "image") return !node.attrs?.key;
+    return hasPendingImageNode(node);
+  });
+}
+
 export function countUnknownPastedNodes(html: string): number {
   if (typeof document === "undefined") return 0;
   const div = document.createElement("div");
