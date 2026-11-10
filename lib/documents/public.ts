@@ -345,11 +345,14 @@ export async function listDocumentPickerItems(
 
   const supabase = createSupabaseAnonClient();
 
+  const now = new Date().toISOString();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query: any = supabase
     .from("documents")
     .select("id, slug, title, cover_image_key, price_cents")
     .eq("status", "published")
+    .lte("published_at", now)
     .is("deleted_at", null)
     .range(from, to);
 
