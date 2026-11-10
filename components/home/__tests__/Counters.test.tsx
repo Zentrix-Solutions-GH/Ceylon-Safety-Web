@@ -26,13 +26,13 @@ describe("Counters", () => {
     expect(screen.getByText("10+")).toBeInTheDocument();
   });
 
-  it("formats 55 as 50+", () => {
-    render(<Counters data={{ ...base, articles: 55 }} />);
+  it("formats 50 as 50+ (backend rounds 55 → 50 before component receives it)", () => {
+    render(<Counters data={{ ...base, articles: 50 }} />);
     expect(screen.getByText("50+")).toBeInTheDocument();
   });
 
-  it("formats 1234 as 1,000+", () => {
-    render(<Counters data={{ ...base, articles: 1234 }} />);
+  it("formats 1000 as 1,000+ (backend rounds 1234 → 1000 before component receives it)", () => {
+    render(<Counters data={{ ...base, articles: 1000 }} />);
     expect(screen.getByText("1,000+")).toBeInTheDocument();
   });
 

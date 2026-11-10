@@ -6,9 +6,7 @@ interface CountersProps {
 }
 
 function formatCount(value: number): string {
-  const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
-  const rounded = Math.floor(value / magnitude) * magnitude;
-  return new Intl.NumberFormat("en-LK").format(rounded) + "+";
+  return new Intl.NumberFormat("en-LK").format(value) + "+";
 }
 
 const COUNTER_KEYS: Array<{

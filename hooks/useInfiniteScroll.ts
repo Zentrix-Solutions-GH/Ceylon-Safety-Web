@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback } from "react";
 
-interface UseInfiniteScrollOptions {
+export interface UseInfiniteScrollOptions {
   page: number;
   autoLoadUntilPage: number;
   hasMore: boolean;
@@ -20,17 +20,22 @@ export function useInfiniteScroll({
   onLoad,
 }: UseInfiniteScrollOptions): UseInfiniteScrollResult {
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const loadingRef = useRef(false);
+
+  // Keep refs in sync each render so tryLoad can use current values without
+  // being re-created — a stable tryLoad means the observer never reconnects.
+  const pageRef = useRef(page);
+  const autoLoadUntilPageRef = useRef(autoLoadUntilPage);
+  const hasMoreRef = useRef(hasMore);
+  const onLoadRef = useRef(onLoad);
+  pageRef.current = page;
+  autoLoadUntilPageRef.current = autoLoadUntilPage;
+  hasMoreRef.current = hasMore;
+  onLoadRef.current = onLoad;
 
   const tryLoad = useCallback(async () => {
-    if (loadingRef.current || !hasMore || page >= autoLoadUntilPage) return;
-    loadingRef.current = true;
-    try {
-      await onLoad();
-    } finally {
-      loadingRef.current = false;
-    }
-  }, [hasMore, page, autoLoadUntilPage, onLoad]);
+    if (!hasMoreRef.current || pageRef.current >= autoLoadUntilPageRef.current) return;
+    await onLoadRef.current();
+  }, []); // stable — deps read via refs
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -47,7 +52,7 @@ export function useInfiniteScroll({
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [tryLoad]);
+  }, [tryLoad]); // tryLoad is now stable → effect runs once
 
   return { ref: sentinelRef };
 }

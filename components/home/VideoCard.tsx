@@ -8,8 +8,10 @@ interface VideoCardProps {
   item: VideoFeedItem;
 }
 
+const MEDIA_BASE = process.env.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL ?? "";
+
 export function VideoCard({ item }: VideoCardProps) {
-  const imgSrc = item.coverImageKey ?? PLACEHOLDER;
+  const imgSrc = item.coverImageKey ? `${MEDIA_BASE}/${item.coverImageKey}` : PLACEHOLDER;
 
   return (
     <Link
@@ -26,7 +28,7 @@ export function VideoCard({ item }: VideoCardProps) {
           className="h-full w-full object-cover transition group-hover:scale-105"
           onError={(e) => { (e.currentTarget as HTMLImageElement).src = PLACEHOLDER; }}
         />
-        <span className="absolute inset-0 flex items-center justify-center">
+        <span className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/60 text-white text-xl">
             &#9654;
           </span>

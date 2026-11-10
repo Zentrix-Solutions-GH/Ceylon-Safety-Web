@@ -1,6 +1,8 @@
 ﻿"use client";
 
 import { useState, useCallback, useRef } from "react";
+
+const MEDIA_BASE = process.env.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL ?? "";
 import { t } from "@/messages/en";
 import { ArticleCardUI } from "@/components/articles/ArticleCard";
 import { VideoCard } from "@/components/home/VideoCard";
@@ -32,12 +34,13 @@ function FeedCard({ item }: { item: FeedItem }) {
   if (item.kind === "video") {
     return <VideoCard item={item} />;
   }
+  if (!item.slug) return null;
   return (
     <ArticleCardUI
-      slug={item.slug ?? ""}
+      slug={item.slug}
       title={item.title}
       excerpt={item.excerpt}
-      categoryName={item.categoryId ?? ""}
+      coverUrl={item.coverImageKey ? `${MEDIA_BASE}/${item.coverImageKey}` : undefined}
       authorName={item.authorName ?? ""}
       publishedAt={item.publishedAt}
       likeCount={item.likeCount}
@@ -52,15 +55,18 @@ export function Feed({ firstPage, autoLoadUntilPage }: FeedProps) {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  // Keep a ref in sync with cursor so loadMore is stable (no cursor dep → no observer cascade)
+  const cursorRef = useRef<string | null>(firstPage.nextCursor);
+  cursorRef.current = cursor;
   const loadingGuard = useRef(false);
 
   const loadMore = useCallback(async () => {
-    if (!cursor || loadingGuard.current) return;
+    if (!cursorRef.current || loadingGuard.current) return;
     loadingGuard.current = true;
     setLoading(true);
     setError(false);
     try {
-      const res = await fetch(`/api/feed?cursor=${encodeURIComponent(cursor)}`);
+      const res = await fetch(`/api/feed?cursor=${encodeURIComponent(cursorRef.current)}`);
       const json = await res.json() as { ok: boolean; data?: FeedPage };
       if (!json.ok || !json.data) {
         setError(true);
@@ -75,7 +81,7 @@ export function Feed({ firstPage, autoLoadUntilPage }: FeedProps) {
       setLoading(false);
       loadingGuard.current = false;
     }
-  }, [cursor]);
+  }, []);
 
   const { ref: sentinelRef } = useInfiniteScroll({
     page,

@@ -13,7 +13,10 @@ export const metadata: Metadata = {
 const AUTO_LOAD_UNTIL_PAGE = 3;
 
 export default async function HomePage() {
-  const [feedResult, counters] = await Promise.all([getFeed(), getCounters()]);
+  const [feedResult, counters] = await Promise.all([
+    getFeed().catch(() => ({ ok: false as const, page: undefined })),
+    getCounters().catch(() => ({ articles: null, documents: null, users: null, downloads: null })),
+  ]);
 
   const firstPage = feedResult.ok
     ? feedResult.page
