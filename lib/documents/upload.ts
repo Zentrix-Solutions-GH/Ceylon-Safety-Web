@@ -114,11 +114,12 @@ export async function startDocumentFileUpload(
 
   const supabase = createSupabaseServiceRoleClient();
 
-  // Verify document exists (AC1)
+  // Verify document exists and is not soft-deleted (AC1)
   const { data: doc, error: docErr } = await supabase
     .from("documents")
     .select("id")
     .eq("id", input.documentId)
+    .is("deleted_at", null)
     .single();
 
   if (docErr || !doc) return { ok: false, code: "not_found" };
@@ -175,7 +176,14 @@ export async function startDocumentFileUpload(
     jpg:  "image/jpeg",
   };
   const mimeType = MIME[input.format] ?? "application/octet-stream";
-  const uploadUrl = await presignedPut(cfg.bucketPrivate, key, mimeType);
+  let uploadUrl: string;
+  try {
+    uploadUrl = await presignedPut(cfg.bucketPrivate, key, mimeType);
+  } catch {
+    // R2 unavailable — delete the pending row so it doesn't litter the DB
+    await supabase.from("document_files").delete().eq("id", row.id);
+    return { ok: false, code: "upload_failed" };
+  }
 
   // Audit (AC8)
   await writeAuditRow({

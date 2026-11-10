@@ -74,13 +74,8 @@ beforeEach(() => {
 
   mockFrom.mockImplementation((table: string) => {
     if (table === "documents") {
-      return {
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }),
-          }),
-        }),
-      };
+      const inner = { single: vi.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }) };
+      return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue(inner) }) }) };
     }
     // document_files: handles select (version lookup + complete fetch) and insert
     return {

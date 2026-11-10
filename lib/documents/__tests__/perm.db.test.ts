@@ -34,6 +34,10 @@ vi.mock("@/lib/ratelimit/index", () => ({
   checkAdminWriteLimit: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
+vi.mock("@/lib/cache/purge", () => ({
+  purgeDocument: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
 vi.mock("@/lib/auth/server", () => ({ requireStaff: vi.fn() }));
 
 const mockFrom = vi.fn();
@@ -43,6 +47,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { startDocumentFileUpload, completeDocumentFileUpload } from "@/lib/documents/upload";
+import { setDocumentStatus } from "@/lib/documents/publish";
 import { requireStaff } from "@/lib/auth/server";
 const mockRequireStaff = vi.mocked(requireStaff);
 
@@ -68,13 +73,11 @@ function setupAllowedMocks() {
 
   mockFrom.mockImplementation((table: string) => {
     if (table === "documents") {
-      return {
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }),
-          }),
-        }),
-      };
+      // startDocumentFileUpload: .eq("id", ...).is("deleted_at", null).single()
+      const docSingle = { single: vi.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }) };
+      const docIs = { is: vi.fn().mockReturnValue(docSingle) };
+      const docEq = { eq: vi.fn().mockReturnValue(docIs) };
+      return { select: vi.fn().mockReturnValue(docEq) };
     }
     return {
       select: vi.fn().mockReturnValue({
@@ -177,6 +180,24 @@ describe("S17 — suspended user blocked", () => {
   it("completeDocumentFileUpload returns not_allowed for a suspended user", async () => {
     mockRequireStaff.mockResolvedValue({ ok: false, code: "not_allowed" });
     const result = await completeDocumentFileUpload(FILE_ID);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("not_allowed");
+  });
+});
+
+describe("AC7 — permission: setDocumentStatus refused for non-staff", () => {
+  it("setDocumentStatus returns not_allowed for a customer session", async () => {
+    mockRequireStaff.mockResolvedValue({ ok: false, code: "not_allowed" });
+    const result = await setDocumentStatus(DOC_ID, "publish", new Date().toISOString());
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("not_allowed");
+  });
+
+  it("setDocumentStatus returns not_allowed for a suspended user", async () => {
+    mockRequireStaff.mockResolvedValue({ ok: false, code: "not_allowed" });
+    const result = await setDocumentStatus(DOC_ID, "hide", new Date().toISOString());
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe("not_allowed");

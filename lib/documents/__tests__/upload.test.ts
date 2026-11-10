@@ -89,13 +89,9 @@ function mockInsert(fileId: string) {
   let callCount = 0;
   mockFrom.mockImplementation((table: string) => {
     if (table === "documents") {
-      return {
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }),
-          }),
-        }),
-      };
+      // .eq("id", ...).is("deleted_at", null).single()
+      const inner = { single: vi.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }) };
+      return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue(inner) }) }) };
     }
     if (table === "document_files") {
       callCount++;
@@ -290,13 +286,8 @@ describe("EC1 — retry when pending row exists for the same slot", () => {
     let callCount = 0;
     mockFrom.mockImplementation((table: string) => {
       if (table === "documents") {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }),
-            }),
-          }),
-        };
+        const inner = { single: vi.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }) };
+        return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue(inner) }) }) };
       }
       if (table === "document_files") {
         callCount++;
@@ -345,12 +336,9 @@ describe("startDocumentFileUpload — permission / rate limit", () => {
   });
 
   it("not_found when document does not exist", async () => {
+    const inner = { single: vi.fn().mockResolvedValue({ data: null, error: { code: "PGRST116" } }) };
     mockFrom.mockImplementation(() => ({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({ data: null, error: { code: "PGRST116" } }),
-        }),
-      }),
+      select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue(inner) }) }),
     }));
     const result = await startDocumentFileUpload({
       documentId: DOC_ID, kind: "full", language: "en", sortOrder: 1, format: "pptx", sizeBytes: 1000,
@@ -358,5 +346,40 @@ describe("startDocumentFileUpload — permission / rate limit", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe("not_found");
+  });
+
+  it("not_found when document is soft-deleted (deleted_at IS NOT NULL)", async () => {
+    // .is("deleted_at", null) returns no row for a soft-deleted document
+    const inner = { single: vi.fn().mockResolvedValue({ data: null, error: { code: "PGRST116" } }) };
+    mockFrom.mockImplementation(() => ({
+      select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue(inner) }) }),
+    }));
+    const result = await startDocumentFileUpload({
+      documentId: DOC_ID, kind: "full", language: "en", sortOrder: 1, format: "pptx", sizeBytes: 1000,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("not_found");
+  });
+
+  it("upload_failed when presignedPut throws (R2 unavailable)", async () => {
+    mockPresignedPut.mockRejectedValueOnce(new Error("R2 network error"));
+    // Insert succeeds, presignedPut throws — pending row should be cleaned up
+    const mockDelete = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
+    const origImpl = mockFrom.getMockImplementation();
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "document_files") {
+        const base = origImpl ? origImpl(table) : {};
+        return { ...base, delete: mockDelete };
+      }
+      return origImpl ? origImpl(table) : {};
+    });
+    const result = await startDocumentFileUpload({
+      documentId: DOC_ID, kind: "full", language: "en", sortOrder: 1, format: "pptx", sizeBytes: 5_000_000,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("upload_failed");
+    expect(mockDelete).toHaveBeenCalled();
   });
 });

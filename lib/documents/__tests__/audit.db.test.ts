@@ -76,13 +76,9 @@ function setupMocks() {
 
   mockFrom.mockImplementation((table: string) => {
     if (table === "documents") {
-      return {
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }),
-          }),
-        }),
-      };
+      // startDocumentFileUpload: .eq("id", ...).is("deleted_at", null).single()
+      const inner = { single: vi.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }) };
+      return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue(inner) }) }) };
     }
     return {
       select: vi.fn().mockReturnValue({
@@ -281,6 +277,39 @@ describe("EC6 — hide allowed even when article_refs exist", () => {
     const result = await setDocumentStatus(DOC_ID, "hide", UPDATED_AT);
     expect(result.ok).toBe(true);
     // hide has no file condition — succeeds regardless of article refs
+  });
+});
+
+describe("P1 — TOCTOU: concurrent publish returns version_conflict", () => {
+  it("setDocumentStatus returns version_conflict when UPDATE matches 0 rows (PGRST116)", async () => {
+    // Simulate the race: doc fetched ok, but UPDATE finds 0 rows (another request won)
+    const docRow = {
+      id: DOC_ID, status: "draft",
+      updated_at: UPDATED_AT, price_cents: 1500, category_id: "cat-1",
+    };
+    // We need a mock where publish path skips file checks (only for hide)
+    // Use hide to avoid the full-file and preview checks
+    const selectInner = { single: vi.fn().mockResolvedValue({ data: docRow, error: null }) };
+    const selectEq = { eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue(selectInner) }) };
+    // UPDATE returns PGRST116 (zero rows matched)
+    const updateSingle = {
+      single: vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: "PGRST116", message: "0 rows" },
+      }),
+    };
+    const updateSelect = { select: vi.fn().mockReturnValue(updateSingle) };
+    const updateEq2 = { eq: vi.fn().mockReturnValue(updateSelect) };
+    const updateEq1 = { eq: vi.fn().mockReturnValue(updateEq2) };
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "documents") return { select: vi.fn().mockReturnValue(selectEq), update: vi.fn().mockReturnValue(updateEq1) };
+      return {};
+    });
+
+    const result = await setDocumentStatus(DOC_ID, "hide", UPDATED_AT);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("version_conflict");
   });
 });
 

@@ -203,6 +203,10 @@ Round 1 review (security-reviewer + adversarial reviewer) found 3 P0 findings; f
 - **P0** `lib/documents/publish.ts:29-35` — `setDocumentStatus` does not filter `deleted_at IS NULL`; a soft-deleted document can be re-published. Fix: add `.is("deleted_at", null)` to the fetch. (full-review 2026-11-10)
 - **P1** `lib/documents/publish.ts:85-93` — TOCTOU race: app-level `updated_at` version-conflict check passes but UPDATE has no `.eq("updated_at", doc.updated_at)` guard; two concurrent publish calls can both succeed. (full-review 2026-11-10)
 - **P1** `lib/documents/__tests__/audit.db.test.ts` — AC8 audit tests only verify the `writeAuditRow` call site via mock; the actual DB row is never written or read back. Add a pgTAP test against real Supabase. (full-review 2026-11-10)
+- **P1** `lib/documents/upload.ts:118-124` — `startDocumentFileUpload` document existence check missing `.is("deleted_at", null)`; staff can upload files to soft-deleted document creating orphaned rows and R2 objects. (full-review round 3 2026-11-10)
+- **P1** `lib/documents/upload.ts:178` — `presignedPut` throw not caught; pending DB row already inserted when R2 call fails; caller gets unhandled 500. Wrap in try/catch, delete pending row on error, return `upload_failed`. (full-review round 3 2026-11-10)
+- **P1** `lib/documents/__tests__/perm.db.test.ts` — `setDocumentStatus` not_allowed path not tested. (full-review round 3 2026-11-10)
+- **P1** `lib/documents/publish.ts:85-98` — TOCTOU fix (zero-row UPDATE → `version_conflict`) has no test. (full-review round 3 2026-11-10)
 
 ## After this merges, a user can:
 

@@ -42,6 +42,7 @@ export type StartUploadResult =
   | { ok: false; code: "not_found" }
   | { ok: false; code: "validation_failed"; reason: "file_type" }
   | { ok: false; code: "rate_limited" }
+  | { ok: false; code: "upload_failed" }
   | { ok: false; code: "unknown"; reason?: string };
 
 export type SetDocumentStatusResult =
