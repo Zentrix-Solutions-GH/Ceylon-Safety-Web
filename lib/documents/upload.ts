@@ -225,9 +225,14 @@ export async function completeDocumentFileUpload(fileId: string): Promise<Upload
     return { ok: false, code: "upload_failed" };
   }
 
-  // EC8: size check (zero bytes OR over limit)
+  // EC8: size check — zero bytes OR over limit
   const maxBytes = row.kind === "full" ? PPTX_MAX_BYTES : PREVIEW_MAX_BYTES;
-  if (meta.contentLength <= 0 || meta.contentLength > maxBytes) {
+  if (meta.contentLength <= 0) {
+    await deleteObject(cfg.bucketPrivate, row.file_key);
+    await markFailed(supabase, fileId);
+    return { ok: false, code: "validation_failed", reason: "file_type" };
+  }
+  if (meta.contentLength > maxBytes) {
     await deleteObject(cfg.bucketPrivate, row.file_key);
     await markFailed(supabase, fileId);
     return { ok: false, code: "validation_failed", reason: "file_too_large" };

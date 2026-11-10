@@ -42,9 +42,8 @@ export async function setDocumentStatus(
     const missing: string[] = [];
 
     // Price and category
-    if (!doc.price_cents || !doc.category_id) {
-      missing.push("price_or_category");
-    }
+    if (!doc.price_cents) missing.push("price");
+    if (!doc.category_id) missing.push("category");
 
     // Three ready full files
     const { data: fullFiles } = await supabase

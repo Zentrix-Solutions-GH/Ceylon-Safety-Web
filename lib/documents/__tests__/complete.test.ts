@@ -133,7 +133,7 @@ describe("completeDocumentFileUpload — AC3 real-type check", () => {
 });
 
 describe("completeDocumentFileUpload — EC8 size", () => {
-  it("zero-byte file is rejected with file_too_large (edge: empty)", async () => {
+  it("zero-byte file is rejected with file_type (edge: empty file is not valid)", async () => {
     setupPendingRow("full", "pptx");
     mockHeadObject.mockResolvedValue({ contentLength: 0 });
     mockGetObjectBytes.mockResolvedValue(PPTX_MAGIC);
@@ -143,7 +143,7 @@ describe("completeDocumentFileUpload — EC8 size", () => {
     if (result.ok) return;
     expect(result.code).toBe("validation_failed");
     if (result.code !== "validation_failed") return;
-    expect(result.reason).toBe("file_too_large");
+    expect(result.reason).toBe("file_type");
   });
 
   it("file just over pptx limit is rejected with file_too_large", async () => {
