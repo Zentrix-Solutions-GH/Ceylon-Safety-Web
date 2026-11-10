@@ -27,6 +27,26 @@ vi.mock("next/font/google", () => ({
   Noto_Sans_Tamil: () => ({ variable: "--font-tamil", className: "" }),
 }));
 
+// S-045: AdminLayout is an async RSC — render AdminShell (its client wrapper) for
+// layout structure tests. Server-side data-fetching is tested in __tests__/admin/.
+vi.mock("@/app/admin/layout", async () => {
+  const { default: AdminShell } = await import("@/app/admin/AdminShell");
+  const React = await import("react");
+  return {
+    __esModule: true,
+    metadata: { robots: { index: false, follow: false } },
+    default: ({ children }: { children: React.ReactNode }) =>
+      React.createElement(
+        AdminShell,
+        { displayName: "Admin User", email: "admin@example.com", role: "admin" as const },
+        children
+      ),
+  };
+});
+vi.mock("@/lib/auth/actions/sign-out", () => ({
+  signOut: vi.fn(),
+}));
+
 // Mocks for RootLayout and PublicLayout
 vi.mock("@/components/ui/toaster", () => ({ Toaster: () => null }));
 vi.mock("@/components/layout/CookieConsentBanner", () => ({ default: () => null }));
@@ -196,11 +216,14 @@ describe("AdminLayout", () => {
     expect(screen.getByTestId("child")).toBeInTheDocument();
   });
 
-  it("has no public Header or Footer", () => {
+  it("has no public Footer (contentinfo)", () => {
     render(<AdminLayout><div /></AdminLayout>);
-    expect(screen.queryByRole("banner")).toBeNull();
-    expect(screen.queryByRole("navigation")).toBeNull();
     expect(screen.queryByRole("contentinfo")).toBeNull();
+  });
+
+  it("has an admin navigation sidebar", () => {
+    render(<AdminLayout><div /></AdminLayout>);
+    expect(screen.getByRole("navigation", { name: /admin navigation/i })).toBeInTheDocument();
   });
 
   it("exports noindex metadata", async () => {

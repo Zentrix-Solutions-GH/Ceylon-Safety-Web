@@ -79,7 +79,7 @@ function checkLinkLengths(nodes: unknown[]): string | null {
 }
 
 /** Returns an error string if the href is not a valid article link, null if ok. */
-function validateLinkHref(href: string): string | null {
+export function validateLinkHref(href: string): string | null {
   // Allow only https:// and http:// schemes (D6, content design §6.1)
   let url: URL;
   try {
@@ -166,15 +166,19 @@ export function validateBody(body: unknown): ValidationResult {
   if (typeof b?.schema_version !== "number") {
     return { ok: false, reason: "schema_version is required" };
   }
+  if (b.schema_version !== SCHEMA_VERSION) {
+    return { ok: false, reason: `unsupported schema_version: ${b.schema_version}` };
+  }
 
   if (b.type !== "doc") {
     return { ok: false, reason: "body must have type 'doc'" };
   }
 
-  // Size check on the JSON text length
+  // Size check on UTF-8 byte length (matches PostgreSQL octet_length)
   const jsonText = JSON.stringify(body);
-  if (jsonText.length > MAX_BODY_BYTES) {
-    return { ok: false, reason: `body size (${jsonText.length} bytes) exceeds ${MAX_BODY_BYTES} byte limit` };
+  const byteLength = new TextEncoder().encode(jsonText).length;
+  if (byteLength > MAX_BODY_BYTES) {
+    return { ok: false, reason: `body size (${byteLength} bytes) exceeds ${MAX_BODY_BYTES} byte limit` };
   }
 
   const content = Array.isArray(b.content) ? (b.content as Record<string, unknown>[]) : [];
