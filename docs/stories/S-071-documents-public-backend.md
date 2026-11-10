@@ -1,11 +1,11 @@
 ---
 id: S-071
 title: Documents public backend (no file keys)
-status: ready
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-071-documents-public-backend
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/79
 depends_on: [S-015]
 reqs: [REQ-041, REQ-042, REQ-047, REQ-055, REQ-058, REQ-059, REQ-060c]
 ---
@@ -56,6 +56,7 @@ Types changed in `types/document.ts`: `PublicDocumentCard`, `PublicDocument`, `D
 - Serving the full file (S-085).
 - Search (S-064).
 - Automatic preview generation.
+- **EC6 at 10,000-row scale (scope cut):** `perf.db.test.ts` does not insert rows at scale; it only verifies `pageSize === 12` against the 2-row dev seed. Full load test (1,000–10,000 rows + EXPLAIN ANALYZE index verification) deferred to a dedicated perf story.
 
 ## Assumptions accepted
 
@@ -83,20 +84,111 @@ Types changed in `types/document.ts`: `PublicDocumentCard`, `PublicDocument`, `D
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
-Prior art: read in full `commerce-design` sections 3.2, 7.5, 12, 13; `content-system-design` sections 15, 19, 21 (`listPickerItems`); `database-schema` Group E and access rules (`document_files` hidden); `file-structure` (`api/preview/`). Extends S-015; supersedes nothing.
+Prior art: Searched `docs/` for "public document", "listPickerItems", "preview route". Found: S-053/S-056 established `listPickerItems` for videos in `lib/videos/actions/listPickerItems.ts` with `PickerItem` type in `types/video.ts`. Commerce-design 3.2 and schema Group E confirm document RLS. S-069 and S-070 established the admin CRUD and file-upload patterns. `app/api/preview/[documentId]/route.ts` stub exists (501). This story extends S-069/S-070 patterns and mirrors the video picker shape.
+
+### Files to create
+
+1. `lib/documents/public.ts` — `listPublicDocuments`, `getPublicDocument`, `listDocumentPickerItems` server actions
+2. `lib/documents/__tests__/public-shape.test.ts` — unit: no file keys in any response (AC2, analyst note)
+3. `lib/documents/__tests__/cache.test.ts` — unit: correct cache tags applied (AC7)
+4. `app/api/documents/route.ts` — GET handler: parse filters, call `listPublicDocuments`, apply cache tags
+5. `app/api/preview/__tests__/route.test.ts` — unit: rate limit, page range (EC7, AC5 out-of-range)
+
+### Files to edit
+
+6. `app/api/preview/[documentId]/route.ts` — replace 501 stub with full implementation (AC5, EC2, EC3, EC7)
+7. `types/document.ts` — add `PublicDocumentCard`, `PublicDocument`, `DocumentFilters`, `DocumentsPage`
+8. `lib/documents/index.ts` — export new public functions
+9. `lib/config.ts` — add `documentsPageSize` (12), `previewRateLimitPerMinute` (60)
+10. `lib/cache/tags.ts` — add `NOT_FOUND_DOCUMENTS_TAG` (separate tag for not-found caching, AC7)
+11. `lib/validation/document.ts` — add `publicDocumentsQuerySchema`, `previewRouteSchema`
+12. `supabase/tests/documents.rls.test.sql` — add: anon cannot read `document_files` directly (Access rules section)
+
+### Notes from analyst gaps (resolved here)
+
+- **AC3 `getDocument` language param**: returns `previewLanguages` — a record `{en, si, ta}` each with count of ready current preview rows (0–3). No single-language param needed; the overlay picks.
+- **AC5 rate limit**: 60 req/min per IP, `mode: "closed"` (preview images are the actual product preview). Config key: `previewRateLimitPerMinute`.
+- **Anonymous access**: `GET /api/documents` uses anon Supabase client so RLS enforces visibility. No auth check.
+- **`getDocument` is a server library call** (no HTTP route for single-doc by slug — the public page at `app/(public)/documents/[slug]/page.tsx` calls it server-side). Contract section already reflects this.
+
+### Step order
+
+1. Add types → `types/document.ts`
+2. Add config keys → `lib/config.ts`
+3. Add cache tag → `lib/cache/tags.ts`
+4. Add validation schemas → `lib/validation/document.ts`
+5. Write failing tests (Step 4)
+6. Implement `lib/documents/public.ts` (Step 5)
+7. Implement `app/api/documents/route.ts`
+8. Implement `app/api/preview/[documentId]/route.ts` (replace stub)
+9. Export from `lib/documents/index.ts`
+10. Add RLS test to `supabase/tests/documents.rls.test.sql`
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh   # after CI fixes (round 4)
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  165 passed | 15 skipped (180)
+      Tests  1761 passed | 52 skipped (1813)
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests (run supabase start first)
+
+── pgTAP seed suite ──
+⚠ Supabase not running — skipping seed tests (run supabase start first)
+
+── pgTAP dev seed suite ──
+⚠ Supabase not running — skipping dev seed tests (run supabase start first)
+
+── Types file freshness ──
+⚠ Supabase not running — skipping types check (run supabase start first)
+
+── Public pages session check (AC11) ──
+check-public-pages: OK — checked 20 file(s), no violations.
+✓ Public pages session check (AC11) passed
+
+── Google Fonts check (AC5) ──
+⚠ No build output found — skipping Google Fonts check (run npm run build first)
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 5 passed, 0 failed
+════════════════════════════════
+✅ All checks passed.
 ```
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `app/api/preview/[documentId]/route.ts` — `Cache-Control: public, s-maxage=300` lets CDN/edge proxies cache the preview stream and bypass the IP-based rate limiter for cached URLs. Change to `Cache-Control: private, max-age=300` so the rate limiter fires on every request. (full-review 2026-11-10) **→ Fixed 2026-11-10**
+- **P1** `lib/documents/public.ts` (`getPublicDocument`) — Two separate `unstable_cache` wrappers (`doc-slug:<slug>` and `doc-slug-nf:<slug>`) means a cold not-found/redirect lookup calls `queryPublicDocument` twice — two Supabase round-trips. Consider a single cache wrapper; caller selects TTL based on `result.ok`. (full-review 2026-11-10)
+- **P1** All 5 integration stubs (`*.db.test.ts`) have empty TODO bodies and are skipped in CI (Supabase not running). EC1–EC3, AC3–AC4, and EC6 have zero executed test coverage. Must be filled before any dependent story (S-074, S-076) merges. (full-review 2026-11-10) **→ Fixed 2026-11-10** (all 5 files now have real test bodies)
+- **P1** `app/api/documents/route.ts:123-128` — Route skips `publicDocumentsQuerySchema.safeParse()` and uses raw `as` casts for `type`, `sort`, and `page`. Violates project rule "route is the validation boundary". Fix: call `publicDocumentsQuerySchema.safeParse(Object.fromEntries(searchParams))` and return 400 on failure, matching the preview route pattern. (full-review 2026-11-10) **→ Fixed 2026-11-10**
+- **P1** `app/api/documents/route.ts:127` — `Number(searchParams.get("page"))` returns `NaN` for non-numeric input; NaN crosses the route/library boundary (Zod in the library catches it, so user-visible behaviour is correct, but passing NaN as a typed number is a defect). Fixed by the schema validation change above. (full-review 2026-11-10) **→ Fixed 2026-11-10**
+- **P2** `app/api/preview/[documentId]/route.ts` (429 response) — `Retry-After` header missing; `checkRateLimit` returns `retryAfterSeconds` but it is not forwarded. (full-review 2026-11-10) **→ Fixed 2026-11-10**
+- **P0** `app/api/preview/[documentId]/route.ts` — `getObjectStream` can throw (not just return null) for transient R2 errors; unhandled throw reaches Next.js 500 handler. Wrap in try/catch → 503. (abevicrama review 2026-11-10) **→ Fixed 2026-11-10**
+- **P1** `app/api/preview/[documentId]/route.ts` — Rate-limit key uses only `x-forwarded-for`; headerless requests all share `"unknown"` bucket. Add `x-real-ip` fallback. (abevicrama review 2026-11-10) **→ Fixed 2026-11-10**
+- **P1** `lib/documents/public.ts` — `unstable_cache` called with new arrow function on every invocation; Node module cache does not deduplicate closures, so the cache is never warm. Pass `queryPublicDocuments` as a function reference and call `cached(...args)`. (abevicrama review 2026-11-10) **→ Fixed 2026-11-10**
+- **P1** `lib/documents/__tests__/cache.test.ts` — AC7 TTL not spy-tested; `revalidate` and `tags` wired into `unstable_cache` calls were not asserted. (abevicrama review 2026-11-10) **→ Fixed 2026-11-10**
+- **P1** `lib/documents/__tests__/picker.db.test.ts:30,55,70` — `vi.mock("@/lib/auth/server", …)` called inside `it()` blocks; Vitest hoists to module scope so there is no per-test isolation. All three tests see the same mock. Fix: use `vi.hoisted(() => vi.fn())` + `mockResolvedValue` per test, or use `beforeEach`. (full-review 2026-11-10)
+- **P1** `lib/documents/__tests__/cache.test.ts:80–83` — Found-path TTL assertion uses `mock.calls[0]?.[2]`; both `foundCached` and `notFoundCached` are created at import time, so call index depends on import order, not test setup. If order changes, the test verifies the wrong wrapper silently. Fix: match wrapper by `tags` field instead of call index. (full-review 2026-11-10)
+- **P1** `lib/documents/__tests__/perf.db.test.ts` — EC6 10,000-row test does not insert any rows at scale (explicitly noted in file comment); tests duplicate `list.db.test.ts` assertions. This is an unlabeled scope cut; add it to the story Out of scope section. (full-review 2026-11-10)
+- **P0** `supabase/tests/documents.rls.test.sql` — FALSE POSITIVE: anon-read pgTAP test already present in `supabase/tests/documents.test.sql` (bottom of file, labelled S-071). (full-review 2026-11-11)
+- **P1** `lib/documents/public.ts:258–265` — `getPublicDocument` uses arrow-function closures for both `foundCached` and `notFoundCached`. **→ Fixed 2026-11-11** (`queryPublicDocument` now passed as function reference; slug encoded in key and arg).
+- **P1** `lib/documents/__tests__/cache.test.ts:71` — `listPublicDocuments` TTL assertion still uses `mock.calls[0]?.[2]` (call index); tag-matching fix was applied only to `getPublicDocument` paths. **→ Fixed 2026-11-11**
+- **P1** `lib/documents/__tests__/list.db.test.ts` — No integration test verifies `sort=popular` returns documents in descending `download_count` order (AC1 requirement). **→ Fixed 2026-11-11**
+- **P1** `lib/documents/__tests__/list.db.test.ts` / `public.db.test.ts` — EC1 soft-delete path (`deleted_at IS NOT NULL`) untested. **→ Fixed 2026-11-11** (soft-delete test added to `list.db.test.ts` with try/finally cleanup).
+- **P1** `lib/validation/document.ts` (picker schema) — FALSE POSITIVE: `z.string().max(200).optional()` already present at line 68. (full-review 2026-11-11)
 
 ## After this merges, a user can:
 
