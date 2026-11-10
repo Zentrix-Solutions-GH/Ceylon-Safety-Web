@@ -1,11 +1,11 @@
 ---
 id: S-070
 title: Documents files backend: 3 languages, previews, publish gating
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-070-documents-files-backend
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/76"
 depends_on: [S-006, S-069]
 reqs: [REQ-133, REQ-146, REQ-043, REQ-047, REQ-055, REQ-060c]
 ---
