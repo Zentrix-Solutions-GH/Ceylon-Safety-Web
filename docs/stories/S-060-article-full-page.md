@@ -1,11 +1,11 @@
 ---
 id: S-060
 title: Article full page
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-060-article-full-page
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/73
 depends_on: [S-059]
 reqs: [REQ-033, REQ-191]
 ---
@@ -21,20 +21,20 @@ Build the standalone article page at `/articles/[slug]`. The `ArticleBody` rende
 
 ## Acceptance criteria
 
-- [ ] AC1: `/articles/[slug]` renders the article body using `ArticleBody` which calls `lib/content/render.tsx`; no raw HTML (`dangerouslySetInnerHTML`) is used at any point in the render path
-- [ ] AC2: The page `<head>` includes: `<title>` from article title, `<meta name="description">` from excerpt, `<link rel="canonical">` pointing to the slug URL with no query string, Open Graph tags (`og:title`, `og:description`, `og:image` from cover)
-- [ ] AC3: An unknown slug looks up `slug_redirects` in the database; if a redirect exists it issues a 301 to the new slug; otherwise returns 404 with `noindex`
-- [ ] AC4: A hidden or deleted article shows a 404 page with "This article is not available." and `noindex`
-- [ ] AC5: The page is cached for 300 seconds (`Cache-Control: s-maxage=300`) per content design section 15; a revalidation tag is used so publishing/hiding triggers cache clearing
-- [ ] AC6: "Back to articles" link is present in the page header, navigating to `/articles`
-- [ ] AC7: An invalid block in the body (fails schema check at render time) is silently dropped; the rest of the page still renders; the problem is logged (not shown to the visitor)
+- [x] AC1: `/articles/[slug]` renders the article body using `ArticleBody` which calls `lib/content/render.tsx`; no raw HTML (`dangerouslySetInnerHTML`) is used at any point in the render path
+- [x] AC2: The page `<head>` includes: `<title>` from article title, `<meta name="description">` from excerpt, `<link rel="canonical">` pointing to the slug URL with no query string, Open Graph tags (`og:title`, `og:description`, `og:image` from cover)
+- [x] AC3: An unknown slug looks up `slug_redirects` in the database; if a redirect exists it issues a 301 to the new slug; otherwise returns 404 with `noindex`
+- [x] AC4: A hidden or deleted article shows a 404 page with "This article is not available." and `noindex`
+- [x] AC5: The page is cached for 300 seconds (`Cache-Control: s-maxage=300`) per content design section 15; a revalidation tag is used so publishing/hiding triggers cache clearing
+- [x] AC6: "Back to articles" link is present in the page header, navigating to `/articles`
+- [x] AC7: An invalid block in the body (fails schema check at render time) is silently dropped; the rest of the page still renders; the problem is logged (not shown to the visitor)
 
 ## Edge cases
 
-- [ ] EC1: Article body contains a `document_spot` block for a now-hidden document — the block renders as nothing (per content design section 4.5)
-- [ ] EC2: Article body contains a `video` block for a deleted video — the block renders as nothing
-- [ ] EC3: `slug_redirects` has a chain (A → B → C) — only the latest redirect is followed; at most one 301 is issued
-- [ ] EC4: Direct refresh after an article is published but within the 300 s cache window — visitor may see 404; this is accepted (content design section 4.2 note A4)
+- [x] EC1: Article body contains a `document_spot` block for a now-hidden document — the block renders as nothing (per content design section 4.5)
+- [x] EC2: Article body contains a `video` block for a deleted video — the block renders as nothing
+- [x] EC3: `slug_redirects` has a chain (A → B → C) — only the latest redirect is followed; at most one 301 is issued
+- [x] EC4: Direct refresh after an article is published but within the 300 s cache window — visitor may see 404; this is accepted (content design section 4.2 note A4)
 
 ## Contract
 

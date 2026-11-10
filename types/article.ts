@@ -226,7 +226,8 @@ export interface PublicArticle {
 
 export type GetArticleResponse =
   | { ok: true; data: PublicArticle }
-  | { ok: false; code: "not_found" };
+  | { ok: false; code: "not_found" }
+  | { ok: false; code: "redirect"; newSlug: string };
 
 export interface ArticlePreviewData extends PublicArticle {
   status: ArticleStatus;
