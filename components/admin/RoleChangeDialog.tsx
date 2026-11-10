@@ -15,6 +15,8 @@ interface RoleChangeDialogProps {
 }
 
 type ErrorKey =
+  | "admin.staff.error.validation_failed"
+  | "admin.staff.error.not_allowed_super_admin"
   | "admin.staff.error.code_invalid"
   | "admin.staff.error.unknown";
 
@@ -39,7 +41,12 @@ export function RoleChangeDialog({
         if (result.ok) {
           onSuccess();
         } else {
-          setError("admin.staff.error.unknown");
+          const codeMap: Record<string, ErrorKey> = {
+            validation_failed: "admin.staff.error.validation_failed",
+            not_allowed: "admin.staff.error.not_allowed_super_admin",
+            unknown: "admin.staff.error.unknown",
+          };
+          setError(codeMap[result.code ?? "unknown"] ?? "admin.staff.error.unknown");
         }
       } catch {
         setError("admin.staff.error.code_invalid");

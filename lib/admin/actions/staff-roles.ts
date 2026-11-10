@@ -203,7 +203,13 @@ export async function listStaff(): Promise<ListStaffResult> {
 
 /**
  * Resolve an email address to a Supabase userId.
- * Super Admin only. Used by the Add Staff dialog before calling grantRole.
+ * Super Admin only. Read-only — not audit-logged and no step-up required
+ * (step-up is enforced on the subsequent grantRole write, not on this lookup).
+ *
+ * Limitation: listUsers is capped at 1000 results. Sites with >1000 Auth
+ * users should replace this with a paginated loop or the getUserByEmail API
+ * if Supabase exposes it. At current scale (<<1000 users) this is acceptable.
+ * TODO: replace with paginated loop before 1000-user threshold is reached.
  */
 export async function findUserByEmail(input: {
   email: string;

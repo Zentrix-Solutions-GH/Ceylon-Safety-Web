@@ -128,6 +128,10 @@ check.sh: 4 passed, 1 failed (pre-existing — not introduced by this story)
 
 ## Review notes
 
+- **P1** `components/admin/RoleChangeDialog.tsx` — Error map only maps `code:"unknown"` for all non-OK `grantRole` results during a role change. `validation_failed` and `not_allowed` from the server show "Something went wrong" with no actionable guidance. Apply same `codeMap` as `AddStaffDialog.tsx:57–64`. (full-review 2026-11-10)
+- **P1** `lib/admin/actions/staff-roles.ts:findUserByEmail` — No `requireStepUp` call; inconsistent with every other action in the file. The deliberate omission (read-only lookup) must be documented with a comment explaining why step-up is not required here. (full-review 2026-11-10)
+- **P1** `lib/admin/actions/staff-roles.ts:findUserByEmail` — `listUsers({ perPage: 1000 })` is a hard cap. Sites with >1000 Auth users will silently miss valid lookups. Add a pagination loop or at minimum a TODO comment noting the limitation. (full-review 2026-11-10)
+
 ## After this merges
 
 ### A user can:
