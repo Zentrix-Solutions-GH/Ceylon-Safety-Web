@@ -50,6 +50,7 @@ vi.mock("@/lib/auth/server", () => ({
 }));
 
 import { startDocumentFileUpload, completeDocumentFileUpload } from "@/lib/documents/upload";
+import { setDocumentStatus } from "@/lib/documents/publish";
 import { writeAuditRow } from "@/lib/audit/index";
 const mockWriteAuditRow = vi.mocked(writeAuditRow);
 
@@ -100,6 +101,62 @@ function setupMocks() {
   });
 }
 
+const UPDATED_AT = "2026-11-10T10:00:00.000Z";
+
+function setupPublishMocks(action: "publish" | "hide" = "publish") {
+  // For publish we need: doc with price+category, ready full files x3, ready preview x3,
+  // then an update, then article_refs lookup.
+  const docRow = {
+    id: DOC_ID, status: action === "publish" ? "draft" : "published",
+    updated_at: UPDATED_AT, price_cents: 1500, category_id: "cat-1",
+  };
+
+  let docFilesCall = 0;
+  mockFrom.mockImplementation((table: string) => {
+    if (table === "documents") {
+      return {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: docRow, error: null }),
+          }),
+        }),
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: { updated_at: UPDATED_AT }, error: null }),
+            }),
+          }),
+        }),
+      };
+    }
+    if (table === "document_files") {
+      docFilesCall++;
+      // first call: full files; second call: preview files
+      const langs = docFilesCall === 1
+        ? [{ language: "en" }, { language: "si" }, { language: "ta" }]
+        : [{ language: "en" }, { language: "si" }, { language: "ta" }];
+      const chain = { eq: vi.fn() };
+      chain.eq.mockReturnValue({ ...chain, data: langs });
+      // Supabase chained query: .eq().eq().eq().eq().eq() → resolves with { data }
+      const terminal = { data: langs, error: null };
+      const eqFn: ReturnType<typeof vi.fn> = vi.fn();
+      const eqChain = { eq: eqFn };
+      eqFn.mockReturnValue({ ...eqChain, ...terminal });
+      return { select: vi.fn().mockReturnValue({ eq: eqFn }) };
+    }
+    if (table === "article_refs") {
+      return {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        }),
+      };
+    }
+    return {};
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockRpc.mockResolvedValue({ error: null });
@@ -116,10 +173,12 @@ describe("AC8 — audit log for file upload start", () => {
     expect(call.action).toBe("document.file_upload");
     expect(call.actorId).toBe("actor-uuid-audit");
     expect(call.entityType).toBe("document_files");
-    expect(call.after.status).toBe("pending");
-    expect(call.after.documentId).toBe(DOC_ID);
-    expect(call.after.kind).toBe("full");
-    expect(call.after.language).toBe("en");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const after = call.after as any;
+    expect(after.status).toBe("pending");
+    expect(after.documentId).toBe(DOC_ID);
+    expect(after.kind).toBe("full");
+    expect(after.language).toBe("en");
   });
 });
 
@@ -131,7 +190,8 @@ describe("AC8 — audit log for file upload complete", () => {
     expect(call.action).toBe("document.file_upload");
     expect(call.actorId).toBe("actor-uuid-audit");
     expect(call.entityType).toBe("document_files");
-    expect(call.after.status).toBe("ready");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((call.after as any).status).toBe("ready");
   });
 });
 
@@ -148,5 +208,82 @@ describe("AC8 — no audit row on failure paths", () => {
     vi.mocked(getObjectBytes).mockResolvedValueOnce(new Uint8Array([0x4d, 0x5a, 0, 0, 0, 0, 0, 0])); // EXE
     await completeDocumentFileUpload(FILE_ID);
     expect(mockWriteAuditRow).not.toHaveBeenCalled();
+  });
+});
+
+describe("AC8 — audit log for publish", () => {
+  it("setDocumentStatus(publish) writes audit row with action=document.publish", async () => {
+    setupPublishMocks("publish");
+    const result = await setDocumentStatus(DOC_ID, "publish", UPDATED_AT);
+    expect(result.ok).toBe(true);
+    expect(mockWriteAuditRow).toHaveBeenCalledOnce();
+    const call = mockWriteAuditRow.mock.calls[0][0];
+    expect(call.action).toBe("document.publish");
+    expect(call.actorId).toBe("actor-uuid-audit");
+    expect(call.entityType).toBe("documents");
+    expect(call.entityId).toBe(DOC_ID);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((call.after as any).status).toBe("published");
+  });
+});
+
+describe("AC8 — audit log for hide", () => {
+  it("setDocumentStatus(hide) writes audit row with action=document.hide", async () => {
+    setupPublishMocks("hide");
+    const result = await setDocumentStatus(DOC_ID, "hide", UPDATED_AT);
+    expect(result.ok).toBe(true);
+    expect(mockWriteAuditRow).toHaveBeenCalledOnce();
+    const call = mockWriteAuditRow.mock.calls[0][0];
+    expect(call.action).toBe("document.hide");
+    expect(call.actorId).toBe("actor-uuid-audit");
+    expect(call.entityType).toBe("documents");
+    expect(call.entityId).toBe(DOC_ID);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((call.after as any).status).toBe("hidden");
+  });
+});
+
+describe("EC6 — hide allowed even when article_refs exist", () => {
+  it("setDocumentStatus(hide) succeeds when document is referenced by articles", async () => {
+    // article_refs returns two article IDs
+    const docRow = {
+      id: DOC_ID, status: "published",
+      updated_at: UPDATED_AT, price_cents: 1500, category_id: "cat-1",
+    };
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "documents") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: docRow, error: null }),
+            }),
+          }),
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({ data: { updated_at: UPDATED_AT }, error: null }),
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === "article_refs") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({
+                data: [{ article_id: "art-1" }, { article_id: "art-2" }],
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    const result = await setDocumentStatus(DOC_ID, "hide", UPDATED_AT);
+    expect(result.ok).toBe(true);
+    // hide has no file condition — succeeds regardless of article refs
   });
 });

@@ -98,12 +98,12 @@ beforeEach(() => {
   mockRpc.mockResolvedValue({ error: null });
 });
 
+const adminUser = { id: "admin-id", email: "a@dev.invalid", claimedRole: "admin" as const, hasAuthenticatorLevel: true, hasTotpEnrolled: true };
+const editorUser = { id: "editor-id", email: "e@dev.invalid", claimedRole: "editor" as const, hasAuthenticatorLevel: true, hasTotpEnrolled: true };
+
 describe("AC7 — permission: admin allowed", () => {
   it("startDocumentFileUpload succeeds for admin", async () => {
-    mockRequireStaff.mockResolvedValue({
-      ok: true,
-      user: { id: "admin-id", claimedRole: "admin" },
-    });
+    mockRequireStaff.mockResolvedValue({ ok: true, user: adminUser });
     setupAllowedMocks();
     const result = await startDocumentFileUpload({
       documentId: DOC_ID, kind: "full", language: "en", sortOrder: 1, format: "pptx", sizeBytes: 5_000_000,
@@ -112,22 +112,16 @@ describe("AC7 — permission: admin allowed", () => {
   });
 
   it("completeDocumentFileUpload succeeds for admin", async () => {
-    mockRequireStaff.mockResolvedValue({
-      ok: true,
-      user: { id: "admin-id", claimedRole: "admin" },
-    });
+    mockRequireStaff.mockResolvedValue({ ok: true, user: adminUser });
     setupAllowedMocks();
     const result = await completeDocumentFileUpload(FILE_ID);
     expect(result.ok).toBe(true);
   });
 });
 
-describe("AC7 — permission: maintainer allowed", () => {
-  it("startDocumentFileUpload succeeds for maintainer", async () => {
-    mockRequireStaff.mockResolvedValue({
-      ok: true,
-      user: { id: "maintainer-id", claimedRole: "maintainer" },
-    });
+describe("AC7 — permission: editor allowed", () => {
+  it("startDocumentFileUpload succeeds for editor", async () => {
+    mockRequireStaff.mockResolvedValue({ ok: true, user: editorUser });
     setupAllowedMocks();
     const result = await startDocumentFileUpload({
       documentId: DOC_ID, kind: "full", language: "en", sortOrder: 1, format: "pptx", sizeBytes: 5_000_000,
@@ -158,10 +152,12 @@ describe("AC7 — permission: customer refused", () => {
 
 describe("AC7 — permission: unauthenticated refused", () => {
   it("startDocumentFileUpload returns not_allowed when session is absent", async () => {
-    mockRequireStaff.mockResolvedValue({ ok: false, code: "unauthenticated" });
+    mockRequireStaff.mockResolvedValue({ ok: false, code: "not_allowed" });
     const result = await startDocumentFileUpload({
       documentId: DOC_ID, kind: "full", language: "en", sortOrder: 1, format: "pptx", sizeBytes: 5_000_000,
     });
     expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("not_allowed");
   });
 });

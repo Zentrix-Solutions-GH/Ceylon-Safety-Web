@@ -274,6 +274,55 @@ describe("startDocumentFileUpload — AC2 validation", () => {
   });
 });
 
+describe("EC1 — retry when pending row exists for the same slot", () => {
+  it("startDocumentFileUpload succeeds and uses version 2 when a pending row already occupies version 1", async () => {
+    // version lookup returns existing pending row at version 1
+    const versionChain = {
+      eq: vi.fn(),
+      order: vi.fn().mockReturnValue({
+        limit: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({ data: { version: 1 }, error: null }),
+        }),
+      }),
+    };
+    versionChain.eq.mockReturnValue(versionChain);
+
+    let callCount = 0;
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "documents") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === "document_files") {
+        callCount++;
+        if (callCount === 1) return { select: vi.fn().mockReturnValue(versionChain) };
+        return {
+          insert: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: { id: FILE_ID }, error: null }),
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    const result = await startDocumentFileUpload({
+      documentId: DOC_ID, kind: "full", language: "en", sortOrder: 1, format: "pptx", sizeBytes: 5_000_000,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // key path should be v2 (next version after existing v1)
+    const [, key] = mockPresignedPut.mock.calls[0];
+    expect(key).toMatch(/\/v2\//);
+  });
+});
+
 describe("startDocumentFileUpload — permission / rate limit", () => {
   it("not_allowed when requireStaff returns not_allowed", async () => {
     vi.mocked(requireStaff).mockResolvedValueOnce({ ok: false, code: "not_allowed" });
