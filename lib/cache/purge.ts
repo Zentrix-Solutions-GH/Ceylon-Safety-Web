@@ -57,7 +57,7 @@ export async function purgeArticle(
 
   try {
     await writeAuditRow({
-      action: "purge.failed" as AuditEventName,
+      action: "purge.failed",
       actorId: actorId ?? "system",
       entityType: "article",
       entityId: articleId,
@@ -87,7 +87,7 @@ export async function purgeVideo(
   if (refsError) {
     try {
       await writeAuditRow({
-        action: "purge.failed" as AuditEventName,
+        action: "purge.failed",
         actorId: actorId ?? "system",
         entityType: "video",
         entityId: videoId,
@@ -114,7 +114,7 @@ export async function purgeVideo(
 
   try {
     await writeAuditRow({
-      action: "purge.failed" as AuditEventName,
+      action: "purge.failed",
       actorId: actorId ?? "system",
       entityType: "video",
       entityId: videoId,
@@ -149,7 +149,7 @@ export async function purgeDocument(
 
   try {
     await writeAuditRow({
-      action: "purge.failed" as AuditEventName,
+      action: "purge.failed",
       actorId: actorId ?? "system",
       entityType: "document",
       entityId: documentId,

@@ -248,9 +248,12 @@ export async function completeDocumentFileUpload(fileId: string): Promise<Upload
 
   // Compute checksum before entering the atomic DB step (AC3)
   const fullBytes = await getObjectBytes(cfg.bucketPrivate, row.file_key, meta.contentLength);
-  const checksum = fullBytes
-    ? createHash("sha256").update(fullBytes).digest("hex")
-    : null;
+  if (!fullBytes) {
+    // R2 read failed after magic-byte check passed — treat as upload failure
+    await markFailed(supabase, fileId);
+    return { ok: false, code: "upload_failed" };
+  }
+  const checksum = createHash("sha256").update(fullBytes).digest("hex");
 
   // AC4: flip old current row + mark new row ready in one Postgres transaction
   // via complete_document_file RPC (migration 20261110000003).

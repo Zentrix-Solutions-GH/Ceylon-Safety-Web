@@ -30,6 +30,7 @@ export async function setDocumentStatus(
     .from("documents")
     .select("id, status, updated_at, price_cents, category_id")
     .eq("id", documentId)
+    .is("deleted_at", null)
     .single();
 
   if (docErr || !doc) return { ok: false, code: "not_found" };
@@ -79,7 +80,7 @@ export async function setDocumentStatus(
     }
   }
 
-  // Update status (AC5, AC6)
+  // Update status (AC5, AC6) — include updated_at filter for optimistic concurrency (P1 TOCTOU fix)
   const newStatus = action === "publish" ? "published" : "hidden";
   const { data: updated, error: updateErr } = await supabase
     .from("documents")
@@ -88,9 +89,14 @@ export async function setDocumentStatus(
       ...(action === "publish" ? { published_at: new Date().toISOString() } : {}),
     })
     .eq("id", documentId)
+    .eq("updated_at", doc.updated_at)
     .select("updated_at")
     .single();
 
+  if (updateErr?.code === "PGRST116") {
+    // Zero rows matched — another request won the race
+    return { ok: false, code: "version_conflict" };
+  }
   if (updateErr || !updated) {
     return { ok: false, code: "unknown", reason: updateErr?.message };
   }

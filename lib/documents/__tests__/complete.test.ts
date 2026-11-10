@@ -193,6 +193,23 @@ describe("completeDocumentFileUpload — EC9, EC10, EC11", () => {
     expect(result.code).toBe("upload_failed");
   });
 
+  it("R2 full-file read returns null after magic-byte check passes → upload_failed (P0 fix)", async () => {
+    setupPendingRow("full", "pptx");
+    mockHeadObject.mockResolvedValue({ contentLength: 5_000_000 });
+    // Magic bytes pass, but the full-file read fails
+    mockGetObjectBytes
+      .mockResolvedValueOnce(PPTX_MAGIC) // 8-byte magic read
+      .mockResolvedValueOnce(null);       // full-file read returns null
+
+    const result = await completeDocumentFileUpload(FILE_ID);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("upload_failed");
+    // Object should NOT be deleted (the file is physically there; it was a read error)
+    // Row should be marked failed
+    expect(mockDeleteObject).not.toHaveBeenCalled();
+  });
+
   it("EC11: row already ready → upload_failed, no duplicate version", async () => {
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
