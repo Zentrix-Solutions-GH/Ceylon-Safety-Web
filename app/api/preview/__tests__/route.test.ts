@@ -34,10 +34,12 @@ vi.mock("@/lib/validation/document", async () => {
 
 import { checkRateLimit } from "@/lib/ratelimit/index";
 import { servePreviewFile } from "@/lib/documents/public";
+import { getObjectStream } from "@/lib/r2/storage";
 import { GET } from "@/app/api/preview/[documentId]/route";
 
 const mockCheckRateLimit = vi.mocked(checkRateLimit);
 const mockServePreviewFile = vi.mocked(servePreviewFile);
+const mockGetObjectStream = vi.mocked(getObjectStream);
 
 function makeRequest(documentId: string, params: Record<string, string> = {}) {
   const url = new URL(`http://localhost/api/preview/${documentId}`);
@@ -49,6 +51,39 @@ function makeRequest(documentId: string, params: Record<string, string> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe("GET /api/preview/[documentId] — happy path (AC5)", () => {
+  beforeEach(() => {
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+  });
+
+  it("returns 200 with correct Content-Type for a png preview", async () => {
+    mockServePreviewFile.mockResolvedValue({ ok: true, fileKey: "previews/doc/en/1.png", format: "png" });
+    // Create a minimal ReadableStream to simulate R2 response
+    const stream = new ReadableStream({ start(c) { c.close(); } });
+    mockGetObjectStream.mockResolvedValue(stream as ReadableStream<Uint8Array>);
+
+    const req = makeRequest("550e8400-e29b-41d4-a716-446655440000", { language: "en", page: "1" });
+    const res = await GET(req, {
+      params: Promise.resolve({ documentId: "550e8400-e29b-41d4-a716-446655440000" }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(res.headers.get("cache-control")).toMatch(/public/);
+  });
+
+  it("returns 404 when R2 object is missing (stream is null)", async () => {
+    mockServePreviewFile.mockResolvedValue({ ok: true, fileKey: "previews/doc/en/1.png", format: "png" });
+    mockGetObjectStream.mockResolvedValue(null);
+
+    const req = makeRequest("550e8400-e29b-41d4-a716-446655440000", { language: "en", page: "1" });
+    const res = await GET(req, {
+      params: Promise.resolve({ documentId: "550e8400-e29b-41d4-a716-446655440000" }),
+    });
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("GET /api/preview/[documentId] — rate limit (EC7)", () => {
