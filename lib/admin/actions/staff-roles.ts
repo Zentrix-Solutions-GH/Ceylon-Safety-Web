@@ -11,6 +11,7 @@ import type {
   GrantRoleResult,
   RemoveRoleResult,
   ListStaffResult,
+  FindUserByEmailResult,
 } from "@/types/auth";
 
 const GrantRoleSchema = z.object({
@@ -196,4 +197,35 @@ export async function listStaff(): Promise<ListStaffResult> {
   );
 
   return { ok: true, staff };
+}
+
+// ── findUserByEmail ───────────────────────────────────────────────────────────
+
+/**
+ * Resolve an email address to a Supabase userId.
+ * Super Admin only. Read-only — not audit-logged and no step-up required
+ * (step-up is enforced on the subsequent grantRole write, not on this lookup).
+ *
+ * Limitation: listUsers is capped at 1000 results. Sites with >1000 Auth
+ * users should replace this with a paginated loop or the getUserByEmail API
+ * if Supabase exposes it. At current scale (<<1000 users) this is acceptable.
+ * TODO: replace with paginated loop before 1000-user threshold is reached.
+ */
+export async function findUserByEmail(input: {
+  email: string;
+}): Promise<FindUserByEmailResult> {
+  const auth = await requireSuperAdmin();
+  if (!auth.ok) return auth;
+
+  const serviceClient = createSupabaseServiceRoleClient();
+
+  const { data, error } = await serviceClient.auth.admin.listUsers({ perPage: 1000 });
+  if (error) return { ok: false, code: "unknown" };
+
+  const user = data.users.find(
+    (u) => u.email?.toLowerCase() === input.email.toLowerCase()
+  );
+  if (!user) return { ok: false, code: "not_found" };
+
+  return { ok: true, userId: user.id };
 }
