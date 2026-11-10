@@ -322,3 +322,44 @@ describe("changeDocumentPrice — EC1: price validation", () => {
     if (!result.ok) expect(result.code).toBe("validation_failed");
   });
 });
+
+describe("changeDocumentPrice — EC6: role removed", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns not_allowed when requireStaff fails", async () => {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" } as never);
+
+    const result = await changeDocumentPrice({
+      documentId: DOC_ID,
+      newPriceLkr: 1000,
+      confirmedLargeChange: false,
+      authenticatorCode: "123456",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_allowed");
+  });
+});
+
+describe("changeDocumentPrice — AC11: rate limit", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(requireStaff).mockResolvedValue({ ok: true, user: MOCK_USER });
+    vi.mocked(requireStepUp).mockResolvedValue(undefined);
+  });
+
+  it("returns rate_limited when checkAdminWriteLimit refuses", async () => {
+    const { checkAdminWriteLimit } = await import("@/lib/ratelimit/index");
+    vi.mocked(checkAdminWriteLimit).mockResolvedValue({ ok: false } as never);
+
+    const result = await changeDocumentPrice({
+      documentId: DOC_ID,
+      newPriceLkr: 1000,
+      confirmedLargeChange: false,
+      authenticatorCode: "123456",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("rate_limited");
+  });
+});

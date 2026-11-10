@@ -34,7 +34,7 @@ The admin actions that create and edit a document record (title, type, category,
 - [ ] AC7: `changeDocumentPrice(id, newPriceLkr, confirmedLargeChange, authenticatorCode)` needs `documents.*` (action `documents.price`), a fresh authenticator code (step-up helper, S-038; a correct code is valid 5 minutes for further money actions) and writes `price.change` with the old and new values. Without a fresh code: `mfa_required`.
 - [ ] AC8: A change of more than 50 percent up or down is refused with `validation_failed` reason `confirm_large_change` unless `confirmedLargeChange` is true.
 - [ ] AC9: Pending orders keep their price snapshot; only new orders use the new price (nothing to do in this story beyond not touching orders; test proves orders are untouched).
-- [ ] AC10: Every write writes exactly one audit row: `document.save` for create and edit, `price.change` for a price change.
+- [ ] AC10: Every write writes at least one audit row: `document.save` for create and edit, `price.change` for a price change. When a published document's slug changes, an additional `document.slug_change` row is also written (same pattern as `article.slug_change`).
 - [ ] AC11: Writes are rate limited per staff person: 60 writes a minute in general (`rate_limited`).
 - [ ] AC12: A document list or detail never contains a file key.
 
@@ -52,7 +52,7 @@ The admin actions that create and edit a document record (title, type, category,
 
 ## Contract
 
-Types added or changed in `types/document.ts` (backend defines): `AdminDocumentRow`, `AdminDocument`, `DocumentFileMark`, `SaveDocumentInput`. Audit events used: `document.save`, `price.change`. Permission names: `documents.*`.
+Types added or changed in `types/document.ts` (backend defines): `AdminDocumentRow`, `AdminDocument`, `DocumentFileMark`, `SaveDocumentInput`. Audit events used: `document.save`, `document.slug_change` (on published slug change), `price.change`. Permission names: `documents.*`, `documents.price`.
 
 ## Out of scope
 
