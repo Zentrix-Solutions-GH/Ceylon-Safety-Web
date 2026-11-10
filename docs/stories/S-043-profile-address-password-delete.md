@@ -1,7 +1,7 @@
 ---
 id: S-043
 title: Profile, saved address, change password, delete account screens
-status: pr-open
+status: merged
 owner: frontend
 risk: normal
 branch: feature/S-043-profile-address-password-delete

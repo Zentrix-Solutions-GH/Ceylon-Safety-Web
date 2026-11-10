@@ -1,7 +1,7 @@
 ---
 id: S-046
 title: Staff screen
-status: pr-open
+status: merged
 owner: frontend
 risk: sensitive
 branch: feature/S-046-staff-screen

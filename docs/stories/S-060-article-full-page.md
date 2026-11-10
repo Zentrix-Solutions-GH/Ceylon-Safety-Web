@@ -1,7 +1,7 @@
 ---
 id: S-060
 title: Article full page
-status: pr-open
+status: merged
 owner: frontend
 risk: normal
 branch: feature/S-060-article-full-page

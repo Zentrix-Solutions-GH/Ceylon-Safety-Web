@@ -1,7 +1,7 @@
 ---
 id: S-052
 title: Authors admin backend
-status: pr-open
+status: merged
 owner: backend
 risk: normal
 branch: feature/S-052-authors-admin-backend

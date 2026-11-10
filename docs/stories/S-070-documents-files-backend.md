@@ -1,7 +1,7 @@
 ---
 id: S-070
 title: Documents files backend: 3 languages, previews, publish gating
-status: blocked
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-070-documents-files-backend

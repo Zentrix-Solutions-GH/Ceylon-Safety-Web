@@ -1,7 +1,7 @@
 ---
 id: S-042
 title: Sign-in, Google button, forgot/reset screens
-status: pr-open
+status: merged
 owner: frontend
 risk: normal
 branch: feature/S-042-signin-google-forgot-reset

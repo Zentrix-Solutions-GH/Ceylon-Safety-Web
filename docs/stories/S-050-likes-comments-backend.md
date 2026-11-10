@@ -1,7 +1,7 @@
 ---
 id: S-050
 title: Article likes + comments backend
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-050-likes-comments-backend

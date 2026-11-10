@@ -1,7 +1,7 @@
 ---
 id: S-049
 title: Articles read backend: list, filters, get, preview
-status: pr-open
+status: merged
 owner: backend
 risk: normal
 branch: feature/S-049-articles-read-backend

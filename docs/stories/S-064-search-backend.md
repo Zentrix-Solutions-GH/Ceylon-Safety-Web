@@ -1,7 +1,7 @@
 ---
 id: S-064
 title: Search backend (articles + documents)
-status: pr-open
+status: merged
 owner: backend
 risk: normal
 branch: feature/S-064-search-backend
