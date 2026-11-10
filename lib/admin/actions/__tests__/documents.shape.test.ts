@@ -1,7 +1,7 @@
 // AC12: list and detail responses must never expose a file key.
 // Unit tests — no DB needed; validates the response shape mapper.
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/config", () => ({
@@ -28,7 +28,9 @@ vi.mock("@/lib/auth/step-up", () => ({
 }));
 
 // mapDocumentRow and mapDocumentDetail are pure mapping functions — no DB calls.
-import { mapDocumentRow, mapDocumentDetail } from "@/lib/admin/actions/documents";
+import { mapDocumentRow, mapDocumentDetail, listDocuments, getDocument } from "@/lib/admin/actions/documents";
+import { requireStaff } from "@/lib/auth/server";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 
 const FILE_ROW_WITH_KEY = {
   id: "file-uuid",
@@ -117,5 +119,68 @@ describe("mapDocumentDetail — AC12 no file key in detail", () => {
     expect(doc).toHaveProperty("id", "doc-uuid");
     expect(doc).toHaveProperty("description", null);
     expect(doc).toHaveProperty("previewPages", 3);
+  });
+});
+
+describe("listDocuments / getDocument — AC12 no file key via public functions", () => {
+  const DOC_ID_VALID = "aa010001-0000-4000-8000-000000000001";
+
+  beforeEach(() => {
+    vi.mocked(requireStaff).mockResolvedValue({
+      ok: true,
+      user: {
+        id: "actor-uuid-0001",
+        email: "admin@test.com",
+        claimedRole: "admin",
+        hasAuthenticatorLevel: true,
+        hasTotpEnrolled: true,
+      },
+    } as never);
+  });
+
+  it("listDocuments response JSON never contains file_key", async () => {
+    const mockFrom = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      ilike: vi.fn().mockReturnThis(),
+      textSearch: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockResolvedValue({
+        data: [{ ...DOC_ROW, id: DOC_ID_VALID }],
+        error: null,
+        count: 1,
+      }),
+    });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: mockFrom } as never);
+
+    const result = await listDocuments({});
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const json = JSON.stringify(result.rows);
+      expect(json).not.toContain("file_key");
+      expect(json).not.toContain("private/documents");
+    }
+  });
+
+  it("getDocument response JSON never contains file_key", async () => {
+    const mockFrom = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { ...DOC_ROW, id: DOC_ID_VALID },
+        error: null,
+      }),
+    });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue({ from: mockFrom } as never);
+
+    const result = await getDocument(DOC_ID_VALID);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const json = JSON.stringify(result.document);
+      expect(json).not.toContain("file_key");
+      expect(json).not.toContain("private/documents");
+    }
   });
 });

@@ -72,12 +72,15 @@ async function clashSafeDocumentSlug(
   let candidate = baseSlug;
   let attempt = 0;
 
-  while (true) {
+  const MAX_ATTEMPTS = 20;
+  while (attempt <= MAX_ATTEMPTS) {
     const result = await supabase
       .from("documents")
       .select("id")
       .eq("slug", candidate)
       .is("deleted_at", null);
+
+    if (result.error) throw new Error(result.error.message ?? "slug clash check failed");
 
     const rows = (result.data ?? []) as { id: string }[];
     const clash = rows.some((r: { id: string }) => r.id !== documentId);
@@ -86,6 +89,7 @@ async function clashSafeDocumentSlug(
     attempt++;
     candidate = `${baseSlug}-${attempt}`;
   }
+  throw new Error(`slug_clash_limit: could not find a unique slug for "${baseSlug}" after ${MAX_ATTEMPTS} attempts`);
 }
 
 // ---------------------------------------------------------------------------
@@ -456,11 +460,13 @@ async function writeSlugRedirect(
   newSlug: string
 ): Promise<void> {
   // Flatten: update all existing redirects for this document to point at the new slug
-  await supabase
+  const { error: flattenErr } = await supabase
     .from("slug_redirects")
     .update({ new_slug: newSlug })
     .eq("entity_type", "document")
     .eq("entity_id", documentId);
+
+  if (flattenErr) throw new Error(flattenErr.message ?? "slug redirect flatten failed");
 
   // Insert the new redirect row for the old slug
   await supabase.from("slug_redirects").insert({

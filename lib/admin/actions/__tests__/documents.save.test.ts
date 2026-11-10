@@ -449,6 +449,155 @@ describe("saveDocument — AC10: document.slug_change audit row on published ren
   });
 });
 
+describe("saveDocument — EC4: reserved slug on edit", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(requireStaff).mockResolvedValue({
+      ok: true,
+      user: {
+        id: "actor-uuid-0001",
+        email: "admin@test.com",
+        claimedRole: "admin",
+        hasAuthenticatorLevel: true,
+        hasTotpEnrolled: true,
+      },
+    });
+    vi.mocked(checkAdminWriteLimit).mockResolvedValue({ ok: true });
+  });
+
+  it("prefixes doc- when editing an existing doc to a reserved title", async () => {
+    const updateCapture: Record<string, unknown>[] = [];
+    const docCalls = { count: 0 };
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "documents") {
+        docCalls.count++;
+        if (docCalls.count === 1) {
+          // Fetch existing row
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: EXISTING_ROW, error: null }),
+          };
+        }
+        if (docCalls.count === 2) {
+          // Slug clash check — no clash for "doc-admin"
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+        // Update call
+        return {
+          update: vi.fn().mockImplementation((data: Record<string, unknown>) => {
+            updateCapture.push({ ...data });
+            return {
+              eq: vi.fn().mockReturnThis(),
+              select: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: { id: DOC_ID, slug: "doc-admin", updated_at: "2026-01-02T00:00:00.000Z" },
+                error: null,
+              }),
+            };
+          }),
+        };
+      }
+      if (table === "categories") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          is: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: CAT_ID }, error: null }),
+        };
+      }
+      return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), is: vi.fn().mockReturnThis() };
+    });
+
+    const result = await saveDocument({
+      documentId: DOC_ID,
+      title: "Admin",
+      docKind: "checklist",
+      categoryId: CAT_ID,
+      updatedAt: EXISTING_ROW.updated_at,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.slug).toBe("doc-admin");
+    }
+    expect(updateCapture[0]).toMatchObject({ slug: "doc-admin" });
+  });
+});
+
+describe("saveDocument — AC6: version_conflict on stale updatedAt", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(requireStaff).mockResolvedValue({
+      ok: true,
+      user: {
+        id: "actor-uuid-0001",
+        email: "admin@test.com",
+        claimedRole: "admin",
+        hasAuthenticatorLevel: true,
+        hasTotpEnrolled: true,
+      },
+    });
+    vi.mocked(checkAdminWriteLimit).mockResolvedValue({ ok: true });
+  });
+
+  it("returns version_conflict when update matches 0 rows", async () => {
+    const docCalls = { count: 0 };
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "documents") {
+        docCalls.count++;
+        if (docCalls.count === 1) {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: EXISTING_ROW, error: null }),
+          };
+        }
+        if (docCalls.count === 2) {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+        // Update returns null (0 rows matched — stale updatedAt)
+        return {
+          update: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }
+      if (table === "categories") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          is: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: CAT_ID }, error: null }),
+        };
+      }
+      return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), is: vi.fn().mockReturnThis() };
+    });
+
+    const result = await saveDocument({
+      documentId: DOC_ID,
+      title: "Updated Title",
+      docKind: "checklist",
+      categoryId: CAT_ID,
+      updatedAt: "2025-01-01T00:00:00.000Z", // stale — won't match EXISTING_ROW.updated_at
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("version_conflict");
+  });
+});
+
 describe("saveDocument — EC4: reserved slug on create", () => {
   beforeEach(() => {
     vi.clearAllMocks();
