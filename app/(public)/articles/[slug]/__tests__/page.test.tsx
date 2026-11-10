@@ -35,7 +35,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 const mockNotFound = vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); });
-const mockRedirect = vi.fn((_url: string): never => { throw new Error("NEXT_REDIRECT"); });
+const mockRedirect = vi.fn((url: string): never => { throw new Error(`NEXT_REDIRECT:${url}`); });
 vi.mock("next/navigation", () => ({
   notFound: () => mockNotFound(),
   redirect: (url: string) => mockRedirect(url),
