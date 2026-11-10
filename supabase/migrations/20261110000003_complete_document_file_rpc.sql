@@ -38,12 +38,19 @@ BEGIN
      AND id          != p_file_id;
 
   -- Step 2: mark the new row ready and current in the same transaction.
+  -- Guard on status = 'pending' prevents a second completeUpload call from
+  -- overwriting an already-completed or upload_failed row.
   UPDATE public.document_files
      SET status            = 'ready',
          is_current        = true,
          size_bytes        = p_size_bytes,
          checksum_sha256   = p_checksum_sha256
-   WHERE id = p_file_id;
+   WHERE id     = p_file_id
+     AND status = 'pending';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'not_pending';
+  END IF;
 END;
 $$;
 

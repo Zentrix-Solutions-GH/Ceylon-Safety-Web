@@ -2,7 +2,6 @@ import "server-only";
 import { revalidateTag } from "next/cache";
 import { writeAuditRow } from "@/lib/audit/index";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import type { AuditEventName } from "@/types/audit";
 import {
   FEED_TAG,
   HOME_FIRST_PAGE_TAG,

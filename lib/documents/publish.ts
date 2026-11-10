@@ -42,8 +42,8 @@ export async function setDocumentStatus(
     // AC5: validate publish pre-conditions
     const missing: string[] = [];
 
-    // Price and category
-    if (!doc.price_cents) missing.push("price");
+    // Price and category (null check only — price_cents === 0 is valid for free docs)
+    if (doc.price_cents == null) missing.push("price");
     if (!doc.category_id) missing.push("category");
 
     // Three ready full files
