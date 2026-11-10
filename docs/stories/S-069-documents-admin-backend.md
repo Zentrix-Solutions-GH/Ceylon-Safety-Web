@@ -62,7 +62,7 @@ Types added or changed in `types/document.ts` (backend defines): `AdminDocumentR
 - Coupons (Release 2).
 - The admin screens (S-072, S-073).
 - **Scope cut (reviewer P0 — in-memory drop counter):** The daily 2-large-drop limit (M8) is enforced by an in-memory Map in `documents.ts`. This is correct for a single-instance dev server but will not work across Vercel/serverless instances. Wiring Upstash/Redis is deferred to a follow-up infra story before production. The comment in documents.ts (line 29) documents this. The admin panel launch is not imminent; this is accepted as a known limitation.
-- DB integration tests (AC1, AC2, AC5, AC6, AC9, AC10) are written as stubs pending `supabase start` availability in CI. The stubs have correct `describe.skipIf` guards; they will be filled in when Supabase local is set up for this story line.
+- DB integration tests (AC1, AC2, AC5, AC6, AC9, AC10) are filled in and gated behind `DOCUMENTS_DB_TEST=1`. They require `supabase start` with the dev seed applied and are skipped in normal CI.
 
 ## Assumptions accepted
 
@@ -124,16 +124,20 @@ $ bash scripts/check.sh
   check.sh: 4 passed, 1 failed  (failure is pre-existing; S-069 files all green)
 ════════════════════════════════
 
-S-069 unit tests: 60 passed, 20 skipped (DB integration stubs, need supabase start)
+S-069 unit tests: 69 passed, 19 skipped (DB integration stubs run with DOCUMENTS_DB_TEST=1)
   ✓ documents.validate.test.ts (20 tests)
   ✓ documents.shape.test.ts (7 tests)
-  ✓ documents.save.test.ts (2 tests)
-  ✓ price.test.ts (10 tests)
-  ✓ documents.perm.db.test.ts (6 skipped — DB)
+  ✓ documents.save.test.ts (9 tests — includes AC10 audit assertion, AC2 not_found, EC4 reserved slug)
+  ✓ price.test.ts (12 tests)
+  ✓ documents.perm.db.test.ts (5 skipped — DB)
   ✓ documents.slug.db.test.ts (6 skipped — DB)
   ✓ documents.save.db.test.ts (3 skipped — DB)
   ✓ price.db.test.ts (2 skipped — DB)
   ✓ documents.audit.db.test.ts (3 skipped — DB)
+
+Additional fix: migration 20261110000001_audit_document_events.sql adds document.save and
+document.slug_change to admin_audit_log CHECK constraint (was missing; writeAuditRow throws
+on unknown action, so saveDocument would have failed in production).
 ```
 
 ## Review notes
