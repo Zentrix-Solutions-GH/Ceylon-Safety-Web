@@ -29,6 +29,15 @@ export async function getArticle(slug: string): Promise<GetArticleResponse> {
     .maybeSingle();
 
   if (error || !data) {
+    // Check slug_redirects before returning not_found (AC3: at most one hop).
+    const { data: redirect } = await supabase
+      .from("slug_redirects")
+      .select("new_slug")
+      .eq("old_slug", slug)
+      .eq("entity_type", "article")
+      .maybeSingle();
+    const newSlug = (redirect as { new_slug: string } | null)?.new_slug ?? null;
+    if (newSlug) return { ok: false, code: "redirect", newSlug };
     return { ok: false, code: "not_found" };
   }
 

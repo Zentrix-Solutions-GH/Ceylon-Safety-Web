@@ -2,25 +2,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getArticle } from "@/lib/articles/getArticle";
-import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import ArticleBody from "@/components/articles/ArticleBody";
 import { t } from "@/messages/en";
 import { publicConfig } from "@/lib/config.public";
 
 interface Props {
   params: Promise<{ slug: string }>;
-}
-
-/** Look up slug_redirects; returns new_slug or null. At most one hop (EC3). */
-async function findRedirect(oldSlug: string): Promise<string | null> {
-  const supabase = createSupabaseAnonClient();
-  const { data } = await supabase
-    .from("slug_redirects")
-    .select("new_slug")
-    .eq("old_slug", oldSlug)
-    .eq("entity_type", "article")
-    .maybeSingle();
-  return (data as { new_slug: string } | null)?.new_slug ?? null;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -54,10 +41,8 @@ export default async function ArticleSlugPage({ params }: Props) {
   const result = await getArticle(slug);
 
   if (!result.ok) {
-    // Check slug_redirects before 404
-    const newSlug = await findRedirect(slug);
-    if (newSlug) {
-      permanentRedirect(`/articles/${newSlug}`);
+    if (result.code === "redirect") {
+      permanentRedirect(`/articles/${result.newSlug}`);
     }
     notFound();
   }

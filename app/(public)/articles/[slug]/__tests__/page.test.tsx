@@ -19,21 +19,6 @@ vi.mock("@/lib/articles/getArticle", () => ({
   getArticle: (...args: unknown[]) => mockGetArticle(...args),
 }));
 
-const mockMaybeSingle = vi.fn();
-vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseAnonClient: () => ({
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          eq: () => ({
-            maybeSingle: mockMaybeSingle,
-          }),
-        }),
-      }),
-    }),
-  }),
-}));
-
 const mockNotFound = vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); });
 const mockRedirect = vi.fn((url: string): never => { throw new Error(`NEXT_REDIRECT:${url}`); });
 vi.mock("next/navigation", () => ({
@@ -74,7 +59,6 @@ const ARTICLE: PublicArticle = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockMaybeSingle.mockResolvedValue({ data: null });
 });
 
 describe("ArticleSlugPage — AC1, AC6", () => {
@@ -89,9 +73,8 @@ describe("ArticleSlugPage — AC1, AC6", () => {
 });
 
 describe("ArticleSlugPage — AC3: redirect", () => {
-  it("redirects to new slug when slug_redirects has a match", async () => {
-    mockGetArticle.mockResolvedValue({ ok: false, code: "not_found" });
-    mockMaybeSingle.mockResolvedValue({ data: { new_slug: "new-slug" } });
+  it("redirects to new slug when getArticle returns redirect", async () => {
+    mockGetArticle.mockResolvedValue({ ok: false, code: "redirect", newSlug: "new-slug" });
     await expect(
       ArticleSlugPage({ params: Promise.resolve({ slug: "old-slug" }) })
     ).rejects.toThrow("NEXT_REDIRECT");
@@ -102,7 +85,6 @@ describe("ArticleSlugPage — AC3: redirect", () => {
 describe("ArticleSlugPage — AC3: 404", () => {
   it("calls notFound when no article and no redirect", async () => {
     mockGetArticle.mockResolvedValue({ ok: false, code: "not_found" });
-    mockMaybeSingle.mockResolvedValue({ data: null });
     await expect(
       ArticleSlugPage({ params: Promise.resolve({ slug: "ghost-slug" }) })
     ).rejects.toThrow("NEXT_NOT_FOUND");
