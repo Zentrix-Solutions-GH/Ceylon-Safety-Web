@@ -213,7 +213,7 @@ export async function findUserByEmail(input: {
 
   const serviceClient = createSupabaseServiceRoleClient();
 
-  const { data, error } = await serviceClient.auth.admin.listUsers();
+  const { data, error } = await serviceClient.auth.admin.listUsers({ perPage: 1000 });
   if (error) return { ok: false, code: "unknown" };
 
   const user = data.users.find(
