@@ -179,7 +179,10 @@ Round 1 review (security-reviewer + adversarial reviewer) found 3 P0 findings; f
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `lib/documents/upload.ts:249-258` — `getObjectBytes` returning `null` for the full-file fetch silently passes `checksum: null` to the RPC; row is marked `ready` with no integrity data. Fix: treat null `fullBytes` as `upload_failed` before calling the RPC. (full-review 2026-11-10)
+- **P0** `lib/documents/publish.ts:29-35` — `setDocumentStatus` does not filter `deleted_at IS NULL`; a soft-deleted document can be re-published. Fix: add `.is("deleted_at", null)` to the fetch. (full-review 2026-11-10)
+- **P1** `lib/documents/publish.ts:85-93` — TOCTOU race: app-level `updated_at` version-conflict check passes but UPDATE has no `.eq("updated_at", doc.updated_at)` guard; two concurrent publish calls can both succeed. (full-review 2026-11-10)
+- **P1** `lib/documents/__tests__/audit.db.test.ts` — AC8 audit tests only verify the `writeAuditRow` call site via mock; the actual DB row is never written or read back. Add a pgTAP test against real Supabase. (full-review 2026-11-10)
 
 ## After this merges, a user can:
 
