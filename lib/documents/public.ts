@@ -178,13 +178,15 @@ export async function listPublicDocuments(
   const { category, type, sort, page } = parsed.data;
   const cacheKey = `docs-list:${category ?? ""}:${type ?? ""}:${sort}:${page}`;
 
+  // unstable_cache is called once per unique key; pass the params via the
+  // wrapper's argument so Next.js can distinguish cache entries by args.
   const cached = unstable_cache(
-    () => queryPublicDocuments(category, type, sort, page),
+    queryPublicDocuments,
     [cacheKey],
     { revalidate: LIST_CACHE_SECONDS, tags: [DOCUMENTS_LIST_TAG] }
   );
 
-  return cached();
+  return cached(category, type, sort, page);
 }
 
 // ---------------------------------------------------------------------------

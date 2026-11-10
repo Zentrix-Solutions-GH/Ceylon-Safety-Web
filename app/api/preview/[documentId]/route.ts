@@ -18,7 +18,10 @@ export async function GET(
   { params }: { params: Promise<{ documentId: string }> }
 ): Promise<NextResponse> {
   // Rate limit by IP — mode: closed (preview images are the actual product, EC7)
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip")?.trim() ||
+    "unknown";
   const rl = await checkRateLimit({
     limitName: "preview-route",
     key: ip,
@@ -68,7 +71,12 @@ export async function GET(
     return NextResponse.json({ ok: false, code: "unknown" }, { status: 500 });
   }
 
-  const stream = await getObjectStream(cfg.bucketPrivate, result.fileKey);
+  let stream: ReadableStream<Uint8Array> | null;
+  try {
+    stream = await getObjectStream(cfg.bucketPrivate, result.fileKey);
+  } catch {
+    return NextResponse.json({ ok: false, code: "unknown" }, { status: 503 });
+  }
   if (!stream) {
     return NextResponse.json({ ok: false, code: "not_found" }, { status: 404 });
   }
