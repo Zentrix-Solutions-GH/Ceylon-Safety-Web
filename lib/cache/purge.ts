@@ -9,6 +9,8 @@ import {
   COUNTERS_TAG,
   SITEMAP_TAG,
   ARTICLES_LIST_TAG,
+  DOCUMENTS_LIST_TAG,
+  documentTag,
 } from "@/lib/cache/tags";
 
 export type PurgeEvent = "publish" | "hide" | "delete" | "slug_change" | "author_change" | "category_change";
@@ -117,6 +119,41 @@ export async function purgeVideo(
       entityType: "video",
       entityId: videoId,
       after: { event: "video-status-change" },
+    });
+  } catch {}
+  return { ok: false, code: "purge_failed" };
+}
+
+/**
+ * Clear cached pages for a document publish or hide event (content design section 15).
+ * Clears: that document page, documents list, counters, sitemap, every article using the document.
+ */
+export async function purgeDocument(
+  documentId: string,
+  articleIds: string[],
+  actorId?: string,
+): Promise<{ ok: true } | { ok: false; code: "purge_failed" }> {
+  const tags = [
+    DOCUMENTS_LIST_TAG,
+    COUNTERS_TAG,
+    SITEMAP_TAG,
+    documentTag(documentId),
+    ...articleIds.map((id) => `article:${id}`),
+  ];
+
+  let failed = purgeTagSubset(tags);
+  if (failed.length === 0) return { ok: true };
+
+  failed = purgeTagSubset(failed);
+  if (failed.length === 0) return { ok: true };
+
+  try {
+    await writeAuditRow({
+      action: "purge.failed" as AuditEventName,
+      actorId: actorId ?? "system",
+      entityType: "document",
+      entityId: documentId,
+      after: { failedTags: failed },
     });
   } catch {}
   return { ok: false, code: "purge_failed" };

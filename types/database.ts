@@ -415,14 +415,14 @@ isOneToOne: false
                   ]
                 },"document_files": {
                   Row: {
-                    "checksum_sha256": string | null,"created_at": string,"document_id": string,"file_key": string,"format": string,"id": string,"is_current": boolean,"kind": string,"language": string,"size_bytes": number,"status": string,"updated_at": string,"uploaded_by": string | null,"version": number
+                    "checksum_sha256": string | null,"created_at": string,"document_id": string,"file_key": string,"format": string,"id": string,"is_current": boolean,"kind": string,"language": string,"size_bytes": number,"sort_order": number,"status": string,"updated_at": string,"uploaded_by": string | null,"version": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "checksum_sha256"?: string | null,"created_at"?: string,"document_id": string,"file_key": string,"format": string,"id"?: string,"is_current"?: boolean,"kind": string,"language": string,"size_bytes": number,"status"?: string,"updated_at"?: string,"uploaded_by"?: string | null,"version"?: number
+                    "checksum_sha256"?: string | null,"created_at"?: string,"document_id": string,"file_key": string,"format": string,"id"?: string,"is_current"?: boolean,"kind": string,"language": string,"size_bytes": number,"sort_order"?: number,"status"?: string,"updated_at"?: string,"uploaded_by"?: string | null,"version"?: number
                   }
                   Update: {
-                    "checksum_sha256"?: string | null,"created_at"?: string,"document_id"?: string,"file_key"?: string,"format"?: string,"id"?: string,"is_current"?: boolean,"kind"?: string,"language"?: string,"size_bytes"?: number,"status"?: string,"updated_at"?: string,"uploaded_by"?: string | null,"version"?: number
+                    "checksum_sha256"?: string | null,"created_at"?: string,"document_id"?: string,"file_key"?: string,"format"?: string,"id"?: string,"is_current"?: boolean,"kind"?: string,"language"?: string,"size_bytes"?: number,"sort_order"?: number,"status"?: string,"updated_at"?: string,"uploaded_by"?: string | null,"version"?: number
                   }
                   Relationships: [
                     {

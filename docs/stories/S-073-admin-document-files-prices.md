@@ -25,11 +25,11 @@ On the document edit screen: upload the English, Sinhala and Tamil PowerPoint fi
 
 ## Acceptance criteria
 
-- [ ] AC1: `components/admin/DocumentLanguageFiles.tsx` shows three upload boxes (English, Sinhala, Tamil) and one preview box. Each box shows its status: Missing, Uploading, Ready or Failed, and the version.
+- [ ] AC1: `components/admin/DocumentLanguageFiles.tsx` shows three upload boxes (English, Sinhala, Tamil) for full files and, for each language, up to 3 preview upload slots (sort_order 1–3). Each box shows its status: Missing, Uploading, Ready or Failed, and the version. Preview slots 2 and 3 are shown only after slot 1 is Ready.
 - [ ] AC2: Choosing a file calls `startDocumentFileUpload` (S-070), sends the file straight to the returned upload link with a progress bar, then calls `completeDocumentFileUpload`. Large PowerPoint files never go through our own routes.
 - [ ] AC3: The box refuses a file of the wrong kind before upload (full files `.pptx`, preview `.png`, `.jpg`, `.pdf`) and shows the server reason for `file_type` and `file_too_large`; `upload_failed` shows "The upload did not finish. Try again." with a retry button.
 - [ ] AC4: A re-upload shows a new version only after the new file is Ready; the old one stays shown until then.
-- [ ] AC5: Publish and Hide buttons call `setDocumentStatus`. When the server answers `files_missing`, the screen shows "Upload all three language files and the preview first." and lists which of the three languages and the preview are missing.
+- [ ] AC5: Publish and Hide buttons call `setDocumentStatus`. When the server answers `files_missing`, the screen shows "Upload all three language files and at least one preview per language first." and lists which of the three languages (full or preview slot 1) are missing.
 - [ ] AC6: Before Hide, the screen calls `countArticleRefs`; if the count is above 0 it shows "Used in N articles. Those articles will show it as unavailable." and asks for confirmation.
 - [ ] AC7: Price change dialog: shows old and new price side by side. A change of more than 50 percent shows a second, stronger confirmation naming the percentage. The dialog asks for the authenticator code and sends it with `changeDocumentPrice`. `confirm_large_change` shows "Please confirm this large price change." and `mfa_required` shows "Enter the code from your authenticator app."
 - [ ] AC8: After a publish or hide the screen shows the purge warning when the server returns it: "The change is saved but the site may show the old page for a few minutes."
@@ -58,7 +58,7 @@ Types consumed (read-only, S-069 and S-070): `DocumentFileMark`, `UploadStart`, 
 
 ## Assumptions accepted
 
-- The preview is one file per language, `png`, `jpg` or `pdf`, with the English one as fallback (schema, Q70 assumption). The upload box accepts those three types, so it works whichever way Q70 is answered as long as one file is enough.
+- Q70 resolved 2026-11-10: up to 3 preview images per language (sort_order 1–3), PNG/JPG/PDF, no English fallback. Each language needs at least one preview (slot 1) for publish to be allowed. The upload UI shows slots 2 and 3 only after slot 1 is Ready.
 - Authenticator step-up window of 5 minutes (ASSUMPTION, S13 PROPOSED) applies to the price dialog.
 
 ## Test plan

@@ -1,7 +1,7 @@
 ---
 id: S-070
 title: Documents files backend: 3 languages, previews, publish gating
-status: blocked
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-070-documents-files-backend
@@ -14,7 +14,7 @@ reqs: [REQ-133, REQ-146, REQ-043, REQ-047, REQ-055, REQ-060c]
 
 Upload the three PowerPoint language files and the preview of a document into the private store, and refuse to publish a document that cannot be delivered. Size: about 1 day.
 
-**Status: blocked on Q70** (preview: images of the first slides, or a PDF sample). The data model allows both (`png`, `jpg`, `pdf`), but the schema keeps only ONE current preview row per document and language, so several slide images do not fit. The owner must accept the assumption "one preview file per language, png, jpg or pdf, uploaded by hand, falling back to the English one" (schema, REQ-047) or answer Q70. Everything else in this story is unblocked.
+**Q70 resolved 2026-11-10:** Up to 3 preview images per language (PNG/JPG/PDF), uploaded by hand. Each language (en, si, ta) has its own preview slots (sort_order 1–3); there is no English-only fallback. Schema updated: `sort_order` column added to `document_files`; unique constraint is now `(document_id, kind, language, sort_order) WHERE is_current`. R2 key path for previews: `previews/{document_id}/{language}/{sort_order}/{file}`.
 
 ## Requirements covered
 
@@ -27,11 +27,11 @@ Upload the three PowerPoint language files and the preview of a document into th
 
 ## Acceptance criteria
 
-- [ ] AC1: `startDocumentFileUpload(documentId, kind, language, size)` needs `documents.*`, creates a `pending` `document_files` row and returns a short-lived presigned R2 upload link for the private bucket. Key paths: full file `documents/{document_id}/{language}/v{version}/{file}`; preview `previews/{document_id}/{file}`. File names from the browser are replaced by generated names.
+- [ ] AC1: `startDocumentFileUpload(documentId, kind, language, sortOrder, size)` needs `documents.*`, creates a `pending` `document_files` row and returns a short-lived presigned R2 upload link for the private bucket. Key paths: full file `documents/{document_id}/{language}/v{version}/{file}`; preview `previews/{document_id}/{language}/{sort_order}/{file}`. `sortOrder` must be 1–3 for preview; must be 1 for full (any other value: `validation_failed` reason `file_type`). File names from the browser are replaced by generated names.
 - [ ] AC2: Language is `en`, `si` or `ta`; kind is `full` (format `pptx`) or `preview` (format `png`, `jpg` or `pdf`). Anything else: `validation_failed` reason `file_type`.
 - [ ] AC3: `completeDocumentFileUpload(fileId)` reads the object from R2, checks the real type (a `pptx` package for full files; a real image or PDF for previews, not the extension), the size against the limit in `lib/config.ts` (over: reason `file_too_large`), computes the checksum, and only then marks the row `ready`. A failed check deletes the object and marks the row failed (`upload_failed`).
-- [ ] AC4: A re-upload creates a new version row. The previous current row of the same document, kind and language is switched off in the same transaction in which the new row becomes `ready`. The old file stays until then.
-- [ ] AC5: `setDocumentStatus(id, 'publish' | 'hide', updatedAt)` needs `documents.*`. Publish is refused with `validation_failed` reason `files_missing` unless a current `ready` full file exists in each of en, si, ta AND a current `ready` preview exists (own or the English fallback), and a price and category exist. Hide has no file condition.
+- [ ] AC4: A re-upload creates a new version row. The previous current row of the same document, kind, language and sort_order is switched off in the same transaction in which the new row becomes `ready`. The old file stays until then.
+- [ ] AC5: `setDocumentStatus(id, 'publish' | 'hide', updatedAt)` needs `documents.*`. Publish is refused with `validation_failed` reason `files_missing` unless a current `ready` full file exists in each of en, si, ta AND at least one current `ready` preview (sort_order 1) exists for each of en, si, ta, and a price and category exist. Hide has no file condition.
 - [ ] AC6: Publish sets `published_at` to now; hide keeps existing orders working (nothing in this story touches orders or entitlements).
 - [ ] AC7: Publish and hide clear the cached copies per the master purge table: that document page, Documents list, counters, sitemap, and every article that uses the document (through `article_refs`). A failed purge is retried and returns the warning "The change is saved but the site may show the old page for a few minutes." and writes `purge.failed`.
 - [ ] AC8: Every upload writes `document.file_upload`; publish writes `document.publish`; hide writes `document.hide`; one audit row per event.
@@ -46,9 +46,11 @@ Upload the three PowerPoint language files and the preview of a document into th
 - [ ] EC4: Two admins upload the same language at once: one current row only (unique rule on current rows); no corrupt state.
 - [ ] EC5: Publish with only two languages ready, or no preview: refused with `files_missing`.
 - [ ] EC6: Hide a document used in articles: allowed here; the "Used in N articles" confirmation is the screen's job (S-073, via `countArticleRefs`).
-- [ ] EC7: Preview uploaded once with language `en` and the document has `si` and `ta` files: preview rule falls back to English and publish is allowed.
+- [ ] EC7: Publish attempted with only en preview uploaded but si and ta previews missing: refused with `files_missing` listing the missing language previews.
 - [ ] EC8: Upload of zero bytes or a file just over the limit is refused.
 - [ ] EC9: Role removed mid-upload: `completeDocumentFileUpload` is refused.
+- [ ] EC10: `completeDocumentFileUpload` called but the R2 object does not exist (upload never arrived): row is marked `upload_failed`, error returned.
+- [ ] EC11: `completeDocumentFileUpload` called on a row already `ready`: returns `upload_failed`; no second version row is created.
 
 ## Contract
 
@@ -64,7 +66,7 @@ Types changed in `types/document.ts`: `DocumentFileKind`, `DocumentLanguage`, `U
 
 ## Assumptions accepted
 
-- Q70 assumption above (once the owner accepts it).
+- Q70 resolved 2026-11-10: up to 3 preview images per language (sort_order 1–3), PNG/JPG/PDF, uploaded by hand; no English fallback; publish requires at least one ready preview (sort_order 1) for each of en, si, ta.
 - The maximum PowerPoint size is not in the spec. The limit is a config value; the hosting test (S-001, S-002) uses 100 MB for the direct upload test.
 - Presigned uploads cannot fix the file length on R2 (to verify), so the size is checked after upload and oversized objects are deleted (content design 14, schema 14.5).
 - Publish requires a preview (admin panel 6.4) in addition to the three files (schema publish rule).
@@ -86,16 +88,72 @@ Types changed in `types/document.ts`: `DocumentFileKind`, `DocumentLanguage`, `U
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
-Prior art: read in full `commerce-design` sections 3.2, 7, 10, 11; `admin-panel-design` sections 6.3, 6.4; `database-schema` Group E and 14.5 (uploads), storage layout; `content-system-design` section 15 (purge table). Extends S-069 and uses the R2 client from S-006; supersedes nothing.
+Prior art: read in full `commerce-design` sections 3.2, 7, 10, 11; `admin-panel-design` sections 6.3, 6.4; `database-schema` Group E and 14.5 (uploads), storage layout; `content-system-design` section 15 (purge table). Extends S-069 and uses the R2 client (`lib/r2/storage.ts`) from S-006; reuses `purgeArticle` pattern from `lib/cache/purge.ts`; supersedes nothing.
+
+### Analyst notes resolved in plan
+- **Presigned link type:** single-part `PutObject` presign for all files (R2 single-part supports up to 5 GB; PowerPoint files are well under this). `ContentLength` is NOT set (R2 does not enforce it on presigned PUTs). Size is verified after upload via `HeadObject`. No multipart needed in v1.
+- **`DocumentLanguageSlot.preview`** updated to `preview: DocumentFileMark[]` (array of 3 slots by sort_order); index 0 = sort_order 1, etc. Allows admin screen to show per-slot status.
+- **`completeDocumentFileUpload` permission re-check:** re-calls `requireStaff` with `documents.*` check at the start (EC9).
+- **Reason for invalid sort_order:** reuses `file_type` reason (the story's AC1 says so explicitly); not adding a new reason code.
+- **EC10, EC11** added below in Edge cases.
+- **Price > 0 on publish:** backend only checks row exists and `price_cents IS NOT NULL`; value validation is S-073's concern.
+
+### Files to create
+- `supabase/migrations/20261110000002_document_files.sql` — `document_files` table, sort_order column, unique constraint, RLS (admin-only), audit CHECK update
+- `lib/documents/upload.ts` — `startDocumentFileUpload`, `completeDocumentFileUpload`
+- `lib/documents/publish.ts` — `setDocumentStatus` (publish/hide + purge)
+- `lib/documents/index.ts` — re-exports
+- `lib/documents/__tests__/upload.test.ts` — AC1, AC2, sort_order, key paths (unit)
+- `lib/documents/__tests__/complete.test.ts` — AC3, EC2, EC8, EC9, EC10, EC11 (unit with R2 mock)
+- `lib/documents/__tests__/versions.db.test.ts` — AC4, EC3, EC4 (integration)
+- `lib/documents/__tests__/publish.db.test.ts` — AC5, AC6, EC5, EC7 (integration)
+- `lib/documents/__tests__/purge.test.ts` — AC7 (unit)
+- `lib/documents/__tests__/audit.db.test.ts` — AC8 (integration)
+- `lib/documents/__tests__/shape.test.ts` — AC9 (unit)
+- `lib/documents/__tests__/perm.db.test.ts` — permission checks (integration)
+
+### Files to edit
+- `types/document.ts` — add `DocumentFileKind`, `UploadStart`, `UploadStatus`; update `DocumentLanguageSlot.preview` to array; add `SetDocumentStatusResult`
+- `types/audit.ts` — add `document.file_upload`, `document.publish`, `document.hide`
+- `lib/config.ts` — add `PPTX_MAX_BYTES` (100 MB), `PREVIEW_MAX_BYTES` (10 MB)
+- `lib/cache/purge.ts` — add `purgeDocument(documentId, articleIds)` following `purgeVideo` pattern
+- `lib/cache/tags.ts` — add document cache tags
+- `lib/admin/actions/documents.ts` — re-export `startDocumentFileUpload`, `completeDocumentFileUpload`, `setDocumentStatus`
+- `lib/admin/actions/index.ts` — ensure new exports are re-exported
+
+### Step order
+1. Migration (table + RLS + audit events)
+2. Types (`document.ts`, `audit.ts`)
+3. Config (size limits)
+4. Cache tags + `purgeDocument`
+5. `lib/documents/upload.ts`
+6. `lib/documents/publish.ts`
+7. Wire into `lib/admin/actions/documents.ts`
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
+```
+$ npx eslint . --max-warnings 0
+(exit 0 — no output)
 
+$ npx tsc --noEmit
+(exit 0 — no output)
+
+$ npx vitest run lib/documents/__tests__
+ ✓ lib/documents/__tests__/purge.test.ts (3 tests)
+ ✓ lib/documents/__tests__/shape.test.ts (3 tests)
+ ✓ lib/documents/__tests__/upload.test.ts (12 tests)
+ ✓ lib/documents/__tests__/complete.test.ts (11 tests)
+ Test Files  4 passed (4)
+      Tests  29 passed (29)
+
+Supabase not running — pgTAP and types-freshness checks skipped per CLAUDE.md.
 ```
-$ bash scripts/check.sh
-```
+
+Round 1 review (security-reviewer + adversarial reviewer) found 3 P0 findings; fixed:
+1. Preview format placeholder ("png" hardcoded) — added `format` field to `StartUploadInput`, validated, stored in DB, used in key path and magic-byte check.
+2. Pending row inserted with `is_current: true` violating unique index on re-upload — changed to `is_current: false`.
+3. `buildLanguageSlots` returned singular `preview` — updated to `previews: [slot1, slot2, slot3]` using `sort_order`; added `sort_order` to both `LIST_COLUMNS` and `DETAIL_COLUMNS` selects.
 
 ## Review notes
 

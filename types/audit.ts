@@ -31,6 +31,9 @@ export type AuditEventName =
   // Documents
   | "document.save"
   | "document.slug_change"
+  | "document.file_upload"
+  | "document.publish"
+  | "document.hide"
   // Money and access
   | "order.grant"
   | "bank_transfer.approve"

@@ -99,6 +99,7 @@ async function clashSafeDocumentSlug(
 type FileRow = {
   kind: string;
   language: string;
+  sort_order?: number;
   status: string;
   is_current: boolean;
 };
@@ -131,14 +132,20 @@ function buildLanguageSlots(files: FileRow[]): DocumentLanguageSlot[] {
   return languages.map((lang) => {
     const currentFiles = files.filter((f) => f.language === lang && f.is_current);
     const fullFile = currentFiles.find((f) => f.kind === "full");
-    const previewFile = currentFiles.find((f) => f.kind === "preview");
 
     const toMark = (f: FileRow | undefined): DocumentFileMark => {
       if (!f) return "missing";
       return f.status === "ready" ? "ready" : "uploading";
     };
 
-    return { language: lang, full: toMark(fullFile), preview: toMark(previewFile) };
+    const previewAtSlot = (slot: number): DocumentFileMark =>
+      toMark(currentFiles.find((f) => f.kind === "preview" && f.sort_order === slot));
+
+    return {
+      language: lang,
+      full: toMark(fullFile),
+      previews: [previewAtSlot(1), previewAtSlot(2), previewAtSlot(3)],
+    };
   });
 }
 
@@ -181,7 +188,7 @@ export function mapDocumentDetail(row: DocQueryRow): AdminDocument {
 const LIST_COLUMNS = `
   id, title, slug, doc_kind, category_id, price_cents, status, updated_at, created_at,
   categories!inner(name),
-  document_files(kind, language, status, is_current)
+  document_files(kind, language, sort_order, status, is_current)
 `;
 
 const DETAIL_COLUMNS = `
@@ -189,7 +196,7 @@ const DETAIL_COLUMNS = `
   description, cover_image_key, page_count, preview_pages, download_count, purchase_count,
   seo_title, seo_description, published_at,
   categories!inner(name),
-  document_files(kind, language, status, is_current)
+  document_files(kind, language, sort_order, status, is_current)
 `;
 
 const PAGE_SIZE = 25;
@@ -584,3 +591,6 @@ export async function changeDocumentPrice(input: {
 
   return { ok: true, documentId: doc.id, newPriceCents: u.price_cents, updatedAt: u.updated_at };
 }
+
+// S-070 re-exports — upload and publish actions.
+export { startDocumentFileUpload, completeDocumentFileUpload, setDocumentStatus } from "@/lib/documents/index";

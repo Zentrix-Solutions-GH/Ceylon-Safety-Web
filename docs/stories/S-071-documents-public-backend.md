@@ -28,9 +28,9 @@ Public reads for the Documents page, the document overlay and the article docume
 
 - [ ] AC1: `GET app/api/documents` (public read, spec gap below) lists visible documents: status published, `published_at` not in the future, not deleted. Filters: `category`, `type` (`checklist`, `safety_sign`, `toolbox_talk`), `sort` (`newest` default, `popular` = `download_count` descending). Server-fixed page size and a validated page value; unknown filter values return `validation_failed`.
 - [ ] AC2: Each list item carries: id, slug, English title, cover image key, price in cents, page count, download count, type, category, and `languages` (the languages that have a current `ready` full file). No file key, no file size, no storage path.
-- [ ] AC3: `getDocument(slug)` returns the same fields plus description, preview page count and whether a preview exists, for a visible document. A slug found only in `slug_redirects` returns the new slug for a 301; an unknown, hidden or deleted slug returns `not_found`.
+- [ ] AC3: `getDocument(slug)` returns the same fields plus description, `preview_pages` (count of ready preview rows at sort_order 1–3 for the requested language) and whether a preview exists, for a visible document. A slug found only in `slug_redirects` returns the new slug for a 301; an unknown, hidden or deleted slug returns `not_found`.
 - [ ] AC4: A document that is published but lacks a ready full file in any language is listed as unavailable and cannot be bought (the pricing call in S-075 uses the same rule). It still shows its remaining `languages`.
-- [ ] AC5: `GET app/api/preview/[documentId]?language=` serves the current ready preview file of a visible document to anyone. It falls back to the English preview. It never serves a `full` row, whatever the id or parameter. Rate limited. Response may be cached for a short time.
+- [ ] AC5: `GET app/api/preview/[documentId]?language=&page=` serves the current ready preview file of a visible document to anyone. `page` selects sort_order (1–3, default 1); a missing or out-of-range page returns `not_found`. No English fallback: each language must have its own preview. It never serves a `full` row, whatever the id or parameter. Rate limited. Response may be cached for a short time.
 - [ ] AC6: `listPickerItems(kind: 'document', search, page)` (read-only, staff with `articles.*`) returns up to 20 published, non-deleted documents with cover, title and price for the article editor picker.
 - [ ] AC7: Cache windows: list at most 60 seconds, a single document at most 300 seconds, a not-found answer at most 60 seconds (separate data tag), all clearable by the purge table.
 - [ ] AC8: Download counts shown are per document, all languages together.
@@ -39,7 +39,7 @@ Public reads for the Documents page, the document overlay and the article docume
 
 - [ ] EC1: Hidden or deleted documents never appear in list, single read, preview route or picker; people who already bought them are unaffected (downloads are S-085).
 - [ ] EC2: `documentId` of another document's file or a random UUID on the preview route returns `not_found` and no hint of a full file.
-- [ ] EC3: Preview missing for the requested language and for English: `not_found` with a neutral message.
+- [ ] EC3: Preview missing for the requested language: `not_found` with a neutral message (no fallback to English).
 - [ ] EC4: Filter combination with no match returns an empty list, not an error.
 - [ ] EC5: A document whose slug changed after publishing resolves through the redirect table; a redirect never points at another item's live slug.
 - [ ] EC6: Response from the list for 10,000 documents stays within the page limit; query uses the `doc_kind`, `download_count` and (status, `published_at`) indexes.
@@ -62,7 +62,7 @@ Types changed in `types/document.ts`: `PublicDocumentCard`, `PublicDocument`, `D
 - Spec gap: no route is named for filtered document lists (the file-structure tree has `api/search` and `api/feed` only). `api/documents` is added here because the Documents page needs a browser read for filters (frontend architecture 3.5). Parent to confirm and to update the file-structure doc.
 - Spec gap: the page size for documents is not specified; this story fixes it on the server as 12 (same as the feed) in config.
 - Spec gap: `listPickerItems` is named in the content design contract but no roster story owns it. This story adds the `document` kind; if S-053 or S-056 has not created the shared call, this story creates it with both kinds in its shape (video support stays S-053's).
-- Q70: the preview route returns the single current preview file per language; if the owner chooses several slide images the schema must change first.
+- Q70 resolved 2026-11-10: up to 3 preview images per language (sort_order 1–3); `page` query param selects the image; no English fallback.
 - Q80: download count is per document (schema ASSUMPTION).
 
 ## Test plan
