@@ -11,6 +11,7 @@ import type {
   GrantRoleResult,
   RemoveRoleResult,
   ListStaffResult,
+  FindUserByEmailResult,
 } from "@/types/auth";
 
 const GrantRoleSchema = z.object({
@@ -196,4 +197,29 @@ export async function listStaff(): Promise<ListStaffResult> {
   );
 
   return { ok: true, staff };
+}
+
+// ── findUserByEmail ───────────────────────────────────────────────────────────
+
+/**
+ * Resolve an email address to a Supabase userId.
+ * Super Admin only. Used by the Add Staff dialog before calling grantRole.
+ */
+export async function findUserByEmail(input: {
+  email: string;
+}): Promise<FindUserByEmailResult> {
+  const auth = await requireSuperAdmin();
+  if (!auth.ok) return auth;
+
+  const serviceClient = createSupabaseServiceRoleClient();
+
+  const { data, error } = await serviceClient.auth.admin.listUsers();
+  if (error) return { ok: false, code: "unknown" };
+
+  const user = data.users.find(
+    (u) => u.email?.toLowerCase() === input.email.toLowerCase()
+  );
+  if (!user) return { ok: false, code: "not_found" };
+
+  return { ok: true, userId: user.id };
 }
