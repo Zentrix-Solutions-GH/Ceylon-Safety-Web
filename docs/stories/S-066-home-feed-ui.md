@@ -1,11 +1,11 @@
 ---
 id: S-066
 title: Home feed + Load more + counters
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-066-home-feed-ui
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/75
 depends_on: [S-059, S-065]
 reqs: [REQ-015, REQ-015d, REQ-016, REQ-017, REQ-062, REQ-063]
 ---
