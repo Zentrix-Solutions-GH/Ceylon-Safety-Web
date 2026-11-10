@@ -1,7 +1,7 @@
 ---
 id: S-053
 title: Videos backend + thumbnail copy
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-053-videos-backend

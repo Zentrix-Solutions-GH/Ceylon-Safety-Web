@@ -34,4 +34,12 @@ export type GetImageUploadLinkResult =
 
 export type ConfirmImageUploadResult =
   | { ok: true; mediaId: string }
-  | { ok: false; code: "not_found" | "upload_failed" | "not_allowed" | "server_error" };
+  | { ok: false; code: "not_found" | "upload_failed" | "location_data_found" | "not_allowed" | "server_error" };
+
+export type MediaRow = {
+  id: string;
+  status: "pending" | "ready";
+  key: string;
+  width: number;
+  height: number;
+};

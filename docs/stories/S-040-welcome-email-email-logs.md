@@ -1,7 +1,7 @@
 ---
 id: S-040
 title: Welcome email and email_logs helper
-status: pr-open
+status: merged
 owner: backend
 risk: normal
 branch: feature/S-040-welcome-email-email-logs

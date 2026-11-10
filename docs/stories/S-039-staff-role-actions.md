@@ -1,7 +1,7 @@
 ---
 id: S-039
 title: Staff role actions — grantRole, removeRole, removeAuthenticator, listStaff
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-039-staff-role-actions

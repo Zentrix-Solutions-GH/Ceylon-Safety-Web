@@ -1,7 +1,7 @@
 ---
 id: S-054
 title: Editor core — text styles, fonts, lists, marks
-status: pr-open
+status: merged
 owner: frontend
 risk: normal
 branch: feature/S-054-editor-core-text-styles

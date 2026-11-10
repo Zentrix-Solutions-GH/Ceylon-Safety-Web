@@ -1,7 +1,7 @@
 ---
 id: S-038
 title: Audit helper and step-up helper
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-038-audit-and-step-up-helpers

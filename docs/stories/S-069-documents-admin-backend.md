@@ -1,7 +1,7 @@
 ---
 id: S-069
 title: Documents admin backend: CRUD + prices
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-069-documents-admin-backend

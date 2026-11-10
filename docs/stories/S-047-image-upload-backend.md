@@ -1,7 +1,7 @@
 ---
 id: S-047
 title: Image upload backend (presigned flow)
-status: review
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-047-image-upload-backend

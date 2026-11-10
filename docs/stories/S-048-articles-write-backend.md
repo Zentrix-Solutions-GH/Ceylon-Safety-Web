@@ -1,7 +1,7 @@
 ---
 id: S-048
 title: Articles write backend: saveArticle, setArticleStatus
-status: pr-open
+status: merged
 owner: backend
 risk: sensitive
 branch: feature/S-048-articles-write-backend

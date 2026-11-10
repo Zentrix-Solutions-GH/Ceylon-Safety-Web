@@ -1,7 +1,7 @@
 ---
 id: S-051
 title: Comment moderation backend
-status: pr-open
+status: merged
 owner: backend
 risk: normal
 branch: feature/S-051-comment-moderation-backend
