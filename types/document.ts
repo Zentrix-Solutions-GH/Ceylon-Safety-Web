@@ -5,6 +5,9 @@
 export type DocumentStatus = "draft" | "published" | "hidden";
 export type DocKind = "checklist" | "safety_sign" | "toolbox_talk";
 export type DocumentLanguage = "en" | "si" | "ta";
+export type DocumentFileKind = "full" | "preview";
+export type DocumentFileFormat = "pptx" | "png" | "jpg" | "pdf";
+export type UploadFileStatus = "pending" | "ready" | "upload_failed";
 
 /** Per-language-slot file status shown in the admin list and detail view. */
 export type DocumentFileMark = "missing" | "uploading" | "ready";
@@ -13,8 +16,42 @@ export type DocumentFileMark = "missing" | "uploading" | "ready";
 export interface DocumentLanguageSlot {
   language: DocumentLanguage;
   full: DocumentFileMark;
-  preview: DocumentFileMark;
+  /** Array of 3 preview slot statuses (index 0 = sort_order 1, …). */
+  previews: [DocumentFileMark, DocumentFileMark, DocumentFileMark];
 }
+
+/** Result returned when a presigned upload is started. */
+export interface UploadStart {
+  fileId: string;
+  uploadUrl: string;
+}
+
+/** Result of completeDocumentFileUpload. */
+export type UploadStatus =
+  | { ok: true; fileId: string; status: "ready" }
+  | { ok: false; code: "not_allowed" }
+  | { ok: false; code: "not_found" }
+  | { ok: false; code: "validation_failed"; reason: "file_type" | "file_too_large" }
+  | { ok: false; code: "upload_failed" }
+  | { ok: false; code: "rate_limited" }
+  | { ok: false; code: "unknown"; reason?: string };
+
+export type StartUploadResult =
+  | { ok: true; upload: UploadStart }
+  | { ok: false; code: "not_allowed" }
+  | { ok: false; code: "not_found" }
+  | { ok: false; code: "validation_failed"; reason: "file_type" }
+  | { ok: false; code: "rate_limited" }
+  | { ok: false; code: "upload_failed" }
+  | { ok: false; code: "unknown"; reason?: string };
+
+export type SetDocumentStatusResult =
+  | { ok: true; documentId: string; updatedAt: string; purgeWarning?: string }
+  | { ok: false; code: "not_allowed" }
+  | { ok: false; code: "not_found" }
+  | { ok: false; code: "validation_failed"; reason: "files_missing"; missing: string[] }
+  | { ok: false; code: "version_conflict" }
+  | { ok: false; code: "unknown"; reason?: string };
 
 /** Row returned by listDocuments (25 per page). No file keys. */
 export interface AdminDocumentRow {
