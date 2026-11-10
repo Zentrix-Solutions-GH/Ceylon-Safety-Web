@@ -1,8 +1,8 @@
 import "server-only";
 import { requireStaff } from "@/lib/auth/server";
-import { writeDenied } from "@/lib/audit/index";
+import { writeDenied, writeAuditRow } from "@/lib/audit/index";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import { writeAuditRow } from "@/lib/audit/index";
+import { checkAdminWriteLimit } from "@/lib/ratelimit/index";
 import { purgeDocument } from "@/lib/cache/purge";
 import type { SetDocumentStatusResult } from "@/types/document";
 
@@ -22,6 +22,9 @@ export async function setDocumentStatus(
     await writeDenied("unknown", "documents", action).catch(() => {});
     return { ok: false, code: "not_allowed" };
   }
+
+  const rl = await checkAdminWriteLimit(auth.user.id);
+  if (!rl.ok) return { ok: false, code: "unknown", reason: "rate_limited" };
 
   const supabase = createSupabaseServiceRoleClient();
 

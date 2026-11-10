@@ -125,7 +125,8 @@ export async function purgeVideo(
 
 /**
  * Clear cached pages for a document publish or hide event (content design section 15).
- * Clears: that document page, documents list, counters, sitemap, every article using the document.
+ * Clears: that document page, documents list, counters, sitemap, home first page,
+ * and every article using the document.
  */
 export async function purgeDocument(
   documentId: string,
@@ -136,6 +137,7 @@ export async function purgeDocument(
     DOCUMENTS_LIST_TAG,
     COUNTERS_TAG,
     SITEMAP_TAG,
+    HOME_FIRST_PAGE_TAG,
     documentTag(documentId),
     ...articleIds.map((id) => `article:${id}`),
   ];

@@ -210,6 +210,31 @@ describe("completeDocumentFileUpload — EC9, EC10, EC11", () => {
     expect(mockDeleteObject).not.toHaveBeenCalled();
   });
 
+  it("EC11: row already upload_failed → upload_failed without touching R2", async () => {
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: {
+              id: FILE_ID, document_id: "doc1", kind: "full", language: "en",
+              sort_order: 1, format: "pptx", file_key: KEY,
+              status: "upload_failed", is_current: false, version: 1,
+            },
+            error: null,
+          }),
+        }),
+      }),
+    });
+
+    const result = await completeDocumentFileUpload(FILE_ID);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("upload_failed");
+    // must not hit R2 at all
+    expect(mockHeadObject).not.toHaveBeenCalled();
+    expect(mockGetObjectBytes).not.toHaveBeenCalled();
+  });
+
   it("EC11: row already ready → upload_failed, no duplicate version", async () => {
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({

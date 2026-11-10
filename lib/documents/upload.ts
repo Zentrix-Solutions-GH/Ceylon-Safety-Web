@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { requireStaff } from "@/lib/auth/server";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { writeAuditRow, writeDenied } from "@/lib/audit/index";
@@ -44,13 +44,11 @@ function isValidFormat(bytes: Uint8Array, format: string): boolean {
 // ---------------------------------------------------------------------------
 
 function fullKey(documentId: string, language: string, version: number, ext: string): string {
-  const name = `${Date.now()}.${ext}`;
-  return `documents/${documentId}/${language}/v${version}/${name}`;
+  return `documents/${documentId}/${language}/v${version}/${randomUUID()}.${ext}`;
 }
 
 function previewKey(documentId: string, language: string, sortOrder: number, ext: string): string {
-  const name = `${Date.now()}.${ext}`;
-  return `previews/${documentId}/${language}/${sortOrder}/${name}`;
+  return `previews/${documentId}/${language}/${sortOrder}/${randomUUID()}.${ext}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -223,8 +221,8 @@ export async function completeDocumentFileUpload(fileId: string): Promise<Upload
 
   if (rowErr || !row) return { ok: false, code: "not_found" };
 
-  // EC11: already ready
-  if (row.status === "ready") return { ok: false, code: "upload_failed" };
+  // EC11: not pending — already ready or upload_failed; reject without touching R2
+  if (row.status !== "pending") return { ok: false, code: "upload_failed" };
 
   // EC10: check the object exists in R2
   const meta = await headObject(cfg.bucketPrivate, row.file_key);
