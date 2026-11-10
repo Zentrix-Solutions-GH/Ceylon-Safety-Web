@@ -1,7 +1,7 @@
 ---
 id: S-075
 title: Cart backend
-status: ready
+status: in-progress
 owner: backend
 risk: normal
 branch: feature/S-075-cart-backend
@@ -26,23 +26,23 @@ Implement the server-side cart: database-backed per-user `carts`/`cart_items` ta
 
 ## Acceptance criteria
 
-- [ ] AC1: `addToCart(documentId, language)` server action — adds a cart_items row for the signed-in user; returns `ok` or one of: `not_signed_in`, `document_unavailable`, `already_in_cart`, `cart_full` (>50 lines), `validation_failed`
-- [ ] AC2: `removeFromCart(cartItemId)` server action — removes the row; returns `ok` or `not_found`; ownership check: user can only remove their own items
-- [ ] AC3: `getCart()` server action — returns the user's cart_items with document id and language; no prices (prices are computed by /api/cart/calculate)
-- [ ] AC4: POST `/api/cart/calculate` — signed-in only; takes optional `buyNow: {documentId, language}` (single-item purchase bypasses stored cart); returns `{ items: CartLineResult[], subtotal, total }`; each item has `{ cartItemId, title, language, price, available, unavailableReason? }`; items that are unpublished, deleted, or lack a verified language file are marked `available: false` with reason `document_unavailable`; rate limited (20 calls/min per user)
-- [ ] AC5: `/api/cart/calculate` validates that no more than 50 lines are in the request
-- [ ] AC6: Header cart item count is available via `getCart()` (item count only, no prices) for unauthenticated callers it returns 0
-- [ ] AC7: `addToCart` for a document+language pair already in the cart is idempotent — returns `already_in_cart`, no duplicate row inserted
-- [ ] AC8: Cart lines belonging to a paid order are cleared (handled by `finalize` in S-081, but the helper used must be defined here)
+- [x] AC1: `addToCart(documentId, language)` server action — adds a cart_items row for the signed-in user; returns `ok` or one of: `not_signed_in`, `document_unavailable`, `already_in_cart`, `cart_full` (>50 lines), `validation_failed`
+- [x] AC2: `removeFromCart(cartItemId)` server action — removes the row; returns `ok` or `not_found`; ownership check: user can only remove their own items
+- [x] AC3: `getCart()` server action — returns the user's cart_items with document id and language; no prices (prices are computed by /api/cart/calculate)
+- [x] AC4: POST `/api/cart/calculate` — signed-in only; takes optional `buyNow: {documentId, language}` (single-item purchase bypasses stored cart); returns `{ items: CartLineResult[], subtotal, total }`; each item has `{ cartItemId, title, language, price, available, unavailableReason? }`; items that are unpublished, deleted, or lack a verified language file are marked `available: false` with reason `document_unavailable`; rate limited (20 calls/min per user)
+- [x] AC5: `/api/cart/calculate` validates that no more than 50 lines are in the request
+- [x] AC6: Header cart item count is available via `getCart()` (item count only, no prices) for unauthenticated callers it returns 0
+- [x] AC7: `addToCart` for a document+language pair already in the cart is idempotent — returns `already_in_cart`, no duplicate row inserted
+- [x] AC8: Cart lines belonging to a paid order are cleared (helper `clearCartForOrder(orderId, userId)` defined in `lib/cart/index.ts`; called by S-080 payment-notification handler)
 
 ## Edge cases
 
-- [ ] EC1: Document is deleted between add-to-cart and calculate → calculate marks it `available: false`; addToCart for a deleted doc returns `document_unavailable`
-- [ ] EC2: Language file is later removed (unverified) for an item already in cart → calculate marks that line unavailable
-- [ ] EC3: Two concurrent `addToCart` calls for the same document+language → database unique constraint prevents duplicate; second call returns `already_in_cart`
-- [ ] EC4: Cart has 50 items; another `addToCart` → returns `cart_full`
-- [ ] EC5: Unauthenticated call to `addToCart` → returns `not_signed_in` (not a 401 thrown, because the caller may be a client component)
-- [ ] EC6: `cartItemId` in `removeFromCart` belongs to a different user → returns `not_found` (no information leak)
+- [x] EC1: Document is deleted between add-to-cart and calculate → calculate marks it `available: false`; addToCart for a deleted doc returns `document_unavailable`
+- [x] EC2: Language file is later removed (unverified) for an item already in cart → calculate marks that line unavailable
+- [x] EC3: Two concurrent `addToCart` calls for the same document+language → database unique constraint prevents duplicate; second call returns `already_in_cart`
+- [x] EC4: Cart has 50 items; another `addToCart` → returns `cart_full`
+- [x] EC5: Unauthenticated call to `addToCart` → returns `not_signed_in` (not a 401 thrown, because the caller may be a client component)
+- [x] EC6: `cartItemId` in `removeFromCart` belongs to a different user → returns `not_found` (no information leak)
 
 ## Contract
 
@@ -83,16 +83,71 @@ Types added to `types/`:
 
 ## Plan
 
-Prior art: searched docs/ for "cart", "cart_items", "addToCart". Found: commerce-design v6 sections 3.1 and 3.2 (full cart spec), database-schema v14 (carts and cart_items tables from S-016), file-structure v8 (no lib/cart/ yet — will be created as lib/orders/cart.ts or lib/cart/). No prior implementation.
+Prior art: searched docs/ for "cart", "cart_items", "addToCart". Found: commerce-design v6 sections 3.1 and 3.2 (full cart spec), database-schema v14 (carts and cart_items tables from S-016), file-structure v8 (no lib/cart/ yet). S-016 migration `20261028000006_schema_cart_orders_coupons.sql` already created `carts`, `cart_items`, and their RLS policies. No prior lib/cart/ implementation.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+### Analyst findings resolved
+
+1. **AC8 terminology**: "handled by S-081" is imprecise. The schema doc (section 7, step 2 success path) clearly places cart-line clearing inside the payment-notification transaction (S-080), not the finalize/invoice step (S-082). The `clearCartForOrder(orderId)` helper is defined here and called by S-080.
+2. **`CartLineResult.pageCount`**: Added to the type (commerce design section 3.2 specifies it). S-091 will need it.
+3. **`clearCartForOrder` helper test**: Added to the test plan.
+4. **Document unavailability**: Covers both "deleted" and "not published" (unpublished/hidden). `addToCart` and calculate both treat status ≠ `published` as `document_unavailable`.
+5. **Cover URL**: The calculate route resolves `cover_image_key` to a URL using `publicUrl(key)` from `lib/media/publicUrl.ts`. The raw key never leaves the server.
+6. **Empty cart + no buyNow**: calculate returns `{ items: [], subtotal: 0, total: 0 }` — not an error.
+
+### Files to create / edit
+
+| File | Action |
+|---|---|
+| `lib/cart/index.ts` | New — `addToCart`, `removeFromCart`, `getCart`, `clearCartForOrder` |
+| `lib/cart/calculate.ts` | New — `calculateCart(userId, buyNow?)` pure function used by the route |
+| `app/api/cart/calculate/route.ts` | New — POST route, auth check, rate limit, delegates to calculateCart |
+| `types/cart.ts` | New — `CartItem`, `CartLineResult`, `CartCalculateResponse` |
+| `__tests__/cart-backend.test.ts` | New — unit tests for server actions |
+| `__tests__/cart-calculate.test.ts` | New — unit tests for the route |
+
+No migrations needed (S-016 already created the tables and RLS).
+
+### Step order
+
+1. Add `CartItem`, `CartLineResult`, `CartCalculateResponse` to `types/cart.ts`
+2. Write failing tests in `__tests__/cart-backend.test.ts` and `__tests__/cart-calculate.test.ts`
+3. Implement `lib/cart/index.ts` (server actions)
+4. Implement `lib/cart/calculate.ts` (pricing logic)
+5. Implement `app/api/cart/calculate/route.ts` (HTTP route)
+6. Run tests green, then `scripts/check.sh`
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  170 passed | 15 skipped (185)
+      Tests  1823 passed | 60 skipped (1883)   ← includes 19 new S-075 tests
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests
+
+── pgTAP seed suite ──
+⚠ Supabase not running — skipping seed tests
+
+── Types file freshness ──
+⚠ Supabase not running — skipping types check
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: passed (exit 0)
+════════════════════════════════
 ```
 
 ## Review notes
