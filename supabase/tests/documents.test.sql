@@ -3,7 +3,7 @@
 -- Requires Docker + local Supabase stack.
 
 BEGIN;
-SELECT plan(79);
+SELECT plan(81);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Helpers
@@ -490,24 +490,22 @@ SELECT throws_ok(
   'S-070: sort_order = 4 is refused'
 );
 
--- S-071: anonymous cannot read document_files directly (RLS: no public read policy)
-SELECT throws_ok(
-  $$
-    SET LOCAL role TO anon;
-    SELECT id FROM public.document_files LIMIT 1;
-  $$,
-  '42501', NULL,
+-- S-071: anonymous cannot read document_files directly (RLS: no public SELECT policy → zero rows)
+SET LOCAL role TO anon;
+
+SELECT is(
+  (SELECT count(*)::int FROM public.document_files),
+  0,
   'S-071: anon role cannot SELECT from document_files'
 );
 
 -- S-071: anonymous can read published documents (public read policy applies)
 SELECT lives_ok(
-  $$
-    SET LOCAL role TO anon;
-    SELECT id FROM public.documents WHERE status = 'published' LIMIT 1;
-  $$,
+  $$SELECT id FROM public.documents WHERE status = 'published' LIMIT 1$$,
   'S-071: anon role can SELECT published documents'
 );
+
+RESET role;
 
 SELECT * FROM finish();
 ROLLBACK;

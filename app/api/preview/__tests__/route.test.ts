@@ -71,7 +71,7 @@ describe("GET /api/preview/[documentId] — happy path (AC5)", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("image/png");
-    expect(res.headers.get("cache-control")).toMatch(/public/);
+    expect(res.headers.get("cache-control")).toMatch(/private/);
   });
 
   it("returns 404 when R2 object is missing (stream is null)", async () => {

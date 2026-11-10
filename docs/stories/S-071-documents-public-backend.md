@@ -126,7 +126,7 @@ Prior art: Searched `docs/` for "public document", "listPickerItems", "preview r
 ## Evidence
 
 ```
-$ bash scripts/check.sh   # after missing tests added (round 3)
+$ bash scripts/check.sh   # after CI fixes (round 4)
 
 ── ESLint ──
 ✓ ESLint passed
@@ -169,7 +169,7 @@ check-public-pages: OK — checked 20 file(s), no violations.
 
 ## Review notes
 
-- **P1** `app/api/preview/[documentId]/route.ts` — `Cache-Control: public, s-maxage=300` lets CDN/edge proxies cache the preview stream and bypass the IP-based rate limiter for cached URLs. Change to `Cache-Control: private, max-age=300` so the rate limiter fires on every request. (full-review 2026-11-10)
+- **P1** `app/api/preview/[documentId]/route.ts` — `Cache-Control: public, s-maxage=300` lets CDN/edge proxies cache the preview stream and bypass the IP-based rate limiter for cached URLs. Change to `Cache-Control: private, max-age=300` so the rate limiter fires on every request. (full-review 2026-11-10) **→ Fixed 2026-11-10**
 - **P1** `lib/documents/public.ts` (`getPublicDocument`) — Two separate `unstable_cache` wrappers (`doc-slug:<slug>` and `doc-slug-nf:<slug>`) means a cold not-found/redirect lookup calls `queryPublicDocument` twice — two Supabase round-trips. Consider a single cache wrapper; caller selects TTL based on `result.ok`. (full-review 2026-11-10)
 - **P1** All 5 integration stubs (`*.db.test.ts`) have empty TODO bodies and are skipped in CI (Supabase not running). EC1–EC3, AC3–AC4, and EC6 have zero executed test coverage. Must be filled before any dependent story (S-074, S-076) merges. (full-review 2026-11-10)
 

@@ -77,7 +77,7 @@ export async function GET(
     headers: {
       "Content-Type": contentType,
       // Short public cache — previews are static once uploaded
-      "Cache-Control": "public, max-age=300, s-maxage=300",
+      "Cache-Control": "private, max-age=300",
     },
   });
 }
