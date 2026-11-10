@@ -1,11 +1,11 @@
 ---
 id: S-075
 title: Cart backend
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-075-cart-backend
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/80
 depends_on: [S-016, S-032]
 reqs: [REQ-044, REQ-044b, REQ-044c, REQ-044d, REQ-044e, REQ-044h, REQ-060c]
 ---
