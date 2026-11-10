@@ -296,7 +296,7 @@ const en = {
   "admin.mfa.submit_button": "Verify",
   "admin.mfa.submitting": "Verifying…",
 
-  // ─── S-045: Admin shell sidebar ───────────────────────────────────────────
+  // --- admin shell sidebar (S-045) ---
   "admin.sidebar.toggle_open": "Open menu",
   "admin.sidebar.toggle_close": "Close menu",
   "admin.role.admin": "Admin",
