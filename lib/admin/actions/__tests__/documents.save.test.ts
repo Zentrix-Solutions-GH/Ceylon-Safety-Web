@@ -42,10 +42,13 @@ vi.mock("@/lib/auth/step-up", () => ({
   _resetCacheForTest: vi.fn(),
 }));
 
-import { saveDocument } from "@/lib/admin/actions/documents";
+import { saveDocument, getDocument } from "@/lib/admin/actions/documents";
 import { requireStaff } from "@/lib/auth/server";
 import { checkAdminWriteLimit } from "@/lib/ratelimit/index";
+import { writeAuditRow } from "@/lib/audit/index";
 
+// Zod 4 UUID: version digit at position 15 (13th char in bare hex) must be 1-8.
+// These are version-4 UUIDs: char 15 = '4', variant byte (char 20) = '8'.
 const CAT_ID = "dd000001-0000-4000-8000-000000000099";
 const DOC_ID = "aa010001-0000-4000-8000-000000000001";
 
@@ -162,6 +165,10 @@ describe("saveDocument — AC4: price only on create", () => {
     for (const payload of updateCapture) {
       expect(payload).not.toHaveProperty("price_cents");
     }
+    // AC10: audit row must be written on every edit
+    expect(vi.mocked(writeAuditRow)).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "document.save" })
+    );
   });
 });
 
@@ -284,5 +291,106 @@ describe("saveDocument — AC11: rate limit", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("rate_limited");
+  });
+});
+
+describe("getDocument — AC2: not_found", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(requireStaff).mockResolvedValue({
+      ok: true,
+      user: {
+        id: "actor-uuid-0001",
+        email: "admin@test.com",
+        claimedRole: "admin",
+        hasAuthenticatorLevel: true,
+        hasTotpEnrolled: true,
+      },
+    });
+  });
+
+  it("returns not_found for an invalid UUID (skips DB)", async () => {
+    const result = await getDocument("not-a-uuid");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_found");
+  });
+
+  it("returns not_found when DB row does not exist (PGRST116)", async () => {
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: "PGRST116", message: "not found" },
+      }),
+    });
+
+    const result = await getDocument(DOC_ID);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_found");
+  });
+});
+
+describe("saveDocument — EC4: reserved slug on create", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(requireStaff).mockResolvedValue({
+      ok: true,
+      user: {
+        id: "actor-uuid-0001",
+        email: "admin@test.com",
+        claimedRole: "admin",
+        hasAuthenticatorLevel: true,
+        hasTotpEnrolled: true,
+      },
+    });
+    vi.mocked(checkAdminWriteLimit).mockResolvedValue({ ok: true });
+  });
+
+  it("prefixes doc- when title generates a reserved slug", async () => {
+    const insertCapture: Record<string, unknown>[] = [];
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "documents") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          is: vi.fn().mockResolvedValue({ data: [], error: null }),
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          insert: vi.fn().mockImplementation((data: Record<string, unknown>) => {
+            insertCapture.push({ ...data });
+            return {
+              select: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: { id: "bb010001-0000-4000-8000-000000000001", slug: "doc-admin", updated_at: "2026-01-01T00:00:00.000Z" },
+                error: null,
+              }),
+            };
+          }),
+        };
+      }
+      if (table === "categories") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          is: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: CAT_ID }, error: null }),
+        };
+      }
+      return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), is: vi.fn().mockReturnThis() };
+    });
+
+    // "admin" title → generateSlug → "admin" → reserved → "doc-admin"
+    const result = await saveDocument({
+      title: "admin",
+      docKind: "checklist",
+      categoryId: CAT_ID,
+      priceLkr: 1000,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.slug).toBe("doc-admin");
+    }
   });
 });
