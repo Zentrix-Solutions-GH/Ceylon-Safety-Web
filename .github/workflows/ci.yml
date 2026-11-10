@@ -118,6 +118,11 @@ jobs:
         with:
           version: 2.122.0
 
+      - name: Free port 54322 (stop any lingering Supabase containers)
+        run: |
+          supabase stop --no-backup 2>/dev/null || true
+          docker rm -f $(docker ps -aq --filter "name=supabase") 2>/dev/null || true
+
       - name: Start Supabase
         run: |
           for attempt in 1 2 3; do
