@@ -56,6 +56,7 @@ Types changed in `types/document.ts`: `PublicDocumentCard`, `PublicDocument`, `D
 - Serving the full file (S-085).
 - Search (S-064).
 - Automatic preview generation.
+- **EC6 at 10,000-row scale (scope cut):** `perf.db.test.ts` does not insert rows at scale; it only verifies `pageSize === 12` against the 2-row dev seed. Full load test (1,000–10,000 rows + EXPLAIN ANALYZE index verification) deferred to a dedicated perf story.
 
 ## Assumptions accepted
 
@@ -179,6 +180,9 @@ check-public-pages: OK — checked 20 file(s), no violations.
 - **P1** `app/api/preview/[documentId]/route.ts` — Rate-limit key uses only `x-forwarded-for`; headerless requests all share `"unknown"` bucket. Add `x-real-ip` fallback. (abevicrama review 2026-11-10) **→ Fixed 2026-11-10**
 - **P1** `lib/documents/public.ts` — `unstable_cache` called with new arrow function on every invocation; Node module cache does not deduplicate closures, so the cache is never warm. Pass `queryPublicDocuments` as a function reference and call `cached(...args)`. (abevicrama review 2026-11-10) **→ Fixed 2026-11-10**
 - **P1** `lib/documents/__tests__/cache.test.ts` — AC7 TTL not spy-tested; `revalidate` and `tags` wired into `unstable_cache` calls were not asserted. (abevicrama review 2026-11-10) **→ Fixed 2026-11-10**
+- **P1** `lib/documents/__tests__/picker.db.test.ts:30,55,70` — `vi.mock("@/lib/auth/server", …)` called inside `it()` blocks; Vitest hoists to module scope so there is no per-test isolation. All three tests see the same mock. Fix: use `vi.hoisted(() => vi.fn())` + `mockResolvedValue` per test, or use `beforeEach`. (full-review 2026-11-10)
+- **P1** `lib/documents/__tests__/cache.test.ts:80–83` — Found-path TTL assertion uses `mock.calls[0]?.[2]`; both `foundCached` and `notFoundCached` are created at import time, so call index depends on import order, not test setup. If order changes, the test verifies the wrong wrapper silently. Fix: match wrapper by `tags` field instead of call index. (full-review 2026-11-10)
+- **P1** `lib/documents/__tests__/perf.db.test.ts` — EC6 10,000-row test does not insert any rows at scale (explicitly noted in file comment); tests duplicate `list.db.test.ts` assertions. This is an unlabeled scope cut; add it to the story Out of scope section. (full-review 2026-11-10)
 
 ## After this merges, a user can:
 

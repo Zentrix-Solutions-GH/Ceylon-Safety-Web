@@ -77,10 +77,15 @@ describe("Cache TTL wiring — unstable_cache called with correct revalidate (AC
   it("getPublicDocument found path wires DOCUMENT_CACHE_SECONDS with DOCUMENTS_LIST_TAG", async () => {
     mockUnstableCache.mockImplementation(() => async () => ({ ok: true, document: {} }));
     const { getPublicDocument, DOCUMENT_CACHE_SECONDS } = await import("@/lib/documents/public");
+    const { DOCUMENTS_LIST_TAG, DOCUMENTS_NOT_FOUND_TAG } = await import("@/lib/cache/tags");
     await getPublicDocument("some-slug");
-    const foundCallOpts = mockUnstableCache.mock.calls[0]?.[2];
+    // Match by tags to avoid relying on call order
+    const allOpts = mockUnstableCache.mock.calls.map((c) => c[2]);
+    const foundCallOpts = allOpts.find(
+      (o) => o?.tags?.includes(DOCUMENTS_LIST_TAG) && !o?.tags?.includes(DOCUMENTS_NOT_FOUND_TAG)
+    );
+    expect(foundCallOpts).toBeDefined();
     expect(foundCallOpts?.revalidate).toBe(DOCUMENT_CACHE_SECONDS);
-    const { DOCUMENTS_LIST_TAG } = await import("@/lib/cache/tags");
     expect(foundCallOpts?.tags).toContain(DOCUMENTS_LIST_TAG);
   });
 
@@ -89,10 +94,13 @@ describe("Cache TTL wiring — unstable_cache called with correct revalidate (AC
       .mockImplementationOnce(() => async () => ({ ok: false, code: "not_found" }))
       .mockImplementationOnce(() => async () => ({ ok: false, code: "not_found" }));
     const { getPublicDocument, NOT_FOUND_CACHE_SECONDS } = await import("@/lib/documents/public");
-    await getPublicDocument("missing-slug");
-    const notFoundCallOpts = mockUnstableCache.mock.calls[1]?.[2];
-    expect(notFoundCallOpts?.revalidate).toBe(NOT_FOUND_CACHE_SECONDS);
     const { DOCUMENTS_NOT_FOUND_TAG } = await import("@/lib/cache/tags");
+    await getPublicDocument("missing-slug");
+    // Match by tags to avoid relying on call order
+    const allOpts = mockUnstableCache.mock.calls.map((c) => c[2]);
+    const notFoundCallOpts = allOpts.find((o) => o?.tags?.includes(DOCUMENTS_NOT_FOUND_TAG));
+    expect(notFoundCallOpts).toBeDefined();
+    expect(notFoundCallOpts?.revalidate).toBe(NOT_FOUND_CACHE_SECONDS);
     expect(notFoundCallOpts?.tags).toContain(DOCUMENTS_NOT_FOUND_TAG);
   });
 });

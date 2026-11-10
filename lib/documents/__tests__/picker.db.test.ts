@@ -3,9 +3,13 @@
  * Run with: DOCUMENTS_PUBLIC_DB_TEST=1 npx vitest run lib/documents/__tests__/picker.db.test.ts
  * Requires: local Supabase running with dev seed applied.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
+
+// Hoist the mock fn so vi.mock() factory can reference it and beforeEach can reset it.
+const mockRequireStaff = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/auth/server", () => ({ requireStaff: mockRequireStaff }));
 
 const ENABLED = process.env.DOCUMENTS_PUBLIC_DB_TEST === "1";
 
@@ -13,19 +17,21 @@ const ENABLED = process.env.DOCUMENTS_PUBLIC_DB_TEST === "1";
 // Seed customer user: 02000010-0000-0000-0000-000000000004 (customer@dev.invalid, no staff role)
 
 describe.skipIf(!ENABLED)("listDocumentPickerItems — picker permission (AC6)", () => {
+  beforeEach(() => {
+    mockRequireStaff.mockReset();
+  });
+
   it("staff with articles.* permission can list picker items", async () => {
-    vi.mock("@/lib/auth/server", () => ({
-      requireStaff: vi.fn().mockResolvedValue({
-        ok: true,
-        user: {
-          id: "02000010-0000-0000-0000-000000000003",
-          email: "admin@dev.invalid",
-          claimedRole: "admin",
-          hasAuthenticatorLevel: true,
-          hasTotpEnrolled: true,
-        },
-      }),
-    }));
+    mockRequireStaff.mockResolvedValue({
+      ok: true,
+      user: {
+        id: "02000010-0000-0000-0000-000000000003",
+        email: "admin@dev.invalid",
+        claimedRole: "admin",
+        hasAuthenticatorLevel: true,
+        hasTotpEnrolled: true,
+      },
+    });
 
     const { listDocumentPickerItems } = await import("@/lib/documents/public");
     const result = await listDocumentPickerItems({});
@@ -41,12 +47,7 @@ describe.skipIf(!ENABLED)("listDocumentPickerItems — picker permission (AC6)",
   });
 
   it("customer (no staff role) cannot list picker items", async () => {
-    vi.mock("@/lib/auth/server", () => ({
-      requireStaff: vi.fn().mockResolvedValue({
-        ok: false,
-        code: "not_allowed",
-      }),
-    }));
+    mockRequireStaff.mockResolvedValue({ ok: false, code: "not_allowed" });
 
     const { listDocumentPickerItems } = await import("@/lib/documents/public");
     const result = await listDocumentPickerItems({});
@@ -56,12 +57,7 @@ describe.skipIf(!ENABLED)("listDocumentPickerItems — picker permission (AC6)",
   });
 
   it("unauthenticated user cannot list picker items", async () => {
-    vi.mock("@/lib/auth/server", () => ({
-      requireStaff: vi.fn().mockResolvedValue({
-        ok: false,
-        code: "not_allowed",
-      }),
-    }));
+    mockRequireStaff.mockResolvedValue({ ok: false, code: "not_allowed" });
 
     const { listDocumentPickerItems } = await import("@/lib/documents/public");
     const result = await listDocumentPickerItems({});
