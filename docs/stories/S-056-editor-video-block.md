@@ -1,11 +1,11 @@
 ---
 id: S-056
 title: Editor video block
-status: in-progress
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-056-editor-video-block
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/85"
 depends_on: [S-053, S-054]
 reqs: [REQ-034, REQ-061]
 ---
