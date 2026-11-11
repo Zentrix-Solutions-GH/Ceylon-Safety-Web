@@ -185,6 +185,26 @@ describe("POST /api/cart/calculate", () => {
     expect(mockCalculateCart).toHaveBeenCalledWith("user-1", { documentId: docId, language: "en" });
   });
 
+  it("AC5: exactly 50 items returns 200 (boundary — not 422)", async () => {
+    mockRequireActiveAccount.mockResolvedValue(activeAuth);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    const exactly50 = Array.from({ length: 50 }, (_, i) => ({
+      cartItemId: `item-${i}`,
+      title: `Doc ${i}`,
+      slug: `doc-${i}`,
+      coverUrl: null,
+      language: "en" as const,
+      pageCount: null,
+      price: 100,
+      available: true,
+    }));
+    mockCalculateCart.mockResolvedValue({ items: exactly50, subtotal: 5000, total: 5000 });
+    const res = await POST(makeRequest({}));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.items).toHaveLength(50);
+  });
+
   it("AC4/S3: buyNow with invalid UUID returns 422", async () => {
     mockRequireActiveAccount.mockResolvedValue(activeAuth);
     mockCheckRateLimit.mockResolvedValue({ ok: true });

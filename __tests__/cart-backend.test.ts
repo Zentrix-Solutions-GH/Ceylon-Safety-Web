@@ -224,6 +224,16 @@ describe("getCart", () => {
     expect(result).toEqual({ ok: true, items: [] });
   });
 
+  it("AC3/AC6: returns empty items for authenticated user with no cart rows", async () => {
+    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    const sb = makeSupabaseMock();
+    sb.eq = vi.fn().mockResolvedValue({ data: [], error: null });
+    mockCreateClient.mockResolvedValue(sb as never);
+
+    const result = await getCart();
+    expect(result).toEqual({ ok: true, items: [] });
+  });
+
   it("AC3: returns cart items for signed-in user", async () => {
     mockGetCurrentUser.mockResolvedValue(fakeUser as never);
     const sb = makeSupabaseMock();
