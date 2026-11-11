@@ -207,7 +207,6 @@ export async function createCheckout(
     console.error("[checkout] payment_unavailable — missing page revision", {
       termsRevId: termsRevId ?? "missing",
       refundRevId: refundRevId ?? "missing",
-      userId: user.id,
     });
     return { ok: false, code: "payment_unavailable" };
   }
@@ -323,7 +322,6 @@ export async function createBankOrder(
     console.error("[bank-order] payment_unavailable — missing page revision", {
       termsRevId: termsRevId ?? "missing",
       refundRevId: refundRevId ?? "missing",
-      userId: user.id,
     });
     return { ok: false, code: "payment_unavailable" };
   }

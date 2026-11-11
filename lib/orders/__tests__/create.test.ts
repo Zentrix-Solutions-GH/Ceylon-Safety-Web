@@ -285,6 +285,80 @@ describe("createCheckout — AC8 terms revision", () => {
   });
 });
 
+// ─── AC9 (multi-item): all cart items flow through to the RPC ────────────────
+
+describe("createCheckout — AC9 multi-item cart", () => {
+  beforeEach(() => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+  });
+
+  it("passes all cart items to create_order_locked with correct line totals", async () => {
+    const line1 = { ...fakeCartLine, cartItemId: "ci-1", documentId: "00000000-0000-4000-8000-000000000001", title: "Safety Sign Pack", price: 400 };
+    const line2 = { ...fakeCartLine, cartItemId: "ci-2", documentId: "00000000-0000-4000-8000-000000000002", title: "Toolbox Talk Vol 1", price: 300 };
+    const line3 = { ...fakeCartLine, cartItemId: "ci-3", documentId: "00000000-0000-4000-8000-000000000003", title: "Fire Safety Checklist", price: 300 };
+    mockCalculateCart.mockResolvedValue({ items: [line1, line2, line3], subtotal: 1000, total: 1000 });
+
+    const db = makeSupabaseMock();
+    (db.single as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: { id: "rev-terms-1" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "rev-refund-1" }, error: null });
+    (db.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { action: "created", order_id: "order-uuid-1", order_number: "CS-0001" },
+      error: null,
+    });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const result = await createCheckout({ ...validInput, expectedTotalCents: 1000 });
+
+    expect(result).toMatchObject({ ok: true, data: { orderNumber: "CS-0001" } });
+
+    // Verify the RPC received all 3 items with the correct unit and line prices.
+    const rpcArgs = (db.rpc as ReturnType<typeof vi.fn>).mock.calls[0] as [string, Record<string, unknown>];
+    const items = rpcArgs[1].p_items as Array<Record<string, unknown>>;
+    expect(items).toHaveLength(3);
+    expect(items[0]).toMatchObject({ document_id: line1.documentId, unit_price_cents: 400, line_total_cents: 400 });
+    expect(items[1]).toMatchObject({ document_id: line2.documentId, unit_price_cents: 300, line_total_cents: 300 });
+    expect(items[2]).toMatchObject({ document_id: line3.documentId, unit_price_cents: 300, line_total_cents: 300 });
+
+    // Verify subtotal on the order payload equals sum of line totals (400+300+300=1000).
+    const orderData = rpcArgs[1].p_order_data as Record<string, unknown>;
+    expect(orderData.subtotal_cents).toBe(1000);
+    expect(orderData.total_cents).toBe(1000);
+  });
+});
+
+// ─── EC3: re-buy an already-owned document ────────────────────────────────────
+
+describe("createCheckout — EC3 re-buy already-owned document", () => {
+  it("proceeds to create a new order even if the document is already owned", async () => {
+    // The TypeScript layer does not check entitlements — that is handled by the DB
+    // function (which REQ-044h allows: re-purchase creates a new order).
+    // This test verifies the action layer passes through to create_order_locked.
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeCartResponse);
+
+    const db = makeSupabaseMock();
+    (db.single as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: { id: "rev-terms-1" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "rev-refund-1" }, error: null });
+    (db.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { action: "created", order_id: "order-uuid-2", order_number: "CS-0002" },
+      error: null,
+    });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const result = await createCheckout(validInput);
+
+    // The TS action does not gate on ownership; it must reach create_order_locked.
+    expect(result).toMatchObject({ ok: true, data: { orderNumber: "CS-0002" } });
+    expect(db.rpc).toHaveBeenCalledWith("create_order_locked", expect.objectContaining({
+      p_user_id: fakeUser.id,
+    }));
+  });
+});
+
 // ─── AC13: error codes exported ───────────────────────────────────────────────
 
 describe("AC13 — COMMERCE_ERROR_CODES exported from types/api.ts", () => {
