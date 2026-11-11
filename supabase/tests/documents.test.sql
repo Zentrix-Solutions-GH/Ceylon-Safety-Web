@@ -3,7 +3,7 @@
 -- Requires Docker + local Supabase stack.
 
 BEGIN;
-SELECT plan(72);
+SELECT plan(81);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Helpers
@@ -398,6 +398,114 @@ BEGIN
 END;
 $$;
 SELECT pass('EC6: document_files rows survive document hide/delete');
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- S-070 RLS: document_files — S5 (anon blocked), S6 (cross-user), S7 (service_role)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Insert two staff profiles and a document for RLS fixture
+DO $$
+BEGIN
+  INSERT INTO public.profiles (id, email, display_name)
+  VALUES ('00000000-0000-0000-0001-000000000001', 'staff1@dev.invalid', 'Staff One')
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.profiles (id, email, display_name)
+  VALUES ('00000000-0000-0000-0001-000000000002', 'staff2@dev.invalid', 'Staff Two')
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.documents (id, slug, title, category_id, file_format, doc_kind, price_cents, status)
+  VALUES ('00000000-0000-0000-0001-000000000010', 'rls-test-doc', 'RLS Test Doc',
+          '00000000-0000-0000-0000-000000000001', 'pptx', 'checklist', 500, 'draft')
+  ON CONFLICT DO NOTHING;
+
+  -- Staff1 uploads a file
+  INSERT INTO public.document_files
+    (id, document_id, kind, language, sort_order, format, file_key, size_bytes, is_current, status, uploaded_by)
+  VALUES
+    ('00000000-0000-0000-0001-000000000020',
+     '00000000-0000-0000-0001-000000000010',
+     'full', 'en', 1, 'pptx', 'private/rls-test/en.pptx', 1000, true, 'pending',
+     '00000000-0000-0000-0001-000000000001')
+  ON CONFLICT DO NOTHING;
+END;
+$$;
+
+-- S5: anon cannot INSERT into document_files
+SET LOCAL role TO anon;
+SELECT throws_ok(
+  $$INSERT INTO public.document_files
+      (document_id, kind, language, sort_order, format, file_key, size_bytes)
+    VALUES ('00000000-0000-0000-0001-000000000010', 'full', 'si', 1, 'pptx', 'private/rls-test/si.pptx', 1000)$$,
+  NULL, NULL,
+  'S5: anon INSERT into document_files is blocked'
+);
+
+-- S5: anon SELECT from document_files returns zero rows (already in AC6 above, confirmed here for S-070 slot)
+SELECT is(
+  (SELECT count(*)::int FROM public.document_files
+   WHERE document_id = '00000000-0000-0000-0001-000000000010'),
+  0,
+  'S5: anon cannot read document_files rows'
+);
+RESET role;
+
+-- S6: authenticated user without documents.* cannot read another user's document_files row
+SET LOCAL role TO authenticated;
+SET LOCAL "request.jwt.claims" TO '{"sub":"00000000-0000-0000-0000-000000000099","role":"authenticated"}';
+SELECT is(
+  (SELECT count(*)::int FROM public.document_files
+   WHERE document_id = '00000000-0000-0000-0001-000000000010'),
+  0,
+  'S6: authenticated customer cannot read document_files uploaded by staff'
+);
+RESET role;
+RESET "request.jwt.claims";
+
+-- S7: service_role can read all document_files rows (bypasses RLS)
+-- service_role is the superuser in pgTAP context — just verify via direct SQL
+SELECT is(
+  (SELECT count(*)::int FROM public.document_files
+   WHERE document_id = '00000000-0000-0000-0001-000000000010'),
+  1,
+  'S7: service_role (default pgTAP role) can read document_files'
+);
+
+-- S7: sort_order column present and constrained 1–3
+SELECT has_column('public', 'document_files', 'sort_order', 'S-070: sort_order column exists');
+
+SELECT throws_ok(
+  $$INSERT INTO public.document_files
+      (document_id, kind, language, sort_order, format, file_key, size_bytes)
+    VALUES ('00000000-0000-0000-0001-000000000010', 'preview', 'en', 0, 'png', 'private/rls-test/p0.png', 100)$$,
+  '23514', NULL,
+  'S-070: sort_order = 0 is refused'
+);
+
+SELECT throws_ok(
+  $$INSERT INTO public.document_files
+      (document_id, kind, language, sort_order, format, file_key, size_bytes)
+    VALUES ('00000000-0000-0000-0001-000000000010', 'preview', 'en', 4, 'png', 'private/rls-test/p4.png', 100)$$,
+  '23514', NULL,
+  'S-070: sort_order = 4 is refused'
+);
+
+-- S-071: anonymous cannot read document_files directly (RLS: no public SELECT policy → zero rows)
+SET LOCAL role TO anon;
+
+SELECT is(
+  (SELECT count(*)::int FROM public.document_files),
+  0,
+  'S-071: anon role cannot SELECT from document_files'
+);
+
+-- S-071: anonymous can read published documents (public read policy applies)
+SELECT lives_ok(
+  $$SELECT id FROM public.documents WHERE status = 'published' LIMIT 1$$,
+  'S-071: anon role can SELECT published documents'
+);
+
+RESET role;
 
 SELECT * FROM finish();
 ROLLBACK;

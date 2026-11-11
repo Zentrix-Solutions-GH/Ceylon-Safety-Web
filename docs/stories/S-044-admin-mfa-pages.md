@@ -1,7 +1,7 @@
 ---
 id: S-044
 title: Admin MFA pages (/admin/security, /admin/mfa)
-status: pr-open
+status: merged
 owner: fullstack
 risk: sensitive
 branch: feature/S-044-admin-mfa-pages

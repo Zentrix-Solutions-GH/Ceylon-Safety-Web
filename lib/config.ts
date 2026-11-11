@@ -85,6 +85,8 @@ export const serverConfig = {
   videoPlaceholderKey: optional("VIDEO_PLACEHOLDER_KEY", "placeholders/video.jpg"),
   feedRateLimitPerMinute: parseInt(optional("FEED_RATE_LIMIT_PER_MINUTE", "60"), 10),
   countersRateLimitPerMinute: parseInt(optional("COUNTERS_RATE_LIMIT_PER_MINUTE", "60"), 10),
+  documentsPageSize: parseInt(optional("DOCUMENTS_PAGE_SIZE", "12"), 10),
+  previewRateLimitPerMinute: parseInt(optional("PREVIEW_RATE_LIMIT_PER_MINUTE", "60"), 10),
 } as const;
 
 // Healthchecks config — optional; returns null when env vars are absent so the
@@ -128,18 +130,24 @@ export function r2Config(): {
   accessKeyId: string;
   secretAccessKey: string;
   bucketPublic: string;
+  bucketPrivate: string;
   publicMediaBaseUrl: string;
 } | null {
   const accountId = process.env["R2_ACCOUNT_ID"]?.trim();
   const accessKeyId = process.env["R2_ACCESS_KEY_ID"]?.trim();
   const secretAccessKey = process.env["R2_SECRET_ACCESS_KEY"]?.trim();
   const bucketPublic = process.env["R2_BUCKET_PUBLIC"]?.trim();
+  const bucketPrivate = process.env["R2_BUCKET_PRIVATE"]?.trim();
   const publicMediaBaseUrl = process.env["NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL"]?.trim();
-  if (!accountId || !accessKeyId || !secretAccessKey || !bucketPublic || !publicMediaBaseUrl) {
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucketPublic || !bucketPrivate || !publicMediaBaseUrl) {
     return null;
   }
-  return { accountId, accessKeyId, secretAccessKey, bucketPublic, publicMediaBaseUrl };
+  return { accountId, accessKeyId, secretAccessKey, bucketPublic, bucketPrivate, publicMediaBaseUrl };
 }
+
+// File size limits for document uploads (S-070).
+export const PPTX_MAX_BYTES = 100 * 1024 * 1024; // 100 MB
+export const PREVIEW_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
 // Fail fast when R2 is not configured (CLAUDE.md: missing config → startup error).
 // Skip during `next build` — Next.js sets NODE_ENV=production at build time but
@@ -152,6 +160,6 @@ if (
   throw new Error(
     "[config] Missing required R2 environment variables: " +
       "R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, " +
-      "R2_BUCKET_PUBLIC, NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL"
+      "R2_BUCKET_PUBLIC, R2_BUCKET_PRIVATE, NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL"
   );
 }

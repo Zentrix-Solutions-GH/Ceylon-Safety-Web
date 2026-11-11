@@ -383,25 +383,29 @@ document_files              (ADMIN-ONLY. No public read policy at all.)
   language            CHECK in (en, si, ta)    which language version this file is (REQ-060c). Every
                                                row has one (see the preview rule below)
   format              pptx for full files; png, jpg or pdf for previews (REQ-043, REQ-047)
+  sort_order          int NOT NULL default 1 CHECK (sort_order BETWEEN 1 AND 3)
+                                               preview only: position of this image (1 = first slide shown,
+                                               up to 3). Always 1 for full files. Determines display order
+                                               in the locked preview carousel.
   file_key            text NOT NULL UNIQUE     R2 key in the PRIVATE bucket
   size_bytes          bigint NOT NULL
   checksum_sha256     text nullable
   version             int default 1            re-upload = new version row
-  is_current          boolean default true     only ONE current row per (document_id, kind, language)
+  is_current          boolean default true     only ONE current row per (document_id, kind, language, sort_order)
   status              CHECK in (pending, ready)   pending = presigned upload started; ready = file
                                                verified in R2 (size, checksum). Only ready files are
                                                ever served. Abandoned pending rows are cleaned up daily
-  v1 previews (ASSUMPTION, REQ-047, Q70): the admin uploads the preview by hand (images of the first
-  slides or a PDF sample), kind = preview. The server does not convert PowerPoint files in v1. If the
-  preview is the same for every language the admin may upload it once with language = en and the shop
-  shows it for all languages (rule: the preview of a document falls back to its `en` preview).
-  The full file served to a buyer is always the current ready `full` row for the language
+  v1 previews (DECISION, REQ-047, Q70 resolved 2026-11-10): the admin uploads preview images or a PDF
+  sample by hand, kind = preview. Up to 3 preview files per language (sort_order 1–3; PNG/JPG/PDF).
+  Each language has its own preview images; there is no English-only fallback. Publish requires at
+  least one current ready preview for EACH of en, si, ta. The server does not convert PowerPoint
+  files in v1. The full file served to a buyer is always the current ready `full` row for the language
   stored on the entitlement. A re-uploaded corrected file (new version) is served to later downloads
   of that language only.
   uploaded_by         FK -> profiles
   created_at
-  UNIQUE(document_id, kind, language) among rows where is_current. The admin screen
-  (`DocumentLanguageFiles`) shows one upload slot per language.
+  UNIQUE(document_id, kind, language, sort_order) among rows where is_current. The admin screen
+  (`DocumentLanguageFiles`) shows up to 3 preview upload slots per language and one full-file slot per language.
 ```
 
 ### Group F - Courses (information only in v1)
@@ -1093,7 +1097,7 @@ This section follows the commerce design v5 (sections 4 to 7 and 9). Two payment
 | courses | GIN search_vector; (status, category_id) |
 | trainers | GIN search_vector |
 | documents | (doc_kind); (download_count DESC); (purchase_count DESC) |
-| document_files | unique (document_id, kind, language) WHERE is_current; (document_id) |
+| document_files | unique (document_id, kind, language, sort_order) WHERE is_current; (document_id) |
 | article_refs | (ref_type, ref_id) (the "which articles use X" lookup); (article_id); unique (article_id, node_id, ref_type, ref_id, COALESCE(phrase, '')) |
 | articles | CHECK on `pg_column_size(body)` (1 MB limit) |
 | article_comments, video_comments | (article_id, status, created_at); (video_id, status, created_at); (status, created_at) WHERE status = pending (the admin approval queue); (user_id) WHERE status = pending (the five-pending check). (The index for the 90-day rejected-comment purge is later (not in v1) and is removed from the v1 list.) |
@@ -1136,7 +1140,7 @@ R2 storage layout:
 
 | Bucket | Contents | Key pattern |
 |---|---|---|
-| private | Full documents (one per language), previews, invoice PDFs, bank transfer slips | `documents/{document_id}/{language}/v{version}/{file}`, `previews/{document_id}/{file}`, `invoices/{order_id}.pdf`, `slips/{order_id}/{slip_id}` (no public link; opened by staff through a short-lived signed link) |
+| private | Full documents (one per language), previews, invoice PDFs, bank transfer slips | `documents/{document_id}/{language}/v{version}/{file}`, `previews/{document_id}/{language}/{sort_order}/{file}`, `invoices/{order_id}.pdf`, `slips/{order_id}/{slip_id}` (no public link; opened by staff through a short-lived signed link) |
 | public | Cover images, banners, trainer/author photos, activity images, article images | `images/{type}/{id}/{file}` (the key is what gets stored; the URL is built from `PUBLIC_MEDIA_BASE_URL`) |
 
 ## 11. Client decisions that change this schema (still open in the requirements document)

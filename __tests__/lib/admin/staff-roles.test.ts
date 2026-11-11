@@ -22,7 +22,7 @@ import { requireSuperAdmin } from "@/lib/auth/server";
 import { requireStepUp } from "@/lib/auth/step-up";
 import { writeAuditRow } from "@/lib/audit/index";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import { grantRole, removeRole } from "@/lib/admin/actions/staff-roles";
+import { grantRole, removeRole, findUserByEmail } from "@/lib/admin/actions/staff-roles";
 
 const SUPER_ADMIN_USER = {
   id: "a0000000-0000-4000-8000-000000000001",
@@ -246,5 +246,68 @@ describe("removeRole", () => {
     expect(result.ok).toBe(true);
     // The delete must have been called so the row no longer exists in the DB.
     expect(client.from).toHaveBeenCalledWith("user_roles");
+  });
+});
+
+// ── findUserByEmail ───────────────────────────────────────────────────────────
+
+function makeListUsersClient(opts: {
+  users?: unknown[];
+  error?: unknown;
+} = {}) {
+  const users = opts.users ?? [{ id: TARGET_UUID, email: "target@example.com" }];
+  return {
+    auth: {
+      admin: {
+        listUsers: vi.fn().mockResolvedValue({ data: { users }, error: opts.error ?? null }),
+        getUserById: vi.fn(),
+      },
+    },
+    from: vi.fn(),
+  };
+}
+
+describe("findUserByEmail", () => {
+  it("AC6: non-Super-Admin caller gets not_allowed", async () => {
+    vi.mocked(requireSuperAdmin).mockResolvedValue({ ok: false, code: "not_allowed" });
+
+    const result = await findUserByEmail({ email: "target@example.com" });
+
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("not_allowed");
+  });
+
+  it("happy path: resolves email to userId", async () => {
+    vi.mocked(requireSuperAdmin).mockResolvedValue({ ok: true, user: SUPER_ADMIN_USER });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(makeListUsersClient() as never);
+
+    const result = await findUserByEmail({ email: "target@example.com" });
+
+    expect(result.ok).toBe(true);
+    expect((result as { ok: true; userId: string }).userId).toBe(TARGET_UUID);
+  });
+
+  it("not_found when no user matches the email", async () => {
+    vi.mocked(requireSuperAdmin).mockResolvedValue({ ok: true, user: SUPER_ADMIN_USER });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeListUsersClient({ users: [{ id: "other-id", email: "other@example.com" }] }) as never
+    );
+
+    const result = await findUserByEmail({ email: "ghost@example.com" });
+
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("not_found");
+  });
+
+  it("unknown when listUsers returns an error", async () => {
+    vi.mocked(requireSuperAdmin).mockResolvedValue({ ok: true, user: SUPER_ADMIN_USER });
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeListUsersClient({ error: { message: "db error" } }) as never
+    );
+
+    const result = await findUserByEmail({ email: "target@example.com" });
+
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("unknown");
   });
 });

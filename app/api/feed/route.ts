@@ -4,7 +4,8 @@ import { getFeed, applyFeedRateLimit } from "@/lib/feed/query";
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const ip =
     req.headers.get("cf-connecting-ip")?.trim() ??
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "unknown";
   if (ip) {
     const rateResult = await applyFeedRateLimit(ip);
     if (!rateResult.ok) {

@@ -9,6 +9,9 @@ vi.mock("next/cache", () => ({
 vi.mock("@/lib/audit/index", () => ({
   writeAuditRow: vi.fn(),
 }));
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServiceRoleClient: vi.fn(),
+}));
 
 import { revalidateTag } from "next/cache";
 import { writeAuditRow } from "@/lib/audit/index";

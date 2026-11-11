@@ -1,22 +1,31 @@
 // S-054: RichTextEditor component — AC1 render, AC2 named styles, AC3 paste, AC4 tab depth, AC6 font
 
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Tiptap requires DOM APIs not fully available in jsdom — mock the module.
 vi.mock("@tiptap/react", () => ({
   useEditor: vi.fn(() => null),
   EditorContent: ({ editor }: { editor: unknown }) =>
     editor ? <div data-testid="editor-content" /> : <div data-testid="editor-loading" />,
+  ReactNodeViewRenderer: vi.fn(() => () => null),
+  NodeViewWrapper: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock("@tiptap/starter-kit", () => ({ default: { configure: vi.fn(() => ({})) } }));
 vi.mock("@tiptap/extension-underline", () => ({ default: {} }));
 vi.mock("@tiptap/extension-link", () => ({ default: { configure: vi.fn(() => ({})) } }));
-vi.mock("@tiptap/core", () => ({ Mark: { create: vi.fn(() => ({})) } }));
+vi.mock("@tiptap/core", () => ({ Mark: { create: vi.fn(() => ({})) }, Node: { create: vi.fn(() => ({})) } }));
 
-import { RichTextEditor, countUnknownPastedNodes, getListDepthFromResolvedPos } from "@/components/admin/ArticleEditor/RichTextEditor";
+// Mock ImageBlock so we can inspect the props passed by ImageNodeView
+vi.mock("@/components/admin/ArticleEditor/blocks/ImageBlock", () => ({
+  default: vi.fn(() => null),
+}));
+
+import { RichTextEditor, countUnknownPastedNodes, getListDepthFromResolvedPos, hasPendingImageNode, ImageNodeView } from "@/components/admin/ArticleEditor/RichTextEditor";
 import { MAX_LIST_DEPTH } from "@/lib/content/schema";
+import ImageBlock from "@/components/admin/ArticleEditor/blocks/ImageBlock";
+import type { NodeViewProps } from "@tiptap/react";
 
 describe("RichTextEditor — AC1: renders without crashing", () => {
   it("renders the editor container", () => {
@@ -136,5 +145,63 @@ describe("getListDepthFromResolvedPos — AC4: Tab key depth limiting", () => {
     const resolved = makeResolvedPos(["doc", "bulletList", "listItem", "paragraph"]);
     const depth = getListDepthFromResolvedPos(resolved);
     expect(depth >= MAX_LIST_DEPTH).toBe(false);
+  });
+});
+
+describe("hasPendingImageNode — AC3: publish blocked while upload incomplete", () => {
+  it("returns false for a doc with no image nodes", () => {
+    expect(hasPendingImageNode({ type: "doc", content: [{ type: "paragraph" }] })).toBe(false);
+  });
+
+  it("returns false for a doc with an image node that has a key (upload complete)", () => {
+    expect(hasPendingImageNode({
+      type: "doc",
+      content: [{ type: "image", attrs: { key: "media/abc123/480.webp", node_id: "x" } }],
+    })).toBe(false);
+  });
+
+  it("returns true for a doc with an image node whose key is null (upload in-progress or pending)", () => {
+    expect(hasPendingImageNode({
+      type: "doc",
+      content: [{ type: "image", attrs: { key: null, node_id: "x" } }],
+    })).toBe(true);
+  });
+
+  it("detects a pending image nested inside another block", () => {
+    expect(hasPendingImageNode({
+      type: "doc",
+      content: [
+        { type: "paragraph" },
+        { type: "image", attrs: { key: null, node_id: "y" } },
+      ],
+    })).toBe(true);
+  });
+});
+
+describe("ImageNodeView — EC1: status derived from node attrs (P0.2)", () => {
+  const mockImageBlock = ImageBlock as ReturnType<typeof vi.fn>;
+
+  function makeProps(attrs: Record<string, unknown>): NodeViewProps {
+    return {
+      node: { attrs } as NodeViewProps["node"],
+      deleteNode: vi.fn(),
+    } as unknown as NodeViewProps;
+  }
+
+  beforeEach(() => mockImageBlock.mockClear());
+
+  it("passes status=pending when key is null", () => {
+    render(<ImageNodeView {...makeProps({ key: null, previewSrc: "", alt: "", decorative: false, caption: "", node_id: "x" })} />);
+    expect(mockImageBlock).toHaveBeenCalledWith(expect.objectContaining({ status: "pending" }), expect.anything());
+  });
+
+  it("passes status=uploading when key is set but previewSrc is empty", () => {
+    render(<ImageNodeView {...makeProps({ key: "media/abc/480.webp", previewSrc: "", alt: "", decorative: false, caption: "", node_id: "x" })} />);
+    expect(mockImageBlock).toHaveBeenCalledWith(expect.objectContaining({ status: "uploading" }), expect.anything());
+  });
+
+  it("passes status=ready when key and previewSrc are both set", () => {
+    render(<ImageNodeView {...makeProps({ key: "media/abc/480.webp", previewSrc: "blob:http://localhost/abc", alt: "photo", decorative: false, caption: "", node_id: "x" })} />);
+    expect(mockImageBlock).toHaveBeenCalledWith(expect.objectContaining({ status: "ready" }), expect.anything());
   });
 });
