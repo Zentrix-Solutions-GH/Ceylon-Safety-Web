@@ -14,7 +14,8 @@ export default async function AdminArticlesPage({
   const params = await searchParams;
 
   const status = params.status as ArticleStatus | "scheduled" | undefined;
-  const page = params.page ? parseInt(params.page, 10) : 1;
+  const rawPage = params.page ? parseInt(params.page, 10) : 1;
+  const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
 
   const [articlesResult, categories] = await Promise.all([
     listAdminArticles({

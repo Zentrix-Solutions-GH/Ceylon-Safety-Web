@@ -29,20 +29,23 @@ export default function AuthorForm({ author }: Props) {
     }
 
     setSaving(true);
-    const result = await saveAuthor({
-      id: author?.id,
-      name: name.trim(),
-      bio: bio.trim() || null,
-      updatedAt: author?.updatedAt,
-    });
-    setSaving(false);
-
-    if (!result.ok) {
+    try {
+      const result = await saveAuthor({
+        id: author?.id,
+        name: name.trim(),
+        bio: bio.trim() || null,
+        updatedAt: author?.updatedAt,
+      });
+      if (!result.ok) {
+        setSaveError(t("admin.authors.form_save_error"));
+        return;
+      }
+      router.push("/admin/authors");
+    } catch {
       setSaveError(t("admin.authors.form_save_error"));
-      return;
+    } finally {
+      setSaving(false);
     }
-
-    router.push("/admin/authors");
   }
 
   return (
