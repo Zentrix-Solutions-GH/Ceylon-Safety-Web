@@ -100,6 +100,9 @@ $ bash scripts/check.sh
 - **P1** `components/home/Feed.tsx:103` — empty-items guard `items.length === 0` should be `&& !cursor`; a non-null cursor with empty items causes permanent empty state. (full-review 2026-11-11) ✅ Fixed
 - **P1** AC10 — no focus restoration after Load more loads a page; `Feed.tsx` needs `useRef` on the button and `.focus()` after `setPage`. (full-review 2026-11-11) ✅ Fixed
 - **P1** AC7 — no `sizes` attribute or 480 px width on `<img>` in `ArticleCard.tsx` or `VideoCard.tsx`; browser fetches full-width images. (full-review 2026-11-11) ✅ Fixed
+- **P0** `lib/feed/query.ts:85` — `toFeedItem()` never sets `categoryName`; enrichment query at line 139 joins `articles` but not `categories`; every article card has blank category label in production, AC2 not met. Add `categories(name)` to the select, populate `enrichMap`, set field in `toFeedItem()`. (full-review 2026-11-11)
+- **P1** `app/api/feed/route.ts:5` — `x-forwarded-for` leftmost address is client-spoofable; attacker bypasses per-IP rate limit. Use rightmost address or `CF-Connecting-IP`. (full-review 2026-11-11)
+- **P1** `lib/feed/query.ts:100` — `createSupabaseServiceRoleClient()` on public unauthenticated endpoint bypasses RLS; use anon client instead. (full-review 2026-11-11)
 
 ## After this merges, a user can:
 
