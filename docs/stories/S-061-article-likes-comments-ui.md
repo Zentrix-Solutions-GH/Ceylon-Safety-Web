@@ -1,11 +1,11 @@
 ---
 id: S-061
 title: Article likes + comments UI
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-061-article-likes-comments-ui
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/83"
 depends_on: [S-050, S-060]
 reqs: [REQ-194, REQ-195]
 ---
@@ -21,20 +21,20 @@ Add the like button and comment thread to the article full page. Signed-in users
 
 ## Acceptance criteria
 
-- [ ] AC1: A like button on the article page shows the current like count; clicking it for a signed-in user calls `POST /api/likes` and toggles the filled/unfilled state; clicking again removes the like
-- [ ] AC2: A signed-out click on the like button navigates to `/sign-in?next=/articles/[slug]`; after sign-in the visitor is returned to the article (the like is not applied automatically)
-- [ ] AC3: The comment form is visible to signed-in, active (non-suspended) users; submitting calls `POST /api/comments` and shows "Your comment is awaiting approval." below the form; the form is cleared
-- [ ] AC4: A signed-out user sees the comment form replaced with "Sign in to comment" link
-- [ ] AC5: The comment thread below the article shows only approved comments; page size 10 with a "Load more" button; newest approved first
-- [ ] AC6: The comment poster also sees their own pending comment above the approved thread, labelled "Waiting for approval" in muted text
-- [ ] AC7: Rate limit response (429) from `/api/comments` shows "You've commented too many times. Try again later."
-- [ ] AC8: Comment text is rendered as plain text, never as HTML; links in comments are not made clickable
+- [x] AC1: A like button on the article page shows the current like count; clicking it for a signed-in user calls `POST /api/likes` and toggles the filled/unfilled state; clicking again removes the like
+- [x] AC2: A signed-out click on the like button navigates to `/sign-in?next=/articles/[slug]`; after sign-in the visitor is returned to the article (the like is not applied automatically)
+- [x] AC3: The comment form is visible to signed-in, active (non-suspended) users; submitting calls `POST /api/comments` and shows "Your comment is awaiting approval." below the form; the form is cleared
+- [x] AC4: A signed-out user sees the comment form replaced with "Sign in to comment" link
+- [x] AC5: The comment thread below the article shows only approved comments; page size 10 with a "Load more" button; newest approved first
+- [x] AC6: The comment poster also sees their own pending comment above the approved thread, labelled "Waiting for approval" in muted text
+- [x] AC7: Rate limit response (429) from `/api/comments` shows "You've commented too many times. Try again later."
+- [x] AC8: Comment text is rendered as plain text, never as HTML; links in comments are not made clickable
 
 ## Edge cases
 
-- [ ] EC1: Suspended user tries to comment — the form is hidden (server returns 403; UI shows "Your account is suspended.")
-- [ ] EC2: Like toggle fails (network error) — button reverts to previous state with an error toast
-- [ ] EC3: User has 5 pending comments (cap enforced by server) — `POST /api/comments` returns 429 with a distinct message; UI shows "You have too many comments waiting for approval."
+- [x] EC1: Suspended user tries to comment — the form is hidden (server returns 403; UI shows "Your account is suspended.")
+- [x] EC2: Like toggle fails (network error) — button reverts to previous state with an error toast
+- [x] EC3: User has 5 pending comments (cap enforced by server) — `POST /api/comments` returns 429 with a distinct message; UI shows "You have too many comments waiting for approval."
 - [ ] EC4: Article is hidden while the visitor has the page open — the like and comment buttons silently fail (the page is already loaded; no real-time update needed in v1)
 
 ## Contract
