@@ -638,7 +638,7 @@ WHERE n.nspname IN ('public', 'private')
     WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e'
   )
   AND NOT (n.nspname = 'public' AND p.proname = ANY(
-    ARRAY['has_permission','is_staff_member','is_super_admin','profile_is_super_admin','create_order_locked']
+    ARRAY['has_permission','is_staff_member','is_super_admin','profile_is_super_admin','create_order_locked','cancel_order_locked']
   ))
   AND NOT (n.nspname = 'public' AND p.proname = 'search_all')
 ORDER BY n.nspname, p.proname;
@@ -695,6 +695,22 @@ SELECT ok(
     'EXECUTE'
   ),
   'AC5: authenticated can EXECUTE public.create_order_locked(uuid, text, text, text, jsonb, jsonb)'
+);
+
+-- S-078: cancel_order_locked — same exposure rules as create_order_locked.
+SELECT throws_ok(
+  $$SET LOCAL role TO anon; SELECT public.cancel_order_locked(NULL::uuid, NULL::uuid)$$,
+  '42501',
+  NULL,
+  'AC5: anon cannot EXECUTE public.cancel_order_locked(uuid, uuid)'
+);
+SELECT ok(
+  has_function_privilege(
+    'authenticated',
+    'public.cancel_order_locked(uuid, uuid)',
+    'EXECUTE'
+  ),
+  'AC5: authenticated can EXECUTE public.cancel_order_locked(uuid, uuid)'
 );
 
 -- ─────────────────────────────────────────────────────────────────────────────

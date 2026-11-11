@@ -189,6 +189,47 @@ describe("createCheckout — AC6d zero overlap (completely different cart)", () 
   });
 });
 
+// ─── EC4: expires_at sent as now + 2h (never-shorten logic is in SQL GREATEST) ──
+
+describe("createCheckout — EC4 expires_at", () => {
+  it("EC4: RPC receives expires_at ≈ now + 2 hours on every checkout (including reuse)", async () => {
+    const db = makeDb({ action: "reused", order_id: "ord-existing-1", order_number: "CS-2026-00001" });
+    const rpcSpy = db.rpc as ReturnType<typeof vi.fn>;
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const before = Date.now();
+    await createCheckout(validInput);
+    const after = Date.now();
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const rpcArgs = rpcSpy.mock.calls[0]?.[1] as { p_order_data: { expires_at: string } };
+    const sentMs = new Date(rpcArgs.p_order_data.expires_at).getTime();
+    const twoHoursMs = 2 * 60 * 60 * 1000;
+    expect(sentMs).toBeGreaterThanOrEqual(before + twoHoursMs - 1000);
+    expect(sentMs).toBeLessThanOrEqual(after + twoHoursMs + 1000);
+  });
+});
+
+// ─── EC6: billing refreshed on reuse (TypeScript sends new billing to RPC) ───
+
+describe("createCheckout — EC6 billing refresh on reuse", () => {
+  it("EC6: RPC receives updated billing payload when reusing with new billing details", async () => {
+    const db = makeDb({ action: "reused", order_id: "ord-existing-1", order_number: "CS-2026-00001" });
+    const rpcSpy = db.rpc as ReturnType<typeof vi.fn>;
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const updatedBilling = { ...validBilling, firstName: "Priya", city: "Galle" };
+    await createCheckout({ ...validInput, billing: updatedBilling });
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const rpcArgs = rpcSpy.mock.calls[0]?.[1] as {
+      p_order_data: { billing_name: string; billing_address: { city: string } };
+    };
+    expect(rpcArgs.p_order_data.billing_name).toBe("Priya Perera");
+    expect(rpcArgs.p_order_data.billing_address.city).toBe("Galle");
+  });
+});
+
 // ─── EC7: bank order not subject to card reuse/supersede (covered in bank-order.test.ts) ─
 
 // ─── AC7 saveToProfile: billing saved to profile when flagged ────────────────

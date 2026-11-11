@@ -30,14 +30,17 @@ const CheckoutLineSchema = z.object({
   language: z.string().min(2).max(5),
 });
 
+// P1: max() bounds prevent arbitrarily large strings from reaching the DB.
+// Empty-required-field validation is handled separately by validateBilling()
+// so it can return billing_invalid + field name (AC7).
 const BillingSchema = z.object({
-  firstName: z.string(),
-  lastName: z.string(),
-  phone: z.string(),
-  address: z.string(),
-  city: z.string(),
-  company: z.string().optional(),
-  taxId: z.string().optional(),
+  firstName: z.string().max(200),
+  lastName: z.string().max(200),
+  phone: z.string().max(30),
+  address: z.string().max(500),
+  city: z.string().max(200),
+  company: z.string().max(200).optional(),
+  taxId: z.string().max(50).optional(),
   saveToProfile: z.boolean().optional(),
 });
 
@@ -112,12 +115,48 @@ async function rebuildAndValidateCart(
   return { ok: true, lines: cart, totalCents: cart.total };
 }
 
+// Shared: build the item list passed to create_order_locked.
+function buildOrderItems(
+  lines: Awaited<ReturnType<typeof calculateCart>>,
+) {
+  return lines.items.map((l) => ({
+    document_id: l.documentId,
+    language: l.language,
+    title_snapshot: l.title,
+    unit_price_cents: l.price,
+    quantity: 1,
+    line_total_cents: l.price,
+    item_type: "document",
+  }));
+}
+
+// Shared: save billing details to the buyer's profile (best-effort; never fails
+// the checkout). Called only when saveToProfile is set.
+async function saveProfileIfRequested(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string,
+  billing: BillingDetails,
+  billingAddress: { address: string; city: string },
+): Promise<void> {
+  if (!billing.saveToProfile) return;
+  await supabase
+    .from("profiles")
+    .update({
+      first_name: billing.firstName,
+      last_name: billing.lastName,
+      phone: billing.phone,
+      billing_address: billingAddress,
+      company_name: billing.company ?? null,
+      tax_id: billing.taxId ?? null,
+    })
+    .eq("id", userId);
+}
+
 // ─── createCheckout ───────────────────────────────────────────────────────────
 
 export async function createCheckout(
   input: CheckoutInput,
 ): Promise<ActionResult<CheckoutResult>> {
-  // Zod schema validation
   const parsed = CheckoutInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, code: "validation_failed" };
 
@@ -162,6 +201,14 @@ export async function createCheckout(
     latestRevisionId(supabase, REFUND_SLUG),
   ]);
   if (!termsRevId || !refundRevId) {
+    // Commerce design section 4.1: alert the admin when a revision is missing.
+    // A proper alert email (S-015 monitoring story) is deferred; structured
+    // server log surfaces in production monitoring in the meantime.
+    console.error("[checkout] payment_unavailable — missing page revision", {
+      termsRevId: termsRevId ?? "missing",
+      refundRevId: refundRevId ?? "missing",
+      userId: user.id,
+    });
     return { ok: false, code: "payment_unavailable" };
   }
 
@@ -185,16 +232,6 @@ export async function createCheckout(
     expires_at: expiresAt,
   };
 
-  const items = lines.items.map((l) => ({
-    document_id: l.documentId,
-    language: l.language,
-    title_snapshot: l.title,
-    unit_price_cents: l.price,
-    quantity: 1,
-    line_total_cents: l.price,
-    item_type: "document",
-  }));
-
   // AC5/AC6/AC9: atomic locked insert via DB function
   const { data: rpcResult, error: rpcError } = await supabase.rpc(
     "create_order_locked",
@@ -204,7 +241,7 @@ export async function createCheckout(
       p_provider: "payhere",
       p_method: null,
       p_order_data: orderData,
-      p_items: items,
+      p_items: buildOrderItems(lines),
     },
   );
 
@@ -221,20 +258,8 @@ export async function createCheckout(
     return { ok: false, code: "pending_order_exists" };
   }
 
-  // AC7: save billing to profile if requested (best-effort; never fails the checkout)
-  if (input.billing.saveToProfile) {
-    await supabase
-      .from("profiles")
-      .update({
-        first_name: input.billing.firstName,
-        last_name: input.billing.lastName,
-        phone: input.billing.phone,
-        billing_address: billingAddress,
-        company_name: input.billing.company ?? null,
-        tax_id: input.billing.taxId ?? null,
-      })
-      .eq("id", user.id);
-  }
+  // AC7: save billing to profile if requested (best-effort)
+  await saveProfileIfRequested(supabase, user.id, input.billing, billingAddress);
 
   // AC11
   return {
@@ -252,7 +277,6 @@ export async function createCheckout(
 export async function createBankOrder(
   input: CheckoutInput,
 ): Promise<ActionResult<BankOrderResult>> {
-  // Zod schema validation
   const parsed = CheckoutInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, code: "validation_failed" };
 
@@ -297,6 +321,11 @@ export async function createBankOrder(
     latestRevisionId(supabase, REFUND_SLUG),
   ]);
   if (!termsRevId || !refundRevId) {
+    console.error("[bank-order] payment_unavailable — missing page revision", {
+      termsRevId: termsRevId ?? "missing",
+      refundRevId: refundRevId ?? "missing",
+      userId: user.id,
+    });
     return { ok: false, code: "payment_unavailable" };
   }
 
@@ -319,16 +348,6 @@ export async function createBankOrder(
     // expires_at omitted — bank orders have no expiry (AC10)
   };
 
-  const items = lines.items.map((l) => ({
-    document_id: l.documentId,
-    language: l.language,
-    title_snapshot: l.title,
-    unit_price_cents: l.price,
-    quantity: 1,
-    line_total_cents: l.price,
-    item_type: "document",
-  }));
-
   // AC10: bank order — no reuse/supersede rules, no card-order check
   const { data: rpcResult, error: rpcError } = await supabase.rpc(
     "create_order_locked",
@@ -338,7 +357,7 @@ export async function createBankOrder(
       p_provider: "bank_transfer",
       p_method: "bank_transfer",
       p_order_data: orderData,
-      p_items: items,
+      p_items: buildOrderItems(lines),
     },
   );
 
@@ -348,21 +367,12 @@ export async function createBankOrder(
 
   const result = rpcResult as unknown as { action: string; order_id: string; order_number: string };
 
-  // AC7: save billing to profile if requested (best-effort)
-  if (input.billing.saveToProfile) {
-    const billingAddrForProfile = { address: input.billing.address, city: input.billing.city };
-    await supabase
-      .from("profiles")
-      .update({
-        first_name: input.billing.firstName,
-        last_name: input.billing.lastName,
-        phone: input.billing.phone,
-        billing_address: billingAddrForProfile,
-        company_name: input.billing.company ?? null,
-        tax_id: input.billing.taxId ?? null,
-      })
-      .eq("id", user.id);
+  if (result.action !== "created") {
+    return { ok: false, code: "unknown" };
   }
+
+  // AC7: save billing to profile if requested (best-effort)
+  await saveProfileIfRequested(supabase, user.id, input.billing, billingAddress);
 
   return {
     ok: true,
@@ -388,71 +398,24 @@ export async function cancelPendingOrder(
 
   const supabase = await createSupabaseServerClient();
 
-  // Fetch the order — RLS ensures only the owner's rows are visible.
-  // The .eq("user_id") below is an extra defence-in-depth check.
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .select("id, user_id, status, payment_provider")
-    .eq("id", orderId)
-    .eq("user_id", user.id)
-    .single();
+  // P0: cancel_order_locked acquires the same per-user advisory lock as
+  // create_order_locked, so the PayHere-event check and the UPDATE run atomically
+  // within one transaction — the TOCTOU race is closed.
+  const { data: rpcResult, error: rpcError } = await supabase.rpc(
+    "cancel_order_locked",
+    { p_user_id: user.id, p_order_id: orderId },
+  );
 
-  if (orderError || !order) {
-    return { ok: false, code: "not_found" };
+  if (rpcError || !rpcResult) return { ok: false, code: "unknown" };
+
+  const result = rpcResult as { action: string };
+
+  switch (result.action) {
+    case "cancelled":           return { ok: true };
+    case "not_found":           return { ok: false, code: "not_found" };
+    case "already_done":        return { ok: false, code: "validation_failed", reason: "already_done" };
+    case "payment_in_progress": return { ok: false, code: "payment_in_progress" };
+    case "slip_uploaded":       return { ok: false, code: "not_allowed" };
+    default:                    return { ok: false, code: "unknown" };
   }
-
-  // Defence-in-depth owner check (RLS + query eq already filter, but be explicit)
-  if (order.user_id !== user.id) {
-    return { ok: false, code: "not_allowed" };
-  }
-
-  // Terminal states: paid, failed, cancelled, refunded
-  const terminalStatuses = ["paid", "failed", "cancelled", "refunded"];
-  if (terminalStatuses.includes(order.status)) {
-    return { ok: false, code: "validation_failed", reason: "already_done" };
-  }
-
-  if (order.payment_provider === "payhere") {
-    // AC12: refuse if PayHere has an unprocessed payment event
-    const { data: pendingEvent } = await supabase
-      .from("payment_events")
-      .select("id")
-      .eq("order_id", orderId)
-      .is("processed_at", null)
-      .limit(1)
-      .single();
-
-    if (pendingEvent) {
-      return { ok: false, code: "payment_in_progress" };
-    }
-  } else if (order.payment_provider === "bank_transfer") {
-    // AC12/EC8: refuse if a bank slip has been uploaded
-    const { data: slip } = await supabase
-      .from("bank_transfer_slips")
-      .select("id")
-      .eq("order_id", orderId)
-      .limit(1)
-      .single();
-
-    if (slip) {
-      return { ok: false, code: "not_allowed" };
-    }
-  }
-
-  // Cancel the order — owner check already applied above via .eq("user_id")
-  const { error: cancelError } = await supabase
-    .from("orders")
-    .update({ status: "cancelled", cancel_reason: "buyer_cancelled" })
-    .eq("id", orderId)
-    .eq("user_id", user.id);
-
-  if (cancelError) {
-    return { ok: false, code: "unknown" };
-  }
-
-  // AC12: private.release_coupon_use(order_id) is called automatically by the DB
-  // trigger that fires on orders.status → 'cancelled'. In Release 1 it is a no-op;
-  // Release 2 coupons will decrement uses_count via that same trigger.
-
-  return { ok: true };
 }

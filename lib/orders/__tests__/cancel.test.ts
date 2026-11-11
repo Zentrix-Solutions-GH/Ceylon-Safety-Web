@@ -1,4 +1,7 @@
 // S-078: cancelPendingOrder unit tests (AC12, EC8)
+// cancelPendingOrder now delegates entirely to the cancel_order_locked RPC,
+// which runs the checks + UPDATE atomically. Tests verify the TypeScript
+// action-string → ActionResult mapping.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -20,29 +23,10 @@ const mockCreateClient = vi.mocked(createSupabaseServerClient);
 const fakeUser = { id: "user-3", email: "buyer@example.com", status: "active" };
 const fakeOrderId = "00000000-0000-4000-8000-000000000099";
 
-function makeDb(orderOverrides: Record<string, unknown> = {}) {
-  const fakeOrder = {
-    id: fakeOrderId,
-    user_id: fakeUser.id,
-    status: "pending",
-    payment_provider: "payhere",
-    payment_method: null,
-    ...orderOverrides,
+function makeDb(rpcAction: string) {
+  return {
+    rpc: vi.fn().mockResolvedValue({ data: { action: rpcAction }, error: null }),
   };
-
-  const chain: Record<string, unknown> = {
-    from: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    in: vi.fn().mockReturnThis(),
-    is: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: fakeOrder, error: null }),
-    order: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnThis(),
-    rpc: vi.fn(),
-  };
-  return { chain, fakeOrder };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -66,104 +50,66 @@ describe("cancelPendingOrder — auth gate", () => {
   });
 });
 
-// ─── AC12: owner-only ────────────────────────────────────────────────────────
+// ─── RPC action mapping ──────────────────────────────────────────────────────
 
-describe("cancelPendingOrder — owner only", () => {
-  it("returns not_allowed for another user's order", async () => {
-    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
-    const { chain } = makeDb({ user_id: "other-user-id" });
-    mockCreateClient.mockResolvedValue(chain as never);
-
-    const result = await cancelPendingOrder(fakeOrderId);
-    expect(result).toMatchObject({ ok: false, code: "not_allowed" });
-  });
-});
-
-// ─── AC12: card order cancel ─────────────────────────────────────────────────
-
-describe("cancelPendingOrder — card order", () => {
+describe("cancelPendingOrder — RPC action mapping", () => {
   beforeEach(() => {
     mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
   });
 
-  it("cancels a pending card order with no PayHere event", async () => {
-    const { chain } = makeDb({ status: "pending", payment_provider: "payhere" });
-    // payment_events: none
-    (chain.single as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({ data: { id: fakeOrderId, user_id: fakeUser.id, status: "pending", payment_provider: "payhere" }, error: null }) // order fetch
-      .mockResolvedValueOnce({ data: null, error: null }); // payment_events check (none)
-    // update: success
-    (chain.eq as ReturnType<typeof vi.fn>).mockReturnThis();
-    (chain.update as ReturnType<typeof vi.fn>).mockReturnThis();
-    mockCreateClient.mockResolvedValue(chain as never);
-
-    const result = await cancelPendingOrder(fakeOrderId);
-    expect(result).toMatchObject({ ok: true });
+  it("cancelled → ok: true", async () => {
+    mockCreateClient.mockResolvedValue(makeDb("cancelled") as never);
+    expect(await cancelPendingOrder(fakeOrderId)).toMatchObject({ ok: true });
   });
 
-  it("returns payment_in_progress when PayHere has a pending event", async () => {
-    const { chain } = makeDb({ status: "pending", payment_provider: "payhere" });
-    (chain.single as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({ data: { id: fakeOrderId, user_id: fakeUser.id, status: "pending", payment_provider: "payhere" }, error: null })
-      .mockResolvedValueOnce({ data: { id: "evt-1", status: "pending" }, error: null }); // pending payment event
-    mockCreateClient.mockResolvedValue(chain as never);
-
-    const result = await cancelPendingOrder(fakeOrderId);
-    expect(result).toMatchObject({ ok: false, code: "payment_in_progress" });
+  it("not_found → not_found", async () => {
+    mockCreateClient.mockResolvedValue(makeDb("not_found") as never);
+    expect(await cancelPendingOrder(fakeOrderId)).toMatchObject({ ok: false, code: "not_found" });
   });
 
-  it("returns validation_failed for already cancelled order", async () => {
-    const { chain } = makeDb({ status: "cancelled" });
-    (chain.single as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { id: fakeOrderId, user_id: fakeUser.id, status: "cancelled", payment_provider: "payhere" },
-      error: null,
+  // AC12: already cancelled / paid / failed / refunded
+  it("already_done → validation_failed with reason already_done", async () => {
+    mockCreateClient.mockResolvedValue(makeDb("already_done") as never);
+    expect(await cancelPendingOrder(fakeOrderId)).toMatchObject({
+      ok: false,
+      code: "validation_failed",
+      reason: "already_done",
     });
-    mockCreateClient.mockResolvedValue(chain as never);
-
-    const result = await cancelPendingOrder(fakeOrderId);
-    expect(result).toMatchObject({ ok: false, code: "validation_failed", reason: "already_done" });
   });
 
-  it("returns validation_failed for paid order", async () => {
-    const { chain } = makeDb({ status: "paid" });
-    (chain.single as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { id: fakeOrderId, user_id: fakeUser.id, status: "paid", payment_provider: "payhere" },
-      error: null,
+  // AC12: PayHere event in flight
+  it("payment_in_progress → payment_in_progress", async () => {
+    mockCreateClient.mockResolvedValue(makeDb("payment_in_progress") as never);
+    expect(await cancelPendingOrder(fakeOrderId)).toMatchObject({
+      ok: false,
+      code: "payment_in_progress",
     });
-    mockCreateClient.mockResolvedValue(chain as never);
-
-    const result = await cancelPendingOrder(fakeOrderId);
-    expect(result).toMatchObject({ ok: false, code: "validation_failed", reason: "already_done" });
-  });
-});
-
-// ─── AC12: bank order cancel (EC8) ───────────────────────────────────────────
-
-describe("cancelPendingOrder — bank order (EC8)", () => {
-  beforeEach(() => {
-    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
   });
 
-  it("cancels a bank order when no slip uploaded", async () => {
-    const { chain } = makeDb({ status: "pending_verification", payment_provider: "bank_transfer" });
-    (chain.single as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({ data: { id: fakeOrderId, user_id: fakeUser.id, status: "pending_verification", payment_provider: "bank_transfer" }, error: null })
-      .mockResolvedValueOnce({ data: null, error: null }); // no bank_slips row
-    (chain.update as ReturnType<typeof vi.fn>).mockReturnThis();
-    mockCreateClient.mockResolvedValue(chain as never);
-
-    const result = await cancelPendingOrder(fakeOrderId);
-    expect(result).toMatchObject({ ok: true });
+  // AC12/EC8: bank slip uploaded
+  it("slip_uploaded → not_allowed (EC8)", async () => {
+    mockCreateClient.mockResolvedValue(makeDb("slip_uploaded") as never);
+    expect(await cancelPendingOrder(fakeOrderId)).toMatchObject({ ok: false, code: "not_allowed" });
   });
 
-  it("returns not_allowed when slip already uploaded (EC8)", async () => {
-    const { chain } = makeDb({ status: "pending_verification", payment_provider: "bank_transfer" });
-    (chain.single as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({ data: { id: fakeOrderId, user_id: fakeUser.id, status: "pending_verification", payment_provider: "bank_transfer" }, error: null })
-      .mockResolvedValueOnce({ data: { id: "slip-1" }, error: null }); // slip exists
-    mockCreateClient.mockResolvedValue(chain as never);
+  // Unknown future action
+  it("unknown RPC action → unknown error code", async () => {
+    mockCreateClient.mockResolvedValue(makeDb("unexpected_state") as never);
+    expect(await cancelPendingOrder(fakeOrderId)).toMatchObject({ ok: false, code: "unknown" });
+  });
 
-    const result = await cancelPendingOrder(fakeOrderId);
-    expect(result).toMatchObject({ ok: false, code: "not_allowed" });
+  // RPC error
+  it("RPC error → unknown", async () => {
+    mockCreateClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: "db error" } }),
+    } as never);
+    expect(await cancelPendingOrder(fakeOrderId)).toMatchObject({ ok: false, code: "unknown" });
+  });
+
+  // AC12: another user's order — the RPC enforces ownership via auth.uid() assertion
+  // and WHERE user_id = p_user_id, returning not_found rather than not_allowed
+  it("another user's order → not_found (RPC ownership check)", async () => {
+    mockCreateClient.mockResolvedValue(makeDb("not_found") as never);
+    expect(await cancelPendingOrder(fakeOrderId)).toMatchObject({ ok: false, code: "not_found" });
   });
 });

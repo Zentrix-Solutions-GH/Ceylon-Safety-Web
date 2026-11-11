@@ -150,7 +150,12 @@ $ bash scripts/check.sh
 pgTAP and types-freshness skipped — Supabase not running locally. No DB migrations in this story; RLS rules for orders already exist from S-016/S-017.
 
 ## Review notes
-<!-- Filled in by reviewer and security-reviewer agents and /full-review -->
+
+- **P0** `lib/orders/create.ts:416–447` — TOCTOU race in `cancelPendingOrder`: PayHere event check and cancel UPDATE are separate queries with no wrapping transaction or advisory lock. A webhook arriving in that window slips past the guard. Must be fixed before S-080 (PayHere webhook handler) merges. (full-review 2026-11-11)
+- **P1** `lib/orders/create.ts:163–165, 298–300` — Missing admin alert when `payment_unavailable` is returned for a missing page revision. Commerce design section 4.1 requires an alert. (full-review 2026-11-11)
+- **P1** `lib/orders/create.ts:33–42` — `BillingSchema` missing length bounds (`z.string()` with no `min(1)` or `max()`). An attacker can POST a 1 MB address string that passes Zod and reaches the DB. Add `max(200)` on text fields, `max(30)` on phone. (full-review 2026-11-11)
+- **P1** `lib/orders/create.ts:117–374` — ~110 lines of identical logic duplicated between `createCheckout` and `createBankOrder`. A bug fix in one will not propagate to the other. (full-review 2026-11-11)
+- **P1** `lib/orders/__tests__/create.reuse.test.ts` — EC4 ("never shorten expiry") and EC6 ("billing refreshed on reuse") both specified in AC6 but have no test. (full-review 2026-11-11)
 
 ## After this merges, a user can:
 - (nothing visible yet) A signed-in test client can call `createCheckout` and `createBankOrder` and get an order with correct server-side totals; this is infrastructure for S-079 and S-092 and is titled as such in the PR.
