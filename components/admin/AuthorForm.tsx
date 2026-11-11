@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { t } from "@/messages/en";
-import { saveAuthor } from "@/lib/authors/actions/saveAuthor";
+import { saveAuthor } from "@/app/admin/authors/actions/saveAuthor";
 import type { Author } from "@/types/author";
 
 interface Props {

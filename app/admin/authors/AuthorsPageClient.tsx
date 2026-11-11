@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { t } from "@/messages/en";
-import { setAuthorActive } from "@/lib/authors/actions/setAuthorActive";
+import { setAuthorActive } from "@/app/admin/authors/actions/setAuthorActive";
 import DataTable, { type Column } from "@/components/admin/DataTable";
 import type { Author } from "@/types/author";
 
