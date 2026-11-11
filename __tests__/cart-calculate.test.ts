@@ -132,6 +132,34 @@ describe("POST /api/cart/calculate", () => {
     expect(body.items[0].unavailableReason).toBe("document_unavailable");
   });
 
+  it("EC2: marks language_unavailable when language file missing after add", async () => {
+    mockRequireActiveAccount.mockResolvedValue(activeAuth);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue({
+      items: [
+        {
+          cartItemId: "item-1",
+          title: "Safety Sign",
+          slug: "safety-sign",
+          coverUrl: null,
+          language: "si" as const,
+          pageCount: null,
+          price: 0,
+          available: false,
+          unavailableReason: "language_unavailable" as const,
+        },
+      ],
+      subtotal: 0,
+      total: 0,
+    });
+
+    const res = await POST(makeRequest({}));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.items[0].available).toBe(false);
+    expect(body.items[0].unavailableReason).toBe("language_unavailable");
+  });
+
   it("AC4: empty cart returns 200 with empty items", async () => {
     mockRequireActiveAccount.mockResolvedValue(activeAuth);
     mockCheckRateLimit.mockResolvedValue({ ok: true });
