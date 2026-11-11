@@ -1,11 +1,11 @@
 ---
 id: S-079
 title: PayHere request builder, return/cancel handling, order status API
-status: ready
+status: pr-open
 owner: backend
 risk: sensitive
-branch: feature/S-079-payhere-request-return
-pr: ~
+branch: feature/S-079-payhere-form-status
+pr: "86 — https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/86"
 depends_on: [S-078]
 reqs: [REQ-152, REQ-153, REQ-055]
 ---
@@ -19,23 +19,23 @@ After `createCheckout` (S-078), the server can build the signed PayHere payment 
 - Not covered: REQ-157 (merchant account and domain approval, OPEN, Q42) affects only going live (S-129), not this story, which runs against the sandbox.
 
 ## Acceptance criteria
-- [ ] AC1: `lib/payhere/money.ts` is the only place cents become a two-decimal string and back: `7155.45` is 715545 cents; a strict parser accepts one or two decimal places and rejects everything else (`7155.456`, `7,155.45`, empty, negative). Tested with edge values.
-- [ ] AC2: `lib/payhere/checkout.ts` builds the request fields for an order: merchant id from config, return/cancel/notify addresses, order id = our `order_number`, a short description such as "CeylonSafety documents (3 items)", currency `LKR`, the amount as the two-decimal string from `order.total_cents`, customer details from the order's billing snapshot, and the hash. The amount always comes from the order row, never from the browser.
-- [ ] AC3: The hash is built on the server from merchant id, order id, formatted amount, currency and the hash of the merchant secret, using the formula in PayHere's current documentation (fact to verify first, see Assumptions). A unit test proves it equals the value PayHere's documentation gives for a known sample.
-- [ ] AC4: `createCheckout` (S-078) now also returns `payhere: { action, fields }`, where `action` is the sandbox address or the live address chosen by configuration, never hardcoded. A card order that PayHere has reported as pending (slow payment) returns `payment_in_progress` instead of a new request (set in S-078, asserted here end to end).
-- [ ] AC5: The return and cancel addresses carry `?order=<unique order id>` (the order's uuid, never the sequential number); the notify address is `/api/payhere/notify`.
-- [ ] AC6: `GET /api/orders/[id]/status` is owner only (the order must belong to the signed-in user, otherwise `not_found`), returns only the status (and whether it is `paid`), and is limited to 1 request per 2 seconds and 40 per order (`rate_limited`). Responses are `no-store`.
-- [ ] AC7: A read helper `getMyOrder(orderId)` (owner check in the query) returns the order with its items and the entitlement ids, for the payment-complete page (S-093), the bank page (S-094) and My Purchases (S-096). Another user's order returns `not_found`.
-- [ ] AC8: The merchant secret never appears in client bundles, responses, logs or error reports. A test greps the built client bundle for the secret value.
-- [ ] AC9: Missing or empty PayHere configuration fails at startup through `lib/config.ts` with a clear message naming the variable.
+- [x] AC1: `lib/payhere/money.ts` is the only place cents become a two-decimal string and back: `7155.45` is 715545 cents; a strict parser accepts one or two decimal places and rejects everything else (`7155.456`, `7,155.45`, empty, negative). Tested with edge values.
+- [x] AC2: `lib/payhere/checkout.ts` builds the request fields for an order: merchant id from config, return/cancel/notify addresses, order id = our `order_number`, a short description such as "CeylonSafety documents (3 items)", currency `LKR`, the amount as the two-decimal string from `order.total_cents`, customer details from the order's billing snapshot, and the hash. The amount always comes from the order row, never from the browser.
+- [x] AC3: The hash is built on the server from merchant id, order id, formatted amount, currency and the hash of the merchant secret, using the formula in PayHere's current documentation (fact to verify first, see Assumptions). A unit test proves it equals the value PayHere's documentation gives for a known sample.
+- [x] AC4: `createCheckout` (S-078) now also returns `payhere: { action, fields }`, where `action` is the sandbox address or the live address chosen by configuration, never hardcoded. A card order that PayHere has reported as pending (slow payment) returns `payment_in_progress` instead of a new request (set in S-078, asserted here end to end).
+- [x] AC5: The return and cancel addresses carry `?order=<unique order id>` (the order's uuid, never the sequential number); the notify address is `/api/payhere/notify`.
+- [x] AC6: `GET /api/orders/[id]/status` is owner only (the order must belong to the signed-in user, otherwise `not_found`), returns only the status (and whether it is `paid`), and is limited to 1 request per 2 seconds and 40 per order (`rate_limited`). Responses are `no-store`.
+- [x] AC7: A read helper `getMyOrder(orderId)` (owner check in the query) returns the order with its items and the entitlement ids, for the payment-complete page (S-093), the bank page (S-094) and My Purchases (S-096). Another user's order returns `not_found`.
+- [x] AC8: The merchant secret never appears in client bundles, responses, logs or error reports. A test greps the built client bundle for the secret value.
+- [x] AC9: Missing or empty PayHere configuration fails at startup through `lib/config.ts` with a clear message naming the variable.
 
 ## Edge cases
-- [ ] EC1: An order that is not `pending` (already paid, cancelled, expired) never gets a payment request: `validation_failed`.
-- [ ] EC2: An amount with a value that does not convert cleanly (for example from a rounding bug) is refused before the request is built.
-- [ ] EC3: Billing fields in Sinhala or Tamil are passed through correctly (encoding of the form fields; verify with PayHere sandbox).
-- [ ] EC4: Item description longer than PayHere's limit is shortened (limit is a fact to verify, commerce 19 item 7).
-- [ ] EC5: The sandbox and the live merchant ids and secrets are separate per environment; a sandbox id on a live site fails the startup check.
-- [ ] EC6: The browser returns before the notification: the status API reports `pending` until S-080 has run.
+- [x] EC1: An order that is not `pending` (already paid, cancelled, expired) never gets a payment request: `validation_failed`.
+- [x] EC2: An amount with a value that does not convert cleanly (for example from a rounding bug) is refused before the request is built.
+- [x] EC3: Billing fields in Sinhala or Tamil are passed through correctly (encoding of the form fields; verify with PayHere sandbox).
+- [x] EC4: Item description longer than PayHere's limit is shortened (limit is a fact to verify, commerce 19 item 7).
+- [x] EC5: The sandbox and the live merchant ids and secrets are separate per environment; a sandbox id on a live site fails the startup check.
+- [x] EC6: The browser returns before the notification: the status API reports `pending` until S-080 has run.
 
 ## Contract
 - `lib/payhere/money.ts`, `lib/payhere/checkout.ts`, `lib/payhere/types.ts`; `GET /api/orders/[id]/status`; `getMyOrder` in `lib/orders/read.ts`.
