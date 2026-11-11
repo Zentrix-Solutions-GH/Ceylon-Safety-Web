@@ -217,6 +217,10 @@ Previously flagged P0 (`renderVideo` empty anchor) — **resolved** in this PR. 
 - **P1** `components/admin/ArticleEditor/ItemPickerModal.tsx` — `ok: false` from server action silently renders "No published videos yet" empty-state. Add a distinct error state and render a different message on failure. (full-review 2026-11-11)
 - **P1** `__tests__/components/admin/ArticleEditor/RichTextEditor.test.tsx` — No test clicks the "Insert video" toolbar button and asserts `onInsertVideoClick` fires. (full-review 2026-11-11)
 
+## Re-check (full-review 2026-11-12, commit 922b651)
+
+All 5 P1 findings from 2026-11-11 resolved. Re-review posted on PR #85 (HEAD 922b6517). **APPROVE** — 91/100.
+
 ## After this merges
 
 - S-057 (save flow) includes the video block in its publish-gating checks
