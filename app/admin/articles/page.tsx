@@ -1,7 +1,7 @@
 ﻿import { redirect } from "next/navigation";
 import { listAdminArticles } from "@/lib/articles/listAdminArticles";
 import { listCategories } from "@/lib/articles/listCategories";
-import ArticlesPageClient from "./ArticlesPageClient";
+import ArticlesPageClient, { type FilterStatus } from "./ArticlesPageClient";
 import type { ArticleStatus } from "@/types/article";
 
 type SearchParams = { status?: string; category?: string; title?: string; page?: string };
@@ -37,6 +37,9 @@ export default async function AdminArticlesPage({
       pageCount={articlesResult.data.pageCount}
       currentPage={page}
       categories={categories}
+      initialStatus={(params.status ?? "") as FilterStatus}
+      initialCategory={params.category ?? ""}
+      initialTitle={params.title ?? ""}
     />
   );
 }

@@ -74,6 +74,9 @@ describe("ArticlesPageClient — AC1 (renders list)", () => {
         pageCount={1}
         currentPage={1}
         categories={CATEGORIES}
+        initialStatus=""
+        initialCategory=""
+        initialTitle=""
       />
     );
     expect(screen.getByText("First Article")).toBeTruthy();
@@ -92,6 +95,9 @@ describe("ArticlesPageClient — AC2 (status filter)", () => {
         pageCount={1}
         currentPage={1}
         categories={CATEGORIES}
+        initialStatus=""
+        initialCategory=""
+        initialTitle=""
       />
     );
     const statusSelect = screen.getByTestId("filter-status");
@@ -109,6 +115,9 @@ describe("ArticlesPageClient — AC3 (title filter debounce)", () => {
         pageCount={1}
         currentPage={1}
         categories={CATEGORIES}
+        initialStatus=""
+        initialCategory=""
+        initialTitle=""
       />
     );
     const titleInput = screen.getByTestId("filter-title");
@@ -129,6 +138,9 @@ describe("ArticlesPageClient — AC4 (links)", () => {
         pageCount={1}
         currentPage={1}
         categories={CATEGORIES}
+        initialStatus=""
+        initialCategory=""
+        initialTitle=""
       />
     );
     expect(screen.getByRole("link", { name: /new article/i })).toHaveAttribute(
@@ -148,6 +160,9 @@ describe("ArticlesPageClient — EC1 (empty state)", () => {
         pageCount={0}
         currentPage={1}
         categories={CATEGORIES}
+        initialStatus=""
+        initialCategory=""
+        initialTitle=""
       />
     );
     expect(screen.getByTestId("articles-empty")).toBeTruthy();

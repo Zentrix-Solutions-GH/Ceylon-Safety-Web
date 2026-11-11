@@ -14,14 +14,18 @@ interface Props {
 export default function AuthorsPageClient({ initialAuthors }: Props) {
   const [authors, setAuthors] = useState(initialAuthors);
   const [toggleError, setToggleError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   async function handleToggle(author: Author) {
+    if (togglingId) return;
+    setTogglingId(author.id);
     setToggleError(null);
     const result = await setAuthorActive({
       id: author.id,
       active: !author.isActive,
       updatedAt: author.updatedAt,
     });
+    setTogglingId(null);
 
     if (!result.ok) {
       setToggleError(t("admin.authors.form_toggle_error"));
@@ -70,7 +74,8 @@ export default function AuthorsPageClient({ initialAuthors }: Props) {
           <button
             data-testid={`author-toggle-active-${author.id}`}
             onClick={() => handleToggle(author)}
-            className="text-sm text-muted-foreground hover:text-foreground"
+            disabled={togglingId === author.id}
+            className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-40"
           >
             {author.isActive
               ? t("admin.authors.deactivate_button")

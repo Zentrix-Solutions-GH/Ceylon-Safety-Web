@@ -14,15 +14,18 @@ interface Props {
   pageCount: number;
   currentPage: number;
   categories: Category[];
+  initialStatus: FilterStatus;
+  initialCategory: string;
+  initialTitle: string;
 }
 
-type FilterStatus = ArticleStatus | "scheduled" | "";
+export type FilterStatus = ArticleStatus | "scheduled" | "";
 
-export default function ArticlesPageClient({ initialArticles, pageCount, currentPage, categories }: Props) {
+export default function ArticlesPageClient({ initialArticles, pageCount, currentPage, categories, initialStatus, initialCategory, initialTitle }: Props) {
   const router = useRouter();
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [titleFilter, setTitleFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>(initialStatus);
+  const [categoryFilter, setCategoryFilter] = useState(initialCategory);
+  const [titleFilter, setTitleFilter] = useState(initialTitle);
   const titleDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const updateParam = useCallback(
@@ -33,6 +36,7 @@ export default function ArticlesPageClient({ initialArticles, pageCount, current
       } else {
         params.delete(key);
       }
+      if (key !== "page") params.delete("page");
       router.replace("/admin/articles?" + params.toString());
     },
     [router]
@@ -93,7 +97,7 @@ export default function ArticlesPageClient({ initialArticles, pageCount, current
     {
       key: "updatedAt",
       header: t("admin.articles.col_updated"),
-      render: (row) => new Date(row.updatedAt).toLocaleDateString(),
+      render: (row) => new Date(row.updatedAt).toLocaleDateString("en-LK"),
     },
     {
       key: "actions",
