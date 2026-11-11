@@ -93,7 +93,7 @@ function getMissingFields(opts: {
   }
   if (!opts.coverImageKey || !opts.coverImageAlt) {
     missing.push({ key: "cover_image", label: t("editor.publish.missing.cover_image") });
-  } else if (opts.coverImageStatus === "pending") {
+  } else if (opts.coverImageStatus !== "ready") {
     missing.push({ key: "cover_image_pending", label: t("editor.publish.missing.cover_image_pending") });
   }
   if (!opts.excerpt.trim()) missing.push({ key: "excerpt", label: t("editor.publish.missing.excerpt") });
@@ -238,33 +238,37 @@ export default function ArticleEditor({ initialData, authors, categories }: Arti
       scheduledAt,
     });
 
-    const result = await saveArticle({
-      articleId: initialData.id,
-      title,
-      slug,
-      categoryId,
-      authorId,
-      excerpt,
-      coverImageKey: coverImageKey ?? undefined,
-      coverImageAlt,
-      publishedAt: scheduledAt ?? undefined,
-      body: body as ArticleBody,
-      bodyVersion,
-    });
+    try {
+      const result = await saveArticle({
+        articleId: initialData.id,
+        title,
+        slug,
+        categoryId,
+        authorId,
+        excerpt,
+        coverImageKey: coverImageKey ?? undefined,
+        coverImageAlt,
+        publishedAt: scheduledAt ?? undefined,
+        body: body as ArticleBody,
+        bodyVersion,
+      });
 
-    setIsSaving(false);
-
-    if (result.ok) {
-      clearBackup(initialData.id); // AC2
-      setBodyVersion(result.bodyVersion);
-      setIsDirty(false);
-      setToast(t("editor.save.saved"));
-    } else if (result.code === "refs_inconsistent") {
-      setToast(t("editor.save.refs_inconsistent"));
-    } else if (result.code === "version_conflict") {
-      setToast(t("editor.save.conflict"));
-    } else {
+      if (result.ok) {
+        clearBackup(initialData.id); // AC2
+        setBodyVersion(result.bodyVersion);
+        setIsDirty(false);
+        setToast(t("editor.save.saved"));
+      } else if (result.code === "refs_inconsistent") {
+        setToast(t("editor.save.refs_inconsistent"));
+      } else if (result.code === "version_conflict") {
+        setToast(t("editor.save.conflict"));
+      } else {
+        setToast(t("editor.save.error"));
+      }
+    } catch {
       setToast(t("editor.save.error"));
+    } finally {
+      setIsSaving(false);
     }
   }
 
