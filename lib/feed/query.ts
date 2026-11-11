@@ -1,6 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { serverConfig } from "@/lib/config";
 import { FEED_TAG, HOME_FIRST_PAGE_TAG } from "@/lib/cache/tags";
@@ -61,6 +61,7 @@ type FeedRow = {
   locale: string | null;
   slug?: string | null;
   author_name?: string | null;
+  category_name?: string | null;
   [key: string]: unknown;
 };
 
@@ -82,6 +83,7 @@ export function toFeedItem(row: FeedRow): FeedItem {
       kind: "article",
       excerpt: row.summary ?? null,
       authorName: row.author_name ?? null,
+      categoryName: row.category_name ?? null,
     } as ArticleFeedItem;
   }
 
@@ -97,7 +99,7 @@ type GetFeedResult =
   | { ok: false; code: "validation_failed" | "unknown" };
 
 async function queryFeed(cursor?: string): Promise<GetFeedResult> {
-  const supabase = createSupabaseServiceRoleClient();
+  const supabase = createSupabaseAnonClient();
 
   const now = new Date().toISOString();
 
@@ -131,19 +133,22 @@ async function queryFeed(cursor?: string): Promise<GetFeedResult> {
 
   // Enrich article rows with slug + author_name via join
   const articleIds = rows.filter((r) => r.kind === "article").map((r) => r.id).filter(Boolean) as string[];
-  const enrichMap: Record<string, { slug: string | null; author_name: string | null }> = {};
+  const enrichMap: Record<string, { slug: string | null; author_name: string | null; category_name: string | null }> = {};
 
   if (articleIds.length > 0) {
     const { data: articles } = await supabase
       .from("articles")
-      .select("id, slug, authors(display_name)")
+      .select("id, slug, authors(display_name), categories(name)")
       .in("id", articleIds);
 
     for (const a of articles ?? []) {
       const authorName = Array.isArray(a.authors)
         ? (a.authors[0] as { display_name: string } | undefined)?.display_name ?? null
         : (a.authors as { display_name: string } | null)?.display_name ?? null;
-      enrichMap[a.id] = { slug: a.slug ?? null, author_name: authorName };
+      const categoryName = Array.isArray(a.categories)
+        ? (a.categories[0] as { name: string } | undefined)?.name ?? null
+        : (a.categories as { name: string } | null)?.name ?? null;
+      enrichMap[a.id] = { slug: a.slug ?? null, author_name: authorName, category_name: categoryName };
     }
   }
 
