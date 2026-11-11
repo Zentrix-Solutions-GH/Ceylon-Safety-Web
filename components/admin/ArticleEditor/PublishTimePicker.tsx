@@ -26,15 +26,24 @@ function toColomboDT(isoValue: string): string {
 }
 
 function toISOFromColombo(localDT: string): string {
-  // Parse a datetime-local value as Asia/Colombo and convert to UTC ISO string
+  // Parse a datetime-local value as Asia/Colombo and convert to UTC ISO string.
+  // Uses Intl to derive the UTC offset for this instant rather than hard-coding
+  // +05:30, so the conversion stays correct if the offset ever changes.
+  // Parse components with Date.UTC to stay independent of the browser timezone.
   const [datePart, timePart] = localDT.split("T");
   const [year, month, day] = datePart.split("-").map(Number);
   const [hour, minute] = (timePart ?? "00:00").split(":").map(Number);
-
-  // Build a fake date in UTC, then adjust by Colombo offset (+05:30)
-  const colomboOffsetMs = 5.5 * 60 * 60 * 1000;
-  const utcMs = Date.UTC(year, month - 1, day, hour, minute) - colomboOffsetMs;
-  return new Date(utcMs).toISOString();
+  // Treat the input as UTC temporarily so Intl can tell us what Colombo shows.
+  const tempUtc = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const colomboStr = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: COLOMBO_TZ,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }).format(tempUtc);
+  // Parse back as UTC to measure the offset between our temp UTC and Colombo's display.
+  const colomboAsUtcMs = new Date(`${colomboStr.replace(" ", "T")}Z`).getTime();
+  const offsetMs = tempUtc.getTime() - colomboAsUtcMs;
+  return new Date(tempUtc.getTime() + offsetMs).toISOString();
 }
 
 function formatColomboDT(isoValue: string): string {
@@ -51,7 +60,10 @@ function formatColomboDT(isoValue: string): string {
 
 export default function PublishTimePicker({ value, onChange }: PublishTimePickerProps) {
   const localValue = value ? toColomboDT(value) : "";
-  const isAlmostImmediate = value !== null && new Date(value).getTime() - Date.now() < ONE_MINUTE_MS;
+  const isAlmostImmediate = value !== null && (() => {
+    const diff = new Date(value).getTime() - Date.now();
+    return diff >= 0 && diff < ONE_MINUTE_MS;
+  })();
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value;

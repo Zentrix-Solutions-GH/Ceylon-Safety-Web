@@ -130,7 +130,10 @@ export default function ArticleEditor({ initialData, authors, categories }: Arti
   const [excerpt, setExcerpt] = useState(initialData.excerpt ?? "");
   const [coverImageKey, setCoverImageKey] = useState(initialData.coverImageKey);
   const [coverImageAlt, setCoverImageAlt] = useState(initialData.coverImageAlt ?? "");
-  const [coverImageStatus] = useState(initialData.coverImageStatus);
+  // coverImageStatus is not held in state: there is no cover-image upload widget in this
+  // component yet, so the value cannot change without a page reload. A future story that
+  // adds cover-image upload must lift this into state and wire a setter here.
+  const coverImageStatus = initialData.coverImageStatus;
   const [scheduledAt, setScheduledAt] = useState<string | null>(initialData.publishedAt);
 
   // ── Body / save state ───────────────────────────────────────────────────────
