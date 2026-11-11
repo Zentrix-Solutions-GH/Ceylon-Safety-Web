@@ -127,6 +127,9 @@ check-public-pages: OK — checked 20 file(s), no violations.
 - ~~**P1** `ArticleLikeButton.tsx`, `CommentForm.tsx`, `CommentThread.tsx` — identical `userStatus` derivation duplicated in all three.~~ **Resolved** commit 89d6544: extracted to `hooks/useArticleUserStatus.ts`.
 - ~~**P1** `app/(public)/articles/[slug]/__tests__/page.test.tsx` — engagement components mocked with no prop assertions.~~ **Resolved** commit 89d6544: prop-capturing mocks + 4 new prop-wiring tests.
 - ~~**P1** `__tests__/components/articles/CommentThread.test.tsx` — Load more cursor param not verified; page-size boundary not asserted.~~ **Resolved** commit 89d6544: cursor URL assertion + Load-more-absent test added.
+- **P1** `components/articles/CommentThread.tsx` — `loadMore` silently discards failures; `!res.ok` returns with no error state shown. Add `role="alert"` on failure. (full-review 2026-11-11)
+- **P1** `__tests__/components/articles/CommentThread.test.tsx` — AC5 ordering (newest-first) has no test; two comments with distinct `createdAt` values and DOM-order assertion needed. (full-review 2026-11-11)
+- **P1** `__tests__/components/articles/CommentThread.test.tsx` — AC5 page-size param not asserted on Load more request. (full-review 2026-11-11)
 
 ## After this merges
 
