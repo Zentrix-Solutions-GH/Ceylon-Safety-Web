@@ -5,7 +5,7 @@ status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-057-editor-save-flow
-pr: ~
+pr: 82
 depends_on: [S-048, S-055]
 reqs: [REQ-034, REQ-026, REQ-027]
 ---
