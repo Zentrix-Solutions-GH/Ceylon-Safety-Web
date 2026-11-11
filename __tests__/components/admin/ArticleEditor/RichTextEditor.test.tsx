@@ -17,6 +17,10 @@ vi.mock("@tiptap/extension-underline", () => ({ default: {} }));
 vi.mock("@tiptap/extension-link", () => ({ default: { configure: vi.fn(() => ({})) } }));
 vi.mock("@tiptap/core", () => ({ Mark: { create: vi.fn(() => ({})) }, Node: { create: vi.fn(() => ({})) } }));
 
+vi.mock("@/lib/config.public", () => ({
+  publicConfig: { appUrl: "https://ceylonsafety.com", mediaCdnUrl: "https://cdn.test" },
+}));
+
 // Mock ImageBlock so we can inspect the props passed by ImageNodeView
 vi.mock("@/components/admin/ArticleEditor/blocks/ImageBlock", () => ({
   default: vi.fn(() => null),

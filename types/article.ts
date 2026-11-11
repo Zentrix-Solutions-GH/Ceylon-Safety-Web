@@ -64,7 +64,7 @@ export interface ImageNode {
 
 export interface VideoNode {
   type: "video";
-  attrs: { node_id: string; video_id: string };
+  attrs: { node_id: string; video_id: string; title?: string; thumbnailKey?: string };
 }
 
 export interface DocumentSpotNode {
