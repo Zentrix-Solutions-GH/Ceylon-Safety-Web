@@ -1,3 +1,4 @@
+export const ANNOUNCEMENT_TAG = "announcement-banner";
 export const FEED_TAG = "feed-api";
 export const DOCUMENTS_NOT_FOUND_TAG = "documents-not-found";
 export const HOME_FIRST_PAGE_TAG = "home-first-page";

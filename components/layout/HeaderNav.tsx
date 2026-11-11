@@ -33,16 +33,23 @@ export function HeaderNav() {
     <>
       {/* Desktop nav — hidden below lg */}
       <nav aria-label="Site navigation" className="hidden lg:flex items-center gap-6">
-        {NAV_ITEMS.map((item) => (
-          <Link
-            key={item.id}
-            href={item.href}
-            aria-current={pathname === item.href ? "page" : undefined}
-            className="text-sm font-medium hover:text-primary transition-colors"
-          >
-            {t(item.labelKey)}
-          </Link>
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              className={`relative text-sm font-medium transition-colors pb-1 ${
+                isActive
+                  ? "text-[#C00000] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#C00000] after:rounded-full"
+                  : "text-gray-700 hover:text-[#C00000]"
+              }`}
+            >
+              {t(item.labelKey)}
+            </Link>
+          );
+        })}
       </nav>
 
       {/* Mobile hamburger — visible below lg */}

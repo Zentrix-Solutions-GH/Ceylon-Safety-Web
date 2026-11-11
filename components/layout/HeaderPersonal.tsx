@@ -88,14 +88,14 @@ export function HeaderPersonal() {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1">
       {/* AC4: cart link — middleware redirects unsigned-in visitors from /cart to /sign-in. */}
       <Link
         href="/cart"
         aria-label={t("nav.cart")}
-        className="flex items-center justify-center w-11 h-11 rounded-md hover:bg-accent relative"
+        className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600 transition-colors relative"
       >
-        <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+        <ShoppingCart className="h-4 w-4" aria-hidden="true" />
         {/* Fixed-width badge slot — count filled by S-091. */}
         <span className="absolute top-1 right-1 w-4 h-4 shrink-0" aria-hidden="true" />
       </Link>
@@ -114,13 +114,13 @@ export function HeaderPersonal() {
         <div className="flex items-center gap-2">
           <Link
             href="/sign-in"
-            className="text-sm font-medium px-3 py-2 rounded-md hover:bg-accent"
+            className="text-sm font-semibold px-4 py-1.5 rounded-full border border-gray-400 text-gray-700 hover:border-[#C00000] hover:text-[#C00000] transition-colors"
           >
             {t("nav.sign_in")}
           </Link>
           <Link
             href="/sign-up"
-            className="text-sm font-medium px-3 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+            className="text-sm font-semibold px-4 py-1.5 rounded-full bg-[#C00000] text-white hover:bg-[#a00000] transition-colors"
           >
             {t("nav.sign_up")}
           </Link>
