@@ -1,11 +1,11 @@
 ---
 id: S-057
 title: Editor save flow — metadata, local backup, publish gating
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-057-editor-save-flow
-pr: ~
+pr: 82
 depends_on: [S-048, S-055]
 reqs: [REQ-034, REQ-026, REQ-027]
 ---
@@ -22,22 +22,22 @@ Complete the `ArticleEditor` shell: manual Save, metadata fields (title, slug, c
 
 ## Acceptance criteria
 
-- [ ] AC1: Clicking "Save draft" calls `saveArticle` (server action from S-048); a success toast shows "Saved"; a version-conflict (HTTP 409) shows "Someone else changed this article. Reload to see their version. Your text is kept in this browser."
-- [ ] AC2: After a successful save, the local backup for this article id is cleared from `localStorage`
-- [ ] AC3: On load, if a `localStorage` backup exists that is newer than the server version, a banner asks "You have unsaved changes from [date]. Restore?" with Restore / Discard buttons
-- [ ] AC4: Navigating away with unsaved changes triggers the browser's native leave-page warning (`beforeunload`)
-- [ ] AC5: The "Publish" button is disabled and shows an inline list of exactly what is missing when any of the following are absent: title, slug, category, active author, cover image (with alt text, `media.status === 'ready'`), excerpt, publish time
-- [ ] AC6: The publish-time picker is labelled "Sri Lanka time (Asia/Colombo)" and shows "Will go live on [formatted date/time]" beneath it; a time less than 1 minute in the future shows a warning "This will publish almost immediately"
-- [ ] AC7: Slug is auto-generated from the title on first keystroke; admin can override it; slug is locked once the article is first published (no edit field shown after first publish)
-- [ ] AC8: Saving never changes the article's status (draft stays draft; hidden stays hidden)
+- [x] AC1: Clicking "Save draft" calls `saveArticle` (server action from S-048); a success toast shows "Saved"; a version-conflict (HTTP 409) shows "Someone else changed this article. Reload to see their version. Your text is kept in this browser."
+- [x] AC2: After a successful save, the local backup for this article id is cleared from `localStorage`
+- [x] AC3: On load, if a `localStorage` backup exists that is newer than the server version, a banner asks "You have unsaved changes from [date]. Restore?" with Restore / Discard buttons
+- [x] AC4: Navigating away with unsaved changes triggers the browser's native leave-page warning (`beforeunload`)
+- [x] AC5: The "Publish" button is disabled and shows an inline list of exactly what is missing when any of the following are absent: title, slug, category, active author, cover image (with alt text, `media.status === 'ready'`), excerpt, publish time
+- [x] AC6: The publish-time picker is labelled "Sri Lanka time (Asia/Colombo)" and shows "Will go live on [formatted date/time]" beneath it; a time less than 1 minute in the future shows a warning "This will publish almost immediately"
+- [x] AC7: Slug is auto-generated from the title on first keystroke; admin can override it; slug is locked once the article is first published (no edit field shown after first publish)
+- [x] AC8: Saving never changes the article's status (draft stays draft; hidden stays hidden)
 
 ## Edge cases
 
-- [ ] EC1: Two admins edit the same article simultaneously — the second save returns 409; the local backup preserves the second admin's work
-- [ ] EC2: `localStorage` throws (private browsing, quota exceeded) — local backup silently disabled; everything else still works
-- [ ] EC3: Slug clashes with a reserved word (admin, api, search, new, edit, preview, sign-in) — inline error "This slug is reserved. Please change it."
-- [ ] EC4: Deactivated author chosen — publish button shows "Author is deactivated. Please pick an active author."
-- [ ] EC5: Cover image is in `pending` state (upload not confirmed) — publish blocked with "Cover image upload is not complete"
+- [x] EC1: Two admins edit the same article simultaneously — the second save returns 409; the local backup preserves the second admin's work
+- [x] EC2: `localStorage` throws (private browsing, quota exceeded) — local backup silently disabled; everything else still works
+- [x] EC3: Slug clashes with a reserved word (admin, api, search, new, edit, preview, sign-in) — inline error "This slug is reserved. Please change it."
+- [x] EC4: Deactivated author chosen — publish button shows "Author is deactivated. Please pick an active author."
+- [x] EC5: Cover image is in `pending` state (upload not confirmed) — publish blocked with "Cover image upload is not complete"
 
 ## Contract
 
@@ -73,14 +73,82 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 
 Prior art: `grep -ril "save.*draft\|local.*backup\|version.*conflict\|body_version" docs/` → content design sections 4.4, 4.6, 5.2. File-structure: `components/admin/ArticleEditor/index.tsx`, `PublishTimePicker.tsx`. S-048 defines `saveArticle` server action.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+### Files to create / edit
+
+| File | Change |
+|---|---|
+| `types/article.ts` | Add `ArticleSavePayload` and `ArticleMetadata` interfaces |
+| `lib/content/slug.ts` | Add `isReservedSlug(slug)` export |
+| `messages/en.ts` | Add `editor.save.*`, `editor.restore.*`, `editor.publish.*`, `editor.metadata.*`, `editor.publish_time.*` keys |
+| `components/admin/ArticleEditor/index.tsx` | Full save flow: metadata fields, local backup, save draft, restore banner, publish gating, `beforeunload` |
+| `components/admin/ArticleEditor/PublishTimePicker.tsx` | Asia/Colombo label, "Will go live" display, near-immediate warning |
+| `components/admin/AuthorSelector.tsx` | Dropdown fed by `authors` prop |
+| `app/admin/articles/[id]/edit/page.tsx` | Server component: fetch article + authors + categories, pass to editor |
+
+### Test files
+
+| File | Tests |
+|---|---|
+| `__tests__/components/admin/ArticleEditor/index.test.tsx` | AC1–AC3, AC5, AC8, EC1–EC2 |
+| `lib/content/__tests__/slug.test.ts` | `isReservedSlug` + AC7 auto-generate |
+
+### Step order
+1. Add `ArticleSavePayload` / `ArticleMetadata` to `types/article.ts`
+2. Add `isReservedSlug` to `lib/content/slug.ts`
+3. Add message keys to `messages/en.ts`
+4. Write failing tests (TDD)
+5. Implement `AuthorSelector.tsx`
+6. Implement `PublishTimePicker.tsx`
+7. Implement `ArticleEditor/index.tsx`
+8. Implement `app/admin/articles/[id]/edit/page.tsx`
+9. Run tests green, then `check.sh`
+
+### Ambiguity resolutions
+- **EC3 reserved-slug**: client-side check only against `RESERVED_SLUGS`; `saveArticle` also rejects, so double-guarded.
+- **AC3 "newer than server version"**: backup stored with `{ savedAt: number, bodyVersion: number, ... }`; restore banner shows if backup exists regardless of version (unsaved = backup not yet cleared).
+- **AC8 boundary**: "Save draft" calls `saveArticle` only; "Publish" is a future pass-through to `setArticleStatus` (S-048); status is never touched by save.
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  165 passed | 10 skipped (175)
+      Tests  1776 passed | 33 skipped (1809)
+   Duration  748.79s
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests (run supabase start first)
+
+── pgTAP seed suite ──
+⚠ Supabase not running — skipping seed tests (run supabase start first)
+
+── pgTAP dev seed suite ──
+⚠ Supabase not running — skipping dev seed tests (run supabase start first)
+
+── Types file freshness ──
+⚠ Supabase not running — skipping types check (run supabase start first)
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+── Google Fonts check (AC5) ──
+✓ Google Fonts check (AC5) passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 6 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
 
 ## Review notes
