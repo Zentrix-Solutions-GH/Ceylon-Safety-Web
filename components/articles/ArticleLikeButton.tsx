@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useArticleUserStatus } from "@/hooks/useArticleUserStatus";
 import { t } from "@/messages/en";
 
 interface Props {
@@ -9,40 +9,36 @@ interface Props {
   slug: string;
   initialCount: number;
 }
-type UserStatus = "loading" | "signed-out" | "active" | "suspended";
 
 export function ArticleLikeButton({ articleId, slug, initialCount }: Props) {
   const router = useRouter();
-  const [userStatus, setUserStatus] = useState<UserStatus>("loading");
+  const userStatus = useArticleUserStatus();
   const [liked, setLiked] = useState(false);
   const [count, setCount] = useState(initialCount);
+  const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    supabase.auth.getUser().then(({ data }) => {
-      const user = data.user;
-      if (!user) { setUserStatus("signed-out"); return; }
-      const status = (user.user_metadata?.account_status as string | undefined) ?? "active";
-      setUserStatus(status === "suspended" ? "suspended" : "active");
-      fetch(`/api/likes?kind=article&id=${encodeURIComponent(articleId)}`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => { if (d) { setLiked(d.liked ?? false); setCount(d.count); } })
-        .catch(() => {});
-    });
-  }, [articleId]);
+    if (userStatus === "loading" || userStatus === "signed-out") return;
+    fetch(`/api/likes?kind=article&id=${encodeURIComponent(articleId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) { setLiked(d.liked ?? false); setCount(d.count); } })
+      .catch(() => {});
+  }, [articleId, userStatus]);
 
   async function handleClick() {
     if (userStatus === "signed-out" || userStatus === "loading") {
       router.push(`/sign-in?next=/articles/${slug}`);
       return;
     }
+    if (submitting) return;
     const prevLiked = liked;
     const prevCount = count;
     const nextLiked = !liked;
     setLiked(nextLiked);
     setCount((c) => (nextLiked ? c + 1 : c - 1));
     setErrorMsg(null);
+    setSubmitting(true);
     try {
       const res = await fetch("/api/likes", {
         method: "POST",
@@ -62,6 +58,8 @@ export function ArticleLikeButton({ articleId, slug, initialCount }: Props) {
       setLiked(prevLiked);
       setCount(prevCount);
       setErrorMsg(t("article.like.error"));
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -73,7 +71,7 @@ export function ArticleLikeButton({ articleId, slug, initialCount }: Props) {
         onClick={handleClick}
         aria-pressed={liked}
         aria-label={label}
-        disabled={userStatus === "loading"}
+        disabled={userStatus === "loading" || submitting}
       >
         {liked ? "♥" : "♡"} <span>{count}</span>
       </button>

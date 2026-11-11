@@ -53,7 +53,10 @@ export default async function ArticleSlugPage({ params }: Props) {
 
   const article = result.data;
   // Fetch approved comments server-side using anon client (no session read)
-  const firstCommentPage = await listComments(article.id, null);
+  const firstCommentPage = await listComments(article.id, null).catch(() => ({
+    comments: [],
+    nextCursor: null,
+  }));
 
   return (
     <article>

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useArticleUserStatus } from "@/hooks/useArticleUserStatus";
 import { t } from "@/messages/en";
 import type { Comment, CommentCursor, MyComment } from "@/types/comment";
 
@@ -9,35 +9,26 @@ interface Props {
   initialComments: Comment[];
   initialNextCursor: CommentCursor | null;
 }
-type UserStatus = "loading" | "signed-out" | "active" | "suspended";
 
 export function CommentThread({ articleId, initialComments, initialNextCursor }: Props) {
-  const [userStatus, setUserStatus] = useState<UserStatus>("loading");
+  const userStatus = useArticleUserStatus();
   const [pendingComment, setPendingComment] = useState<Pick<MyComment, "id" | "body"> | null>(null);
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [nextCursor, setNextCursor] = useState<CommentCursor | null>(initialNextCursor);
   const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    supabase.auth.getUser().then(({ data }) => {
-      const user = data.user;
-      if (!user) { setUserStatus("signed-out"); return; }
-      const status = (user.user_metadata?.account_status as string | undefined) ?? "active";
-      setUserStatus(status === "suspended" ? "suspended" : "active");
-      if (status !== "suspended") {
-        fetch(`/api/comments?kind=article&id=${encodeURIComponent(articleId)}&mine=1`)
-          .then((r) => (r.ok ? r.json() : null))
-          .then((d) => {
-            if (d?.comments?.length) {
-              const first = d.comments[0] as MyComment;
-              setPendingComment({ id: first.id, body: first.body });
-            }
-          })
-          .catch(() => {});
-      }
-    });
-  }, [articleId]);
+    if (userStatus !== "active") return;
+    fetch(`/api/comments?kind=article&id=${encodeURIComponent(articleId)}&mine=1`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.comments?.length) {
+          const first = d.comments[0] as MyComment;
+          setPendingComment({ id: first.id, body: first.body });
+        }
+      })
+      .catch(() => {});
+  }, [articleId, userStatus]);
 
   async function loadMore() {
     if (!nextCursor) return;

@@ -1,38 +1,24 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useArticleUserStatus } from "@/hooks/useArticleUserStatus";
 import { t } from "@/messages/en";
 import type { RateLimitReason } from "@/types/comment";
 
 interface Props {
   articleId: string;
 }
-type UserStatus = "loading" | "signed-out" | "active" | "suspended";
 
 const DRAFT_KEY = (id: string) => `cs_comment_draft_${id}`;
 
 export function CommentForm({ articleId }: Props) {
-  const [userStatus, setUserStatus] = useState<UserStatus>("loading");
-  const [body, setBody] = useState("");
+  const userStatus = useArticleUserStatus();
+  const [body, setBody] = useState(() => {
+    try { return sessionStorage.getItem(DRAFT_KEY(articleId)) ?? ""; } catch { return ""; }
+  });
   const [pending, setPending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    supabase.auth.getUser().then(({ data }) => {
-      const user = data.user;
-      if (!user) { setUserStatus("signed-out"); return; }
-      const status = (user.user_metadata?.account_status as string | undefined) ?? "active";
-      setUserStatus(status === "suspended" ? "suspended" : "active");
-      try {
-        const draft = sessionStorage.getItem(DRAFT_KEY(articleId));
-        if (draft) setBody(draft);
-      } catch {}
-    });
-  }, [articleId]);
 
   function handleBodyChange(value: string) {
     setBody(value);
@@ -42,6 +28,7 @@ export function CommentForm({ articleId }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!body.trim()) return;
+    setSubmitted(false);
     setPending(true);
     setErrorMsg(null);
     try {
@@ -95,12 +82,12 @@ export function CommentForm({ articleId }: Props) {
       <label htmlFor="comment-body">{t("article.comment.textarea_label")}</label>
       <textarea
         id="comment-body"
-        ref={textareaRef}
         value={body}
         onChange={(e) => handleBodyChange(e.target.value)}
         placeholder={t("article.comment.textarea_placeholder")}
         disabled={pending}
         aria-label={t("article.comment.textarea_label")}
+        maxLength={2000}
       />
       <button type="submit" disabled={pending || !body.trim()}>
         {pending ? t("article.comment.submitting") : t("article.comment.submit")}

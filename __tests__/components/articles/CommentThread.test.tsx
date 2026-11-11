@@ -2,10 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CommentThread } from "@/components/articles/CommentThread";
 import type { Comment, CommentCursor } from "@/types/comment";
+import type { UserStatus } from "@/hooks/useArticleUserStatus";
 
-const mockGetUser = vi.fn();
-vi.mock("@/lib/supabase/client", () => ({
-  createSupabaseBrowserClient: () => ({ auth: { getUser: mockGetUser } }),
+const mockUserStatus = vi.fn<() => UserStatus>();
+vi.mock("@/hooks/useArticleUserStatus", () => ({
+  useArticleUserStatus: () => mockUserStatus(),
 }));
 
 const mockFetch = vi.fn();
@@ -28,7 +29,7 @@ beforeEach(() => {
 
 describe("CommentThread", () => {
   it("AC5: renders approved comments", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } });
+    mockUserStatus.mockReturnValue("signed-out");
     const comments = [makeComment({ body: "First comment" })];
     render(
       <CommentThread articleId="a1" initialComments={comments} initialNextCursor={null} />,
@@ -37,7 +38,7 @@ describe("CommentThread", () => {
   });
 
   it("AC8: comment body is rendered as plain text, not HTML", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } });
+    mockUserStatus.mockReturnValue("signed-out");
     const comments = [makeComment({ body: "<script>alert(1)</script>" })];
     render(
       <CommentThread articleId="a1" initialComments={comments} initialNextCursor={null} />,
@@ -47,7 +48,7 @@ describe("CommentThread", () => {
   });
 
   it("AC5: shows Load more button when nextCursor is set", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } });
+    mockUserStatus.mockReturnValue("signed-out");
     const cursor: CommentCursor = { createdAt: "2026-01-01T00:00:00Z", id: "c1" };
     render(
       <CommentThread articleId="a1" initialComments={[makeComment()]} initialNextCursor={cursor} />,
@@ -55,8 +56,16 @@ describe("CommentThread", () => {
     expect(screen.getByRole("button", { name: /load more/i })).toBeInTheDocument();
   });
 
+  it("AC5: Load more button absent when initialNextCursor is null", () => {
+    mockUserStatus.mockReturnValue("signed-out");
+    render(
+      <CommentThread articleId="a1" initialComments={[makeComment()]} initialNextCursor={null} />,
+    );
+    expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
+  });
+
   it("AC5: Load more appends comments", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } });
+    mockUserStatus.mockReturnValue("signed-out");
     const cursor: CommentCursor = { createdAt: "2026-01-01T00:00:00Z", id: "c1" };
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -73,10 +82,24 @@ describe("CommentThread", () => {
     expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
   });
 
-  it("AC6: active user sees their pending comment above the thread", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { user_metadata: { account_status: "active" } } },
+  it("AC5: Load more sends cursor as JSON in request URL", async () => {
+    mockUserStatus.mockReturnValue("signed-out");
+    const cursor: CommentCursor = { createdAt: "2026-01-01T00:00:00Z", id: "c1" };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ comments: [], nextCursor: null }),
     });
+    render(
+      <CommentThread articleId="a1" initialComments={[makeComment()]} initialNextCursor={cursor} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /load more/i }));
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+    const url: string = mockFetch.mock.calls[0][0];
+    expect(url).toContain(encodeURIComponent(JSON.stringify(cursor)));
+  });
+
+  it("AC6: active user sees their pending comment above the thread", async () => {
+    mockUserStatus.mockReturnValue("active");
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -91,36 +114,34 @@ describe("CommentThread", () => {
   });
 
   it("staff badge shown for staff comment", () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } });
+    mockUserStatus.mockReturnValue("signed-out");
     const comments = [makeComment({ author: { displayName: "Staff User", isStaff: true } })];
     render(
       <CommentThread articleId="a1" initialComments={comments} initialNextCursor={null} />,
     );
     expect(screen.getByText("Staff User")).toBeInTheDocument();
-    expect(screen.getByText("Admin")).toBeInTheDocument(); // staff badge label
+    expect(screen.getByText("Admin")).toBeInTheDocument();
   });
 
   it("shows empty signed-out message when no comments and user is signed out", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } });
+    mockUserStatus.mockReturnValue("signed-out");
     render(
       <CommentThread articleId="a1" initialComments={[]} initialNextCursor={null} />,
     );
-    await waitFor(() => expect(screen.getByText(/sign in to comment/i)).toBeInTheDocument());
+    expect(screen.getByText(/sign in to comment/i)).toBeInTheDocument();
   });
 
   it("shows empty signed-in message when no comments and user is active", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { user_metadata: { account_status: "active" } } },
-    });
+    mockUserStatus.mockReturnValue("active");
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ comments: [] }) });
     render(
       <CommentThread articleId="a1" initialComments={[]} initialNextCursor={null} />,
     );
-    await waitFor(() => expect(screen.getByText(/be the first/i)).toBeInTheDocument());
+    expect(screen.getByText(/be the first/i)).toBeInTheDocument();
   });
 
   it("AC8: links in comment body are not rendered as anchors", () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } });
+    mockUserStatus.mockReturnValue("signed-out");
     const comments = [makeComment({ body: "Visit https://example.com for more" })];
     render(
       <CommentThread articleId="a1" initialComments={comments} initialNextCursor={null} />,
