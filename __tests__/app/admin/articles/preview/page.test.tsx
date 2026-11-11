@@ -25,8 +25,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/components/articles/ArticleBody", () => ({
-  default: ({ body }: { body: unknown }) =>
-    React.createElement("div", { "data-testid": "article-body" }),
+  default: () => React.createElement("div", { "data-testid": "article-body" }),
 }));
 
 import PreviewPageInner from "@/app/admin/articles/[id]/preview/PreviewPageInner";
