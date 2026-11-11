@@ -90,25 +90,30 @@ $ bash scripts/check.sh
 ✓ TypeScript passed
 
 ── Vitest (unit) ──
-Test Files  185 passed | 15 skipped (200)
-      Tests  1929 passed | 60 skipped (1989)
+ Test Files  185 passed | 15 skipped (200)
+       Tests  1933 passed | 60 skipped (1993)
+   Duration  582.75s
+
 ✓ Vitest (unit) passed
 
 ── pgTAP RLS suite ──
-⚠ Supabase not running — skipping pgTAP tests
+⚠ Supabase not running — skipping pgTAP tests (run supabase start first)
+
+── pgTAP seed suite ──
+⚠ Supabase not running — skipping seed tests (run supabase start first)
+
+── Types file freshness ──
+⚠ Supabase not running — skipping types check (run supabase start first)
 
 ── Public pages session check (AC11) ──
 check-public-pages: OK — checked 20 file(s), no violations.
 ✓ Public pages session check (AC11) passed
 
-── Google Fonts check (AC5) ──
-✓ Google Fonts check (AC5) passed
-
 ── Dev seed guard ──
 ✓ Dev seed guard passed
 
 ════════════════════════════════
-  check.sh: 6 passed, 0 failed
+  check.sh: 5 passed, 0 failed
 ════════════════════════════════
 
 ✅ All checks passed.
