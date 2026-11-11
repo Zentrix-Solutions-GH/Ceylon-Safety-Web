@@ -85,13 +85,12 @@ describe("addToCart", () => {
   it("AC7/EC3: returns already_in_cart for duplicate (unique constraint violation)", async () => {
     mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const docSingle = vi.fn().mockResolvedValue({ data: fakeDoc, error: null });
-    const insertSingle = vi.fn().mockResolvedValue({ data: null, error: { code: "23505", message: "duplicate" } });
     const sb = {
       from: vi.fn().mockImplementation((table: string) => {
         if (table === "documents") return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ single: docSingle }) }) }) };
         if (table === "cart_items") return {
           select: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ count: 2, error: null }) }),
-          insert: vi.fn().mockReturnValue({ single: insertSingle }),
+          insert: vi.fn().mockResolvedValue({ data: null, error: { code: "23505", message: "duplicate" } }),
         };
         return { upsert: vi.fn().mockResolvedValue({ error: null }) };
       }),
@@ -118,13 +117,12 @@ describe("addToCart", () => {
   it("AC1: happy path inserts row and returns ok", async () => {
     mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const docSingle = vi.fn().mockResolvedValue({ data: fakeDoc, error: null });
-    const insertSingle = vi.fn().mockResolvedValue({ data: { id: "item-1" }, error: null });
     const sb = {
       from: vi.fn().mockImplementation((table: string) => {
         if (table === "documents") return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ single: docSingle }) }) }) };
         if (table === "cart_items") return {
           select: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ count: 2, error: null }) }),
-          insert: vi.fn().mockReturnValue({ single: insertSingle }),
+          insert: vi.fn().mockResolvedValue({ data: { id: "item-1" }, error: null }),
         };
         return { upsert: vi.fn().mockResolvedValue({ error: null }) };
       }),
@@ -227,11 +225,10 @@ describe("getCart", () => {
 // ─── clearCartForOrder ───────────────────────────────────────────────────────
 
 describe("clearCartForOrder", () => {
-  it("AC8: removes cart_items matching the given order's lines (uses service-role client)", async () => {
-    const finalEq = vi.fn().mockResolvedValue({ error: null });
-    const secondEq = vi.fn().mockReturnValue({ eq: finalEq });
-    const firstEq = vi.fn().mockReturnValue({ eq: secondEq });
-    const mockDelete = vi.fn().mockReturnValue({ eq: firstEq });
+  it("AC8: removes cart_items using a single batch delete scoped to user_id (uses service-role client)", async () => {
+    const mockOr = vi.fn().mockResolvedValue({ error: null });
+    const mockEq = vi.fn().mockReturnValue({ or: mockOr });
+    const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
 
     const sb = {
       from: vi.fn().mockImplementation((table: string) => {
@@ -239,7 +236,10 @@ describe("clearCartForOrder", () => {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockResolvedValue({
-                data: [{ document_id: "doc-1", language: "en" }],
+                data: [
+                  { document_id: "doc-1", language: "en" },
+                  { document_id: "doc-2", language: "si" },
+                ],
                 error: null,
               }),
             }),
@@ -253,7 +253,25 @@ describe("clearCartForOrder", () => {
     await expect(clearCartForOrder("order-1", "user-1")).resolves.toBeUndefined();
     expect(mockServiceRoleClient).toHaveBeenCalled();
     expect(mockDelete).toHaveBeenCalled();
-    // Verify user_id is passed as first .eq argument (ownership scope)
-    expect(firstEq).toHaveBeenCalledWith("user_id", "user-1");
+    // Verify user_id scoping
+    expect(mockEq).toHaveBeenCalledWith("user_id", "user-1");
+    // Verify single OR batch (not N individual deletes)
+    expect(mockOr).toHaveBeenCalledTimes(1);
+    expect(mockOr).toHaveBeenCalledWith(
+      "and(document_id.eq.doc-1,language.eq.en),and(document_id.eq.doc-2,language.eq.si)",
+    );
+  });
+
+  it("AC8: no-ops when order has no items", async () => {
+    const sb = {
+      from: vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      })),
+    };
+    mockServiceRoleClient.mockReturnValue(sb as never);
+
+    await expect(clearCartForOrder("order-empty", "user-1")).resolves.toBeUndefined();
   });
 });

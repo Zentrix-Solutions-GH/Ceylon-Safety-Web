@@ -43,7 +43,8 @@ export async function calculateCart(
     .select(
       "id, title, slug, cover_image_key, price_cents, page_count, status, deleted_at",
     )
-    .in("id", documentIds);
+    .in("id", documentIds)
+    .is("deleted_at", null);
 
   const docMap = new Map((docs ?? []).map((d) => [d.id, d]));
 

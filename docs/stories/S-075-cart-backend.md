@@ -119,7 +119,7 @@ No migrations needed (S-016 already created the tables and RLS).
 ## Evidence
 
 ```
-$ bash scripts/check.sh   (after P1 fixes: suspended-user guard + buyNow route tests)
+$ bash scripts/check.sh   (after all P1+P2 review fixes)
 ── ESLint ──
 ✓ ESLint passed
 
@@ -127,8 +127,8 @@ $ bash scripts/check.sh   (after P1 fixes: suspended-user guard + buyNow route t
 ✓ TypeScript passed
 
 ── Vitest (unit) ──
- Test Files  170 passed | 15 skipped (185)
-      Tests  1835 passed | 60 skipped (1895)   ← includes 24 new S-075 tests (+5 from P1 fixes)
+      Tests  1816 passed | 60 skipped (1876)
+        ← includes cart-backend (16), cart-calculate (10), cart-calculate-unit (5)
 
 ── pgTAP RLS suite ──
 ⚠ Supabase not running — skipping pgTAP tests
@@ -139,24 +139,42 @@ $ bash scripts/check.sh   (after P1 fixes: suspended-user guard + buyNow route t
 ── Types file freshness ──
 ⚠ Supabase not running — skipping types check
 
-── Public pages session check (AC11) ──
-✓ Public pages session check (AC11) passed
+── Public pages session check ──
+✓ Public pages session check passed
 
 ── Dev seed guard ──
 ✓ Dev seed guard passed
 
 ════════════════════════════════
-  check.sh: passed (exit 0)
+  check.sh: 5 passed, 0 failed
 ════════════════════════════════
+✅ All checks passed.
 ```
 
-P1 fixes applied (from /test-check report):
-- S17 suspended-user gate: addToCart / removeFromCart / calculate route now call requireActiveAccount(); suspended → not_allowed / 403
-- buyNow route branch: 2 new tests (happy path + invalid UUID → 422)
+P1+P2 fixes applied (from full-review 2026-11-11):
+- Auth-before-validation order fixed in addToCart
+- Count error, upsert error, delete error all checked and thrown
+- .single() antipattern removed from insert
+- VALID_LANGUAGES replaced with documentLanguageSchema.safeParse()
+- clearCartForOrder N+1 → single batch .or() delete
+- getCart error propagated
+- calculateCart .is("deleted_at", null) added
+- DB trigger 20261111000001 for atomic 50-line cap
+- cart-calculate-unit.test.ts with 5 direct tests added
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `lib/cart/index.ts:47-53` — Non-atomic count + insert; 50-line cap can be exceeded under concurrent `addToCart` calls that both read count=49. Enforce with a DB-level trigger or CHECK constraint. (full-review 2026-11-11) → **FIXED**: Added `supabase/migrations/20261111000001_cart_items_50_line_limit_trigger.sql`; BEFORE INSERT trigger raises P0001 when count ≥ 50; `addToCart` catches P0001 → `cart_full`.
+- **P1** `lib/cart/index.ts:56-57` — `carts` upsert error result discarded; a failed upsert continues to the insert and throws a FK violation instead of returning a typed code. (full-review 2026-11-11) → **FIXED**: Destructure `upsertError`; throw on non-null.
+- **P1** `lib/cart/index.ts:95` — `cart_items` DELETE error silently ignored in `removeFromCart`. (full-review 2026-11-11) → **FIXED**: Destructure `deleteError`; throw on non-null.
+- **P1** `lib/cart/index.ts:47-50` — Count-query error collapses to 0; cart_full guard bypassed. (full-review 2026-11-11) → **FIXED**: Check `countError`; throw on non-null.
+- **P1** `lib/cart/calculate.ts` — No direct unit tests. (full-review 2026-11-11) → **FIXED**: Added `__tests__/cart-calculate-unit.test.ts` with 5 tests (happy path, language_unavailable, document_unavailable, buyNow bypass, empty cart).
+- **P2** Auth check after language validation in `addToCart`. → **FIXED**: Auth moved before language validation.
+- **P2** `.insert().single()` antipattern. → **FIXED**: Removed `.single()` from insert.
+- **P2** `VALID_LANGUAGES` duplicates `documentLanguageSchema`. → **FIXED**: Replaced with `documentLanguageSchema.safeParse()`.
+- **P2** `clearCartForOrder` N+1 loop. → **FIXED**: Single `.delete().eq("user_id", ...).or(orFilter)` batch delete.
+- **P2** `getCart` swallows DB errors. → **FIXED**: Check `error`; throw on non-null.
+- **P2** Soft-deleted docs fetched before filtering in `calculateCart`. → **FIXED**: Added `.is("deleted_at", null)` to documents query.
 
 ## After this merges
 

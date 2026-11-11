@@ -2,10 +2,10 @@ import "server-only";
 
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { requireActiveAccount, getCurrentUser } from "@/lib/auth/server";
+import { documentLanguageSchema } from "@/lib/validation/cart";
 import type { CartItem } from "@/types/cart";
 import type { DocumentLanguage } from "@/types/document";
 
-const VALID_LANGUAGES: DocumentLanguage[] = ["en", "si", "ta"];
 const MAX_CART_LINES = 50;
 
 // ─── addToCart ───────────────────────────────────────────────────────────────
@@ -23,16 +23,17 @@ export async function addToCart(
   documentId: string,
   language: DocumentLanguage,
 ): Promise<AddToCartResult> {
-  if (!VALID_LANGUAGES.includes(language)) {
-    return { ok: false, code: "validation_failed" };
-  }
-
+  // Auth check first so suspended users always get not_allowed, not validation_failed
   const authResult = await requireActiveAccount();
   if (!authResult.ok) {
     if (authResult.code === "account_suspended") return { ok: false, code: "not_allowed" };
     return { ok: false, code: "not_signed_in" };
   }
   const user = authResult.user;
+
+  if (!documentLanguageSchema.safeParse(language).success) {
+    return { ok: false, code: "validation_failed" };
+  }
 
   const supabase = await createSupabaseServerClient();
 
@@ -48,26 +49,31 @@ export async function addToCart(
     return { ok: false, code: "document_unavailable" };
   }
 
-  // Check cart line count (count: "exact", head: true — no rows fetched)
-  const { count: currentCount } = await supabase
+  // Check cart line count — also enforced by DB trigger (20261111000001)
+  const { count: currentCount, error: countError } = await supabase
     .from("cart_items")
     .select("*", { count: "exact", head: true })
     .eq("user_id", user.id);
+  if (countError) throw countError;
   if ((currentCount ?? 0) >= MAX_CART_LINES) {
     return { ok: false, code: "cart_full" };
   }
 
   // Ensure carts row exists (upsert)
-  await supabase.from("carts").upsert({ user_id: user.id }, { onConflict: "user_id" });
+  const { error: upsertError } = await supabase
+    .from("carts")
+    .upsert({ user_id: user.id }, { onConflict: "user_id" });
+  if (upsertError) throw upsertError;
 
   // Insert cart item
   const { error: insertError } = await supabase
     .from("cart_items")
-    .insert({ user_id: user.id, document_id: documentId, language })
-    .single();
+    .insert({ user_id: user.id, document_id: documentId, language });
 
   if (insertError) {
     if (insertError.code === "23505") return { ok: false, code: "already_in_cart" };
+    // DB trigger raises P0001 when cart already has 50 lines (race condition safety net)
+    if (insertError.code === "P0001") return { ok: false, code: "cart_full" };
     throw insertError;
   }
 
@@ -102,7 +108,13 @@ export async function removeFromCart(cartItemId: string): Promise<RemoveFromCart
 
   if (!existing) return { ok: false, code: "not_found" };
 
-  await supabase.from("cart_items").delete().eq("id", cartItemId).eq("user_id", user.id);
+  const { error: deleteError } = await supabase
+    .from("cart_items")
+    .delete()
+    .eq("id", cartItemId)
+    .eq("user_id", user.id);
+  if (deleteError) throw deleteError;
+
   return { ok: true };
 }
 
@@ -116,10 +128,12 @@ export async function getCart(): Promise<GetCartResult> {
 
   const supabase = await createSupabaseServerClient();
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("cart_items")
     .select("id, document_id, language, created_at")
     .eq("user_id", user.id);
+
+  if (error) throw error;
 
   const items: CartItem[] = (data ?? []).map((row) => ({
     id: row.id,
@@ -148,13 +162,16 @@ export async function clearCartForOrder(orderId: string, userId: string): Promis
 
   if (!orderItems || orderItems.length === 0) return;
 
-  for (const item of orderItems) {
-    if (!item.document_id || !item.language) continue;
-    await supabase
-      .from("cart_items")
-      .delete()
-      .eq("user_id", userId)
-      .eq("document_id", item.document_id as string)
-      .eq("language", item.language as string);
-  }
+  const validItems = orderItems.filter(
+    (item): item is { document_id: string; language: string } =>
+      !!item.document_id && !!item.language,
+  );
+  if (validItems.length === 0) return;
+
+  // Single DELETE with OR filter — avoids N round trips for large orders
+  const orFilter = validItems
+    .map((item) => `and(document_id.eq.${item.document_id},language.eq.${item.language})`)
+    .join(",");
+
+  await supabase.from("cart_items").delete().eq("user_id", userId).or(orFilter);
 }
