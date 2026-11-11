@@ -9,6 +9,19 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/auth/server", () => ({ requireActiveAccount: vi.fn() }));
 vi.mock("@/lib/cart/calculate", () => ({ calculateCart: vi.fn() }));
 vi.mock("@/lib/ratelimit", () => ({ checkRateLimit: vi.fn() }));
+// S-079: mock config and payhere/checkout so env vars are not required in tests
+vi.mock("@/lib/config", () => ({
+  payhereConfig: vi.fn(() => ({
+    merchantId: "test-mid",
+    secret: "test-secret",
+    isSandbox: true,
+    checkoutUrl: "https://sandbox.payhere.lk/pay/checkout",
+  })),
+  publicConfig: { appUrl: "https://test.example.com" },
+}));
+vi.mock("@/lib/payhere/checkout", () => ({
+  buildPayHereRequest: vi.fn(() => ({ checkout_url: "https://sandbox.payhere.lk/pay/checkout", hash: "testhash" })),
+}));
 
 import { createSupabaseServerClient as _createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireActiveAccount } from "@/lib/auth/server";
@@ -420,6 +433,58 @@ describe("createCheckout — AC14 no PII in logs", () => {
 
     errorSpy.mockRestore();
     logSpy.mockRestore();
+  });
+});
+
+// ─── S-079: payhereFields in CheckoutResult ──────────────────────────────────
+
+describe("createCheckout — S-079 payhereFields returned (AC5)", () => {
+  it("happy path: result.data.payhereFields includes checkout_url from buildPayHereRequest mock", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeCartResponse);
+
+    const db = makeSupabaseMock();
+    (db.single as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: { id: "rev-terms-1" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "rev-refund-1" }, error: null });
+    (db.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { action: "created", order_id: "ord-ph-1", order_number: "CS-2026-00001" },
+      error: null,
+    });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const result = await createCheckout(validInput);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data?.payhereFields).toBeDefined();
+    expect(result.data?.payhereFields?.checkout_url).toBe("https://sandbox.payhere.lk/pay/checkout");
+  });
+
+  it("returns payment_unavailable when payhereConfig() throws (missing env vars)", async () => {
+    // Override the config mock for this test only: payhereConfig throws
+    const { payhereConfig } = await import("@/lib/config");
+    vi.mocked(payhereConfig).mockImplementationOnce(() => {
+      throw new Error("[config] Missing environment variable: PAYHERE_SANDBOX_MERCHANT_ID");
+    });
+
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeCartResponse);
+
+    const db = makeSupabaseMock();
+    (db.single as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: { id: "rev-terms-1" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "rev-refund-1" }, error: null });
+    (db.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { action: "created", order_id: "ord-ph-2", order_number: "CS-2026-00002" },
+      error: null,
+    });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const result = await createCheckout(validInput);
+    expect(result).toMatchObject({ ok: false, code: "payment_unavailable" });
   });
 });
 

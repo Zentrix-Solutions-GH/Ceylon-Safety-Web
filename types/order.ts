@@ -1,4 +1,5 @@
 import type { DocumentLanguage } from "@/types/document";
+import type { PayHereFormFields } from "@/types/payhere";
 
 export type OrderStatus =
   | "pending"
@@ -38,9 +39,28 @@ export interface CheckoutResult {
   orderId: string;
   orderNumber: string;
   totalCents: number;
+  payhereFields: PayHereFormFields;
 }
 
 export interface BankOrderResult {
   orderId: string;
   orderNumber: string;
+}
+
+export interface MyOrderItem {
+  orderItemId: string;
+  documentId: string;
+  titleSnapshot: string;
+  language: DocumentLanguage;
+  lineTotalCents: number;
+  entitlementId: string | null;
+}
+
+export interface MyOrder {
+  orderId: string;
+  orderNumber: string;
+  status: OrderStatus;
+  totalCents: number;
+  createdAt: string;
+  items: MyOrderItem[];
 }

@@ -124,6 +124,32 @@ export const cspConfig = {
   ),
 } as const;
 
+// PayHere config — server only. Throws at first use if required env vars are absent (AC9).
+export function payhereConfig(): {
+  merchantId: string;
+  secret: string;
+  isSandbox: boolean;
+  checkoutUrl: string;
+} {
+  const isSandbox = process.env["NEXT_PUBLIC_PAYHERE_SANDBOX"] === "true";
+  if (isSandbox) {
+    const merchantId = process.env["PAYHERE_SANDBOX_MERCHANT_ID"]?.trim();
+    const secret = process.env["PAYHERE_SANDBOX_SECRET"]?.trim();
+    if (!merchantId) throw new Error("[config] Missing environment variable: PAYHERE_SANDBOX_MERCHANT_ID");
+    if (!secret) throw new Error("[config] Missing environment variable: PAYHERE_SANDBOX_SECRET");
+    const checkoutUrl = process.env["PAYHERE_SANDBOX_CHECKOUT_URL"]?.trim()
+      || "https://sandbox.payhere.lk/pay/checkout";
+    return { merchantId, secret, isSandbox: true, checkoutUrl };
+  }
+  const merchantId = process.env["PAYHERE_MERCHANT_ID"]?.trim();
+  const secret = process.env["PAYHERE_SECRET"]?.trim();
+  if (!merchantId) throw new Error("[config] Missing environment variable: PAYHERE_MERCHANT_ID");
+  if (!secret) throw new Error("[config] Missing environment variable: PAYHERE_SECRET");
+  const checkoutUrl = process.env["PAYHERE_CHECKOUT_URL"]?.trim()
+    || "https://www.payhere.lk/pay/checkout";
+  return { merchantId, secret, isSandbox: false, checkoutUrl };
+}
+
 // R2 config — server only; returns null when env vars absent (tests inject mocks via vi.mock).
 export function r2Config(): {
   accountId: string;

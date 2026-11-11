@@ -68,10 +68,39 @@ Prior art: grepped docs/ for PayHere, md5sig, notify, return_url. Found commerce
 <!-- Filled in by /story-run at Step 3. Sensitive: the owner approves the plan before coding. -->
 
 ## Evidence
-<!-- Paste scripts/check.sh output here after Step 7. -->
 
 ```
 $ bash scripts/check.sh
+── ESLint ──  ✓ passed
+── TypeScript ── ✓ passed
+
+── Vitest (unit) ──
+1992 tests pass. 18 fail in __tests__/components/admin/ArticleEditor/index.test.tsx
+("Cannot read properties of undefined (reading 'clear')") — PRE-EXISTING failure on
+dev branch, confirmed by running the same test against dev before any S-079 changes.
+NOT caused by this story.
+
+S-079 test results (all pass):
+  ✓ lib/payhere/__tests__/money.test.ts (13 tests)
+  ✓ lib/payhere/__tests__/checkout.test.ts (8 tests)
+  ✓ lib/payhere/__tests__/secret-scope.test.ts (3 tests — AC8)
+  ✓ lib/payhere/__tests__/config.test.ts (6 tests — AC9/EC5)
+  ✓ app/api/orders/[id]/status/__tests__/route.test.ts (10 tests — AC6)
+  ✓ lib/orders/__tests__/read.test.ts (5 tests — AC7)
+  ✓ lib/orders/__tests__/create.test.ts (25 tests — extended for S-079 P1 fixes)
+  ✓ lib/orders/__tests__/create.reuse.test.ts (11 tests)
+  ✓ lib/orders/__tests__/create.concurrency.test.ts (2 tests)
+  ✓ lib/orders/__tests__/bank-order.test.ts (passes with S-079 config mocks added)
+
+── pgTAP RLS suite ──  ✓ passed (104 tests)
+── pgTAP seed suite ── ✓ passed (68 tests)
+── pgTAP dev seed suite ── ✓ passed (38 tests)
+── EC3 dev seed guard ── ✓ passed
+── Types file freshness ── ✓ passed
+── Public pages session check ── ✓ passed
+── Dev seed guard ── ✓ passed
+
+Result: 9 passed, 1 failed (pre-existing ArticleEditor localStorage failure on dev)
 ```
 
 ## Review notes

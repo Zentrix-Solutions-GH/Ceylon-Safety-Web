@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import { requireActiveAccount } from "@/lib/auth/server";
 import { calculateCart } from "@/lib/cart/calculate";
+import { buildPayHereRequest } from "@/lib/payhere/checkout";
+import { payhereConfig, publicConfig } from "@/lib/config";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/types/api";
@@ -265,6 +267,34 @@ export async function createCheckout(
   // AC7: save billing to profile if requested (best-effort)
   await saveProfileIfRequested(supabase, user.id, input.billing, billingAddress);
 
+  // Build PayHere form fields (S-079)
+  let phConfig: ReturnType<typeof payhereConfig>;
+  try {
+    phConfig = payhereConfig();
+  } catch (err) {
+    console.error("[checkout] PayHere config missing — cannot build payment request", err);
+    return { ok: false, code: "payment_unavailable" };
+  }
+
+  const appUrl = publicConfig.appUrl;
+  const payhereFields = buildPayHereRequest(
+    { orderNumber: result.order_number, totalCents },
+    {
+      firstName: input.billing.firstName,
+      lastName: input.billing.lastName,
+      email: user.email ?? "",
+      phone: input.billing.phone,
+      address: input.billing.address,
+      city: input.billing.city,
+    },
+    {
+      returnUrl: `${appUrl}/checkout/success?order=${result.order_id}`,
+      cancelUrl: `${appUrl}/checkout/cancel?order=${result.order_id}`,
+      notifyUrl: `${appUrl}/api/payhere/notify`,
+    },
+    phConfig,
+  );
+
   // AC11
   return {
     ok: true,
@@ -272,6 +302,7 @@ export async function createCheckout(
       orderId: result.order_id,
       orderNumber: result.order_number,
       totalCents,
+      payhereFields,
     },
   };
 }
