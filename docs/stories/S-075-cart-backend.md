@@ -169,6 +169,9 @@ P1+P2 fixes applied (from full-review 2026-11-11):
 - **P1** `lib/cart/index.ts:95` — `cart_items` DELETE error silently ignored in `removeFromCart`. (full-review 2026-11-11) → **FIXED**: Destructure `deleteError`; throw on non-null.
 - **P1** `lib/cart/index.ts:47-50` — Count-query error collapses to 0; cart_full guard bypassed. (full-review 2026-11-11) → **FIXED**: Check `countError`; throw on non-null.
 - **P1** `lib/cart/calculate.ts` — No direct unit tests. (full-review 2026-11-11) → **FIXED**: Added `__tests__/cart-calculate-unit.test.ts` with 5 tests (happy path, language_unavailable, document_unavailable, buyNow bypass, empty cart).
+- **P1** `supabase/migrations/20261111000001_cart_items_50_line_limit_trigger.sql:12-14` — Trigger `count(*)` has no row-level lock; two concurrent transactions counting 49 rows before either commits will both pass and both insert, leaving 51 rows. Fix: `pg_advisory_xact_lock` or `SELECT … FOR UPDATE` on the `carts` row. (full-review 2026-11-11 round 3)
+- **P1** `supabase/migrations/20261111000001_cart_items_50_line_limit_trigger.sql:25` — `CREATE TRIGGER` has no idempotency guard; will error on a re-seeded or re-run-CI database. Fix: `DROP TRIGGER IF EXISTS … ON cart_items;` before the create. (full-review 2026-11-11 round 3)
+- **P1** `__tests__/cart-backend.test.ts` — No test for `addToCart` P0001 trigger-error path (`lib/cart/index.ts:76`). Add: mock insert to resolve `{ error: { code: "P0001" } }` and assert `{ ok: false, code: "cart_full" }`. (full-review 2026-11-11 round 3)
 - **P2** Auth check after language validation in `addToCart`. → **FIXED**: Auth moved before language validation.
 - **P2** `.insert().single()` antipattern. → **FIXED**: Removed `.single()` from insert.
 - **P2** `VALID_LANGUAGES` duplicates `documentLanguageSchema`. → **FIXED**: Replaced with `documentLanguageSchema.safeParse()`.
