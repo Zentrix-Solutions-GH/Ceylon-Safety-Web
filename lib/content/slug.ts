@@ -30,6 +30,11 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   "auth",
 ]);
 
+/** Returns true when the slug matches a reserved route name. */
+export function isReservedSlug(slug: string): boolean {
+  return RESERVED_SLUGS.has(slug);
+}
+
 const MAX_SLUG_LENGTH = 80;
 
 /**
