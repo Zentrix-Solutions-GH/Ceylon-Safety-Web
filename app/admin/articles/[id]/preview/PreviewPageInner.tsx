@@ -1,7 +1,7 @@
 "use client";
 
 import { t } from "@/messages/en";
-import ArticleBody from "@/components/ArticleBody";
+import ArticleBody from "@/components/articles/ArticleBody";
 import type { ArticlePreviewData } from "@/types/article";
 
 interface Props {

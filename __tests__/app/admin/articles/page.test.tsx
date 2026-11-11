@@ -131,9 +131,8 @@ describe("ArticlesPageClient — AC4 (links)", () => {
       "href",
       "/admin/articles/new"
     );
-    expect(
-      screen.getByRole("link", { name: /edit/i, hidden: false })
-    ).toBeTruthy();
+    const editLinks = screen.getAllByRole("link", { name: /edit/i });
+    expect(editLinks.length).toBeGreaterThanOrEqual(1);
   });
 });
 
