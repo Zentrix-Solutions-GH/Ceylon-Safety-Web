@@ -43,15 +43,12 @@ export async function addToCart(
     return { ok: false, code: "document_unavailable" };
   }
 
-  // Check cart line count
-  const { data: countRow } = await supabase
+  // Check cart line count (count: "exact", head: true — no rows fetched)
+  const { count: currentCount } = await supabase
     .from("cart_items")
-    .select("count")
-    .eq("user_id", user.id)
-    .single();
-
-  const currentCount = countRow?.count ?? 0;
-  if (currentCount >= MAX_CART_LINES) {
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id);
+  if ((currentCount ?? 0) >= MAX_CART_LINES) {
     return { ok: false, code: "cart_full" };
   }
 
@@ -85,13 +82,17 @@ export async function removeFromCart(cartItemId: string): Promise<RemoveFromCart
 
   const supabase = await createSupabaseServerClient();
 
-  const { count } = await supabase
+  // Check ownership before deleting (EC6: cross-user → not_found, no info leak)
+  const { data: existing } = await supabase
     .from("cart_items")
-    .delete()
+    .select("id")
     .eq("id", cartItemId)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .single();
 
-  if (!count || count === 0) return { ok: false, code: "not_found" };
+  if (!existing) return { ok: false, code: "not_found" };
+
+  await supabase.from("cart_items").delete().eq("id", cartItemId).eq("user_id", user.id);
   return { ok: true };
 }
 

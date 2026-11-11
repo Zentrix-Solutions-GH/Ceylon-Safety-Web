@@ -53,21 +53,18 @@ describe("addToCart", () => {
 
   it("AC1/EC1: returns document_unavailable for deleted document", async () => {
     mockGetCurrentUser.mockResolvedValue(fakeUser as never);
-    const sb = makeSupabaseMock();
-    // Document lookup returns null (deleted or not found)
-    sb.single.mockResolvedValueOnce({ data: null, error: null });
+    const docSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    const sb = { from: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ single: docSingle }) }) }) }) };
     mockCreateClient.mockResolvedValue(sb as never);
-
     const result = await addToCart("doc-deleted", "en");
     expect(result).toEqual({ ok: false, code: "document_unavailable" });
   });
 
   it("AC1/EC1: returns document_unavailable for unpublished document", async () => {
     mockGetCurrentUser.mockResolvedValue(fakeUser as never);
-    const sb = makeSupabaseMock();
-    sb.single.mockResolvedValueOnce({ data: { ...fakeDoc, status: "draft" }, error: null });
+    const docSingle = vi.fn().mockResolvedValue({ data: { ...fakeDoc, status: "draft" }, error: null });
+    const sb = { from: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ single: docSingle }) }) }) }) };
     mockCreateClient.mockResolvedValue(sb as never);
-
     const result = await addToCart("doc-draft", "en");
     expect(result).toEqual({ ok: false, code: "document_unavailable" });
   });
@@ -80,45 +77,52 @@ describe("addToCart", () => {
 
   it("AC7/EC3: returns already_in_cart for duplicate (unique constraint violation)", async () => {
     mockGetCurrentUser.mockResolvedValue(fakeUser as never);
-    const sb = makeSupabaseMock();
-    // Document found and published
-    sb.single.mockResolvedValueOnce({ data: fakeDoc, error: null });
-    // Count = 2 (not full)
-    sb.single.mockResolvedValueOnce({ data: { count: 2 }, error: null });
-    // Insert conflict
-    sb.single.mockResolvedValueOnce({
-      data: null,
-      error: { code: "23505", message: "duplicate" },
-    });
+    const docSingle = vi.fn().mockResolvedValue({ data: fakeDoc, error: null });
+    const insertSingle = vi.fn().mockResolvedValue({ data: null, error: { code: "23505", message: "duplicate" } });
+    const sb = {
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === "documents") return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ single: docSingle }) }) }) };
+        if (table === "cart_items") return {
+          select: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ count: 2, error: null }) }),
+          insert: vi.fn().mockReturnValue({ single: insertSingle }),
+        };
+        return { upsert: vi.fn().mockResolvedValue({ error: null }) };
+      }),
+    };
     mockCreateClient.mockResolvedValue(sb as never);
-
     const result = await addToCart("doc-1", "en");
     expect(result).toEqual({ ok: false, code: "already_in_cart" });
   });
 
   it("AC5/EC4: returns cart_full when cart has 50 items", async () => {
     mockGetCurrentUser.mockResolvedValue(fakeUser as never);
-    const sb = makeSupabaseMock();
-    sb.single.mockResolvedValueOnce({ data: fakeDoc, error: null });
-    // Count = 50
-    sb.single.mockResolvedValueOnce({ data: { count: 50 }, error: null });
+    const docSingle = vi.fn().mockResolvedValue({ data: fakeDoc, error: null });
+    const sb = {
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === "documents") return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ single: docSingle }) }) }) };
+        return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ count: 50, error: null }) }) };
+      }),
+    };
     mockCreateClient.mockResolvedValue(sb as never);
-
     const result = await addToCart("doc-1", "si");
     expect(result).toEqual({ ok: false, code: "cart_full" });
   });
 
   it("AC1: happy path inserts row and returns ok", async () => {
     mockGetCurrentUser.mockResolvedValue(fakeUser as never);
-    const sb = makeSupabaseMock();
-    sb.single.mockResolvedValueOnce({ data: fakeDoc, error: null });
-    sb.single.mockResolvedValueOnce({ data: { count: 2 }, error: null });
-    sb.single.mockResolvedValueOnce({
-      data: { id: "item-1", document_id: "doc-1", language: "en", created_at: "2026-01-01" },
-      error: null,
-    });
+    const docSingle = vi.fn().mockResolvedValue({ data: fakeDoc, error: null });
+    const insertSingle = vi.fn().mockResolvedValue({ data: { id: "item-1" }, error: null });
+    const sb = {
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === "documents") return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ single: docSingle }) }) }) };
+        if (table === "cart_items") return {
+          select: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ count: 2, error: null }) }),
+          insert: vi.fn().mockReturnValue({ single: insertSingle }),
+        };
+        return { upsert: vi.fn().mockResolvedValue({ error: null }) };
+      }),
+    };
     mockCreateClient.mockResolvedValue(sb as never);
-
     const result = await addToCart("doc-1", "en");
     expect(result).toEqual({ ok: true });
   });
@@ -130,28 +134,44 @@ describe("removeFromCart", () => {
   it("AC2: happy path removes own item", async () => {
     mockGetCurrentUser.mockResolvedValue(fakeUser as never);
     const sb = makeSupabaseMock();
-    // delete matched 1 row
-    const mockDelete = vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ data: [{ id: "item-1" }], error: null, count: 1 }),
-      }),
+    // select returns the item (ownership confirmed), delete succeeds
+    sb.from = vi.fn().mockImplementation((table: string) => {
+      if (table === "cart_items") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({ data: { id: "item-1" }, error: null }),
+              }),
+            }),
+          }),
+          delete: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          }),
+        };
+      }
+      return makeSupabaseMock();
     });
-    sb.from = vi.fn().mockReturnValue({ delete: mockDelete });
     mockCreateClient.mockResolvedValue(sb as never);
 
     const result = await removeFromCart("item-1");
     expect(result).toEqual({ ok: true });
   });
 
-  it("AC2/EC6: returns not_found for another user's item (no rows deleted)", async () => {
+  it("AC2/EC6: returns not_found for another user's item (select returns null)", async () => {
     mockGetCurrentUser.mockResolvedValue(fakeUser as never);
     const sb = makeSupabaseMock();
-    const mockDelete = vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 }),
+    sb.from = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        }),
       }),
     });
-    sb.from = vi.fn().mockReturnValue({ delete: mockDelete });
     mockCreateClient.mockResolvedValue(sb as never);
 
     const result = await removeFromCart("item-other");
