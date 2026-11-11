@@ -76,7 +76,9 @@ describe("calculateCart", () => {
         return {
           select: vi.fn().mockReturnValue({
             in: vi.fn().mockReturnValue({
-              is: vi.fn().mockResolvedValue(docsResult),
+              is: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue(docsResult),
+              }),
             }),
           }),
         };
@@ -119,7 +121,7 @@ describe("calculateCart", () => {
         return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue(cartItemsResult) }) };
       }
       if (table === "documents") {
-        return { select: vi.fn().mockReturnValue({ in: vi.fn().mockReturnValue({ is: vi.fn().mockResolvedValue(docsResult) }) }) };
+        return { select: vi.fn().mockReturnValue({ in: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue(docsResult) }) }) }) };
       }
       if (table === "document_files") {
         return { select: vi.fn().mockReturnValue({ in: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue(filesResult) }) }) }) }) };
@@ -137,19 +139,17 @@ describe("calculateCart", () => {
   });
 
   it("EC1: document unpublished → document_unavailable, price=0, excluded from subtotal", async () => {
-    const doc = makeDoc({ status: "draft" });
     const cartItemsResult = { data: [{ id: "ci-1", document_id: "doc-1", language: "en" }], error: null };
-    // .is("deleted_at", null) filter means deleted/unpublished docs come back null from DB for deleted ones
-    // but unpublished are still returned (status filter is in-memory)
-    const docsResult = { data: [doc], error: null };
-    const filesResult = { data: [makeFile()], error: null };
+    // DB filters status=published, so draft docs are absent from the result
+    const docsResult = { data: [], error: null };
+    const filesResult = { data: [], error: null };
 
     mockSupabaseFrom.mockImplementation((table: string) => {
       if (table === "cart_items") {
         return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue(cartItemsResult) }) };
       }
       if (table === "documents") {
-        return { select: vi.fn().mockReturnValue({ in: vi.fn().mockReturnValue({ is: vi.fn().mockResolvedValue(docsResult) }) }) };
+        return { select: vi.fn().mockReturnValue({ in: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue(docsResult) }) }) }) };
       }
       if (table === "document_files") {
         return { select: vi.fn().mockReturnValue({ in: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue(filesResult) }) }) }) }) };
@@ -171,7 +171,7 @@ describe("calculateCart", () => {
 
     mockSupabaseFrom.mockImplementation((table: string) => {
       if (table === "documents") {
-        return { select: vi.fn().mockReturnValue({ in: vi.fn().mockReturnValue({ is: vi.fn().mockResolvedValue(docsResult) }) }) };
+        return { select: vi.fn().mockReturnValue({ in: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue(docsResult) }) }) }) };
       }
       if (table === "document_files") {
         return { select: vi.fn().mockReturnValue({ in: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue(filesResult) }) }) }) }) };

@@ -2,7 +2,7 @@ import "server-only";
 
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { requireActiveAccount, getCurrentUser } from "@/lib/auth/server";
-import { documentLanguageSchema } from "@/lib/validation/cart";
+import { documentLanguageSchema, documentIdSchema } from "@/lib/validation/cart";
 import type { CartItem } from "@/types/cart";
 import type { DocumentLanguage } from "@/types/document";
 
@@ -31,6 +31,9 @@ export async function addToCart(
   }
   const user = authResult.user;
 
+  if (!documentIdSchema.safeParse(documentId).success) {
+    return { ok: false, code: "validation_failed" };
+  }
   if (!documentLanguageSchema.safeParse(language).success) {
     return { ok: false, code: "validation_failed" };
   }
@@ -155,16 +158,17 @@ export async function clearCartForOrder(orderId: string, userId: string): Promis
   // userId is passed explicitly so every delete is scoped to the buyer.
   const supabase = createSupabaseServiceRoleClient();
 
-  const { data: orderItems } = await supabase
+  const { data: orderItems, error: orderItemsError } = await supabase
     .from("order_items")
     .select("document_id, language")
     .eq("order_id", orderId);
 
+  if (orderItemsError) throw orderItemsError;
   if (!orderItems || orderItems.length === 0) return;
 
   const validItems = orderItems.filter(
     (item): item is { document_id: string; language: string } =>
-      !!item.document_id && !!item.language,
+      documentIdSchema.safeParse(item.document_id).success && !!item.language,
   );
   if (validItems.length === 0) return;
 

@@ -21,10 +21,12 @@ export async function calculateCart(
   if (buyNow) {
     lines = [{ cartItemId: null, documentId: buyNow.documentId, language: buyNow.language }];
   } else {
-    const { data: cartItems } = await supabase
+    const { data: cartItems, error: cartError } = await supabase
       .from("cart_items")
       .select("id, document_id, language")
       .eq("user_id", userId);
+
+    if (cartError) throw cartError;
 
     lines = (cartItems ?? []).map((row) => ({
       cartItemId: row.id,
@@ -38,24 +40,29 @@ export async function calculateCart(
   const documentIds = [...new Set(lines.map((l) => l.documentId))];
 
   // Fetch documents and their file availability in one query
-  const { data: docs } = await supabase
+  const { data: docs, error: docsError } = await supabase
     .from("documents")
     .select(
       "id, title, slug, cover_image_key, price_cents, page_count, status, deleted_at",
     )
     .in("id", documentIds)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .eq("status", "published");
+
+  if (docsError) throw docsError;
 
   const docMap = new Map((docs ?? []).map((d) => [d.id, d]));
 
   // Fetch ready full-language files for the documents (kind='full', is_current=true, status='ready')
-  const { data: files } = await supabase
+  const { data: files, error: filesError } = await supabase
     .from("document_files")
     .select("document_id, language, kind, status, is_current")
     .in("document_id", documentIds)
     .eq("kind", "full")
     .eq("is_current", true)
     .eq("status", "ready");
+
+  if (filesError) throw filesError;
 
   const readyFiles = new Set(
     (files ?? []).map((f) => `${f.document_id}:${f.language}`),

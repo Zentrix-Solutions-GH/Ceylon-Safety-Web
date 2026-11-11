@@ -35,8 +35,9 @@ function makeSupabaseMock(overrides: Record<string, unknown> = {}) {
 }
 
 const fakeUser = { id: "user-1", email: "a@b.com", status: "active" };
+const fakeDocId = "00000000-0000-4000-8000-000000000001";
 const fakeDoc = {
-  id: "doc-1",
+  id: fakeDocId,
   status: "published",
   deleted_at: null,
 };
@@ -48,13 +49,13 @@ beforeEach(() => vi.clearAllMocks());
 describe("addToCart", () => {
   it("AC5/EC5: returns not_signed_in when no user", async () => {
     mockRequireActiveAccount.mockResolvedValue({ ok: false, code: "reauth_required" } as never);
-    const result = await addToCart("doc-1", "en");
+    const result = await addToCart(fakeDocId, "en");
     expect(result).toEqual({ ok: false, code: "not_signed_in" });
   });
 
   it("S17: returns not_allowed for suspended user", async () => {
     mockRequireActiveAccount.mockResolvedValue({ ok: false, code: "account_suspended" } as never);
-    const result = await addToCart("doc-1", "en");
+    const result = await addToCart(fakeDocId, "en");
     expect(result).toEqual({ ok: false, code: "not_allowed" });
   });
 
@@ -63,7 +64,7 @@ describe("addToCart", () => {
     const docSingle = vi.fn().mockResolvedValue({ data: null, error: null });
     const sb = { from: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ single: docSingle }) }) }) }) };
     mockCreateClient.mockResolvedValue(sb as never);
-    const result = await addToCart("doc-deleted", "en");
+    const result = await addToCart("00000000-0000-4000-8000-000000000002", "en");
     expect(result).toEqual({ ok: false, code: "document_unavailable" });
   });
 
@@ -72,13 +73,13 @@ describe("addToCart", () => {
     const docSingle = vi.fn().mockResolvedValue({ data: { ...fakeDoc, status: "draft" }, error: null });
     const sb = { from: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ single: docSingle }) }) }) }) };
     mockCreateClient.mockResolvedValue(sb as never);
-    const result = await addToCart("doc-draft", "en");
+    const result = await addToCart("00000000-0000-4000-8000-000000000003", "en");
     expect(result).toEqual({ ok: false, code: "document_unavailable" });
   });
 
   it("AC1: returns validation_failed for invalid language", async () => {
     mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
-    const result = await addToCart("doc-1", "fr" as never);
+    const result = await addToCart(fakeDocId, "fr" as never);
     expect(result).toEqual({ ok: false, code: "validation_failed" });
   });
 
@@ -96,7 +97,7 @@ describe("addToCart", () => {
       }),
     };
     mockCreateClient.mockResolvedValue(sb as never);
-    const result = await addToCart("doc-1", "en");
+    const result = await addToCart(fakeDocId, "en");
     expect(result).toEqual({ ok: false, code: "already_in_cart" });
   });
 
@@ -110,7 +111,7 @@ describe("addToCart", () => {
       }),
     };
     mockCreateClient.mockResolvedValue(sb as never);
-    const result = await addToCart("doc-1", "si");
+    const result = await addToCart(fakeDocId, "si");
     expect(result).toEqual({ ok: false, code: "cart_full" });
   });
 
@@ -128,7 +129,7 @@ describe("addToCart", () => {
       }),
     };
     mockCreateClient.mockResolvedValue(sb as never);
-    const result = await addToCart("doc-1", "en");
+    const result = await addToCart(fakeDocId, "en");
     expect(result).toEqual({ ok: false, code: "cart_full" });
   });
 
@@ -146,7 +147,7 @@ describe("addToCart", () => {
       }),
     };
     mockCreateClient.mockResolvedValue(sb as never);
-    const result = await addToCart("doc-1", "en");
+    const result = await addToCart(fakeDocId, "en");
     expect(result).toEqual({ ok: true });
   });
 });
@@ -227,7 +228,7 @@ describe("getCart", () => {
     mockGetCurrentUser.mockResolvedValue(fakeUser as never);
     const sb = makeSupabaseMock();
     const rows = [
-      { id: "item-1", document_id: "doc-1", language: "en", created_at: "2026-01-01" },
+      { id: "item-1", document_id: fakeDocId, language: "en", created_at: "2026-01-01" },
     ];
     sb.eq = vi.fn().mockResolvedValue({ data: rows, error: null });
     mockCreateClient.mockResolvedValue(sb as never);
@@ -235,7 +236,7 @@ describe("getCart", () => {
     const result = await getCart();
     expect(result).toEqual({
       ok: true,
-      items: [{ id: "item-1", documentId: "doc-1", language: "en", addedAt: "2026-01-01" }],
+      items: [{ id: "item-1", documentId: fakeDocId, language: "en", addedAt: "2026-01-01" }],
     });
   });
 });
@@ -255,8 +256,8 @@ describe("clearCartForOrder", () => {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockResolvedValue({
                 data: [
-                  { document_id: "doc-1", language: "en" },
-                  { document_id: "doc-2", language: "si" },
+                  { document_id: "00000000-0000-4000-8000-000000000001", language: "en" },
+                  { document_id: "00000000-0000-4000-8000-000000000002", language: "si" },
                 ],
                 error: null,
               }),
@@ -276,7 +277,7 @@ describe("clearCartForOrder", () => {
     // Verify single OR batch (not N individual deletes)
     expect(mockOr).toHaveBeenCalledTimes(1);
     expect(mockOr).toHaveBeenCalledWith(
-      "and(document_id.eq.doc-1,language.eq.en),and(document_id.eq.doc-2,language.eq.si)",
+      "and(document_id.eq.00000000-0000-4000-8000-000000000001,language.eq.en),and(document_id.eq.00000000-0000-4000-8000-000000000002,language.eq.si)",
     );
   });
 
