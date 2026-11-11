@@ -40,7 +40,8 @@ Add the like button and comment thread to the article full page. Signed-in users
 ## Contract
 
 Types added or changed in `types/` by this story (for contract-checker agent):
-- `types/comment.ts`: `PublicComment` (id, authorDisplayName, body, approvedAt) and `PendingComment` (id, body, status: 'pending')
+- `types/comment.ts`: `PublicComment` alias for `Comment` — shape: `{ id, articleId, author: { displayName, isStaff }, body, createdAt }` (fields defined by S-050 backend contract)
+- `types/comment.ts`: `PendingComment` — shape: `{ id, body, status: 'pending' }`
 
 ## Out of scope
 
@@ -74,10 +75,47 @@ Prior art: `grep -ril "likes\|comments\|REQ-194\|REQ-195" docs/` → content des
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Test Files  196 passed | 15 skipped (211)
+Tests       1918 passed | 60 skipped (1978)
+✓ Vitest (unit) passed
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests (run supabase start first)
+
+── pgTAP seed suite ──
+⚠ Supabase not running — skipping seed tests (run supabase start first)
+
+── pgTAP dev seed suite ──
+⚠ Supabase not running — skipping dev seed tests (run supabase start first)
+
+── Types file freshness ──
+⚠ Supabase not running — skipping types check (run supabase start first)
+
+── Public pages session check (AC11) ──
+check-public-pages: OK — checked 20 file(s), no violations.
+✓ Public pages session check (AC11) passed
+
+── Google Fonts check (AC5) ──
+✓ Google Fonts check (AC5) passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 6 passed, 0 failed
+════════════════════════════════
+
+✅ All checks passed.
 ```
 
 ## Review notes

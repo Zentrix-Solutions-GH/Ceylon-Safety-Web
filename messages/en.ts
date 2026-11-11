@@ -308,6 +308,27 @@ const en = {
   "article.back_to_articles": "Back to articles",
   "article.unavailable": "This article is not available.",
 
+  // --- article likes + comments (S-061) ---
+  "article.like.button_label": "Like this article",
+  "article.like.liked_label": "Unlike this article",
+  "article.like.error": "Could not update like. Please try again.",
+  "article.comment.sign_in_to_comment": "Sign in to comment",
+  "article.comment.textarea_label": "Write a comment",
+  "article.comment.textarea_placeholder": "Share your thoughts…",
+  "article.comment.submit": "Post comment",
+  "article.comment.submitting": "Posting…",
+  "article.comment.pending": "Your comment is awaiting approval.",
+  "article.comment.rate_limited_hourly": "You've commented too many times. Try again later.",
+  "article.comment.rate_limited_pending_cap": "You have too many comments waiting for approval.",
+  "article.comment.suspended": "Your account is suspended.",
+  "article.comment.error": "Could not post comment. Please try again.",
+  "article.comment.load_more": "Load more comments",
+  "article.comment.load_more.loading": "Loading…",
+  "article.comment.staff_badge": "Admin",
+  "article.comment.waiting_for_approval": "Waiting for approval",
+  "article.comment.empty_signed_in": "Be the first to comment.",
+  "article.comment.empty_signed_out": "Sign in to comment.",
+
   // --- admin MFA pages (S-044) ---
   "admin.security.title": "Set up authenticator",
   "admin.security.heading": "Set up your authenticator app",

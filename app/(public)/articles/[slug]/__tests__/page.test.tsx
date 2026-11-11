@@ -35,6 +35,22 @@ vi.mock("@/components/articles/ArticleBody", () => ({
   default: () => React.createElement("div", { "data-testid": "article-body" }),
 }));
 
+vi.mock("@/lib/engagement/listComments", () => ({
+  listComments: async () => ({ comments: [], nextCursor: null }),
+}));
+
+vi.mock("@/components/articles/ArticleLikeButton", () => ({
+  ArticleLikeButton: () => React.createElement("div", { "data-testid": "like-button" }),
+}));
+
+vi.mock("@/components/articles/CommentForm", () => ({
+  CommentForm: () => React.createElement("div", { "data-testid": "comment-form" }),
+}));
+
+vi.mock("@/components/articles/CommentThread", () => ({
+  CommentThread: () => React.createElement("div", { "data-testid": "comment-thread" }),
+}));
+
 import ArticleSlugPage, { generateMetadata, revalidate } from "../page";
 import type { PublicArticle } from "@/types/article";
 
