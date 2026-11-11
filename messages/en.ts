@@ -204,6 +204,7 @@ const en = {
   "editor.picker.loading": "Loading…",
   "editor.picker.no_videos": "No published videos yet.",
   "editor.picker.no_videos_link": "Go to Videos",
+  "editor.picker.error": "Could not load videos. Please try again.",
   "editor.picker.title": "Insert video",
   "editor.picker.close": "Close",
   "editor.image.alt_label": "Alt text",

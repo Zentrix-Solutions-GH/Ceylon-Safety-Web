@@ -66,6 +66,18 @@ describe("ItemPickerModal — AC3: empty state when no published videos", () => 
   });
 });
 
+describe("ItemPickerModal — P1: error state on server failure", () => {
+  it("shows error message (not empty-state) when listPickerItemsAction returns ok: false", async () => {
+    mockListPickerItems.mockResolvedValue({ ok: false, code: "not_allowed" });
+    render(<ItemPickerModal onPick={vi.fn()} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/no published videos/i)).toBeNull();
+  });
+});
+
 describe("ItemPickerModal — EC1: real-time title filter", () => {
   it("calls listPickerItems with search text when user types", async () => {
     mockListPickerItems.mockResolvedValue({ ok: true, items: [VIDEO_A], hasMore: false });

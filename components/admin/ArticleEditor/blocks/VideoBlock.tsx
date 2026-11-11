@@ -14,9 +14,17 @@ interface VideoBlockProps {
 }
 
 export default function VideoBlock({ title, thumbnailKey, status, onRemove }: VideoBlockProps) {
-  if (status === "deleted") return null;
+  const thumbSrc = thumbnailKey ? `${publicConfig.mediaCdnUrl}/${thumbnailKey}` : null;
 
-  const thumbSrc = `${publicConfig.mediaCdnUrl}/${thumbnailKey}`;
+  if (status === "deleted") {
+    return (
+      <figure className="video-block">
+        <p role="alert" className="video-block__warning">
+          {t("editor.video.hidden_warning")}
+        </p>
+      </figure>
+    );
+  }
 
   return (
     <figure className="video-block">
@@ -26,7 +34,7 @@ export default function VideoBlock({ title, thumbnailKey, status, onRemove }: Vi
         </p>
       )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={thumbSrc} alt={title} className="video-block__thumbnail" />
+      {thumbSrc && <img src={thumbSrc} alt={title} className="video-block__thumbnail" />}
       <figcaption className="video-block__title">{title}</figcaption>
       <button
         type="button"

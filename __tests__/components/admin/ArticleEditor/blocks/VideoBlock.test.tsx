@@ -26,6 +26,19 @@ describe("VideoBlock — AC2: renders thumbnail and title", () => {
     expect(screen.getByText("PPE Safety Guide")).toBeInTheDocument();
   });
 
+  it("renders no img when thumbnailKey is empty string (P1: no broken-image request)", () => {
+    render(
+      <VideoBlock
+        videoId="vid-123"
+        title="No Thumb"
+        thumbnailKey=""
+        status="ready"
+        onRemove={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
   it("renders remove button", () => {
     const onRemove = vi.fn();
     render(
@@ -58,8 +71,8 @@ describe("VideoBlock — AC5: warning for hidden or deleted video", () => {
     expect(screen.getByText(/hidden or deleted/i)).toBeInTheDocument();
   });
 
-  it("renders nothing (null) when status is deleted", () => {
-    const { container } = render(
+  it("shows warning banner when status is deleted (AC5 — deleted also requires warning)", () => {
+    render(
       <VideoBlock
         videoId="vid-123"
         title="Deleted Video"
@@ -68,7 +81,7 @@ describe("VideoBlock — AC5: warning for hidden or deleted video", () => {
         onRemove={vi.fn()}
       />
     );
-    // For deleted status, component returns null — container should be empty
-    expect(container.firstChild).toBeNull();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText(/hidden or deleted/i)).toBeInTheDocument();
   });
 });

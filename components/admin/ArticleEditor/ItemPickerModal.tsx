@@ -21,11 +21,18 @@ export default function ItemPickerModal({ onPick, onClose }: ItemPickerModalProp
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<PickerItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const fetchItems = useCallback(async (q: string) => {
     setLoading(true);
+    setError(false);
     const result = await listPickerItemsAction({ kind: "video", search: q || undefined });
-    if (result.ok) setItems(result.items);
+    if (result.ok) {
+      setItems(result.items);
+    } else {
+      setError(true);
+      setItems([]);
+    }
     setLoading(false);
   }, []);
 
@@ -56,6 +63,8 @@ export default function ItemPickerModal({ onPick, onClose }: ItemPickerModalProp
 
       {loading ? (
         <p>{t("editor.picker.loading")}</p>
+      ) : error ? (
+        <p role="alert">{t("editor.picker.error")}</p>
       ) : items.length === 0 ? (
         <p>
           {t("editor.picker.no_videos")}{" "}

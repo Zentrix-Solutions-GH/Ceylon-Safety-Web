@@ -30,6 +30,7 @@ import { RichTextEditor, countUnknownPastedNodes, getListDepthFromResolvedPos, h
 import { MAX_LIST_DEPTH } from "@/lib/content/schema";
 import ImageBlock from "@/components/admin/ArticleEditor/blocks/ImageBlock";
 import type { NodeViewProps } from "@tiptap/react";
+import userEvent from "@testing-library/user-event";
 
 describe("RichTextEditor — AC1: renders without crashing", () => {
   it("renders the editor container", () => {
@@ -73,6 +74,21 @@ describe("RichTextEditor — AC1: renders without crashing", () => {
     const h2Option = options.find((o) => (o as HTMLOptionElement).value === "h2");
     expect(h2Option?.textContent).not.toBe("h2");
     expect(h2Option?.textContent).toMatch(/heading 2/i);
+  });
+});
+
+describe("RichTextEditor — S-056: Insert video toolbar button", () => {
+  it("calls onInsertVideoClick when Insert video button is clicked", async () => {
+    const onInsertVideoClick = vi.fn();
+    render(<RichTextEditor onChange={vi.fn()} onInsertVideoClick={onInsertVideoClick} />);
+    const btn = screen.getByRole("button", { name: /insert video/i });
+    await userEvent.click(btn);
+    expect(onInsertVideoClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render the Insert video button when onInsertVideoClick is not passed", () => {
+    render(<RichTextEditor onChange={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /insert video/i })).toBeNull();
   });
 });
 
