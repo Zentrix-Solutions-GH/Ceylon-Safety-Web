@@ -178,6 +178,11 @@ P1+P2 fixes applied (from full-review 2026-11-11):
 - **P2** `clearCartForOrder` N+1 loop. → **FIXED**: Single `.delete().eq("user_id", ...).or(orFilter)` batch delete.
 - **P2** `getCart` swallows DB errors. → **FIXED**: Check `error`; throw on non-null.
 - **P2** Soft-deleted docs fetched before filtering in `calculateCart`. → **FIXED**: Added `.is("deleted_at", null)` to documents query.
+- **P1** `lib/cart/calculate.ts:26-28,44-48,54-58` — `calculateCart` does not check Supabase query errors; DB failure returns silent empty 200. (external review abevicrama 2026-11-11) → **FIXED**: Destructure `error` from all 3 queries; throw on non-null.
+- **P1** `lib/cart/calculate.ts:~42` — documents query fetches non-published rows and filters in memory; at scale fetches all drafts. (external review abevicrama 2026-11-11) → **FIXED**: Added `.eq("status", "published")` to DB query.
+- **P1** `lib/cart/index.ts:~155` — `clearCartForOrder` silently swallows `order_items` query error. (external review abevicrama 2026-11-11) → **FIXED**: Destructure `error`; throw on non-null.
+- **P1** `lib/cart/index.ts:~44` — `addToCart` does not validate `documentId` as UUID before querying. (external review abevicrama 2026-11-11) → **FIXED**: Added `documentIdSchema.safeParse(documentId)` guard returning `validation_failed`.
+- **P1** `lib/cart/index.ts:~170` — `clearCartForOrder` builds OR filter by string-interpolating DB-sourced `document_id` without UUID validation. (external review abevicrama 2026-11-11) → **FIXED**: `validItems` filter now uses `documentIdSchema.safeParse(item.document_id).success`.
 
 ## After this merges
 
