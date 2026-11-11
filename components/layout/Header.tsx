@@ -14,7 +14,7 @@ export default async function Header() {
     <div className="sticky top-0 z-40 w-full">
       {/* Announcement bar — content driven by site_settings (announcement_* keys) */}
       {banner.enabled && (
-        <div className="bg-[#C00000] text-white text-xs text-center py-1.5 px-4">
+        <div className="bg-primary text-white text-xs text-center py-1.5 px-4">
           {banner.text}&nbsp;
           <Link href={banner.linkHref} className="font-semibold underline hover:no-underline whitespace-nowrap">
             {banner.linkLabel} →
@@ -42,7 +42,7 @@ export default async function Header() {
             <div className="hidden sm:block">
               <div className="flex items-baseline gap-1 leading-none">
                 <span className="text-[15px] font-extrabold text-gray-800 tracking-wide">CEYLON</span>
-                <span className="text-[15px] font-extrabold text-[#C00000] tracking-wide">SAFETY</span>
+                <span className="text-[15px] font-extrabold text-primary tracking-wide">SAFETY</span>
               </div>
               <p className="text-[7px] font-medium text-gray-400 tracking-widest uppercase mt-0.5">
                 Sri Lanka&apos;s National Safety Hub

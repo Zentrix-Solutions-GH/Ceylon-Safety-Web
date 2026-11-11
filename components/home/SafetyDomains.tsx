@@ -88,12 +88,12 @@ export function SafetyDomains() {
             <Link
               key={d.slug}
               href={`/articles?category=${encodeURIComponent(d.slug)}`}
-              className="group flex flex-col items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-2 py-5 text-center hover:border-[#C00000]/20 hover:bg-red-50 transition-colors"
+              className="group flex flex-col items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-2 py-5 text-center hover:border-primary/20 hover:bg-red-50 transition-colors"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-[#C00000] group-hover:bg-red-200 transition-colors">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-primary group-hover:bg-red-200 transition-colors">
                 {d.icon}
               </div>
-              <span className="text-xs font-medium text-gray-700 group-hover:text-[#C00000] leading-tight">{d.label}</span>
+              <span className="text-xs font-medium text-gray-700 group-hover:text-primary leading-tight">{d.label}</span>
             </Link>
           ))}
         </div>

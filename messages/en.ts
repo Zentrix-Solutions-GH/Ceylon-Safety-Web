@@ -509,6 +509,27 @@ const en = {
   "admin.staff.error.code_invalid": "Incorrect authenticator code",
   "admin.staff.error.not_found_remove": "Action failed, please refresh and try again",
   "admin.staff.error.unknown": "Something went wrong, please try again",
+
+  // --- home page hero (UI redesign) ---
+  "home.hero.badge": "Safety First, Every Day",
+  "home.hero.heading_line1": "Learn. Stay Safe.",
+  "home.hero.heading_line2": "Get Certified.",
+  "home.hero.description": "Sri Lanka's trusted national portal for accredited OSHA & SLS occupational health and safety training, statutory audit templates and registered industrial consultants.",
+  "home.hero.cta_articles": "Explore Articles →",
+  "home.hero.cta_documents": "Browse Documents",
+  "home.hero.search_placeholder": "Search safety guidelines, audit templates...",
+  "home.hero.search_button": "FIND RESOURCES",
+  "home.hero.search_category_all": "All Categories | Construction, Fire, Electrical...",
+  "home.hero.search_category_fire": "Fire Safety",
+  "home.hero.search_category_construction": "Construction",
+  "home.hero.search_category_chemical": "Chemical & Industrial",
+  "home.hero.search_category_electrical": "Electrical Safety",
+  "home.hero.search_category_ergonomics": "Ergonomics",
+  "home.hero.slide1_alt": "Construction site safety",
+  "home.hero.slide2_alt": "Industrial safety workers",
+  "home.hero.slide3_alt": "Fire safety equipment",
+  "home.hero.slide4_alt": "Electrical safety inspection",
+  "home.hero.slide_indicator": "Slide {n}",
 } as const;
 
 export type MessageKey = keyof typeof en;

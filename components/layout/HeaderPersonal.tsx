@@ -114,13 +114,13 @@ export function HeaderPersonal() {
         <div className="flex items-center gap-2">
           <Link
             href="/sign-in"
-            className="text-sm font-semibold px-4 py-1.5 rounded-full border border-gray-400 text-gray-700 hover:border-[#C00000] hover:text-[#C00000] transition-colors"
+            className="text-sm font-semibold px-4 py-1.5 rounded-full border border-gray-400 text-gray-700 hover:border-primary hover:text-primary transition-colors"
           >
             {t("nav.sign_in")}
           </Link>
           <Link
             href="/sign-up"
-            className="text-sm font-semibold px-4 py-1.5 rounded-full bg-[#C00000] text-white hover:bg-[#a00000] transition-colors"
+            className="text-sm font-semibold px-4 py-1.5 rounded-full bg-primary text-white hover:bg-primary-dark transition-colors"
           >
             {t("nav.sign_up")}
           </Link>

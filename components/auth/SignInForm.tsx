@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
@@ -9,6 +9,7 @@ import { signIn } from "@/lib/auth/actions/sign-in";
 import { startGoogleSignIn } from "@/lib/auth/actions/start-google-sign-in";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 import { t, errorMessage } from "@/messages/en";
+import { GoogleLogo } from "@/components/icons/GoogleLogo";
 
 function isSocialAppBrowser(): boolean {
   if (typeof window === "undefined") return false;
@@ -101,7 +102,7 @@ export function SignInForm() {
   return (
     <div className="flex min-h-screen">
       {/* Left panel — branding */}
-      <div className="relative hidden lg:flex lg:w-[45%] flex-col justify-between overflow-hidden bg-[#8B0000]">
+      <div className="relative hidden lg:flex lg:w-[45%] flex-col justify-between overflow-hidden bg-primary-darker">
         {/* Background construction image */}
         <div className="absolute inset-0">
           <Image
@@ -112,13 +113,13 @@ export function SignInForm() {
             unoptimized
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#8B0000]/80 via-[#8B0000]/70 to-[#4a0000]/90" />
+          <div className="absolute inset-0 bg-gradient-to-b from-primary-darker/80 via-primary-darker/70 to-primary-deepest/90" />
         </div>
 
         <div className="relative z-10 p-8">
           <Link href="/" className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-lg">
-              <span className="text-lg font-black text-[#C00000]">CS</span>
+              <span className="text-lg font-black text-primary">CS</span>
             </div>
             <div className="text-white">
               <div className="text-xl font-black tracking-wide leading-tight">CEYLON</div>
@@ -157,12 +158,12 @@ export function SignInForm() {
       {/* Right panel — form */}
       <div className="flex flex-1 flex-col justify-between bg-white px-6 py-8 sm:px-10 lg:px-16">
         <div className="flex justify-end text-sm text-gray-500 lg:hidden">
-          <Link href="/" className="text-[#C00000] font-semibold">← Return to Portal</Link>
+          <Link href="/" className="text-primary font-semibold">← Return to Portal</Link>
         </div>
 
         <div className="my-auto w-full max-w-md mx-auto">
           <div className="flex items-center gap-2 mb-6">
-            <span className="h-2 w-2 rounded-full bg-[#C00000]" />
+            <span className="h-2 w-2 rounded-full bg-primary" />
             <span className="text-xs font-semibold uppercase tracking-widest text-gray-500">Secure Portal Login</span>
           </div>
 
@@ -180,7 +181,7 @@ export function SignInForm() {
           {socialApp && (
             <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm space-y-2">
               <p>{t("auth.sign_in.social_app_hint")}</p>
-              <button type="button" onClick={handleCopyLink} className="underline text-[#C00000]">
+              <button type="button" onClick={handleCopyLink} className="underline text-primary">
                 {linkCopied ? t("auth.sign_in.link_copied") : t("auth.sign_in.copy_link")}
               </button>
             </div>
@@ -193,12 +194,7 @@ export function SignInForm() {
             disabled={pending}
             className="w-full flex items-center justify-center gap-3 rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 transition-colors mb-5"
           >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
+            <GoogleLogo className="h-5 w-5" />
             {t("auth.sign_in.google_button")}
           </button>
 
@@ -230,7 +226,7 @@ export function SignInForm() {
                   autoComplete="email"
                   required
                   placeholder="name@workplace.lk"
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-[#C00000] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 transition-colors"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                 />
               </div>
             </div>
@@ -240,7 +236,7 @@ export function SignInForm() {
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   {t("auth.sign_in.password")}
                 </label>
-                <Link href="/forgot-password" className="text-xs font-semibold text-[#C00000] hover:underline">
+                <Link href="/forgot-password" className="text-xs font-semibold text-primary hover:underline">
                   {t("auth.sign_in.forgot_password")}
                 </Link>
               </div>
@@ -253,7 +249,7 @@ export function SignInForm() {
                   autoComplete="current-password"
                   required
                   placeholder="••••••••••"
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-11 text-sm placeholder-gray-400 focus:border-[#C00000] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 transition-colors"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-11 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                 />
                 <button
                   type="button"
@@ -268,7 +264,7 @@ export function SignInForm() {
 
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="remember" className="h-4 w-4 rounded border-gray-300 accent-[#C00000]" />
+                <input type="checkbox" name="remember" className="h-4 w-4 rounded border-gray-300 accent-primary" />
                 <span className="text-sm text-gray-600">Remember this device</span>
               </label>
               <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
@@ -285,7 +281,7 @@ export function SignInForm() {
             <button
               type="submit"
               disabled={pending || !captchaToken}
-              className="w-full rounded-full bg-[#C00000] px-4 py-3.5 text-sm font-semibold text-white hover:bg-[#a00000] disabled:opacity-50 transition-colors shadow-lg shadow-red-900/20"
+              className="w-full rounded-full bg-primary px-4 py-3.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50 transition-colors shadow-lg shadow-red-900/20"
             >
               {pending ? t("auth.sign_in.submitting") : `${t("auth.sign_in.submit")} →`}
             </button>
@@ -293,7 +289,7 @@ export function SignInForm() {
 
           <p className="mt-5 text-center text-sm text-gray-500">
             {t("auth.sign_in.no_account")}{" "}
-            <Link href="/sign-up" className="font-semibold text-[#C00000] hover:underline">
+            <Link href="/sign-up" className="font-semibold text-primary hover:underline">
               {t("auth.sign_in.sign_up_link")}
             </Link>
           </p>

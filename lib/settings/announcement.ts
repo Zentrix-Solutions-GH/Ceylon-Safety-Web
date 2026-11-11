@@ -10,6 +10,10 @@ export interface AnnouncementBanner {
   linkHref: string;
 }
 
+function isSafeHref(href: string): boolean {
+  return href.startsWith("/") || href.startsWith("https://") || href.startsWith("http://");
+}
+
 const FALLBACK: AnnouncementBanner = {
   enabled: true,
   text: "Certified Industrial PPE & Fall Protection Equipment | Special Bulk Rates for Sri Lankan Sites",
@@ -47,7 +51,10 @@ const fetchAnnouncement = unstable_cache(
         enabled: bool("announcement_enabled", FALLBACK.enabled),
         text: str("announcement_text") ?? FALLBACK.text,
         linkLabel: str("announcement_link_label") ?? FALLBACK.linkLabel,
-        linkHref: str("announcement_link_href") ?? FALLBACK.linkHref,
+        linkHref: (() => {
+          const h = str("announcement_link_href") ?? FALLBACK.linkHref;
+          return isSafeHref(h) ? h : FALLBACK.linkHref;
+        })(),
       };
     } catch {
       return FALLBACK;

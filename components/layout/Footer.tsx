@@ -4,7 +4,6 @@ import { useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { t } from "@/messages/en";
-import type { MessageKey } from "@/messages/en";
 
 export interface FooterSettings {
   contact_email?: string | null;
@@ -79,7 +78,7 @@ function InstagramIcon() {
   );
 }
 
-export default function Footer({ settings, categories: _categories = [] }: FooterProps) {
+export default function Footer({ settings }: FooterProps) {
   const year = new Date().getFullYear();
   const btnRef = useRef<HTMLButtonElement>(null);
 
@@ -94,7 +93,7 @@ export default function Footer({ settings, categories: _categories = [] }: Foote
   const email = settings?.contact_email ?? "support@ceylonsafety.lk";
 
   return (
-    <footer aria-label={t("footer.label")} className="bg-[#1a1a1a] text-white">
+    <footer aria-label={t("footer.label")} className="bg-surface-dark text-white">
 
       {/* Top section — brand + newsletter */}
       <div className="border-b border-white/10">
@@ -105,7 +104,7 @@ export default function Footer({ settings, categories: _categories = [] }: Foote
               <Image src="/logo.jpg" alt="Ceylon Safety" width={36} height={36} className="rounded" />
               <div className="leading-tight">
                 <p className="text-sm font-bold text-white tracking-wide">CEYLON</p>
-                <p className="text-sm font-bold text-[#C00000] tracking-wide">SAFETY</p>
+                <p className="text-sm font-bold text-primary tracking-wide">SAFETY</p>
               </div>
             </div>
             <p className="text-[11px] text-gray-400 uppercase tracking-widest mb-3">
@@ -128,7 +127,7 @@ export default function Footer({ settings, categories: _categories = [] }: Foote
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-gray-300 hover:bg-[#C00000] hover:text-white transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-gray-300 hover:bg-primary hover:text-white transition-colors"
                 >
                   {icon}
                 </a>
@@ -152,7 +151,7 @@ export default function Footer({ settings, categories: _categories = [] }: Foote
               />
               <button
                 type="submit"
-                className="shrink-0 bg-[#C00000] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#a00000] transition-colors tracking-wider"
+                className="shrink-0 bg-primary px-4 py-2.5 text-xs font-bold text-white hover:bg-primary-dark transition-colors tracking-wider"
               >
                 SUBSCRIBE
               </button>
@@ -220,7 +219,7 @@ export default function Footer({ settings, categories: _categories = [] }: Foote
             </p>
             <Link
               href="/certifications"
-              className="inline-block rounded border border-[#C00000] px-3 py-1.5 text-[11px] font-semibold text-[#C00000] hover:bg-[#C00000] hover:text-white transition-colors"
+              className="inline-block rounded border border-primary px-3 py-1.5 text-[11px] font-semibold text-primary hover:bg-primary hover:text-white transition-colors"
             >
               Get Registered Online
             </Link>

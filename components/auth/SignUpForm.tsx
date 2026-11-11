@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useRef } from "react";
 import Link from "next/link";
@@ -79,7 +79,7 @@ export function SignUpForm() {
   return (
     <div className="flex min-h-screen">
       {/* Left panel — branding */}
-      <div className="relative hidden lg:flex lg:w-[45%] flex-col justify-between overflow-hidden bg-[#8B0000]">
+      <div className="relative hidden lg:flex lg:w-[45%] flex-col justify-between overflow-hidden bg-primary-darker">
         <div className="absolute inset-0">
           <Image
             src="https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=1200&q=80"
@@ -89,13 +89,13 @@ export function SignUpForm() {
             unoptimized
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#8B0000]/80 via-[#8B0000]/70 to-[#4a0000]/90" />
+          <div className="absolute inset-0 bg-gradient-to-b from-primary-darker/80 via-primary-darker/70 to-primary-deepest/90" />
         </div>
 
         <div className="relative z-10 p-8">
           <Link href="/" className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-lg">
-              <span className="text-lg font-black text-[#C00000]">CS</span>
+              <span className="text-lg font-black text-primary">CS</span>
             </div>
             <div className="text-white">
               <div className="text-xl font-black tracking-wide leading-tight">CEYLON</div>
@@ -134,12 +134,12 @@ export function SignUpForm() {
       {/* Right panel — form */}
       <div className="flex flex-1 flex-col justify-between bg-white px-6 py-8 sm:px-10 lg:px-16">
         <div className="flex justify-end text-sm text-gray-500 lg:hidden">
-          <Link href="/" className="text-[#C00000] font-semibold">← Return to Portal</Link>
+          <Link href="/" className="text-primary font-semibold">← Return to Portal</Link>
         </div>
 
         <div className="my-auto w-full max-w-md mx-auto">
           <div className="flex items-center gap-2 mb-6">
-            <span className="h-2 w-2 rounded-full bg-[#C00000]" />
+            <span className="h-2 w-2 rounded-full bg-primary" />
             <span className="text-xs font-semibold uppercase tracking-widest text-gray-500">Create Your Account</span>
           </div>
 
@@ -158,7 +158,7 @@ export function SignUpForm() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  {t("auth.sign_up.first_name")} <span className="text-[#C00000]">*</span>
+                  {t("auth.sign_up.first_name")} <span className="text-primary">*</span>
                 </label>
                 <div className="relative">
                   <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -168,7 +168,7 @@ export function SignUpForm() {
                     type="text"
                     autoComplete="given-name"
                     required
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-[#C00000] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 transition-colors"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                   />
                 </div>
                 {fieldErrors.firstName && <p className="mt-1 text-xs text-red-600">{fieldErrors.firstName}</p>}
@@ -176,7 +176,7 @@ export function SignUpForm() {
 
               <div>
                 <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  {t("auth.sign_up.last_name")} <span className="text-[#C00000]">*</span>
+                  {t("auth.sign_up.last_name")} <span className="text-primary">*</span>
                 </label>
                 <div className="relative">
                   <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -186,7 +186,7 @@ export function SignUpForm() {
                     type="text"
                     autoComplete="family-name"
                     required
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-[#C00000] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 transition-colors"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                   />
                 </div>
                 {fieldErrors.lastName && <p className="mt-1 text-xs text-red-600">{fieldErrors.lastName}</p>}
@@ -195,7 +195,7 @@ export function SignUpForm() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
-                {t("auth.sign_up.email")} <span className="text-[#C00000]">*</span>
+                {t("auth.sign_up.email")} <span className="text-primary">*</span>
               </label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -206,7 +206,7 @@ export function SignUpForm() {
                   autoComplete="email"
                   required
                   placeholder="name@workplace.lk"
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-[#C00000] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 transition-colors"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                 />
               </div>
               {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
@@ -214,7 +214,7 @@ export function SignUpForm() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
-                {t("auth.sign_up.password")} <span className="text-[#C00000]">*</span>
+                {t("auth.sign_up.password")} <span className="text-primary">*</span>
               </label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -225,7 +225,7 @@ export function SignUpForm() {
                   autoComplete="new-password"
                   required
                   placeholder="••••••••••"
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-11 text-sm placeholder-gray-400 focus:border-[#C00000] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 transition-colors"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-11 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                 />
                 <button
                   type="button"
@@ -244,14 +244,14 @@ export function SignUpForm() {
                 <input
                   type="checkbox"
                   name="terms"
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-[#C00000]"
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary"
                   onChange={(e) => setTermsAccepted(e.target.checked)}
                 />
                 <span className="text-sm text-gray-600 leading-snug">
                   {t("auth.sign_up.terms")}{" "}
-                  <Link href="/terms" className="font-medium text-[#C00000] hover:underline">{t("auth.sign_up.terms_link")}</Link>
+                  <Link href="/terms" className="font-medium text-primary hover:underline">{t("auth.sign_up.terms_link")}</Link>
                   {" "}{t("auth.sign_up.and")}{" "}
-                  <Link href="/privacy" className="font-medium text-[#C00000] hover:underline">{t("auth.sign_up.privacy_link")}</Link>
+                  <Link href="/privacy" className="font-medium text-primary hover:underline">{t("auth.sign_up.privacy_link")}</Link>
                 </span>
               </label>
               {fieldErrors.terms && <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.terms}</p>}
@@ -266,7 +266,7 @@ export function SignUpForm() {
             <button
               type="submit"
               disabled={pending || !captchaToken || !termsAccepted}
-              className="w-full rounded-full bg-[#C00000] px-4 py-3.5 text-sm font-semibold text-white hover:bg-[#a00000] disabled:opacity-50 transition-colors shadow-lg shadow-red-900/20"
+              className="w-full rounded-full bg-primary px-4 py-3.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50 transition-colors shadow-lg shadow-red-900/20"
             >
               {pending ? t("auth.sign_up.submitting") : `${t("auth.sign_up.submit")} →`}
             </button>
@@ -274,7 +274,7 @@ export function SignUpForm() {
 
           <p className="mt-5 text-center text-sm text-gray-500">
             {t("auth.sign_up.have_account")}{" "}
-            <Link href="/sign-in" className="font-semibold text-[#C00000] hover:underline">
+            <Link href="/sign-in" className="font-semibold text-primary hover:underline">
               {t("auth.sign_up.sign_in_link")}
             </Link>
           </p>

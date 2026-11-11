@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export function TrainerCTA() {
   return (
-    <section className="relative overflow-hidden bg-[#1a1a1a] py-16">
+    <section className="relative overflow-hidden bg-surface-dark py-16">
       <div className="absolute inset-0">
         <Image
           src="https://images.unsplash.com/photo-1593079831268-3381b0db4a77?w=1600&q=80"
@@ -12,7 +12,7 @@ export function TrainerCTA() {
           className="object-cover object-center opacity-25"
           unoptimized
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#C00000]/90 via-[#8B0000]/80 to-[#4a0000]/70" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/90 via-primary-darker/80 to-primary-deepest/70" />
       </div>
 
       <div className="relative z-10 mx-auto max-w-6xl px-4 text-center">
@@ -26,7 +26,7 @@ export function TrainerCTA() {
         </p>
         <Link
           href="/contact-coach"
-          className="inline-flex items-center rounded-full bg-white px-8 py-3 text-sm font-bold text-[#C00000] hover:bg-gray-100 transition-colors shadow-xl"
+          className="inline-flex items-center rounded-full bg-white px-8 py-3 text-sm font-bold text-primary hover:bg-gray-100 transition-colors shadow-xl"
         >
           Contact a Trainer →
         </Link>

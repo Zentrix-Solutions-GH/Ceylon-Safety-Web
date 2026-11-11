@@ -42,8 +42,8 @@ export function HeaderNav() {
               aria-current={isActive ? "page" : undefined}
               className={`relative text-sm font-medium transition-colors pb-1 ${
                 isActive
-                  ? "text-[#C00000] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#C00000] after:rounded-full"
-                  : "text-gray-700 hover:text-[#C00000]"
+                  ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary after:rounded-full"
+                  : "text-gray-700 hover:text-primary"
               }`}
             >
               {t(item.labelKey)}

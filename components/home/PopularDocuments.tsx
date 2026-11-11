@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import Image from "next/image";
 import { Star } from "lucide-react";
 import { listPublicDocuments } from "@/lib/documents/public";
@@ -68,7 +68,7 @@ function DocumentCard({ doc }: { doc: PublicDocumentCard }) {
             <p className="text-[10px] text-gray-400">From</p>
             <p className="text-sm font-bold text-gray-900">Rs. {price}</p>
           </div>
-          <span className="rounded-full bg-[#C00000] px-3 py-1 text-xs font-semibold text-white group-hover:bg-[#a00000] transition-colors">
+          <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white group-hover:bg-primary-dark transition-colors">
             Buy
           </span>
         </div>
@@ -90,7 +90,7 @@ export async function PopularDocuments() {
         {/* Section header */}
         <div className="mb-5 flex items-start justify-between">
           <div>
-            <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#C00000]">
+            <p className="mb-1 text-xs font-bold uppercase tracking-widest text-primary">
               Statutory Compliance
             </p>
             <h2 className="text-xl font-bold text-gray-900">
@@ -99,7 +99,7 @@ export async function PopularDocuments() {
           </div>
           <Link
             href="/documents"
-            className="text-sm font-medium text-[#C00000] hover:underline whitespace-nowrap mt-1"
+            className="text-sm font-medium text-primary hover:underline whitespace-nowrap mt-1"
           >
             View all documents →
           </Link>
