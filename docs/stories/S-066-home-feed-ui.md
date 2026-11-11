@@ -5,7 +5,7 @@ status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-066-home-feed-ui
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/75
 depends_on: [S-059, S-065]
 reqs: [REQ-015, REQ-015d, REQ-016, REQ-017, REQ-062, REQ-063]
 ---
@@ -92,6 +92,21 @@ $ bash scripts/check.sh
 ## Review notes
 
 <!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+
+- **P0** `components/home/Feed.tsx:5`, `components/home/VideoCard.tsx:12` — direct `process.env.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL` in client components bypasses `lib/config.public.ts`; use `publicConfig.mediaCdnUrl` instead. (full-review 2026-11-11) ✅ Fixed
+- **P1** `components/home/Feed.tsx:39-48` — `categoryName` never passed to `ArticleCardUI`; `FeedItem` has `categoryId` only, so category labels are always blank. AC2 not fully met. (full-review 2026-11-11) ✅ Fixed — added `categoryName` to `ArticleFeedItem` type and Feed.tsx
+- **P1** `components/home/Feed.tsx:142` — sentinel rendered when `error=true`; IntersectionObserver re-fires on next scroll, clears error before user can act. Add `&& !error` to sentinel condition. (full-review 2026-11-11) ✅ Fixed
+- **P1** `components/home/Feed.tsx:81` — `res.ok` not checked before `res.json()`; non-JSON error bodies throw unhandled. Add `if (!res.ok) { setError(true); return; }`. (full-review 2026-11-11) ✅ Fixed
+- **P1** `components/home/Feed.tsx:103` — empty-items guard `items.length === 0` should be `&& !cursor`; a non-null cursor with empty items causes permanent empty state. (full-review 2026-11-11) ✅ Fixed
+- **P1** AC10 — no focus restoration after Load more loads a page; `Feed.tsx` needs `useRef` on the button and `.focus()` after `setPage`. (full-review 2026-11-11) ✅ Fixed
+- **P1** AC7 — no `sizes` attribute or 480 px width on `<img>` in `ArticleCard.tsx` or `VideoCard.tsx`; browser fetches full-width images. (full-review 2026-11-11) ✅ Fixed
+- **P0** `lib/feed/query.ts:85` — `toFeedItem()` never sets `categoryName`; enrichment query at line 139 joins `articles` but not `categories`; every article card has blank category label in production, AC2 not met. Add `categories(name)` to the select, populate `enrichMap`, set field in `toFeedItem()`. (full-review 2026-11-11)
+- **P1** `app/api/feed/route.ts:5` — `x-forwarded-for` leftmost address is client-spoofable; attacker bypasses per-IP rate limit. Use rightmost address or `CF-Connecting-IP`. (full-review 2026-11-11)
+- **P1** `lib/feed/query.ts:100` — `createSupabaseServiceRoleClient()` on public unauthenticated endpoint bypasses RLS; use anon client instead. (full-review 2026-11-11) ✅ Fixed — switched to anon client
+- **P0** `lib/feed/query.ts:102` / migrations — anon client needs `GRANT SELECT ON public.feed_items TO anon, authenticated`; view has no explicit grant; feed silently empty in production. (full-review 2026-11-11)
+- **P1** `app/api/feed/route.ts:5` — `.at(-1)` on XFF gives Vercel node IP on CF+Vercel; use `cf-connecting-ip` header instead. (full-review 2026-11-11)
+- **P1** `app/(public)/page.tsx:17` — DB errors swallowed silently with no server-side logging. (full-review 2026-11-11) ✅ Fixed
+- **P1** `app/api/feed/route.ts:6` — when both `cf-connecting-ip` and `x-forwarded-for` absent, `ip` is `undefined`, rate limit bypassed entirely. Fall back to `"unknown"` sentinel key. (full-review 2026-11-11) ✅ Fixed
 
 ## After this merges, a user can:
 
