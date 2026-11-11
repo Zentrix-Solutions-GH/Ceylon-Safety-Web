@@ -1,4 +1,5 @@
 // S-060: /articles/[slug] page — AC1, AC2, AC3, AC4, AC5, AC6
+// S-061: prop-wiring for engagement components
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -19,6 +20,11 @@ vi.mock("@/lib/articles/getArticle", () => ({
   getArticle: (...args: unknown[]) => mockGetArticle(...args),
 }));
 
+const mockListComments = vi.fn();
+vi.mock("@/lib/engagement/listComments", () => ({
+  listComments: (...args: unknown[]) => mockListComments(...args),
+}));
+
 const mockNotFound = vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); });
 const mockRedirect = vi.fn((url: string): never => { throw new Error(`NEXT_REDIRECT:${url}`); });
 vi.mock("next/navigation", () => ({
@@ -33,6 +39,30 @@ vi.mock("next/link", () => ({
 
 vi.mock("@/components/articles/ArticleBody", () => ({
   default: () => React.createElement("div", { "data-testid": "article-body" }),
+}));
+
+const mockLikeButtonProps = vi.fn();
+vi.mock("@/components/articles/ArticleLikeButton", () => ({
+  ArticleLikeButton: (props: Record<string, unknown>) => {
+    mockLikeButtonProps(props);
+    return React.createElement("div", { "data-testid": "like-button" });
+  },
+}));
+
+const mockCommentFormProps = vi.fn();
+vi.mock("@/components/articles/CommentForm", () => ({
+  CommentForm: (props: Record<string, unknown>) => {
+    mockCommentFormProps(props);
+    return React.createElement("div", { "data-testid": "comment-form" });
+  },
+}));
+
+const mockCommentThreadProps = vi.fn();
+vi.mock("@/components/articles/CommentThread", () => ({
+  CommentThread: (props: Record<string, unknown>) => {
+    mockCommentThreadProps(props);
+    return React.createElement("div", { "data-testid": "comment-thread" });
+  },
 }));
 
 import ArticleSlugPage, { generateMetadata, revalidate } from "../page";
@@ -51,10 +81,15 @@ const ARTICLE: PublicArticle = {
   authorName: "Jane Doe",
   publishedAt: "2026-01-01T00:00:00Z",
   body: { schema_version: 1, type: "doc", content: [] },
-  likeCount: 0,
-  commentCount: 0,
+  likeCount: 42,
+  commentCount: 3,
   resolvedVideos: [],
   resolvedDocuments: [],
+};
+
+const COMMENTS_RESPONSE = {
+  comments: [{ id: "c1", articleId: "1", author: { displayName: "Bob", isStaff: false }, body: "Hi", createdAt: "2026-01-01T00:00:00Z" }],
+  nextCursor: { createdAt: "2026-01-01T00:00:00Z", id: "c1" },
 };
 
 beforeEach(() => {
@@ -64,6 +99,7 @@ beforeEach(() => {
 describe("ArticleSlugPage — AC1, AC6", () => {
   it("renders article with back link and article body", async () => {
     mockGetArticle.mockResolvedValue({ ok: true, data: ARTICLE });
+    mockListComments.mockResolvedValue(COMMENTS_RESPONSE);
     const jsx = await ArticleSlugPage({ params: Promise.resolve({ slug: "test-slug" }) });
     render(jsx as React.ReactElement);
     expect(screen.getByRole("link", { name: /back to articles/i })).toHaveAttribute("href", "/articles");
@@ -121,5 +157,51 @@ describe("generateMetadata — AC2", () => {
 describe("revalidate — AC5", () => {
   it("is 300", () => {
     expect(revalidate).toBe(300);
+  });
+});
+
+describe("ArticleSlugPage — engagement component prop wiring (S-061)", () => {
+  it("passes initialCount and slug to ArticleLikeButton", async () => {
+    mockGetArticle.mockResolvedValue({ ok: true, data: ARTICLE });
+    mockListComments.mockResolvedValue(COMMENTS_RESPONSE);
+    const jsx = await ArticleSlugPage({ params: Promise.resolve({ slug: "test-slug" }) });
+    render(jsx as React.ReactElement);
+    expect(mockLikeButtonProps).toHaveBeenCalledWith(
+      expect.objectContaining({ articleId: "1", slug: "test-slug", initialCount: 42 }),
+    );
+  });
+
+  it("passes articleId to CommentForm", async () => {
+    mockGetArticle.mockResolvedValue({ ok: true, data: ARTICLE });
+    mockListComments.mockResolvedValue(COMMENTS_RESPONSE);
+    const jsx = await ArticleSlugPage({ params: Promise.resolve({ slug: "test-slug" }) });
+    render(jsx as React.ReactElement);
+    expect(mockCommentFormProps).toHaveBeenCalledWith(
+      expect.objectContaining({ articleId: "1" }),
+    );
+  });
+
+  it("passes initialComments and initialNextCursor to CommentThread", async () => {
+    mockGetArticle.mockResolvedValue({ ok: true, data: ARTICLE });
+    mockListComments.mockResolvedValue(COMMENTS_RESPONSE);
+    const jsx = await ArticleSlugPage({ params: Promise.resolve({ slug: "test-slug" }) });
+    render(jsx as React.ReactElement);
+    expect(mockCommentThreadProps).toHaveBeenCalledWith(
+      expect.objectContaining({
+        articleId: "1",
+        initialComments: COMMENTS_RESPONSE.comments,
+        initialNextCursor: COMMENTS_RESPONSE.nextCursor,
+      }),
+    );
+  });
+
+  it("renders with empty comments when listComments throws", async () => {
+    mockGetArticle.mockResolvedValue({ ok: true, data: ARTICLE });
+    mockListComments.mockRejectedValue(new Error("DB error"));
+    const jsx = await ArticleSlugPage({ params: Promise.resolve({ slug: "test-slug" }) });
+    render(jsx as React.ReactElement);
+    expect(mockCommentThreadProps).toHaveBeenCalledWith(
+      expect.objectContaining({ initialComments: [], initialNextCursor: null }),
+    );
   });
 });

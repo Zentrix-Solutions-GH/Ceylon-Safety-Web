@@ -57,6 +57,10 @@ export interface LikeStatusResult {
   count: number;
 }
 
+// S-061 contract aliases (content system design section 10.2)
+export type PublicComment = Comment;
+export type PendingComment = Pick<MyComment, "id" | "body"> & { status: "pending" };
+
 // S-051: Comment moderation types (backend defines; frontend consumes in S-062)
 
 export type ModerationState = "pending" | "approved" | "rejected" | "deleted";

@@ -3,8 +3,12 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getArticle } from "@/lib/articles/getArticle";
 import ArticleBody from "@/components/articles/ArticleBody";
+import { ArticleLikeButton } from "@/components/articles/ArticleLikeButton";
+import { CommentForm } from "@/components/articles/CommentForm";
+import { CommentThread } from "@/components/articles/CommentThread";
 import { t } from "@/messages/en";
 import { publicConfig } from "@/lib/config.public";
+import { listComments } from "@/lib/engagement/listComments";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -48,6 +52,11 @@ export default async function ArticleSlugPage({ params }: Props) {
   }
 
   const article = result.data;
+  // Fetch approved comments server-side using anon client (no session read)
+  const firstCommentPage = await listComments(article.id, null).catch(() => ({
+    comments: [],
+    nextCursor: null,
+  }));
 
   return (
     <article>
@@ -79,6 +88,13 @@ export default async function ArticleSlugPage({ params }: Props) {
       </header>
 
       <ArticleBody body={article.body} />
+      <ArticleLikeButton articleId={article.id} slug={slug} initialCount={article.likeCount} />
+      <CommentForm articleId={article.id} />
+      <CommentThread
+        articleId={article.id}
+        initialComments={firstCommentPage.comments}
+        initialNextCursor={firstCommentPage.nextCursor}
+      />
     </article>
   );
 }
