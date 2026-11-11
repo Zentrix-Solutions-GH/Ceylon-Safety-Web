@@ -119,7 +119,7 @@ No migrations needed (S-016 already created the tables and RLS).
 ## Evidence
 
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh   (after P1 fixes: suspended-user guard + buyNow route tests)
 ── ESLint ──
 ✓ ESLint passed
 
@@ -128,7 +128,7 @@ $ bash scripts/check.sh
 
 ── Vitest (unit) ──
  Test Files  170 passed | 15 skipped (185)
-      Tests  1823 passed | 60 skipped (1883)   ← includes 19 new S-075 tests
+      Tests  1835 passed | 60 skipped (1895)   ← includes 24 new S-075 tests (+5 from P1 fixes)
 
 ── pgTAP RLS suite ──
 ⚠ Supabase not running — skipping pgTAP tests
@@ -149,6 +149,10 @@ $ bash scripts/check.sh
   check.sh: passed (exit 0)
 ════════════════════════════════
 ```
+
+P1 fixes applied (from /test-check report):
+- S17 suspended-user gate: addToCart / removeFromCart / calculate route now call requireActiveAccount(); suspended → not_allowed / 403
+- buyNow route branch: 2 new tests (happy path + invalid UUID → 422)
 
 ## Review notes
 

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/auth/server";
+import { requireActiveAccount, getCurrentUser } from "@/lib/auth/server";
 import type { CartItem } from "@/types/cart";
 import type { DocumentLanguage } from "@/types/document";
 
@@ -13,6 +13,7 @@ const MAX_CART_LINES = 50;
 export type AddToCartResult =
   | { ok: true }
   | { ok: false; code: "not_signed_in" }
+  | { ok: false; code: "not_allowed" }
   | { ok: false; code: "document_unavailable" }
   | { ok: false; code: "already_in_cart" }
   | { ok: false; code: "cart_full" }
@@ -26,8 +27,12 @@ export async function addToCart(
     return { ok: false, code: "validation_failed" };
   }
 
-  const user = await getCurrentUser();
-  if (!user) return { ok: false, code: "not_signed_in" };
+  const authResult = await requireActiveAccount();
+  if (!authResult.ok) {
+    if (authResult.code === "account_suspended") return { ok: false, code: "not_allowed" };
+    return { ok: false, code: "not_signed_in" };
+  }
+  const user = authResult.user;
 
   const supabase = await createSupabaseServerClient();
 
@@ -74,11 +79,16 @@ export async function addToCart(
 export type RemoveFromCartResult =
   | { ok: true }
   | { ok: false; code: "not_signed_in" }
+  | { ok: false; code: "not_allowed" }
   | { ok: false; code: "not_found" };
 
 export async function removeFromCart(cartItemId: string): Promise<RemoveFromCartResult> {
-  const user = await getCurrentUser();
-  if (!user) return { ok: false, code: "not_signed_in" };
+  const authResult = await requireActiveAccount();
+  if (!authResult.ok) {
+    if (authResult.code === "account_suspended") return { ok: false, code: "not_allowed" };
+    return { ok: false, code: "not_signed_in" };
+  }
+  const user = authResult.user;
 
   const supabase = await createSupabaseServerClient();
 

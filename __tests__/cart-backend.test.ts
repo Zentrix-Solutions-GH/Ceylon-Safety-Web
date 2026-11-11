@@ -8,13 +8,14 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(),
   createSupabaseServiceRoleClient: vi.fn(), // used by clearCartForOrder
 }));
-vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
+vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn(), requireActiveAccount: vi.fn() }));
 
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getCurrentUser, requireActiveAccount } from "@/lib/auth/server";
 import { addToCart, removeFromCart, getCart, clearCartForOrder } from "@/lib/cart/index";
 
 const mockGetCurrentUser = vi.mocked(getCurrentUser);
+const mockRequireActiveAccount = vi.mocked(requireActiveAccount);
 const mockCreateClient = vi.mocked(createSupabaseServerClient);
 const mockServiceRoleClient = vi.mocked(createSupabaseServiceRoleClient);
 
@@ -46,13 +47,19 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("addToCart", () => {
   it("AC5/EC5: returns not_signed_in when no user", async () => {
-    mockGetCurrentUser.mockResolvedValue(null);
+    mockRequireActiveAccount.mockResolvedValue({ ok: false, code: "reauth_required" } as never);
     const result = await addToCart("doc-1", "en");
     expect(result).toEqual({ ok: false, code: "not_signed_in" });
   });
 
+  it("S17: returns not_allowed for suspended user", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: false, code: "account_suspended" } as never);
+    const result = await addToCart("doc-1", "en");
+    expect(result).toEqual({ ok: false, code: "not_allowed" });
+  });
+
   it("AC1/EC1: returns document_unavailable for deleted document", async () => {
-    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const docSingle = vi.fn().mockResolvedValue({ data: null, error: null });
     const sb = { from: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ single: docSingle }) }) }) }) };
     mockCreateClient.mockResolvedValue(sb as never);
@@ -61,7 +68,7 @@ describe("addToCart", () => {
   });
 
   it("AC1/EC1: returns document_unavailable for unpublished document", async () => {
-    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const docSingle = vi.fn().mockResolvedValue({ data: { ...fakeDoc, status: "draft" }, error: null });
     const sb = { from: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ single: docSingle }) }) }) }) };
     mockCreateClient.mockResolvedValue(sb as never);
@@ -70,13 +77,13 @@ describe("addToCart", () => {
   });
 
   it("AC1: returns validation_failed for invalid language", async () => {
-    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const result = await addToCart("doc-1", "fr" as never);
     expect(result).toEqual({ ok: false, code: "validation_failed" });
   });
 
   it("AC7/EC3: returns already_in_cart for duplicate (unique constraint violation)", async () => {
-    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const docSingle = vi.fn().mockResolvedValue({ data: fakeDoc, error: null });
     const insertSingle = vi.fn().mockResolvedValue({ data: null, error: { code: "23505", message: "duplicate" } });
     const sb = {
@@ -95,7 +102,7 @@ describe("addToCart", () => {
   });
 
   it("AC5/EC4: returns cart_full when cart has 50 items", async () => {
-    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const docSingle = vi.fn().mockResolvedValue({ data: fakeDoc, error: null });
     const sb = {
       from: vi.fn().mockImplementation((table: string) => {
@@ -109,7 +116,7 @@ describe("addToCart", () => {
   });
 
   it("AC1: happy path inserts row and returns ok", async () => {
-    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const docSingle = vi.fn().mockResolvedValue({ data: fakeDoc, error: null });
     const insertSingle = vi.fn().mockResolvedValue({ data: { id: "item-1" }, error: null });
     const sb = {
@@ -132,7 +139,7 @@ describe("addToCart", () => {
 
 describe("removeFromCart", () => {
   it("AC2: happy path removes own item", async () => {
-    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const sb = makeSupabaseMock();
     // select returns the item (ownership confirmed), delete succeeds
     sb.from = vi.fn().mockImplementation((table: string) => {
@@ -161,7 +168,7 @@ describe("removeFromCart", () => {
   });
 
   it("AC2/EC6: returns not_found for another user's item (select returns null)", async () => {
-    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const sb = makeSupabaseMock();
     sb.from = vi.fn().mockReturnValue({
       select: vi.fn().mockReturnValue({
@@ -179,9 +186,15 @@ describe("removeFromCart", () => {
   });
 
   it("EC5: returns not_signed_in when no user", async () => {
-    mockGetCurrentUser.mockResolvedValue(null);
+    mockRequireActiveAccount.mockResolvedValue({ ok: false, code: "reauth_required" } as never);
     const result = await removeFromCart("item-1");
     expect(result).toEqual({ ok: false, code: "not_signed_in" });
+  });
+
+  it("S17: returns not_allowed for suspended user", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: false, code: "account_suspended" } as never);
+    const result = await removeFromCart("item-1");
+    expect(result).toEqual({ ok: false, code: "not_allowed" });
   });
 });
 

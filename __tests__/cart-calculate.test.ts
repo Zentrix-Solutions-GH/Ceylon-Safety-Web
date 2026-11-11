@@ -5,19 +5,20 @@ import { NextRequest } from "next/server";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/cart/calculate", () => ({ calculateCart: vi.fn() }));
-vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
+vi.mock("@/lib/auth/server", () => ({ requireActiveAccount: vi.fn() }));
 vi.mock("@/lib/ratelimit/index", () => ({ checkRateLimit: vi.fn() }));
 
 import { calculateCart } from "@/lib/cart/calculate";
-import { getCurrentUser } from "@/lib/auth/server";
+import { requireActiveAccount } from "@/lib/auth/server";
 import { checkRateLimit } from "@/lib/ratelimit/index";
 import { POST } from "@/app/api/cart/calculate/route";
 
 const mockCalculateCart = vi.mocked(calculateCart);
-const mockGetCurrentUser = vi.mocked(getCurrentUser);
+const mockRequireActiveAccount = vi.mocked(requireActiveAccount);
 const mockCheckRateLimit = vi.mocked(checkRateLimit);
 
-const fakeUser = { id: "user-1", email: "a@b.com", status: "active" };
+const fakeUser = { id: "user-1", email: "a@b.com" };
+const activeAuth = { ok: true, user: fakeUser } as never;
 
 const fakeResponse = {
   items: [
@@ -48,20 +49,30 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("POST /api/cart/calculate", () => {
   it("AC4: returns 401 when unauthenticated", async () => {
-    mockGetCurrentUser.mockResolvedValue(null);
+    mockRequireActiveAccount.mockResolvedValue({ ok: false, code: "reauth_required" } as never);
     const res = await POST(makeRequest());
     expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.code).toBe("not_signed_in");
+  });
+
+  it("S17: returns 403 when account is suspended", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: false, code: "account_suspended" } as never);
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.code).toBe("not_allowed");
   });
 
   it("AC4: returns 429 when rate limited", async () => {
-    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    mockRequireActiveAccount.mockResolvedValue(activeAuth);
     mockCheckRateLimit.mockResolvedValue({ ok: false, reason: "rate_limited", retryAfterSeconds: 10 });
     const res = await POST(makeRequest());
     expect(res.status).toBe(429);
   });
 
   it("AC5: returns 422 when stored cart exceeds 50 lines", async () => {
-    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    mockRequireActiveAccount.mockResolvedValue(activeAuth);
     mockCheckRateLimit.mockResolvedValue({ ok: true });
     // Simulate calculateCart returning 51 items
     const oversized = Array.from({ length: 51 }, (_, i) => ({
@@ -80,7 +91,7 @@ describe("POST /api/cart/calculate", () => {
   });
 
   it("AC4: happy path prices items and returns 200", async () => {
-    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    mockRequireActiveAccount.mockResolvedValue(activeAuth);
     mockCheckRateLimit.mockResolvedValue({ ok: true });
     mockCalculateCart.mockResolvedValue(fakeResponse);
 
@@ -94,7 +105,7 @@ describe("POST /api/cart/calculate", () => {
   });
 
   it("AC4: marks unavailable item when calculateCart returns available:false", async () => {
-    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    mockRequireActiveAccount.mockResolvedValue(activeAuth);
     mockCheckRateLimit.mockResolvedValue({ ok: true });
     mockCalculateCart.mockResolvedValue({
       items: [
@@ -122,7 +133,7 @@ describe("POST /api/cart/calculate", () => {
   });
 
   it("AC4: empty cart returns 200 with empty items", async () => {
-    mockGetCurrentUser.mockResolvedValue(fakeUser as never);
+    mockRequireActiveAccount.mockResolvedValue(activeAuth);
     mockCheckRateLimit.mockResolvedValue({ ok: true });
     mockCalculateCart.mockResolvedValue({ items: [], subtotal: 0, total: 0 });
 
@@ -131,5 +142,28 @@ describe("POST /api/cart/calculate", () => {
     const body = await res.json();
     expect(body.items).toHaveLength(0);
     expect(body.total).toBe(0);
+  });
+
+  it("AC4: buyNow happy path returns 200 with one item", async () => {
+    mockRequireActiveAccount.mockResolvedValue(activeAuth);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeResponse);
+
+    const docId = "550e8400-e29b-41d4-a716-446655440000";
+    const res = await POST(makeRequest({ buyNow: { documentId: docId, language: "en" } }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.items).toHaveLength(1);
+    expect(mockCalculateCart).toHaveBeenCalledWith("user-1", { documentId: docId, language: "en" });
+  });
+
+  it("AC4/S3: buyNow with invalid UUID returns 422", async () => {
+    mockRequireActiveAccount.mockResolvedValue(activeAuth);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+
+    const res = await POST(makeRequest({ buyNow: { documentId: "not-a-uuid", language: "en" } }));
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.code).toBe("validation_failed");
   });
 });

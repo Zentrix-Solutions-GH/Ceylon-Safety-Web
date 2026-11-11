@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/server";
+import { requireActiveAccount } from "@/lib/auth/server";
 import { checkRateLimit } from "@/lib/ratelimit/index";
 import { calculateCart } from "@/lib/cart/calculate";
 import { cartCalculateBodySchema } from "@/lib/validation/cart";
@@ -7,10 +7,14 @@ import { cartCalculateBodySchema } from "@/lib/validation/cart";
 const MAX_LINES = 50;
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const user = await getCurrentUser();
-  if (!user) {
+  const authResult = await requireActiveAccount();
+  if (!authResult.ok) {
+    if (authResult.code === "account_suspended") {
+      return NextResponse.json({ ok: false, code: "not_allowed" }, { status: 403 });
+    }
     return NextResponse.json({ ok: false, code: "not_signed_in" }, { status: 401 });
   }
+  const user = authResult.user;
 
   const rl = await checkRateLimit({
     limitName: "cart-calculate",
