@@ -221,12 +221,11 @@ BEGIN
 END;
 $$;
 
--- Allow authenticated users to call this SECURITY DEFINER function.
--- The function enforces its own ownership check via p_user_id which the
--- TypeScript layer passes from requireActiveAccount() — never from input.
-GRANT EXECUTE ON FUNCTION public.create_order_locked(uuid, text, text, text, jsonb, jsonb)
-  TO authenticated;
-
--- Revoke from PUBLIC so anon callers cannot reach it.
-REVOKE ALL ON FUNCTION public.create_order_locked(uuid, text, text, text, jsonb, jsonb)
-  FROM PUBLIC;
+-- Supabase's ALTER DEFAULT PRIVILEGES auto-grants EXECUTE on public functions to
+-- both anon and authenticated. REVOKE FROM PUBLIC does not strip those direct
+-- role grants (see migration 20261029000002).
+-- authenticated retains EXECUTE — TypeScript calls this via supabase.rpc();
+--   the auth.uid() assertion inside the function is the security boundary.
+-- anon must not call it directly.
+REVOKE EXECUTE ON FUNCTION public.create_order_locked(uuid, text, text, text, jsonb, jsonb)
+  FROM anon;

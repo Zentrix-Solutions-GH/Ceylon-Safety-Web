@@ -638,7 +638,7 @@ WHERE n.nspname IN ('public', 'private')
     WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e'
   )
   AND NOT (n.nspname = 'public' AND p.proname = ANY(
-    ARRAY['has_permission','is_staff_member','is_super_admin','profile_is_super_admin']
+    ARRAY['has_permission','is_staff_member','is_super_admin','profile_is_super_admin','create_order_locked']
   ))
   AND NOT (n.nspname = 'public' AND p.proname = 'search_all')
 ORDER BY n.nspname, p.proname;
@@ -678,6 +678,24 @@ SELECT ok(
   'AC5: authenticated can still EXECUTE public.profile_is_super_admin(uuid)'
 );
 RESET role;
+
+-- S-078: create_order_locked is callable by authenticated (TypeScript calls it
+-- via supabase.rpc); anon must not reach it. The auth.uid() assertion inside the
+-- function is the runtime security boundary.
+SELECT throws_ok(
+  $$SET LOCAL role TO anon; SELECT public.create_order_locked(NULL::uuid,NULL,NULL,NULL,NULL::jsonb,NULL::jsonb)$$,
+  '42501',
+  NULL,
+  'AC5: anon cannot EXECUTE public.create_order_locked(uuid, text, text, text, jsonb, jsonb)'
+);
+SELECT ok(
+  has_function_privilege(
+    'authenticated',
+    'public.create_order_locked(uuid, text, text, text, jsonb, jsonb)',
+    'EXECUTE'
+  ),
+  'AC5: authenticated can EXECUTE public.create_order_locked(uuid, text, text, text, jsonb, jsonb)'
+);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- AC6: Guarded-behaviour regressions
