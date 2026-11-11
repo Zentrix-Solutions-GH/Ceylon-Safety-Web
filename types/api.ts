@@ -84,3 +84,19 @@ export interface AdminBadgeCounts {
   bankTransfers: number;
   downloadRequests: number;
 }
+
+// ── Commerce / Checkout (S-078) ─────────────────────────────────────────────
+
+export const COMMERCE_ERROR_CODES = [
+  "cart_empty",
+  "item_unavailable",
+  "language_unavailable",
+  "price_changed",
+  "pending_order_exists",
+  "terms_required",
+  "billing_invalid",
+  "payment_unavailable",
+  "payment_in_progress",
+] as const;
+
+export type CommerceErrorCode = (typeof COMMERCE_ERROR_CODES)[number];
