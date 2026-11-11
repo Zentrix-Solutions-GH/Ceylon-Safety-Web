@@ -4,11 +4,11 @@ import { listAuthors } from "@/lib/authors/actions/listAuthors";
 import { listCategories } from "@/lib/articles/listCategories";
 import ArticleEditor from "@/components/admin/ArticleEditor/index";
 
-export default async function ArticleEditPage({
-  params,
-}: {
+interface PageProps {
   params: Promise<{ id: string }>;
-}) {
+}
+
+export default async function ArticleEditPage({ params }: PageProps) {
   const { id } = await params;
 
   const [articleResult, authorsResult, categories] = await Promise.all([
@@ -22,7 +22,9 @@ export default async function ArticleEditPage({
     redirect("/admin/articles");
   }
 
-  if (!authorsResult.ok) redirect("/admin/articles");
+  if (!authorsResult.ok) {
+    redirect("/admin/articles");
+  }
 
   return (
     <ArticleEditor

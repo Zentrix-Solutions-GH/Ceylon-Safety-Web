@@ -95,11 +95,25 @@ describe("clashSafeSlug", () => {
 });
 
 describe("isReservedSlug (S-057 EC3: inline editor validation)", () => {
-  it("returns true for admin", () => { expect(isReservedSlug("admin")).toBe(true); });
-  it("returns true for api", () => { expect(isReservedSlug("api")).toBe(true); });
-  it("returns true for search", () => { expect(isReservedSlug("search")).toBe(true); });
-  it("returns false for a safe slug", () => { expect(isReservedSlug("fire-safety-tips")).toBe(false); });
-  it("returns false for an empty string", () => { expect(isReservedSlug("")).toBe(false); });
+  it("returns true for admin", () => {
+    expect(isReservedSlug("admin")).toBe(true);
+  });
+
+  it("returns true for api", () => {
+    expect(isReservedSlug("api")).toBe(true);
+  });
+
+  it("returns true for search", () => {
+    expect(isReservedSlug("search")).toBe(true);
+  });
+
+  it("returns false for a safe slug", () => {
+    expect(isReservedSlug("fire-safety-tips")).toBe(false);
+  });
+
+  it("returns false for an empty string", () => {
+    expect(isReservedSlug("")).toBe(false);
+  });
 });
 
 describe("RESERVED_SLUGS", () => {

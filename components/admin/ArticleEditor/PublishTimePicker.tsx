@@ -1,13 +1,18 @@
 ﻿"use client";
 
-import { useId } from "react";
 import { t } from "@/messages/en";
 
 const COLOMBO_TZ = "Asia/Colombo";
+const ONE_MINUTE_MS = 60_000;
 
-function toColomboDT(isoString: string): string {
-  // Convert ISO string to local datetime-local value in Colombo time
-  const d = new Date(isoString);
+interface PublishTimePickerProps {
+  value: string | null;
+  onChange: (isoValue: string | null) => void;
+}
+
+function toColomboDT(isoValue: string): string {
+  // Convert ISO string to datetime-local value in Asia/Colombo
+  const date = new Date(isoValue);
   const parts = new Intl.DateTimeFormat("sv-SE", {
     timeZone: COLOMBO_TZ,
     year: "numeric",
@@ -15,41 +20,38 @@ function toColomboDT(isoString: string): string {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
-  }).formatToParts(d);
+  }).formatToParts(date);
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
   return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }
 
 function toISOFromColombo(localDT: string): string {
-  // Parse datetime-local value as Colombo time and return ISO string
+  // Parse a datetime-local value as Asia/Colombo and convert to UTC ISO string
   const [datePart, timePart] = localDT.split("T");
-  const [y, mo, d] = datePart.split("-").map(Number);
-  const [h, mi] = timePart.split(":").map(Number);
-  // Colombo is UTC+5:30
-  const utcMs = Date.UTC(y, mo - 1, d, h - 5, mi - 30);
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = (timePart ?? "00:00").split(":").map(Number);
+
+  // Build a fake date in UTC, then adjust by Colombo offset (+05:30)
+  const colomboOffsetMs = 5.5 * 60 * 60 * 1000;
+  const utcMs = Date.UTC(year, month - 1, day, hour, minute) - colomboOffsetMs;
   return new Date(utcMs).toISOString();
 }
 
-function formatColomboDT(isoString: string): string {
+function formatColomboDT(isoValue: string): string {
   return new Intl.DateTimeFormat("en-LK", {
     timeZone: COLOMBO_TZ,
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(isoString));
-}
-
-function isAlmostImmediate(isoString: string): boolean {
-  return new Date(isoString).getTime() - Date.now() < 60_000;
-}
-
-interface PublishTimePickerProps {
-  value: string | null;
-  onChange: (isoString: string | null) => void;
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(isoValue));
 }
 
 export default function PublishTimePicker({ value, onChange }: PublishTimePickerProps) {
-  const id = useId();
+  const localValue = value ? toColomboDT(value) : "";
+  const isAlmostImmediate = value !== null && new Date(value).getTime() - Date.now() < ONE_MINUTE_MS;
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value;
@@ -58,20 +60,23 @@ export default function PublishTimePicker({ value, onChange }: PublishTimePicker
 
   return (
     <div>
-      <label htmlFor={id}>{t("editor.publish_time.label")}</label>
-      <div>{t("editor.publish_time.timezone")}</div>
+      <label htmlFor="publish-time-picker">{t("editor.publish_time.label")}</label>
+      <p className="publish-time-picker__timezone">{t("editor.publish_time.timezone")}</p>
       <input
-        id={id}
+        id="publish-time-picker"
         type="datetime-local"
-        value={value ? toColomboDT(value) : ""}
+        value={localValue}
         onChange={handleChange}
       />
       {value && (
-        <div>
-          {isAlmostImmediate(value)
-            ? t("editor.publish_time.almost_immediate")
-            : t("editor.publish_time.will_go_live").replace("{date}", formatColomboDT(value))}
-        </div>
+        <p className="publish-time-picker__preview">
+          {t("editor.publish_time.will_go_live", { date: formatColomboDT(value) })}
+        </p>
+      )}
+      {isAlmostImmediate && (
+        <p role="alert" className="publish-time-picker__warning">
+          {t("editor.publish_time.almost_immediate")}
+        </p>
       )}
     </div>
   );
