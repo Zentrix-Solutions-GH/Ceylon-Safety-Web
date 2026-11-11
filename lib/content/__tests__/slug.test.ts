@@ -1,7 +1,7 @@
 // S-048: lib/content/slug — AC6/EC3 slug generation rules
 
 import { describe, it, expect } from "vitest";
-import { generateSlug, clashSafeSlug, RESERVED_SLUGS } from "@/lib/content/slug";
+import { generateSlug, clashSafeSlug, RESERVED_SLUGS, isReservedSlug } from "@/lib/content/slug";
 
 describe("generateSlug", () => {
   it("lowercases the title", () => {
@@ -91,6 +91,28 @@ describe("clashSafeSlug", () => {
     const sb = makeSlugMock([[{ id: ARTICLE_ID }]]);
     const result = await clashSafeSlug("fire-safety", ARTICLE_ID, "en", sb as never);
     expect(result).toBe("fire-safety");
+  });
+});
+
+describe("isReservedSlug (S-057 EC3: inline editor validation)", () => {
+  it("returns true for admin", () => {
+    expect(isReservedSlug("admin")).toBe(true);
+  });
+
+  it("returns true for api", () => {
+    expect(isReservedSlug("api")).toBe(true);
+  });
+
+  it("returns true for search", () => {
+    expect(isReservedSlug("search")).toBe(true);
+  });
+
+  it("returns false for a safe slug", () => {
+    expect(isReservedSlug("fire-safety-tips")).toBe(false);
+  });
+
+  it("returns false for an empty string", () => {
+    expect(isReservedSlug("")).toBe(false);
   });
 });
 

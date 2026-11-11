@@ -1,4 +1,4 @@
-import "server-only";
+"use server";
 import { z } from "zod";
 import { requireStaff } from "@/lib/auth/server";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";

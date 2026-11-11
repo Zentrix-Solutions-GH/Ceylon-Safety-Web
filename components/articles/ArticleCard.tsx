@@ -9,7 +9,7 @@ export interface ArticleCardUIProps {
   excerpt: string | null;
   coverUrl?: string;
   coverAlt?: string;
-  categoryName: string;
+  categoryName?: string;
   authorName: string;
   publishedAt: string;
   likeCount: number;
@@ -50,14 +50,17 @@ export function ArticleCardUI({
           src={imgSrc}
           alt={imgAlt}
           loading="lazy"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 480px"
           className="h-full w-full object-cover transition group-hover:scale-105"
           onError={(e) => { (e.currentTarget as HTMLImageElement).src = PLACEHOLDER; }}
         />
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <span className="text-xs font-semibold uppercase tracking-wide text-red-600">
-          {categoryName}
-        </span>
+        {categoryName && (
+          <span className="text-xs font-semibold uppercase tracking-wide text-red-600">
+            {categoryName}
+          </span>
+        )}
         <h2 className="line-clamp-2 text-base font-bold text-gray-900">{title}</h2>
         {excerpt && (
           <p className="line-clamp-3 text-sm text-gray-600">{excerpt}</p>

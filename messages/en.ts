@@ -224,6 +224,7 @@ const en = {
   "editor.save.saving": "Saving…",
   "editor.save.saved": "Saved",
   "editor.save.conflict": "Someone else changed this article. Reload to see their version. Your text is kept in this browser.",
+  "editor.save.error": "Save failed. Your changes are kept in this browser.",
   "editor.save.refs_inconsistent": "Saved, but some content references may be broken.",
   "editor.restore.banner": "You have unsaved changes from {date}. Restore?",
   "editor.restore.button": "Restore",
@@ -326,6 +327,16 @@ const en = {
   "articles.load_more.retry": "Try again",
   "articles.card.likes": "{count} likes",
   "articles.card.comments": "{count} comments",
+  // --- home feed (S-066) ---
+  "home.page_title": "CeylonSafety — Health & Safety Resources",
+  "home.page_description": "Health and safety articles, guides, and checklists for the Sri Lankan workplace.",
+  "home.feed_label": "Latest articles and videos",
+  "home.video_card_label": "Video: {title}",
+  "home.counters_label": "Site statistics",
+  "home.counter.articles": "Articles",
+  "home.counter.documents": "Documents",
+  "home.counter.users": "Members",
+  "home.counter.downloads": "Downloads",
 
   // --- article full page (S-060) ---
   "article.back_to_articles": "Back to articles",

@@ -1,6 +1,6 @@
-// Document types for the admin backend (S-069).
-// Backend defines; frontend consumes. document_files.file_key never appears here.
-// coverImageKey (the cover R2 key) is intentionally included — the admin screen needs it.
+// Document types — admin (S-069) and public (S-071).
+// Backend defines; frontend consumes. document_files.file_key never appears in any response.
+// coverImageKey on AdminDocument is the cover R2 key — admin screen needs it; public types never expose it.
 
 export type DocumentStatus = "draft" | "published" | "hidden";
 export type DocKind = "checklist" | "safety_sign" | "toolbox_talk";
@@ -137,4 +137,81 @@ export type GetDocumentResult =
   | { ok: true; document: AdminDocument }
   | { ok: false; code: "not_allowed" }
   | { ok: false; code: "not_found" }
+  | { ok: false; code: "unknown"; reason?: string };
+
+// ── Public types (S-071) ────────────────────────────────────────────────────
+
+/** Languages that have a current ready full file. AC2. */
+export type PublicDocumentLanguages = DocumentLanguage[];
+
+/**
+ * Per-language preview availability: count of ready current preview rows (sort_order 1–3).
+ * 0 = no preview for this language. AC3 (analyst gap resolved).
+ */
+export type PreviewAvailability = Record<DocumentLanguage, number>;
+
+/** Card shown in the public document list. No file keys, no file sizes. AC2. */
+export interface PublicDocumentCard {
+  id: string;
+  slug: string;
+  title: string;
+  coverImageKey: string | null;
+  priceCents: number;
+  pageCount: number | null;
+  downloadCount: number;
+  docKind: DocKind;
+  categoryId: string;
+  categoryName: string | null;
+  languages: PublicDocumentLanguages;
+  /** True when no ready full file exists in any language (post-publish file removal). AC4. */
+  unavailable: boolean;
+}
+
+/** Full document as returned by getPublicDocument(slug). AC3. */
+export interface PublicDocument extends PublicDocumentCard {
+  description: string | null;
+  previewAvailability: PreviewAvailability;
+}
+
+/** Filters accepted by GET /api/documents. AC1. */
+export interface DocumentFilters {
+  category?: string;
+  type?: DocKind;
+  sort?: "newest" | "popular";
+  page?: number;
+}
+
+/** Response envelope from GET /api/documents. AC1. */
+export interface DocumentsPage {
+  documents: PublicDocumentCard[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export type ListPublicDocumentsResult =
+  | { ok: true; data: DocumentsPage }
+  | { ok: false; code: "validation_failed"; reason: string }
+  | { ok: false; code: "unknown"; reason?: string };
+
+export type GetPublicDocumentResult =
+  | { ok: true; document: PublicDocument }
+  | { ok: false; code: "not_found" }
+  /** slug was found in slug_redirects — caller should 301 to newSlug. */
+  | { ok: false; code: "redirect"; newSlug: string }
+  | { ok: false; code: "unknown"; reason?: string };
+
+/** Item returned by listDocumentPickerItems. AC6. */
+export interface DocumentPickerItem {
+  id: string;
+  slug: string;
+  title: string;
+  coverImageKey: string | null;
+  priceCents: number;
+  kind: "document";
+}
+
+export type ListDocumentPickerItemsResult =
+  | { ok: true; items: DocumentPickerItem[]; hasMore: boolean }
+  | { ok: false; code: "not_allowed" }
   | { ok: false; code: "unknown"; reason?: string };

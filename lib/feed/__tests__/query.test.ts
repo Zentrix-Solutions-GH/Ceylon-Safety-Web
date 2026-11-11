@@ -6,14 +6,16 @@ vi.mock("@/lib/config", () => ({
   publicConfig: { supabaseUrl: "https://test.supabase.co", supabaseAnonKey: "anon" },
 }));
 vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseAnonClient: vi.fn(),
   createSupabaseServiceRoleClient: vi.fn(),
 }));
 vi.mock("@/lib/ratelimit", () => ({ checkRateLimit: vi.fn() }));
 vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn }));
 
 import { parseCursor, encodeCursor, PAGE_SIZE, getFeed } from "../query";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 
+const mockCreateAnon = vi.mocked(createSupabaseAnonClient);
 const mockCreate = vi.mocked(createSupabaseServiceRoleClient);
 
 function makeRow(overrides: Record<string, unknown> = {}) {
@@ -56,6 +58,9 @@ function makeQueryChain(resolvedData: unknown[]) {
 function makeSupabaseMock(feedRows: unknown[]) {
   const feedChain = makeQueryChain(feedRows);
   const articlesChain = makeQueryChain([]);
+  mockCreateAnon.mockReturnValue({
+    from: vi.fn(() => feedChain),
+  } as never);
   mockCreate.mockReturnValue({
     from: vi.fn((table: string) => (table === "articles" ? articlesChain : feedChain)),
   } as never);
