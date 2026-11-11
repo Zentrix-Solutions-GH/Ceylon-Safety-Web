@@ -1,7 +1,7 @@
 ---
 id: S-057
 title: Editor save flow — metadata, local backup, publish gating
-status: ready
+status: in-progress
 owner: frontend
 risk: normal
 branch: feature/S-057-editor-save-flow
