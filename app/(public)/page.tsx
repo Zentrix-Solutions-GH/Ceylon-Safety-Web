@@ -14,8 +14,8 @@ const AUTO_LOAD_UNTIL_PAGE = 3;
 
 export default async function HomePage() {
   const [feedResult, counters] = await Promise.all([
-    getFeed().catch(() => ({ ok: false as const, page: undefined })),
-    getCounters().catch(() => ({ articles: null, documents: null, users: null, downloads: null })),
+    getFeed().catch((err) => { console.error("[HomePage] feed error", err); return { ok: false as const, page: undefined }; }),
+    getCounters().catch((err) => { console.error("[HomePage] counters error", err); return { articles: null, documents: null, users: null, downloads: null }; }),
   ]);
 
   const firstPage = feedResult.ok
