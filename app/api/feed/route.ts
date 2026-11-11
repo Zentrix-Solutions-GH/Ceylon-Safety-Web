@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getFeed, applyFeedRateLimit } from "@/lib/feed/query";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const ip = req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
   if (ip) {
     const rateResult = await applyFeedRateLimit(ip);
     if (!rateResult.ok) {

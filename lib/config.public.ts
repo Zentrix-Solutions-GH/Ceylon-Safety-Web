@@ -31,4 +31,5 @@ export const publicConfig = {
   // Cloudflare Turnstile public site key (safe to expose in browser).
   // For local development use the always-passing test key: 1x00000000000000000000AA
   turnstileSiteKey: requiredString("NEXT_PUBLIC_TURNSTILE_SITE_KEY", process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY),
+  mediaCdnUrl: requiredString("NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL", process.env.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL),
 } as const;
