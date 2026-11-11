@@ -106,7 +106,7 @@ $ bash scripts/check.sh
 - **P0** `lib/feed/query.ts:102` / migrations — anon client needs `GRANT SELECT ON public.feed_items TO anon, authenticated`; view has no explicit grant; feed silently empty in production. (full-review 2026-11-11)
 - **P1** `app/api/feed/route.ts:5` — `.at(-1)` on XFF gives Vercel node IP on CF+Vercel; use `cf-connecting-ip` header instead. (full-review 2026-11-11)
 - **P1** `app/(public)/page.tsx:17` — DB errors swallowed silently with no server-side logging. (full-review 2026-11-11) ✅ Fixed
-- **P1** `app/api/feed/route.ts:6` — when both `cf-connecting-ip` and `x-forwarded-for` absent, `ip` is `undefined`, rate limit bypassed entirely. Fall back to `"unknown"` sentinel key. (full-review 2026-11-11)
+- **P1** `app/api/feed/route.ts:6` — when both `cf-connecting-ip` and `x-forwarded-for` absent, `ip` is `undefined`, rate limit bypassed entirely. Fall back to `"unknown"` sentinel key. (full-review 2026-11-11) ✅ Fixed
 
 ## After this merges, a user can:
 
