@@ -114,6 +114,24 @@ describe("addToCart", () => {
     expect(result).toEqual({ ok: false, code: "cart_full" });
   });
 
+  it("EC4: returns cart_full when DB trigger fires P0001 (concurrent race safety net)", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    const docSingle = vi.fn().mockResolvedValue({ data: fakeDoc, error: null });
+    const sb = {
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === "documents") return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockReturnValue({ single: docSingle }) }) }) };
+        if (table === "cart_items") return {
+          select: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ count: 2, error: null }) }),
+          insert: vi.fn().mockResolvedValue({ error: { code: "P0001", message: "cart_full" } }),
+        };
+        return { upsert: vi.fn().mockResolvedValue({ error: null }) };
+      }),
+    };
+    mockCreateClient.mockResolvedValue(sb as never);
+    const result = await addToCart("doc-1", "en");
+    expect(result).toEqual({ ok: false, code: "cart_full" });
+  });
+
   it("AC1: happy path inserts row and returns ok", async () => {
     mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const docSingle = vi.fn().mockResolvedValue({ data: fakeDoc, error: null });

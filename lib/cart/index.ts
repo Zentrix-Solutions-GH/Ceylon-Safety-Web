@@ -173,5 +173,10 @@ export async function clearCartForOrder(orderId: string, userId: string): Promis
     .map((item) => `and(document_id.eq.${item.document_id},language.eq.${item.language})`)
     .join(",");
 
-  await supabase.from("cart_items").delete().eq("user_id", userId).or(orFilter);
+  const { error: clearError } = await supabase
+    .from("cart_items")
+    .delete()
+    .eq("user_id", userId)
+    .or(orFilter);
+  if (clearError) throw clearError;
 }
