@@ -239,7 +239,6 @@ export async function createCheckout(
       p_user_id: user.id,
       p_status: "pending",
       p_provider: "payhere",
-      p_method: null,
       p_order_data: orderData,
       p_items: buildOrderItems(lines),
     },
