@@ -11,6 +11,7 @@ export interface CartItem {
 /** One priced line returned by /api/cart/calculate. */
 export interface CartLineResult {
   cartItemId: string | null;
+  documentId: string;
   title: string;
   slug: string;
   coverUrl: string | null;

@@ -1121,8 +1121,14 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "complete_document_file":
+            "cancel_order_locked":
+{ Args: { "p_order_id": string,"p_user_id": string }; Returns: Json
+                           },
+"complete_document_file":
 { Args: { "p_checksum_sha256": string,"p_file_id": string,"p_size_bytes": number }; Returns: undefined
+                           },
+"create_order_locked":
+{ Args: { "p_items"?: Json,"p_method"?: string,"p_order_data"?: Json,"p_provider": string,"p_status": string,"p_user_id": string }; Returns: Json
                            },
 "create_profile_for":
 { Args: { "p_user": unknown }; Returns: undefined

@@ -24,6 +24,7 @@ const fakeResponse = {
   items: [
     {
       cartItemId: "item-1",
+      documentId: "00000000-0000-4000-8000-000000000001",
       title: "Safety Sign EN",
       slug: "safety-sign",
       coverUrl: null,
@@ -77,6 +78,7 @@ describe("POST /api/cart/calculate", () => {
     // Simulate calculateCart returning 51 items
     const oversized = Array.from({ length: 51 }, (_, i) => ({
       cartItemId: `item-${i}`,
+      documentId: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
       title: `Doc ${i}`,
       slug: `doc-${i}`,
       coverUrl: null,
@@ -111,6 +113,7 @@ describe("POST /api/cart/calculate", () => {
       items: [
         {
           cartItemId: "item-1",
+          documentId: "00000000-0000-4000-8000-000000000001",
           title: "Old Doc",
           slug: "old-doc",
           coverUrl: null,
@@ -139,6 +142,7 @@ describe("POST /api/cart/calculate", () => {
       items: [
         {
           cartItemId: "item-1",
+          documentId: "00000000-0000-4000-8000-000000000001",
           title: "Safety Sign",
           slug: "safety-sign",
           coverUrl: null,
@@ -190,6 +194,7 @@ describe("POST /api/cart/calculate", () => {
     mockCheckRateLimit.mockResolvedValue({ ok: true });
     const exactly50 = Array.from({ length: 50 }, (_, i) => ({
       cartItemId: `item-${i}`,
+      documentId: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
       title: `Doc ${i}`,
       slug: `doc-${i}`,
       coverUrl: null,
