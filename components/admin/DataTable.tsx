@@ -12,7 +12,7 @@ interface Props<T> {
   rows: T[];
   getRowKey: (row: T) => string;
   getRowClassName?: (row: T) => string;
-  getRowProps?: (row: T) => React.ComponentPropsWithoutRef<"tr">;
+  getRowProps?: (row: T) => Record<string, string | number | boolean | undefined>;
 }
 
 export default function DataTable<T>({ columns, rows, getRowKey, getRowClassName, getRowProps }: Props<T>) {
@@ -37,7 +37,7 @@ export default function DataTable<T>({ columns, rows, getRowKey, getRowClassName
             <tr
               key={getRowKey(row)}
               className={`hover:bg-muted/30 transition-colors${getRowClassName ? ` ${getRowClassName(row)}` : ""}`}
-              {...(getRowProps ? getRowProps(row) : {})}
+              {...(getRowProps ? getRowProps(row) as React.ComponentPropsWithoutRef<"tr"> : {})}
             >
               {columns.map((col) => (
                 <td key={col.key} className={`px-4 py-3 ${col.className ?? ""}`}>
