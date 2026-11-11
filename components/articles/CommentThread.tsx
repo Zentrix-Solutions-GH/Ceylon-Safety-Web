@@ -16,6 +16,7 @@ export function CommentThread({ articleId, initialComments, initialNextCursor }:
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [nextCursor, setNextCursor] = useState<CommentCursor | null>(initialNextCursor);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
 
   useEffect(() => {
     if (userStatus !== "active") return;
@@ -38,9 +39,14 @@ export function CommentThread({ articleId, initialComments, initialNextCursor }:
         kind: "article",
         id: articleId,
         cursor: JSON.stringify(nextCursor),
+        pageSize: "10",
       });
       const res = await fetch(`/api/comments?${params}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        setLoadMoreError(true);
+        return;
+      }
+      setLoadMoreError(false);
       const data = await res.json();
       setComments((prev) => [...prev, ...(data.comments ?? [])]);
       setNextCursor(data.nextCursor ?? null);
@@ -76,6 +82,9 @@ export function CommentThread({ articleId, initialComments, initialNextCursor }:
             </li>
           ))}
         </ul>
+      )}
+      {loadMoreError && (
+        <p role="alert">{t("article.comment.load_more.error")}</p>
       )}
       {nextCursor && (
         <button type="button" onClick={loadMore} disabled={loadingMore}>

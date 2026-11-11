@@ -98,6 +98,48 @@ describe("CommentThread", () => {
     expect(url).toContain(encodeURIComponent(JSON.stringify(cursor)));
   });
 
+  it("AC5: Load more sends pageSize param in request URL", async () => {
+    mockUserStatus.mockReturnValue("signed-out");
+    const cursor: CommentCursor = { createdAt: "2026-01-01T00:00:00Z", id: "c1" };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ comments: [], nextCursor: null }),
+    });
+    render(
+      <CommentThread articleId="a1" initialComments={[makeComment()]} initialNextCursor={cursor} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /load more/i }));
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+    const url: string = mockFetch.mock.calls[0][0];
+    expect(url).toContain("pageSize=10");
+  });
+
+  it("AC5: approved comments appear newest-first (DOM order)", () => {
+    mockUserStatus.mockReturnValue("signed-out");
+    const older = makeComment({ id: "c1", body: "Older comment", createdAt: "2026-01-01T00:00:00Z" });
+    const newer = makeComment({ id: "c2", body: "Newer comment", createdAt: "2026-01-02T00:00:00Z" });
+    // initialComments is passed newest-first from the server; component must preserve order
+    render(
+      <CommentThread articleId="a1" initialComments={[newer, older]} initialNextCursor={null} />,
+    );
+    const items = screen.getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("Newer comment");
+    expect(items[1]).toHaveTextContent("Older comment");
+  });
+
+  it("EC: Load more failure shows role=alert error message", async () => {
+    mockUserStatus.mockReturnValue("signed-out");
+    const cursor: CommentCursor = { createdAt: "2026-01-01T00:00:00Z", id: "c1" };
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+    render(
+      <CommentThread articleId="a1" initialComments={[makeComment()]} initialNextCursor={cursor} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /load more/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(/could not load more/i),
+    );
+  });
+
   it("AC6: active user sees their pending comment above the thread", async () => {
     mockUserStatus.mockReturnValue("active");
     mockFetch.mockResolvedValueOnce({
