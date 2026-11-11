@@ -85,6 +85,8 @@ export const serverConfig = {
   videoPlaceholderKey: optional("VIDEO_PLACEHOLDER_KEY", "placeholders/video.jpg"),
   feedRateLimitPerMinute: parseInt(optional("FEED_RATE_LIMIT_PER_MINUTE", "60"), 10),
   countersRateLimitPerMinute: parseInt(optional("COUNTERS_RATE_LIMIT_PER_MINUTE", "60"), 10),
+  documentsPageSize: parseInt(optional("DOCUMENTS_PAGE_SIZE", "12"), 10),
+  previewRateLimitPerMinute: parseInt(optional("PREVIEW_RATE_LIMIT_PER_MINUTE", "60"), 10),
 } as const;
 
 // Healthchecks config — optional; returns null when env vars are absent so the

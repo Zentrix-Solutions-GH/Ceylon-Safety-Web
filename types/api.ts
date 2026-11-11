@@ -55,6 +55,7 @@ export interface ArticleFeedItem extends FeedItemBase {
   kind: "article";
   excerpt: string | null;
   authorName: string | null;
+  categoryName: string | null;
 }
 
 export interface VideoFeedItem extends FeedItemBase {
