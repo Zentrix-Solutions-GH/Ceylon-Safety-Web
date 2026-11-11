@@ -12,7 +12,7 @@ interface Props<T> {
   rows: T[];
   getRowKey: (row: T) => string;
   getRowClassName?: (row: T) => string;
-  getRowProps?: (row: T) => React.HTMLAttributes<HTMLTableRowElement>;
+  getRowProps?: (row: T) => React.ComponentPropsWithoutRef<"tr">;
 }
 
 export default function DataTable<T>({ columns, rows, getRowKey, getRowClassName, getRowProps }: Props<T>) {
