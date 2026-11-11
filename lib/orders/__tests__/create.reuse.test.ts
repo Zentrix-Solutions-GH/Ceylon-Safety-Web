@@ -201,7 +201,6 @@ describe("createCheckout — EC4 expires_at", () => {
     await createCheckout(validInput);
     const after = Date.now();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const rpcArgs = rpcSpy.mock.calls[0]?.[1] as { p_order_data: { expires_at: string } };
     const sentMs = new Date(rpcArgs.p_order_data.expires_at).getTime();
     const twoHoursMs = 2 * 60 * 60 * 1000;
@@ -221,7 +220,6 @@ describe("createCheckout — EC6 billing refresh on reuse", () => {
     const updatedBilling = { ...validBilling, firstName: "Priya", city: "Galle" };
     await createCheckout({ ...validInput, billing: updatedBilling });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const rpcArgs = rpcSpy.mock.calls[0]?.[1] as {
       p_order_data: { billing_name: string; billing_address: { city: string } };
     };
