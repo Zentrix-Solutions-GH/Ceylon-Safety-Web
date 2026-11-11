@@ -28,7 +28,7 @@ export default async function AdminArticlesPage({
 
   if (!articlesResult.ok) {
     if (articlesResult.code === "not_allowed") redirect("/admin");
-    redirect("/admin");
+    redirect("/admin/articles");
   }
 
   return (

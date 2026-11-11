@@ -43,7 +43,6 @@ export default function AuthorForm({ author }: Props) {
     }
 
     router.push("/admin/authors");
-    router.refresh();
   }
 
   return (

@@ -25,12 +25,14 @@ interface Props {
 }
 
 export default function ArticleStatusBadge({ status, "data-testid": testId }: Props) {
+  const style = BADGE_STYLES[status] ?? "bg-gray-100 text-gray-700";
+  const label = STATUS_LABELS[status] ?? status;
   return (
     <span
       data-testid={testId}
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${BADGE_STYLES[status]}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${style}`}
     >
-      {STATUS_LABELS[status]}
+      {label}
     </span>
   );
 }

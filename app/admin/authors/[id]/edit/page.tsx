@@ -10,6 +10,7 @@ export default async function EditAuthorPage({
 }) {
   const { id } = await params;
 
+  // TODO(backend): replace with getAuthor(id) once available — full-table fetch to find one row
   const result = await listAuthors({ includeInactive: true });
   if (!result.ok) {
     if (result.code === "not_allowed") redirect("/admin");

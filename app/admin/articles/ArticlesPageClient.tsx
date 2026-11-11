@@ -17,8 +17,9 @@ interface Props {
 
 type FilterStatus = ArticleStatus | "scheduled" | "";
 
-export default function ArticlesPageClient({ initialArticles, categories }: Props) {
+export default function ArticlesPageClient({ initialArticles, pageCount, categories }: Props) {
   const router = useRouter();
+  const currentPage = parseInt(new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("page") ?? "1", 10) || 1;
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [titleFilter, setTitleFilter] = useState("");
@@ -50,13 +51,9 @@ export default function ArticlesPageClient({ initialArticles, categories }: Prop
   function handleTitleChange(value: string) {
     setTitleFilter(value);
     if (titleDebounce.current) clearTimeout(titleDebounce.current);
-    if (value.length >= 2) {
+    if (value.length >= 2 || value.length === 0) {
       titleDebounce.current = setTimeout(() => {
         updateParam("title", value);
-      }, 300);
-    } else if (value.length === 0) {
-      titleDebounce.current = setTimeout(() => {
-        updateParam("title", "");
       }, 300);
     }
   }
@@ -178,6 +175,32 @@ export default function ArticlesPageClient({ initialArticles, categories }: Prop
           rows={initialArticles}
           getRowKey={(row) => row.id}
         />
+      )}
+
+      {pageCount > 1 && (
+        <div data-testid="articles-pagination" className="flex items-center justify-between pt-2">
+          <button
+            data-testid="pagination-prev"
+            onClick={() => updateParam("page", String(currentPage - 1))}
+            disabled={currentPage <= 1}
+            className="rounded-md border border-border px-3 py-1.5 text-sm disabled:opacity-40"
+          >
+            {t("admin.articles.page_prev")}
+          </button>
+          <span className="text-sm text-muted-foreground">
+            {t("admin.articles.page_label")
+              .replace("{current}", String(currentPage))
+              .replace("{total}", String(pageCount))}
+          </span>
+          <button
+            data-testid="pagination-next"
+            onClick={() => updateParam("page", String(currentPage + 1))}
+            disabled={currentPage >= pageCount}
+            className="rounded-md border border-border px-3 py-1.5 text-sm disabled:opacity-40"
+          >
+            {t("admin.articles.page_next")}
+          </button>
+        </div>
       )}
     </div>
   );

@@ -11,9 +11,11 @@ interface Props<T> {
   columns: Column<T>[];
   rows: T[];
   getRowKey: (row: T) => string;
+  getRowClassName?: (row: T) => string;
+  getRowProps?: (row: T) => React.HTMLAttributes<HTMLTableRowElement>;
 }
 
-export default function DataTable<T>({ columns, rows, getRowKey }: Props<T>) {
+export default function DataTable<T>({ columns, rows, getRowKey, getRowClassName, getRowProps }: Props<T>) {
   return (
     <div className="overflow-x-auto rounded-md border border-border">
       <table className="min-w-full text-sm">
@@ -32,7 +34,11 @@ export default function DataTable<T>({ columns, rows, getRowKey }: Props<T>) {
         </thead>
         <tbody className="divide-y divide-border bg-background">
           {rows.map((row) => (
-            <tr key={getRowKey(row)} className="hover:bg-muted/30 transition-colors">
+            <tr
+              key={getRowKey(row)}
+              className={`hover:bg-muted/30 transition-colors${getRowClassName ? ` ${getRowClassName(row)}` : ""}`}
+              {...(getRowProps ? getRowProps(row) : {})}
+            >
               {columns.map((col) => (
                 <td key={col.key} className={`px-4 py-3 ${col.className ?? ""}`}>
                   {col.render(row)}
