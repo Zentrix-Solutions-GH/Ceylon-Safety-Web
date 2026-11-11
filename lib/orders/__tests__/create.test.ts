@@ -362,7 +362,18 @@ describe("createCheckout — EC3 re-buy already-owned document", () => {
 // ─── AC14: no PII in server logs ─────────────────────────────────────────────
 
 describe("createCheckout — AC14 no PII in logs", () => {
-  it("does not log billing PII fields on a successful checkout", async () => {
+  const piiFieldNames  = ["phone", "billing_phone", "firstName", "lastName", "billing_name", "address", "billing_address", "email", "billing_email"];
+  const piiFieldValues = ["0771234567", "Kasun", "Perera", "No 1, Main Street", "Colombo", "buyer@example.com"];
+
+  function assertNoPII(calls: unknown[][]): void {
+    const serialised = calls.map((c) => JSON.stringify(c));
+    for (const entry of serialised) {
+      for (const name of piiFieldNames)  expect(entry).not.toContain(name);
+      for (const val  of piiFieldValues) expect(entry).not.toContain(val);
+    }
+  }
+
+  it("does not log billing PII fields or values on a successful checkout", async () => {
     mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     mockCheckRateLimit.mockResolvedValue({ ok: true });
     mockCalculateCart.mockResolvedValue(fakeCartResponse);
@@ -380,19 +391,32 @@ describe("createCheckout — AC14 no PII in logs", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const logSpy   = vi.spyOn(console, "log").mockImplementation(() => {});
 
-    await createCheckout({
-      billing: { ...validBilling, phone: "0771234567" },
-      expectedTotalCents: 1000,
-      acceptedTerms: true,
-    });
+    await createCheckout({ billing: validBilling, expectedTotalCents: 1000, acceptedTerms: true });
 
-    const piiFields = ["phone", "billing_phone", "firstName", "lastName", "billing_name", "address", "billing_address", "email", "billing_email"];
-    const allArgs = [...errorSpy.mock.calls, ...logSpy.mock.calls].map((c) => JSON.stringify(c));
-    for (const field of piiFields) {
-      for (const entry of allArgs) {
-        expect(entry).not.toContain(field);
-      }
-    }
+    assertNoPII([...errorSpy.mock.calls, ...logSpy.mock.calls]);
+
+    errorSpy.mockRestore();
+    logSpy.mockRestore();
+  });
+
+  it("does not log billing PII fields or values when payment_unavailable fires (error path)", async () => {
+    // The payment_unavailable console.error is the most likely log to accidentally
+    // carry PII — assert it only logs revision slugs, not user data.
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeCartResponse);
+
+    const db = makeSupabaseMock();
+    // Both revisions missing → triggers the console.error alert
+    (db.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null, error: { code: "PGRST116" } });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const logSpy   = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await createCheckout({ billing: validBilling, expectedTotalCents: 1000, acceptedTerms: true });
+
+    assertNoPII([...errorSpy.mock.calls, ...logSpy.mock.calls]);
 
     errorSpy.mockRestore();
     logSpy.mockRestore();

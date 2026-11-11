@@ -10,6 +10,11 @@
 -- Migration 20261111000007 applied the same fix to create_order_locked.
 -- This migration brings cancel_order_locked into alignment.
 -- Body is otherwise identical to 20261111000004.
+--
+-- Privilege note: REVOKE ALL FROM PUBLIC, anon and GRANT EXECUTE TO authenticated
+-- were applied to cancel_order_locked in migration 20261111000005. CREATE OR REPLACE
+-- does NOT reset existing grants, so those privileges persist after this migration.
+-- No explicit REVOKE/GRANT is needed here.
 
 CREATE OR REPLACE FUNCTION public.cancel_order_locked(
   p_user_id  uuid,
