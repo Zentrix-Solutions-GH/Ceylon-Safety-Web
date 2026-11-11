@@ -359,6 +359,46 @@ describe("createCheckout — EC3 re-buy already-owned document", () => {
   });
 });
 
+// ─── AC14: no PII in server logs ─────────────────────────────────────────────
+
+describe("createCheckout — AC14 no PII in logs", () => {
+  it("does not log billing PII fields on a successful checkout", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeCartResponse);
+
+    const db = makeSupabaseMock();
+    (db.single as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: { id: "rev-terms-1" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "rev-refund-1" }, error: null });
+    (db.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { action: "created", order_id: "order-uuid-1", order_number: "CS-0001" },
+      error: null,
+    });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const logSpy   = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await createCheckout({
+      billing: { ...validBilling, phone: "0771234567" },
+      expectedTotalCents: 1000,
+      acceptedTerms: true,
+    });
+
+    const piiFields = ["phone", "billing_phone", "firstName", "lastName", "billing_name", "address", "billing_address", "email", "billing_email"];
+    const allArgs = [...errorSpy.mock.calls, ...logSpy.mock.calls].map((c) => JSON.stringify(c));
+    for (const field of piiFields) {
+      for (const entry of allArgs) {
+        expect(entry).not.toContain(field);
+      }
+    }
+
+    errorSpy.mockRestore();
+    logSpy.mockRestore();
+  });
+});
+
 // ─── AC13: error codes exported ───────────────────────────────────────────────
 
 describe("AC13 — COMMERCE_ERROR_CODES exported from types/api.ts", () => {

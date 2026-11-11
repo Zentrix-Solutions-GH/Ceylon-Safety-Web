@@ -73,13 +73,19 @@ async function latestRevisionId(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   slug: string,
 ): Promise<string | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("page_revisions")
     .select("id, pages!inner(slug)")
     .eq("pages.slug", slug)
     .order("published_at", { ascending: false })
     .limit(1)
     .single();
+  // PGRST116 = no rows found (genuinely missing revision — expected case).
+  // Any other error is a transient fault (network, permissions) that ops must
+  // distinguish from a missing page when triaging payment_unavailable alerts.
+  if (error && error.code !== "PGRST116") {
+    console.error("[revision] supabase error fetching page revision", { slug, code: error.code });
+  }
   return data?.id ?? null;
 }
 
@@ -167,7 +173,7 @@ export async function createCheckout(
 
   // AC2: rate limit
   const rl = await checkRateLimit({
-    limitName: "checkout",
+    limitName: "checkout:card",
     key: user.id,
     maxCount: CHECKOUT_RATE_LIMIT.max,
     windowSeconds: CHECKOUT_RATE_LIMIT.windowSeconds,
@@ -285,7 +291,7 @@ export async function createBankOrder(
 
   // Rate limit
   const rl = await checkRateLimit({
-    limitName: "checkout",
+    limitName: "checkout:bank",
     key: user.id,
     maxCount: CHECKOUT_RATE_LIMIT.max,
     windowSeconds: CHECKOUT_RATE_LIMIT.windowSeconds,
