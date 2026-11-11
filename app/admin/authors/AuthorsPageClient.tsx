@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { t } from "@/messages/en";
 import { setAuthorActive } from "@/lib/authors/actions/setAuthorActive";
 import DataTable, { type Column } from "@/components/admin/DataTable";
@@ -13,7 +12,6 @@ interface Props {
 }
 
 export default function AuthorsPageClient({ initialAuthors }: Props) {
-  const router = useRouter();
   const [authors, setAuthors] = useState(initialAuthors);
   const [toggleError, setToggleError] = useState<string | null>(null);
 
@@ -33,7 +31,6 @@ export default function AuthorsPageClient({ initialAuthors }: Props) {
     setAuthors((prev) =>
       prev.map((a) => (a.id === author.id ? result.author : a))
     );
-    router.refresh();
   }
 
   const columns: Column<Author>[] = [

@@ -12,14 +12,14 @@ import type { Category } from "@/types/article";
 interface Props {
   initialArticles: AdminArticleRow[];
   pageCount: number;
+  currentPage: number;
   categories: Category[];
 }
 
 type FilterStatus = ArticleStatus | "scheduled" | "";
 
-export default function ArticlesPageClient({ initialArticles, pageCount, categories }: Props) {
+export default function ArticlesPageClient({ initialArticles, pageCount, currentPage, categories }: Props) {
   const router = useRouter();
-  const currentPage = parseInt(new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("page") ?? "1", 10) || 1;
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [titleFilter, setTitleFilter] = useState("");

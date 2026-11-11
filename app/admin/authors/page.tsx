@@ -7,7 +7,7 @@ export default async function AdminAuthorsPage() {
 
   if (!result.ok) {
     if (result.code === "not_allowed") redirect("/admin");
-    redirect("/admin");
+    redirect("/admin/authors");
   }
 
   return <AuthorsPageClient initialAuthors={result.authors} />;

@@ -72,6 +72,7 @@ describe("ArticlesPageClient — AC1 (renders list)", () => {
       <ArticlesPageClient
         initialArticles={ARTICLES}
         pageCount={1}
+        currentPage={1}
         categories={CATEGORIES}
       />
     );
@@ -89,6 +90,7 @@ describe("ArticlesPageClient — AC2 (status filter)", () => {
       <ArticlesPageClient
         initialArticles={ARTICLES}
         pageCount={1}
+        currentPage={1}
         categories={CATEGORIES}
       />
     );
@@ -105,6 +107,7 @@ describe("ArticlesPageClient — AC3 (title filter debounce)", () => {
       <ArticlesPageClient
         initialArticles={ARTICLES}
         pageCount={1}
+        currentPage={1}
         categories={CATEGORIES}
       />
     );
@@ -124,6 +127,7 @@ describe("ArticlesPageClient — AC4 (links)", () => {
       <ArticlesPageClient
         initialArticles={ARTICLES}
         pageCount={1}
+        currentPage={1}
         categories={CATEGORIES}
       />
     );
@@ -142,6 +146,7 @@ describe("ArticlesPageClient — EC1 (empty state)", () => {
       <ArticlesPageClient
         initialArticles={[]}
         pageCount={0}
+        currentPage={1}
         categories={CATEGORIES}
       />
     );

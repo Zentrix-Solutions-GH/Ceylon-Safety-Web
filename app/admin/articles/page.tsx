@@ -35,6 +35,7 @@ export default async function AdminArticlesPage({
     <ArticlesPageClient
       initialArticles={articlesResult.data.items}
       pageCount={articlesResult.data.pageCount}
+      currentPage={page}
       categories={categories}
     />
   );
