@@ -120,7 +120,13 @@ check-public-pages: OK — checked 20 file(s), no violations.
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `components/articles/ArticleLikeButton.tsx:479`, `components/articles/CommentForm.tsx:571` — `account_status` read from `user_metadata` which is client-writable; a suspended user can remove the field and re-enable the form UI. Server 403 is the true gate. Fix: switch to `app_metadata.account_status`. (full-review 2026-11-11)
+- **P1** `components/articles/ArticleLikeButton.tsx:36–65` — no in-flight guard on `handleClick`; rapid double-click sends two requests against the same optimistic snapshot. Add a `submitting` boolean. (full-review 2026-11-11)
+- **P1** `components/articles/CommentThread.tsx:36` — `d.comments[0]` discards additional pending comments; API may return up to 5. Display all or the most recent. (full-review 2026-11-11)
+- **P1** `app/(public)/articles/[slug]/page.tsx:430` — `listComments` awaited sequentially after `getArticle`; use `Promise.all`. Also missing try/catch for graceful degradation. (full-review 2026-11-11)
+- **P1** `ArticleLikeButton.tsx`, `CommentForm.tsx`, `CommentThread.tsx` — identical `userStatus` derivation logic duplicated in all three. Extract to `hooks/useAuthStatus.ts`. (full-review 2026-11-11)
+- **P1** `app/(public)/articles/[slug]/__tests__/page.test.tsx` — engagement components mocked with no prop assertions; wiring of `initialCount`, `slug`, `articleId`, `initialNextCursor` untested. (full-review 2026-11-11)
+- **P1** `__tests__/components/articles/CommentThread.test.tsx` — Load more cursor param not verified; page-size boundary (10 items + cursor = show button) not asserted. (full-review 2026-11-11)
 
 ## After this merges
 
