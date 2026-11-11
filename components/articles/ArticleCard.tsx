@@ -50,6 +50,7 @@ export function ArticleCardUI({
           src={imgSrc}
           alt={imgAlt}
           loading="lazy"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 480px"
           className="h-full w-full object-cover transition group-hover:scale-105"
           onError={(e) => { (e.currentTarget as HTMLImageElement).src = PLACEHOLDER; }}
         />

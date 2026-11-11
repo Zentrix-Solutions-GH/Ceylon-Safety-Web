@@ -93,6 +93,14 @@ $ bash scripts/check.sh
 
 <!-- Filled in by reviewer/security-reviewer agents and /full-review -->
 
+- **P0** `components/home/Feed.tsx:5`, `components/home/VideoCard.tsx:12` — direct `process.env.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL` in client components bypasses `lib/config.public.ts`; use `publicConfig.mediaCdnUrl` instead. (full-review 2026-11-11) ✅ Fixed
+- **P1** `components/home/Feed.tsx:39-48` — `categoryName` never passed to `ArticleCardUI`; `FeedItem` has `categoryId` only, so category labels are always blank. AC2 not fully met. (full-review 2026-11-11) ✅ Fixed — added `categoryName` to `ArticleFeedItem` type and Feed.tsx
+- **P1** `components/home/Feed.tsx:142` — sentinel rendered when `error=true`; IntersectionObserver re-fires on next scroll, clears error before user can act. Add `&& !error` to sentinel condition. (full-review 2026-11-11) ✅ Fixed
+- **P1** `components/home/Feed.tsx:81` — `res.ok` not checked before `res.json()`; non-JSON error bodies throw unhandled. Add `if (!res.ok) { setError(true); return; }`. (full-review 2026-11-11) ✅ Fixed
+- **P1** `components/home/Feed.tsx:103` — empty-items guard `items.length === 0` should be `&& !cursor`; a non-null cursor with empty items causes permanent empty state. (full-review 2026-11-11) ✅ Fixed
+- **P1** AC10 — no focus restoration after Load more loads a page; `Feed.tsx` needs `useRef` on the button and `.focus()` after `setPage`. (full-review 2026-11-11) ✅ Fixed
+- **P1** AC7 — no `sizes` attribute or 480 px width on `<img>` in `ArticleCard.tsx` or `VideoCard.tsx`; browser fetches full-width images. (full-review 2026-11-11) ✅ Fixed
+
 ## After this merges, a user can:
 
 - Open the Home page and see the newest articles and videos, scroll to load two more pages, press Load more for further pages, open an article from a card, and see the counters near the footer.

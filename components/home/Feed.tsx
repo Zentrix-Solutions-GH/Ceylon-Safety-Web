@@ -1,8 +1,7 @@
 ﻿"use client";
 
-import { useState, useCallback, useRef } from "react";
-
-const MEDIA_BASE = process.env.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL ?? "";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { publicConfig } from "@/lib/config.public";
 import { t } from "@/messages/en";
 import { ArticleCardUI } from "@/components/articles/ArticleCard";
 import { VideoCard } from "@/components/home/VideoCard";
@@ -40,7 +39,8 @@ function FeedCard({ item }: { item: FeedItem }) {
       slug={item.slug}
       title={item.title}
       excerpt={item.excerpt}
-      coverUrl={item.coverImageKey ? `${MEDIA_BASE}/${item.coverImageKey}` : undefined}
+      coverUrl={item.coverImageKey ? `${publicConfig.mediaCdnUrl}/${item.coverImageKey}` : undefined}
+      categoryName={item.categoryName ?? undefined}
       authorName={item.authorName ?? ""}
       publishedAt={item.publishedAt}
       likeCount={item.likeCount}
@@ -59,6 +59,8 @@ export function Feed({ firstPage, autoLoadUntilPage }: FeedProps) {
   const cursorRef = useRef<string | null>(firstPage.nextCursor);
   cursorRef.current = cursor;
   const loadingGuard = useRef(false);
+  const loadMoreRef = useRef<HTMLButtonElement>(null);
+  const focusAfterLoad = useRef(false);
 
   const loadMore = useCallback(async () => {
     if (!cursorRef.current || loadingGuard.current) return;
@@ -67,6 +69,7 @@ export function Feed({ firstPage, autoLoadUntilPage }: FeedProps) {
     setError(false);
     try {
       const res = await fetch(`/api/feed?cursor=${encodeURIComponent(cursorRef.current)}`);
+      if (!res.ok) { setError(true); return; }
       const json = await res.json() as { ok: boolean; data?: FeedPage };
       if (!json.ok || !json.data) {
         setError(true);
@@ -75,6 +78,7 @@ export function Feed({ firstPage, autoLoadUntilPage }: FeedProps) {
       setItems((prev) => [...prev, ...json.data!.items]);
       setCursor(json.data.nextCursor);
       setPage((p) => p + 1);
+      focusAfterLoad.current = true;
     } catch {
       setError(true);
     } finally {
@@ -82,6 +86,13 @@ export function Feed({ firstPage, autoLoadUntilPage }: FeedProps) {
       loadingGuard.current = false;
     }
   }, []);
+
+  useEffect(() => {
+    if (!loading && focusAfterLoad.current) {
+      focusAfterLoad.current = false;
+      loadMoreRef.current?.focus();
+    }
+  }, [loading]);
 
   const { ref: sentinelRef } = useInfiniteScroll({
     page,
@@ -92,7 +103,7 @@ export function Feed({ firstPage, autoLoadUntilPage }: FeedProps) {
 
   const showLoadMore = !!cursor && page >= autoLoadUntilPage && !loading;
 
-  if (items.length === 0) {
+  if (items.length === 0 && !cursor) {
     return (
       <p className="py-16 text-center text-gray-500">
         {t("articles.empty.all")}
@@ -117,7 +128,7 @@ export function Feed({ firstPage, autoLoadUntilPage }: FeedProps) {
         )}
       </ul>
 
-      {!!cursor && page < autoLoadUntilPage && (
+      {!!cursor && page < autoLoadUntilPage && !error && (
         <div ref={sentinelRef} aria-hidden="true" className="h-1" />
       )}
 
@@ -137,6 +148,7 @@ export function Feed({ firstPage, autoLoadUntilPage }: FeedProps) {
       {showLoadMore && (
         <div className="mt-8 flex justify-center">
           <button
+            ref={loadMoreRef}
             type="button"
             onClick={() => void loadMore()}
             className="rounded-md bg-red-600 px-6 py-2 text-sm font-semibold text-white hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-600"

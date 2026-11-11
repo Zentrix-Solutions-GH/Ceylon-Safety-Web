@@ -1,5 +1,16 @@
 ﻿import { render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("@/lib/config.public", () => ({
+  publicConfig: {
+    supabaseUrl: "https://test.supabase.co",
+    supabaseAnonKey: "test-anon-key",
+    appUrl: "https://test.example.com",
+    turnstileSiteKey: "1x00000000000000000000AA",
+    mediaCdnUrl: "https://cdn.example.com",
+  },
+}));
+
 import { Feed } from "@/components/home/Feed";
 import type { FeedPage, ArticleFeedItem, VideoFeedItem } from "@/types/api";
 
@@ -10,7 +21,8 @@ const article: ArticleFeedItem = {
   title: "Test Article",
   excerpt: "An excerpt",
   coverImageKey: null,
-  categoryId: "safety",
+  categoryId: "cat-safety",
+  categoryName: "Safety",
   authorName: "Alice",
   publishedAt: "2025-01-01T00:00:00Z",
   likeCount: 5,
@@ -61,9 +73,16 @@ describe("Feed", () => {
     expect(link).toHaveAttribute("href", "/?video=v2");
   });
 
-  it("shows empty state when no items", () => {
+  it("shows exact empty state message when no items", () => {
     render(<Feed firstPage={{ items: [], nextCursor: null }} autoLoadUntilPage={3} />);
-    expect(screen.getByRole("paragraph")).toBeInTheDocument();
+    expect(
+      screen.getByText("Nothing published yet. Please come back soon.")
+    ).toBeInTheDocument();
+  });
+
+  it("renders category label on article card", () => {
+    render(<Feed firstPage={firstPage} autoLoadUntilPage={3} />);
+    expect(screen.getByText("Safety")).toBeInTheDocument();
   });
 
   it("does not show Load more button when nextCursor is null", () => {

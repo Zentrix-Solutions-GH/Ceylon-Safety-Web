@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import { publicConfig } from "@/lib/config.public";
 import { t } from "@/messages/en";
 import type { VideoFeedItem } from "@/types/api";
 
@@ -8,10 +9,8 @@ interface VideoCardProps {
   item: VideoFeedItem;
 }
 
-const MEDIA_BASE = process.env.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL ?? "";
-
 export function VideoCard({ item }: VideoCardProps) {
-  const imgSrc = item.coverImageKey ? `${MEDIA_BASE}/${item.coverImageKey}` : PLACEHOLDER;
+  const imgSrc = item.coverImageKey ? `${publicConfig.mediaCdnUrl}/${item.coverImageKey}` : PLACEHOLDER;
 
   return (
     <Link
@@ -25,6 +24,7 @@ export function VideoCard({ item }: VideoCardProps) {
           src={imgSrc}
           alt={item.title}
           loading="lazy"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 480px"
           className="h-full w-full object-cover transition group-hover:scale-105"
           onError={(e) => { (e.currentTarget as HTMLImageElement).src = PLACEHOLDER; }}
         />

@@ -5,8 +5,10 @@ interface CountersProps {
   data: CountersData;
 }
 
+const COUNT_FORMAT = new Intl.NumberFormat("en-LK");
+
 function formatCount(value: number): string {
-  return new Intl.NumberFormat("en-LK").format(value) + "+";
+  return COUNT_FORMAT.format(value) + "+";
 }
 
 const COUNTER_KEYS: Array<{
