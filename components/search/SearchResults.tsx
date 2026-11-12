@@ -1,7 +1,9 @@
 ﻿"use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { t } from "@/messages/en";
+import { publicConfig } from "@/lib/config.public";
 import type { SearchResultItem } from "@/types/api";
 import type { SearchStatus } from "@/hooks/useSearch";
 
@@ -54,15 +56,28 @@ export default function SearchResults({ status, items }: Props) {
           <li key={item.id}>
             <Link
               href={itemHref(item)}
-              className="block rounded-lg border border-gray-200 p-4 hover:border-primary hover:bg-gray-50 transition-colors"
+              className="flex gap-3 rounded-lg border border-gray-200 p-4 hover:border-primary hover:bg-gray-50 transition-colors"
             >
-              <span className="mb-1 inline-block text-xs font-semibold uppercase tracking-wider text-primary">
-                {kindLabel(item.kind)}
-              </span>
-              <p className="font-semibold text-gray-900">{item.title}</p>
-              {item.shortText && (
-                <p className="mt-1 text-sm text-gray-600 line-clamp-2">{item.shortText}</p>
+              {item.coverImageKey && (
+                <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded">
+                  <Image
+                    src={`${publicConfig.mediaCdnUrl}/${item.coverImageKey}`}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                  />
+                </div>
               )}
+              <div className="min-w-0">
+                <span className="mb-1 inline-block text-xs font-semibold uppercase tracking-wider text-primary">
+                  {kindLabel(item.kind)}
+                </span>
+                <p className="font-semibold text-gray-900">{item.title}</p>
+                {item.shortText && (
+                  <p className="mt-1 text-sm text-gray-600 line-clamp-2">{item.shortText}</p>
+                )}
+              </div>
             </Link>
           </li>
         ))}

@@ -1,5 +1,15 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@/lib/config.public", () => ({
+  publicConfig: {
+    mediaCdnUrl: "https://cdn.test.example.com",
+    supabaseUrl: "https://test.supabase.co",
+    supabaseAnonKey: "test-anon-key",
+    appUrl: "https://test.example.com",
+    turnstileSiteKey: "1x00000000000000000000AA",
+  },
+}));
 import type { SearchResultItem } from "@/types/api";
 import SearchResults from "@/components/search/SearchResults";
 
@@ -75,6 +85,20 @@ describe("SearchResults", () => {
     render(<SearchResults status="success" items={[article, doc]} />);
     expect(screen.getByRole("list")).toBeInTheDocument();
     expect(screen.getByRole("heading")).toBeInTheDocument();
+  });
+
+  it("AC4: cover image is shown when coverImageKey is set", () => {
+    const withImage: SearchResultItem = { ...article, coverImageKey: "covers/fire.jpg" };
+    const { container } = render(<SearchResults status="success" items={[withImage]} />);
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    const src = img?.getAttribute("src") ?? img?.getAttribute("srcset") ?? "";
+    expect(src).toContain("fire.jpg");
+  });
+
+  it("AC4: no image element when coverImageKey is null", () => {
+    const { container } = render(<SearchResults status="success" items={[article]} />);
+    expect(container.querySelector("img")).toBeNull();
   });
 
   it("EC2: script text is rendered as plain text, not executed", () => {
