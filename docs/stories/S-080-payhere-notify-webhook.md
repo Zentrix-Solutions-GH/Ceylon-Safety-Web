@@ -111,6 +111,15 @@ Prior art: grepped docs/ for notify, payment_events, fulfil, chargeback, event_k
 - `lib/payhere/__tests__/verify.test.ts`
 - `app/api/payhere/notify/__tests__/route.test.ts`
 
+## Evidence (round 4 — 2026-11-12)
+
+Round-3 P0/P1 fixes applied and pushed (HEAD `8271f8f`).
+- Lint: ✓ (0 warnings)
+- Typecheck: ✓ (0 errors)
+- Unit tests: 18/18 route tests pass; pre-existing ArticleEditor failures unchanged.
+- pgTAP: 13 new tests added (plan 133 → 146); requires `supabase start` to run.
+- types/database.ts: regenerated to include `fulfil_payhere_locked` and nullable `actor_id`.
+
 ## Evidence
 
 ```
