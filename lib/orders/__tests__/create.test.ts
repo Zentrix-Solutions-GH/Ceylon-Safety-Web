@@ -9,17 +9,32 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/auth/server", () => ({ requireActiveAccount: vi.fn() }));
 vi.mock("@/lib/cart/calculate", () => ({ calculateCart: vi.fn() }));
 vi.mock("@/lib/ratelimit", () => ({ checkRateLimit: vi.fn() }));
+// S-079: mock config and payhere/checkout so env vars are not required in tests
+vi.mock("@/lib/config", () => ({
+  payhereConfig: vi.fn(() => ({
+    merchantId: "test-mid",
+    secret: "test-secret",
+    isSandbox: true,
+    checkoutUrl: "https://sandbox.payhere.lk/pay/checkout",
+  })),
+  publicConfig: { appUrl: "https://test.example.com" },
+}));
+vi.mock("@/lib/payhere/checkout", () => ({
+  buildPayHereRequest: vi.fn(() => ({ checkout_url: "https://sandbox.payhere.lk/pay/checkout", hash: "testhash" })),
+}));
 
 import { createSupabaseServerClient as _createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireActiveAccount } from "@/lib/auth/server";
 import { calculateCart } from "@/lib/cart/calculate";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { createCheckout } from "@/lib/orders/create";
+import { buildPayHereRequest } from "@/lib/payhere/checkout";
 
 const mockRequireActiveAccount = vi.mocked(requireActiveAccount);
 const mockCreateClient = vi.mocked(_createSupabaseServerClient);
 const mockCalculateCart = vi.mocked(calculateCart);
 const mockCheckRateLimit = vi.mocked(checkRateLimit);
+const mockBuildPayHereRequest = vi.mocked(buildPayHereRequest);
 
 const fakeUser = { id: "user-1", email: "buyer@example.com", status: "active" };
 
@@ -420,6 +435,139 @@ describe("createCheckout — AC14 no PII in logs", () => {
 
     errorSpy.mockRestore();
     logSpy.mockRestore();
+  });
+});
+
+// ─── S-079: payhereFields in CheckoutResult ──────────────────────────────────
+
+describe("createCheckout — S-079 payhereFields returned (AC5)", () => {
+  it("happy path: result.data.payhereFields includes checkout_url from buildPayHereRequest mock", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeCartResponse);
+
+    const db = makeSupabaseMock();
+    (db.single as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: { id: "rev-terms-1" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "rev-refund-1" }, error: null });
+    (db.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { action: "created", order_id: "ord-ph-1", order_number: "CS-2026-00001" },
+      error: null,
+    });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const result = await createCheckout(validInput);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data?.payhereFields).toBeDefined();
+    expect(result.data?.payhereFields?.checkout_url).toBe("https://sandbox.payhere.lk/pay/checkout");
+  });
+
+  it("returnUrl and cancelUrl use order UUID (order_id), not order number (AC5)", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeCartResponse);
+
+    const db = makeSupabaseMock();
+    (db.single as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: { id: "rev-terms-ac5" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "rev-refund-ac5" }, error: null });
+    (db.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { action: "created", order_id: "uuid-ac5-order-id", order_number: "CS-2026-99999" },
+      error: null,
+    });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    await createCheckout(validInput);
+
+    expect(mockBuildPayHereRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ orderNumber: "CS-2026-99999" }),
+      expect.anything(),
+      expect.objectContaining({
+        returnUrl: expect.stringContaining("?order=uuid-ac5-order-id"),
+        cancelUrl: expect.stringContaining("?order=uuid-ac5-order-id"),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("returns payment_unavailable when payhereConfig() throws (missing env vars)", async () => {
+    // Override the config mock for this test only: payhereConfig throws
+    const { payhereConfig } = await import("@/lib/config");
+    vi.mocked(payhereConfig).mockImplementationOnce(() => {
+      throw new Error("[config] Missing environment variable: PAYHERE_SANDBOX_MERCHANT_ID");
+    });
+
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeCartResponse);
+
+    const db = makeSupabaseMock();
+    (db.single as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: { id: "rev-terms-1" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "rev-refund-1" }, error: null });
+    (db.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { action: "created", order_id: "ord-ph-2", order_number: "CS-2026-00002" },
+      error: null,
+    });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const result = await createCheckout(validInput);
+    expect(result).toMatchObject({ ok: false, code: "payment_unavailable" });
+  });
+});
+
+// ─── AC4: payment_in_progress returned from RPC ──────────────────────────────
+
+describe("createCheckout — AC4 payment_in_progress end-to-end", () => {
+  it("returns payment_in_progress when RPC reports an existing pending PayHere order", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeCartResponse);
+
+    const db = makeSupabaseMock();
+    (db.single as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: { id: "rev-terms-ac4" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "rev-refund-ac4" }, error: null });
+    // RPC signals that a PayHere order is already in flight
+    (db.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { action: "payment_in_progress" },
+      error: null,
+    });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const result = await createCheckout(validInput);
+    expect(result).toMatchObject({ ok: false, code: "payment_in_progress" });
+  });
+});
+
+// ─── EC2: non-integer totalCents handled gracefully ──────────────────────────
+
+describe("createCheckout — EC2 non-integer totalCents", () => {
+  it("returns payment_unavailable when buildPayHereRequest throws (EC2: data bug producing non-integer cents)", async () => {
+    // Simulate a data bug that causes buildPayHereRequest (and internally centsToDecimal)
+    // to throw. The try/catch in createCheckout must catch it and return payment_unavailable.
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeCartResponse); // total: 1000 matches expectedTotalCents
+
+    const db = makeSupabaseMock();
+    (db.single as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: { id: "rev-terms-ec2" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "rev-refund-ec2" }, error: null });
+    (db.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { action: "created", order_id: "ord-ec2", order_number: "CS-2026-EC2" },
+      error: null,
+    });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    mockBuildPayHereRequest.mockImplementationOnce(() => {
+      throw new Error("cents must be an integer");
+    });
+
+    const result = await createCheckout(validInput);
+    expect(result).toMatchObject({ ok: false, code: "payment_unavailable" });
   });
 });
 

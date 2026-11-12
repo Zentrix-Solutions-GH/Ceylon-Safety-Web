@@ -23,6 +23,19 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 vi.mock("@/lib/auth/server", () => ({ requireActiveAccount: vi.fn() }));
 vi.mock("@/lib/cart/calculate", () => ({ calculateCart: vi.fn() }));
+// S-079: mock config and payhere/checkout so env vars are not required in tests
+vi.mock("@/lib/config", () => ({
+  payhereConfig: vi.fn(() => ({
+    merchantId: "test-mid",
+    secret: "test-secret",
+    isSandbox: true,
+    checkoutUrl: "https://sandbox.payhere.lk/pay/checkout",
+  })),
+  publicConfig: { appUrl: "https://test.example.com" },
+}));
+vi.mock("@/lib/payhere/checkout", () => ({
+  buildPayHereRequest: vi.fn(() => ({ checkout_url: "https://sandbox.payhere.lk/pay/checkout", hash: "testhash" })),
+}));
 vi.mock("@/lib/ratelimit", () => ({ checkRateLimit: vi.fn() }));
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
