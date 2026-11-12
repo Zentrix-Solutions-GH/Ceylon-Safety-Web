@@ -38,8 +38,8 @@ A search bar on Home and a results page at `/search`, so a visitor can find arti
 - [x] EC1: Query typed with leading and trailing spaces is trimmed before the call.
 - [x] EC2: Query with `<script>` text shows as plain text in the page; nothing runs.
 - [x] EC3: Two quick searches: only the newest result is shown.
-- [ ] EC4: Browser back from a result returns to the same results. (architecture correct — URL-driven; not covered by unit test; e2e absent)
-- [ ] EC5: A very slow network shows the skeleton, then the results; no double render. (architecturally correct; no test)
+- [x] EC4: Browser back from a result returns to the same results. (URL-driven; SearchPageClient re-runs search on q change — tested in SearchPageClient.test.tsx)
+- [x] EC5: A very slow network shows the skeleton, then the results; no double render. (pending fetch → role="status" skeleton → resolved → "No results found." — tested in SearchPageClient.test.tsx)
 - [x] EC6: Query of 100 characters of operators returns within the call's own limit and the page does not hang. (maxLength enforced; backend limit in S-064)
 
 ## Contract
