@@ -5,7 +5,7 @@
 -- Requires Docker + local Supabase stack.
 
 BEGIN;
-SELECT plan(133);
+SELECT plan(148);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- UUID legend (all hex-valid, non-overlapping with earlier test files)
@@ -1241,6 +1241,345 @@ BEGIN
   END IF;
 END $$;
 SELECT ok(true, 'AC6: next_invoice_number() returns -00001 for the first invoice of a new year');
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- S-080: fulfil_payhere_locked — one test per status-code path
+-- UUID legend (non-overlapping with earlier blocks)
+-- Profile:    fa000000-... (fulfilment customer)
+-- Order:      f1000001-...  (pending, for all fulfil tests)
+-- Order item: f2000001-...
+-- Event:      f3000001-...  (inserted fresh per test via do-block)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+DO $$
+BEGIN
+  INSERT INTO public.profiles (id, email, display_name, first_name, last_name)
+  VALUES ('fa000000-0000-0000-0000-000000000001', 'fulfil_cust@test.invalid', 'Fulfil Cust', 'F', 'C')
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.orders (
+    id, order_number, user_id, status, subtotal_cents, total_cents, currency,
+    terms_revision_id, refund_policy_revision_id, terms_accepted_at
+  ) VALUES (
+    'f1000001-0000-0000-0000-000000000001',
+    'CS-S080-TEST-001',
+    'fa000000-0000-0000-0000-000000000001',
+    'pending', 2000, 2000, 'LKR',
+    '21100000-0000-0000-0000-000000000010',
+    '21200000-0000-0000-0000-000000000010',
+    now()
+  ) ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.order_items (
+    id, order_id, item_type, document_id, language, title_snapshot, unit_price_cents, quantity, line_total_cents
+  ) VALUES (
+    'f2000001-0000-0000-0000-000000000001',
+    'f1000001-0000-0000-0000-000000000001',
+    'document', 'd1100000-0000-0000-0000-000000000001',
+    'en', 'Safety Doc P', 2000, 1, 2000
+  ) ON CONFLICT DO NOTHING;
+END $$;
+
+-- S-080/AC4: status 2 marks order paid and creates entitlement
+DO $$
+DECLARE
+  v_evt uuid := 'f3000001-0000-0000-0000-000000000001';
+  v_result jsonb;
+  v_order_status text;
+  v_ent_count int;
+BEGIN
+  INSERT INTO public.payment_events (id, order_id, event_key, status_code, received_at)
+  VALUES (v_evt, 'f1000001-0000-0000-0000-000000000001', 's080:2:001', 2, now())
+  ON CONFLICT DO NOTHING;
+
+  v_result := public.fulfil_payhere_locked(
+    'f1000001-0000-0000-0000-000000000001',
+    v_evt, 2, 'Visa', 3
+  );
+
+  SELECT status INTO v_order_status FROM public.orders WHERE id = 'f1000001-0000-0000-0000-000000000001';
+  SELECT count(*) INTO v_ent_count FROM public.entitlements
+  WHERE order_item_id = 'f2000001-0000-0000-0000-000000000001';
+
+  IF v_order_status <> 'paid' THEN
+    RAISE EXCEPTION 'S-080/AC4: order status not paid; got %', v_order_status;
+  END IF;
+  IF v_ent_count <> 1 THEN
+    RAISE EXCEPTION 'S-080/AC4: entitlement not created; count=%', v_ent_count;
+  END IF;
+  IF (v_result->>'outcome') <> 'applied' THEN
+    RAISE EXCEPTION 'S-080/AC4: expected outcome applied, got %', v_result->>'outcome';
+  END IF;
+END $$;
+SELECT ok(true, 'S-080/AC4: status 2 marks order paid and creates entitlement');
+
+-- S-080/AC2: calling fulfil_payhere_locked twice on the same event returns duplicate_ignored
+DO $$
+DECLARE
+  v_evt uuid := 'f3000001-0000-0000-0000-000000000001';
+  v_result jsonb;
+BEGIN
+  -- Event was already processed in the previous block; call again
+  v_result := public.fulfil_payhere_locked(
+    'f1000001-0000-0000-0000-000000000001',
+    v_evt, 2, 'Visa', 3
+  );
+  IF (v_result->>'outcome') <> 'duplicate_ignored' THEN
+    RAISE EXCEPTION 'S-080/AC2: expected duplicate_ignored, got %', v_result->>'outcome';
+  END IF;
+END $$;
+SELECT ok(true, 'S-080/AC2: second call with same event returns duplicate_ignored');
+
+-- S-080/AC6: status 2 on already-paid order flags second_payment
+DO $$
+DECLARE
+  v_evt uuid := 'f3000001-0000-0000-0000-000000000002';
+  v_result jsonb;
+  v_needs_review bool;
+BEGIN
+  INSERT INTO public.payment_events (id, order_id, event_key, status_code, received_at)
+  VALUES (v_evt, 'f1000001-0000-0000-0000-000000000001', 's080:2:002', 2, now())
+  ON CONFLICT DO NOTHING;
+
+  v_result := public.fulfil_payhere_locked(
+    'f1000001-0000-0000-0000-000000000001',
+    v_evt, 2, 'Visa', 3
+  );
+
+  SELECT needs_review INTO v_needs_review FROM public.orders WHERE id = 'f1000001-0000-0000-0000-000000000001';
+
+  IF (v_result->>'outcome') <> 'second_payment_flagged' THEN
+    RAISE EXCEPTION 'S-080/AC6: expected second_payment_flagged, got %', v_result->>'outcome';
+  END IF;
+  IF NOT v_needs_review THEN
+    RAISE EXCEPTION 'S-080/AC6: needs_review not set on second payment';
+  END IF;
+END $$;
+SELECT ok(true, 'S-080/AC6: second payment on paid order flags second_payment_flagged');
+
+-- Reset order to pending for remaining tests
+UPDATE public.orders
+  SET status = 'pending', needs_review = false, review_reason = NULL, paid_at = NULL
+  WHERE id = 'f1000001-0000-0000-0000-000000000001';
+-- Remove the entitlement created by the status-2 test
+DELETE FROM public.entitlements WHERE order_item_id = 'f2000001-0000-0000-0000-000000000001';
+
+-- S-080/AC7: status 0 extends expires_at and returns recorded_only
+DO $$
+DECLARE
+  v_evt  uuid := 'f3000001-0000-0000-0000-000000000003';
+  v_result jsonb;
+  v_expiry timestamptz;
+BEGIN
+  INSERT INTO public.payment_events (id, order_id, event_key, status_code, received_at)
+  VALUES (v_evt, 'f1000001-0000-0000-0000-000000000001', 's080:0:003', 0, now())
+  ON CONFLICT DO NOTHING;
+
+  v_result := public.fulfil_payhere_locked(
+    'f1000001-0000-0000-0000-000000000001',
+    v_evt, 0, '', 3
+  );
+
+  SELECT expires_at INTO v_expiry FROM public.orders WHERE id = 'f1000001-0000-0000-0000-000000000001';
+
+  IF (v_result->>'outcome') <> 'recorded_only' THEN
+    RAISE EXCEPTION 'S-080/AC7: expected recorded_only, got %', v_result->>'outcome';
+  END IF;
+  IF v_expiry IS NULL OR v_expiry < now() + INTERVAL '47 hours' THEN
+    RAISE EXCEPTION 'S-080/AC7: expires_at not extended to 48 h minimum; got %', v_expiry;
+  END IF;
+END $$;
+SELECT ok(true, 'S-080/AC7: status 0 extends expires_at to at least 48 h and returns recorded_only');
+
+-- S-080/AC8: status -1 cancels a pending order
+DO $$
+DECLARE
+  v_evt uuid := 'f3000001-0000-0000-0000-000000000004';
+  v_result jsonb;
+  v_status text;
+BEGIN
+  INSERT INTO public.payment_events (id, order_id, event_key, status_code, received_at)
+  VALUES (v_evt, 'f1000001-0000-0000-0000-000000000001', 's080:-1:004', -1, now())
+  ON CONFLICT DO NOTHING;
+
+  v_result := public.fulfil_payhere_locked(
+    'f1000001-0000-0000-0000-000000000001',
+    v_evt, -1, '', 3
+  );
+
+  SELECT status INTO v_status FROM public.orders WHERE id = 'f1000001-0000-0000-0000-000000000001';
+
+  IF v_status <> 'cancelled' THEN
+    RAISE EXCEPTION 'S-080/AC8: expected order status cancelled, got %', v_status;
+  END IF;
+  IF (v_result->>'outcome') <> 'payment_cancelled' THEN
+    RAISE EXCEPTION 'S-080/AC8: expected payment_cancelled, got %', v_result->>'outcome';
+  END IF;
+END $$;
+SELECT ok(true, 'S-080/AC8: status -1 cancels pending order');
+
+-- Reset order to pending for failed test
+UPDATE public.orders SET status = 'pending' WHERE id = 'f1000001-0000-0000-0000-000000000001';
+
+-- S-080/AC8: status -2 marks pending order failed
+DO $$
+DECLARE
+  v_evt uuid := 'f3000001-0000-0000-0000-000000000005';
+  v_result jsonb;
+  v_status text;
+BEGIN
+  INSERT INTO public.payment_events (id, order_id, event_key, status_code, received_at)
+  VALUES (v_evt, 'f1000001-0000-0000-0000-000000000001', 's080:-2:005', -2, now())
+  ON CONFLICT DO NOTHING;
+
+  v_result := public.fulfil_payhere_locked(
+    'f1000001-0000-0000-0000-000000000001',
+    v_evt, -2, '', 3
+  );
+
+  SELECT status INTO v_status FROM public.orders WHERE id = 'f1000001-0000-0000-0000-000000000001';
+
+  IF v_status <> 'failed' THEN
+    RAISE EXCEPTION 'S-080/AC8: expected order status failed, got %', v_status;
+  END IF;
+  IF (v_result->>'outcome') <> 'payment_failed' THEN
+    RAISE EXCEPTION 'S-080/AC8: expected payment_failed, got %', v_result->>'outcome';
+  END IF;
+END $$;
+SELECT ok(true, 'S-080/AC8: status -2 marks pending order failed');
+
+-- Set order to paid so chargeback test can run
+UPDATE public.orders
+  SET status = 'paid', paid_at = now(), needs_review = false, review_reason = NULL
+  WHERE id = 'f1000001-0000-0000-0000-000000000001';
+-- Re-create entitlement for chargeback revocation test (downloads_used=0)
+INSERT INTO public.entitlements (
+  user_id, item_type, document_id, language, order_item_id, source, download_limit, downloads_used
+) VALUES (
+  'fa000000-0000-0000-0000-000000000001',
+  'document', 'd1100000-0000-0000-0000-000000000001', 'en',
+  'f2000001-0000-0000-0000-000000000001',
+  'purchase', 3, 0
+) ON CONFLICT (order_item_id) WHERE order_item_id IS NOT NULL DO NOTHING;
+
+-- S-080/AC9: status -3 on paid order applies chargeback
+DO $$
+DECLARE
+  v_evt uuid := 'f3000001-0000-0000-0000-000000000006';
+  v_result jsonb;
+  v_status text;
+  v_revoked int;
+BEGIN
+  INSERT INTO public.payment_events (id, order_id, event_key, status_code, received_at)
+  VALUES (v_evt, 'f1000001-0000-0000-0000-000000000001', 's080:-3:006', -3, now())
+  ON CONFLICT DO NOTHING;
+
+  v_result := public.fulfil_payhere_locked(
+    'f1000001-0000-0000-0000-000000000001',
+    v_evt, -3, '', 3
+  );
+
+  SELECT status INTO v_status FROM public.orders WHERE id = 'f1000001-0000-0000-0000-000000000001';
+  SELECT count(*) INTO v_revoked FROM public.entitlements
+  WHERE order_item_id = 'f2000001-0000-0000-0000-000000000001'
+    AND revoked_at IS NOT NULL AND revoke_reason = 'chargeback';
+
+  IF v_status <> 'chargeback' THEN
+    RAISE EXCEPTION 'S-080/AC9: expected status chargeback, got %', v_status;
+  END IF;
+  IF v_revoked <> 1 THEN
+    RAISE EXCEPTION 'S-080/AC9: entitlement not revoked; revoked count=%', v_revoked;
+  END IF;
+  IF (v_result->>'outcome') <> 'chargeback_applied' THEN
+    RAISE EXCEPTION 'S-080/AC9: expected chargeback_applied, got %', v_result->>'outcome';
+  END IF;
+END $$;
+SELECT ok(true, 'S-080/AC9: status -3 on paid order revokes unused entitlement');
+
+-- S-080/EC8: unknown status code returns recorded_only
+DO $$
+DECLARE
+  v_evt uuid := 'f3000001-0000-0000-0000-000000000007';
+  v_result jsonb;
+BEGIN
+  -- Reset order to pending; must also clear paid_at and payment_method because
+  -- orders_paid_at_consistency CHECK forbids paid_at IS NOT NULL when status = 'pending'.
+  UPDATE public.orders
+    SET status = 'pending', paid_at = NULL, payment_method = NULL,
+        needs_review = false, review_reason = NULL
+    WHERE id = 'f1000001-0000-0000-0000-000000000001';
+
+  INSERT INTO public.payment_events (id, order_id, event_key, status_code, received_at)
+  VALUES (v_evt, 'f1000001-0000-0000-0000-000000000001', 's080:99:007', 99, now())
+  ON CONFLICT DO NOTHING;
+
+  v_result := public.fulfil_payhere_locked(
+    'f1000001-0000-0000-0000-000000000001',
+    v_evt, 99, '', 3
+  );
+
+  IF (v_result->>'outcome') <> 'recorded_only' THEN
+    RAISE EXCEPTION 'S-080/EC8: expected recorded_only for unknown status, got %', v_result->>'outcome';
+  END IF;
+END $$;
+SELECT ok(true, 'S-080/EC8: unknown status code stores recorded_only outcome');
+
+-- S-080: flag_mismatch_event sets payment_events.outcome and orders.needs_review atomically
+DO $$
+DECLARE
+  v_evt uuid := 'f3000001-0000-0000-0000-000000000008';
+  v_outcome text;
+  v_needs_review bool;
+BEGIN
+  -- Reset order; clear paid_at to satisfy orders_paid_at_consistency CHECK.
+  UPDATE public.orders
+    SET status = 'pending', paid_at = NULL, payment_method = NULL,
+        needs_review = false, review_reason = NULL
+    WHERE id = 'f1000001-0000-0000-0000-000000000001';
+
+  INSERT INTO public.payment_events (id, order_id, event_key, status_code, received_at)
+  VALUES (v_evt, 'f1000001-0000-0000-0000-000000000001', 's080:2:mismatch', 2, now())
+  ON CONFLICT DO NOTHING;
+
+  PERFORM public.flag_mismatch_event(v_evt, 'f1000001-0000-0000-0000-000000000001');
+
+  SELECT outcome INTO v_outcome FROM public.payment_events WHERE id = v_evt;
+  SELECT needs_review INTO v_needs_review FROM public.orders WHERE id = 'f1000001-0000-0000-0000-000000000001';
+
+  IF v_outcome <> 'rejected_mismatch' THEN
+    RAISE EXCEPTION 'S-080/AC3: payment_events.outcome not set; got %', v_outcome;
+  END IF;
+  IF NOT v_needs_review THEN
+    RAISE EXCEPTION 'S-080/AC3: orders.needs_review not set after flag_mismatch_event';
+  END IF;
+END $$;
+SELECT ok(true, 'S-080/AC3: flag_mismatch_event sets rejected_mismatch and needs_review atomically');
+
+-- S-080: fulfil_payhere_locked and flag_mismatch_event not executable by anon, authenticated, or public
+SELECT ok(
+  NOT has_function_privilege('anon', 'public.fulfil_payhere_locked(uuid,uuid,integer,text,integer)', 'EXECUTE'),
+  'S-080/AC5: anon cannot EXECUTE fulfil_payhere_locked'
+);
+SELECT ok(
+  NOT has_function_privilege('authenticated', 'public.fulfil_payhere_locked(uuid,uuid,integer,text,integer)', 'EXECUTE'),
+  'S-080/AC5: authenticated cannot EXECUTE fulfil_payhere_locked'
+);
+SELECT ok(
+  NOT has_function_privilege('public', 'public.fulfil_payhere_locked(uuid,uuid,integer,text,integer)', 'EXECUTE'),
+  'S-080/AC5: public role cannot EXECUTE fulfil_payhere_locked'
+);
+SELECT ok(
+  NOT has_function_privilege('anon', 'public.flag_mismatch_event(uuid,uuid)', 'EXECUTE'),
+  'S-080/AC5: anon cannot EXECUTE flag_mismatch_event'
+);
+SELECT ok(
+  NOT has_function_privilege('authenticated', 'public.flag_mismatch_event(uuid,uuid)', 'EXECUTE'),
+  'S-080/AC5: authenticated cannot EXECUTE flag_mismatch_event'
+);
+SELECT ok(
+  NOT has_function_privilege('public', 'public.flag_mismatch_event(uuid,uuid)', 'EXECUTE'),
+  'S-080/AC5: public role cannot EXECUTE flag_mismatch_event'
+);
 
 SELECT * FROM finish();
 ROLLBACK;

@@ -36,6 +36,8 @@ export type AuditEventName =
   | "document.hide"
   // Money and access
   | "order.grant"
+  | "order.paid"
+  | "order.chargeback"
   | "bank_transfer.approve"
   | "bank_transfer.reject"
   | "download_request.approve"
@@ -55,7 +57,8 @@ export type AuditEventName =
 
 export type AuditEvent = {
   action: AuditEventName;
-  actorId: string;
+  // actorId is optional for system-generated events (e.g. payment webhook) where there is no human actor.
+  actorId?: string;
   entityType?: string;
   entityId?: string;
   // before/after hold structured diffs. Sensitive values (8+ digit runs) are
