@@ -79,7 +79,9 @@ describe("buildPayHereRequest", () => {
   });
 
   it("hash matches fixed known-output reference vector (AC3)", () => {
-    // Reference vector computed offline (Node.js crypto, verified manually):
+    // Reference vector computed offline (Node.js crypto, verified manually against
+    // PayHere's sandbox hash formula documentation: https://support.payhere.lk/api-&-mobile-sdk/payhere-checkout
+    // section "Generate Hash" — formula: md5(merchant_id + order_id + amount + currency + strtoupper(md5(secret))):
     // merchantId=1215097, orderId=ItemNo12345, amount=1000.00, currency=LKR
     // secret=GfPy2tCMDCN6GQQCSPqPFhKSjHFbRAMm
     // md5(secret).toUpperCase() = "88241DD5A74865480F6934327098D4FF"

@@ -21,6 +21,14 @@ describe("centsToDecimal", () => {
   it("handles large amounts", () => {
     expect(centsToDecimal(100000000)).toBe("1000000.00");
   });
+
+  it("throws for negative cents (AC1)", () => {
+    expect(() => centsToDecimal(-1)).toThrow();
+  });
+
+  it("throws for non-integer cents (EC2)", () => {
+    expect(() => centsToDecimal(715545.5)).toThrow();
+  });
 });
 
 describe("parseCentsStrict", () => {

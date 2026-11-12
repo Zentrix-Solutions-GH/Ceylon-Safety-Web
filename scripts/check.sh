@@ -114,11 +114,15 @@ else
   FAIL=$((FAIL + 1))
 fi
 
-# 9. AC8 (S-079): PayHere secret must not appear in client bundles
+# 9. AC8 (S-079): PayHere server-only module must not appear in client bundles.
+# Checks both the env var key names (catches the source code being bundled) and the
+# function names (catches minified builds where the source strings still appear).
+# Note: value-level detection (actual resolved secret) requires a CI build that injects
+# a known test secret and greps for it — that is a CI-environment concern, not checked here.
 printf '\n── PayHere secret bundle check (AC8/S-079) ──\n'
 if [ -d ".next/static" ]; then
-  if grep -r 'PAYHERE_SANDBOX_SECRET\|PAYHERE_SECRET' .next/static/ 2>/dev/null | grep -qv '\.map$'; then
-    printf '✗ PayHere secret bundle check FAILED — PayHere secret env var key found in client bundle\n'
+  if grep -r 'PAYHERE_SANDBOX_SECRET\|PAYHERE_SECRET\|buildPayHereRequest\|payhereConfig' .next/static/ 2>/dev/null | grep -qv '\.map$'; then
+    printf '✗ PayHere secret bundle check FAILED — PayHere server-only code found in client bundle\n'
     FAIL=$((FAIL + 1))
   else
     printf '✓ PayHere secret bundle check passed\n'

@@ -110,6 +110,23 @@ describe("getMyOrder — AC7", () => {
     expect(result).toMatchObject({ ok: false, code: "not_found" });
   });
 
+  it("AC7: user_id filter is applied to the DB query — owner check is in the query", async () => {
+    // Uses a fresh spy so we can assert the second .eq() call carried the user_id.
+    // If the user_id filter is ever removed from read.ts, this test will fail.
+    const eqSpy = vi.fn().mockReturnThis();
+    const db = {
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: eqSpy,
+      single: vi.fn().mockResolvedValue({ data: fakeOrderRow, error: null }),
+    };
+    mockCreateClient.mockResolvedValue(db as never);
+
+    await getMyOrder(VALID_UUID);
+
+    expect(eqSpy).toHaveBeenCalledWith("user_id", fakeUser.id);
+  });
+
   it("returns not_found when order does not exist at all", async () => {
     const db = makeDb({ data: null, error: { code: "PGRST116", message: "No rows" } });
     mockCreateClient.mockResolvedValue(db as never);

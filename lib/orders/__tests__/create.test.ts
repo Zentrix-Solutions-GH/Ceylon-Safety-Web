@@ -518,6 +518,59 @@ describe("createCheckout — S-079 payhereFields returned (AC5)", () => {
   });
 });
 
+// ─── AC4: payment_in_progress returned from RPC ──────────────────────────────
+
+describe("createCheckout — AC4 payment_in_progress end-to-end", () => {
+  it("returns payment_in_progress when RPC reports an existing pending PayHere order", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeCartResponse);
+
+    const db = makeSupabaseMock();
+    (db.single as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: { id: "rev-terms-ac4" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "rev-refund-ac4" }, error: null });
+    // RPC signals that a PayHere order is already in flight
+    (db.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { action: "payment_in_progress" },
+      error: null,
+    });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const result = await createCheckout(validInput);
+    expect(result).toMatchObject({ ok: false, code: "payment_in_progress" });
+  });
+});
+
+// ─── EC2: non-integer totalCents handled gracefully ──────────────────────────
+
+describe("createCheckout — EC2 non-integer totalCents", () => {
+  it("returns payment_unavailable when buildPayHereRequest throws (EC2: data bug producing non-integer cents)", async () => {
+    // Simulate a data bug that causes buildPayHereRequest (and internally centsToDecimal)
+    // to throw. The try/catch in createCheckout must catch it and return payment_unavailable.
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeCartResponse); // total: 1000 matches expectedTotalCents
+
+    const db = makeSupabaseMock();
+    (db.single as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: { id: "rev-terms-ec2" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "rev-refund-ec2" }, error: null });
+    (db.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { action: "created", order_id: "ord-ec2", order_number: "CS-2026-EC2" },
+      error: null,
+    });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    mockBuildPayHereRequest.mockImplementationOnce(() => {
+      throw new Error("cents must be an integer");
+    });
+
+    const result = await createCheckout(validInput);
+    expect(result).toMatchObject({ ok: false, code: "payment_unavailable" });
+  });
+});
+
 // ─── AC13: error codes exported ───────────────────────────────────────────────
 
 describe("AC13 — COMMERCE_ERROR_CODES exported from types/api.ts", () => {

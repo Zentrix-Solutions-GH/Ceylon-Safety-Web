@@ -147,7 +147,7 @@ async function saveProfileIfRequested(
   billingAddress: { address: string; city: string },
 ): Promise<void> {
   if (!billing.saveToProfile) return;
-  await supabase
+  const { error } = await supabase
     .from("profiles")
     .update({
       first_name: billing.firstName,
@@ -158,6 +158,7 @@ async function saveProfileIfRequested(
       tax_id: billing.taxId ?? null,
     })
     .eq("id", userId);
+  if (error) console.warn("[checkout] profile save failed — billing not updated", { code: error.code });
 }
 
 // ─── createCheckout ───────────────────────────────────────────────────────────
@@ -262,10 +263,15 @@ export async function createCheckout(
   );
 
   if (rpcError || !rpcResult) {
+    console.error("[checkout] RPC error", { code: rpcError?.code, message: rpcError?.message });
     return { ok: false, code: "unknown" };
   }
 
   const result = rpcResult as unknown as { action: string; order_id: string; order_number: string };
+  if (typeof result.action !== "string") {
+    console.error("[checkout] RPC returned unexpected shape", { rpcResult });
+    return { ok: false, code: "unknown" };
+  }
 
   if (result.action === "payment_in_progress") {
     return { ok: false, code: "payment_in_progress" };
@@ -406,10 +412,15 @@ export async function createBankOrder(
   );
 
   if (rpcError || !rpcResult) {
+    console.error("[bank-order] RPC error", { code: rpcError?.code, message: rpcError?.message });
     return { ok: false, code: "unknown" };
   }
 
   const result = rpcResult as unknown as { action: string; order_id: string; order_number: string };
+  if (typeof result.action !== "string") {
+    console.error("[bank-order] RPC returned unexpected shape", { rpcResult });
+    return { ok: false, code: "unknown" };
+  }
 
   if (result.action !== "created") {
     return { ok: false, code: "unknown" };
@@ -450,9 +461,16 @@ export async function cancelPendingOrder(
     { p_user_id: user.id, p_order_id: orderId },
   );
 
-  if (rpcError || !rpcResult) return { ok: false, code: "unknown" };
+  if (rpcError || !rpcResult) {
+    console.error("[cancel] RPC error", { code: rpcError?.code, message: rpcError?.message });
+    return { ok: false, code: "unknown" };
+  }
 
   const result = rpcResult as { action: string };
+  if (typeof result.action !== "string") {
+    console.error("[cancel] RPC returned unexpected shape", { rpcResult });
+    return { ok: false, code: "unknown" };
+  }
 
   switch (result.action) {
     case "cancelled":           return { ok: true };
