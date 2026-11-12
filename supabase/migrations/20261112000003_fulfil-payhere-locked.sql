@@ -75,6 +75,12 @@ DECLARE
   v_new_expiry timestamptz;
   v_now        timestamptz := NOW();
 BEGIN
+  -- Allow UPDATE on payment_events for this transaction.
+  -- The trg_payment_events_append_only trigger requires this GUC to be 'true'
+  -- before it permits any UPDATE. The third argument (true) makes it session-local
+  -- so it resets automatically when the transaction ends.
+  PERFORM set_config('ceylonsafety.nulling_payload', 'true', true);
+
   -- AC10: transaction-scoped advisory lock keyed on order_id.
   -- Two simultaneous calls for the same order serialize here; only one proceeds.
   v_lock_key := hashtext(p_order_id::text)::bigint;

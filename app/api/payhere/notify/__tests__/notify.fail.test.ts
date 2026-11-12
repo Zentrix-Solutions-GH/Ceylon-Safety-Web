@@ -88,11 +88,13 @@ describe("notify route — fulfil failure (AC11)", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     await POST(makeRequest());
     const allArgs = [
       ...errorSpy.mock.calls.flat(),
       ...warnSpy.mock.calls.flat(),
       ...infoSpy.mock.calls.flat(),
+      ...logSpy.mock.calls.flat(),
     ].map(a => (typeof a === "string" ? a : JSON.stringify(a)));
     // Raw body fields (payment_id, md5sig) must not appear in logs
     expect(allArgs.some(s => s.includes("pay-999"))).toBe(false);
@@ -100,6 +102,7 @@ describe("notify route — fulfil failure (AC11)", () => {
     errorSpy.mockRestore();
     warnSpy.mockRestore();
     infoSpy.mockRestore();
+    logSpy.mockRestore();
   });
 
   it("AC11: does not mark payment_event processed when fulfil throws", async () => {

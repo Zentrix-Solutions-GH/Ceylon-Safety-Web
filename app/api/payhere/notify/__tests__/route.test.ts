@@ -189,6 +189,7 @@ describe("POST /api/payhere/notify", () => {
 
   it("returns 200 for amount mismatch and does not call fulfil", async () => {
     const sb = {
+      rpc: vi.fn().mockResolvedValue({}),
       from: vi.fn((table: string) => {
         if (table === "orders") return {
           select: vi.fn().mockReturnThis(),
@@ -352,6 +353,7 @@ describe("POST /api/payhere/notify", () => {
   // ── AC3: wrong currency (not just wrong amount) ───────────────────────────
   it("AC3: returns 200 and does not call fulfil when currency is not LKR", async () => {
     const sb = {
+      rpc: vi.fn().mockResolvedValue({}),
       from: vi.fn((table: string) => {
         if (table === "orders") return {
           select: vi.fn().mockReturnThis(),

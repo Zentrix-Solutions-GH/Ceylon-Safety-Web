@@ -96,7 +96,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .single();
 
   if (insertErr) {
-    // Duplicate key = event_key already exists; re-read to decide
+    if (insertErr.code !== "23505") {
+      // Non-duplicate error (network, FK, constraint) — do not enter the duplicate path.
+      console.error(`payhere_notify: insert_error code=${insertErr.code} order=${order.order_number}`);
+      return NextResponse.json({ error: "storage_error" }, { status: 500 });
+    }
+    // Duplicate key — event_key already exists; re-read to decide.
     const { data: existing } = await sb
       .from("payment_events")
       .select("id,processed_at")
@@ -138,7 +143,13 @@ async function runFulfilment(
   // may carry amount=0 or partial amounts; amount mismatch is only meaningful for
   // a successful payment where the actual charged amount must match the order total.
   if (statusCode === 2 && (fields.payhere_currency !== "LKR" || amountCents !== orderTotalCents)) {
-    // AC3: mismatch — record outcome and flag
+    // AC3: mismatch — record outcome and flag.
+    // The append-only trigger on payment_events requires the session GUC
+    // ceylonsafety.nulling_payload = 'true' before any UPDATE is permitted.
+    await (sb as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<unknown> }).rpc(
+      "set_config",
+      { setting: "ceylonsafety.nulling_payload", value: "true", is_local: true },
+    );
     await sb
       .from("payment_events")
       .update({ outcome: "rejected_mismatch", processed_at: new Date().toISOString() })
@@ -158,7 +169,7 @@ async function runFulfilment(
       statusCode,
       paymentId: fields.payment_id,
       paymentDescription: fields.payment_description,
-      amountCents: amountCents!,
+      amountCents: amountCents,
       currency: fields.payhere_currency,
     }, sb);
   } catch {

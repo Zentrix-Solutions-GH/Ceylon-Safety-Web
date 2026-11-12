@@ -152,7 +152,11 @@ PR: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/91
 ```
 
 ## Review notes
-<!-- Filled in by reviewer and security-reviewer agents -->
+
+- **P0** `supabase/migrations/20261112000003_fulfil-payhere-locked.sql` (all UPDATE branches) — `fulfil_payhere_locked` calls `UPDATE public.payment_events` without first setting `ceylonsafety.nulling_payload = 'true'`. The `trg_payment_events_append_only` trigger raises `restrict_violation` on any UPDATE unless that GUC is set. Every webhook call will roll back in production. Fix: add `PERFORM set_config('ceylonsafety.nulling_payload', 'true', true);` at the top of the function. Same problem in the route's direct UPDATE in the AC3 mismatch branch (`route.ts:136-140`). (full-review 2026-11-12)
+- **P0** `app/api/payhere/notify/route.ts:98` — `if (insertErr)` does not check `insertErr.code === "23505"` before entering the duplicate-event path. Any insert error (network failure, FK violation) silently falls through and may call `runFulfilment` on an unrelated existing event. Fix: check the code explicitly; return 500 for anything other than `23505`. (full-review 2026-11-12)
+- **P1** `app/api/payhere/notify/route.ts:149` / `lib/orders/fulfil.ts` — `amountCents!` asserts non-null but can be null when PayHere omits the amount field. Fix: declare `amountCents` as `number | null` in `FulfilInput`. (full-review 2026-11-12)
+- **P1** `app/api/payhere/notify/__tests__/notify.fail.test.ts:71` — AC13 log-clean test does not spy on `console.log`. Fix: add `vi.spyOn(console, "log")`. (full-review 2026-11-12)
 
 ## After this merges, a user can:
 - Pay for an order at the PayHere sandbox and have the order become `paid` with one download granted per item (visible in the database and through the status API). Pages that show it come with S-093 and S-096.

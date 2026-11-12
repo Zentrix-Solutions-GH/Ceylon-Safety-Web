@@ -24,7 +24,7 @@ export interface FulfilInput {
   statusCode: number;
   paymentId: string;
   paymentDescription: string;
-  amountCents: number;
+  amountCents: number | null; // null when PayHere omits the amount field (e.g. EC6 no-payment-id)
   currency: string;
 }
 
