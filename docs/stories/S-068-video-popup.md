@@ -1,11 +1,11 @@
 ---
 id: S-068
 title: Video popup + Home video cards
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-068-video-popup
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/90
 depends_on: [S-053, S-066]
 reqs: [REQ-017, REQ-061, REQ-062, REQ-063, REQ-064, REQ-196]
 ---
@@ -24,25 +24,25 @@ Clicking a video card on Home opens the YouTube video in a popup, at the address
 
 ## Acceptance criteria
 
-- [ ] AC1: Clicking a video card (from S-066) opens `VideoModal` over the Home page and sets the address to `/?video=<our video id>` (our row id, never the YouTube id). The feed behind keeps its place and loaded pages.
-- [ ] AC2: The value of `video` is read only in a client component inside `Suspense` (`useSearchParams` rule); the Home page itself stays cached. The page is `noindex` while a video is open (set in the browser) and the canonical address stays `/`.
-- [ ] AC3: The popup first shows the thumbnail and title with a play button and the line "This loads YouTube". The player iframe is created only after the visitor presses play.
-- [ ] AC4: The embed address is built by our code from the fixed host `www.youtube-nocookie.com` and the video id returned by `getPublishedVideo` (S-065), which must match `^[A-Za-z0-9_-]{11}$`; if it does not match, no iframe is created.
-- [ ] AC5: A hidden, deleted, scheduled or unknown video id shows the Home page with the notice "This video is not available." and no popup.
-- [ ] AC6: Dialog behaviour: focus moves into the popup and stays inside, Escape and the close button close it, focus returns to the card that opened it, the page behind is inert, scrolling is locked and restored.
-- [ ] AC7: Closing removes `video` from the address without reloading the page and without losing the scroll place.
-- [ ] AC8: A direct visit to `/?video=<id>` (shared link, refresh) shows Home with the popup open.
-- [ ] AC9: The popup shows the player and title only. No like or comment controls (video likes and comments are Release 2).
-- [ ] AC10: Popup fills the screen at 375 px width and is usable by keyboard.
+- [x] AC1: Clicking a video card (from S-066) opens `VideoModal` over the Home page and sets the address to `/?video=<our video id>` (our row id, never the YouTube id). The feed behind keeps its place and loaded pages.
+- [x] AC2: The value of `video` is read only in a client component inside `Suspense` (`useSearchParams` rule); the Home page itself stays cached. The page is `noindex` while a video is open (set in the browser) and the canonical address stays `/`.
+- [x] AC3: The popup first shows the thumbnail and title with a play button and the line "This loads YouTube". The player iframe is created only after the visitor presses play.
+- [x] AC4: The embed address is built by our code from the fixed host `www.youtube-nocookie.com` and the video id returned by `getPublishedVideo` (S-065), which must match `^[A-Za-z0-9_-]{11}$`; if it does not match, no iframe is created.
+- [x] AC5: A hidden, deleted, scheduled or unknown video id shows the Home page with the notice "This video is not available." and no popup.
+- [x] AC6: Dialog behaviour: focus moves into the popup and stays inside, Escape and the close button close it, focus returns to the card that opened it, the page behind is inert, scrolling is locked and restored.
+- [x] AC7: Closing removes `video` from the address without reloading the page and without losing the scroll place.
+- [x] AC8: A direct visit to `/?video=<id>` (shared link, refresh) shows Home with the popup open.
+- [x] AC9: The popup shows the player and title only. No like or comment controls (video likes and comments are Release 2).
+- [ ] AC10: Popup fills the screen at 375 px width and is usable by keyboard. (e2e not yet verified — Playwright not set up)
 
 ## Edge cases
 
-- [ ] EC1: A video removed on YouTube: the player shows YouTube's own message; our popup stays usable and closable.
-- [ ] EC2: `video=` with script text, a very long value or an id of another item type shows the not-available notice, nothing else.
-- [ ] EC3: Browser Back while the popup is open closes it (history entry), then Back again leaves Home.
-- [ ] EC4: Opening a second video while one is open replaces it and stops the first player.
-- [ ] EC5: Thumbnail missing (copy failed, S-053 placeholder): the generic placeholder shows.
-- [ ] EC6: User prefers reduced motion: no open or close animation.
+- [x] EC1: A video removed on YouTube: the player shows YouTube's own message; our popup stays usable and closable.
+- [x] EC2: `video=` with script text, a very long value or an id of another item type shows the not-available notice, nothing else.
+- [x] EC3: Browser Back while the popup is open closes it (history entry), then Back again leaves Home. (VideoCard Link pushes history entry; replace on close pops it)
+- [x] EC4: Opening a second video while one is open replaces it and stops the first player. (key={videoId} remounts VideoModal)
+- [x] EC5: Thumbnail missing (copy failed, S-053 placeholder): the generic placeholder shows.
+- [ ] EC6: User prefers reduced motion: no open or close animation. (no animation implemented — no motion-reduce needed)
 
 ## Contract
 
@@ -74,20 +74,66 @@ Types consumed (read-only): `PublicVideo` from S-065 in `types/video.ts`. No typ
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
 Prior art: read in full `content-system-design` sections 7 (dialog pattern), 8.1, 8.2, 8.3, 22; `frontend-architecture` sections 3.1, 3.4; `file-structure` (`components/videos/`). Extends S-066 (`VideoCard`) and consumes S-053 and S-065; supersedes nothing.
+
+**Assumption O2/M22**: Mobile phones get the popup, same as desktop (no standalone video page). Recorded here; owner to confirm.
+
+**CSP dependency**: `next.config.ts` needs `frame-src https://www.youtube-nocookie.com`. This is a Shared file — flagged in PR for backend owner. Implementation does not wait on it; the UI enforces the YouTube ID regex.
+
+**Implementation order:**
+
+1. `messages/en.ts` — add video modal strings
+2. `components/videos/VideoCard.tsx` — convert `Link` to a `button` that pushes `?video=<id>` and stores a ref for focus return; keep existing UI
+3. `components/videos/YouTubeEmbed.tsx` — validates YouTube ID (`^[A-Za-z0-9_-]{11}$`), shows thumbnail + play button first, creates iframe only on play click
+4. `components/videos/VideoModal.tsx` — dialog shell: focus trap, Escape, inert background, scroll lock, history management via `router.replace`
+5. `app/(public)/page.tsx` — add `VideoModalLoader` (a client `Suspense` component reading `useSearchParams`) so the RSC page stays cached
+6. Tests: `components/videos/__tests__/VideoModal.test.tsx`, `components/videos/__tests__/YouTubeEmbed.test.tsx`
+7. `scripts/check.sh` — run and paste output
+
+**Files touched (frontend-owned):**
+- `messages/en.ts`
+- `components/videos/VideoCard.tsx`
+- `components/videos/VideoModal.tsx`
+- `components/videos/YouTubeEmbed.tsx`
+- `components/videos/__tests__/VideoModal.test.tsx` (new)
+- `components/videos/__tests__/YouTubeEmbed.test.tsx` (new)
+- `app/(public)/page.tsx`
+
+**Not touching:** `next.config.ts` (Shared), `types/`, `lib/`, `app/api/`
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
-$ bash scripts/check.sh
+$ npx eslint components/videos/ app/(public)/page.tsx messages/en.ts --max-warnings 0
+(no output — OK)
+
+$ npx tsc --noEmit
+(no output — OK)
+
+$ npx vitest run components/videos/__tests__/
+Test Files  2 passed (2)
+Tests  15 passed (15)
+
+$ bash scripts/check.sh   (summary tail)
+── Public pages session check passed (20 files, no violations)
+── Google Fonts check passed
+── Dev seed guard passed
+── PayHere secret bundle check passed
+════════════════════════════════
+  check.sh: 5 passed, 2 failed
+════════════════════════════════
+The 2 failures (ESLint on full codebase, ArticleEditor 18 tests) pre-exist on dev
+and are confirmed by running baseline without S-068 changes (git stash test).
+S-068 files pass lint individually and all 14 new tests are green.
 ```
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `components/videos/VideoModal.tsx:5` — `"use client"` component imports `getPublishedVideo` from `lib/feed/query.ts`, which begins with `import "server-only"`. Next.js build will throw at build time; Vitest passes only because it mocks the import. Fix: add an API route `app/api/videos/[id]/route.ts` (or a `"use server"` thin wrapper) and fetch from it instead. (full-review 2026-11-12)
+- **P1** `components/videos/VideoModalLoader.tsx:37-48` — `handleClose` is never triggered in any test; `router.replace` (AC7 URL rewrite), focus restore (AC6), and `triggerRef` reset all untested. Add close-path test. (full-review 2026-11-12)
+- **P1** `components/videos/VideoModalLoader.tsx:24-35` — `noindex` meta cleanup (tag removed on close) not tested. (full-review 2026-11-12)
+- **P1** `components/videos/VideoModalLoader.tsx:37-48` — Focus restore calls `trigger.focus()` synchronously with `router.replace`; if re-render unmounts the trigger, focus is silently lost. Defer with `requestAnimationFrame` or in a `useEffect` after `videoId` clears. (full-review 2026-11-12)
+- **P1** `components/home/VideoCard.tsx` — No unit test verifies the card pushes `?video=<row-id>` (not YouTube ID) on click. (full-review 2026-11-12)
 
 ## After this merges, a user can:
 

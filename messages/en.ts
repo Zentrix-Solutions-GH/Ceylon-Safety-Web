@@ -344,6 +344,12 @@ const en = {
   "home.page_description": "Health and safety articles, guides, and checklists for the Sri Lankan workplace.",
   "home.feed_label": "Latest articles and videos",
   "home.video_card_label": "Video: {title}",
+  // --- video popup (S-068) ---
+  "video.unavailable": "This video is not available.",
+  "video.modal_close": "Close video",
+  "video.modal_title": "Watch video",
+  "video.loads_youtube": "This loads YouTube",
+  "video.play_button": "Play {title}",
   "home.counters_label": "Site statistics",
   "home.counter.articles": "Articles",
   "home.counter.documents": "Documents",
@@ -542,6 +548,19 @@ const en = {
   "home.hero.slide3_alt": "Fire safety equipment",
   "home.hero.slide4_alt": "Electrical safety inspection",
   "home.hero.slide_indicator": "Slide {n}",
+
+  // --- search bar + results page (S-067) ---
+  "search.bar.label": "Search",
+  "search.bar.placeholder": "Search safety resources…",
+  "search.bar.button": "Search",
+  "search.bar.empty_prompt": "Enter a search term to find articles and documents.",
+  "search.results.heading": "Search Results",
+  "search.results.none": "No results found.",
+  "search.results.loading": "Loading results…",
+  "search.results.rate_limited": "Too many searches. Please wait a minute.",
+  "search.results.error": "Something went wrong. Try again.",
+  "search.results.kind_article": "Article",
+  "search.results.kind_document": "Document",
 
   // --- home latest section (UI redesign) ---
   "home.latest.heading": "Latest Today",
