@@ -39,14 +39,14 @@ export type Database = {
                   ]
                 },"admin_audit_log": {
                   Row: {
-                    "action": string,"actor_id": string,"after": Json | null,"before": Json | null,"created_at": string,"entity_id": string | null,"entity_type": string | null,"id": number
+                    "action": string,"actor_id": string | null,"after": Json | null,"before": Json | null,"created_at": string,"entity_id": string | null,"entity_type": string | null,"id": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "action": string,"actor_id": string,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: never
+                    "action": string,"actor_id"?: string | null,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: never
                   }
                   Update: {
-                    "action"?: string,"actor_id"?: string,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: never
+                    "action"?: string,"actor_id"?: string | null,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: never
                   }
                   Relationships: [
                     {
@@ -1135,6 +1135,9 @@ isOneToOne: false
                            },
 "ensure_profile_for_user":
 { Args: { "p_app_meta"?: Json,"p_email": string,"p_user_id": string,"p_user_meta"?: Json }; Returns: undefined
+                           },
+"fulfil_payhere_locked":
+{ Args: { "p_download_limit": number,"p_event_id": string,"p_order_id": string,"p_payment_desc": string,"p_status_code": number }; Returns: Json
                            },
 "has_permission":
 { Args: { "p_action": string }; Returns: boolean
