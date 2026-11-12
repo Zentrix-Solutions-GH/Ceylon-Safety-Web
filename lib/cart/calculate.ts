@@ -74,6 +74,7 @@ export async function calculateCart(
     if (!doc || doc.status !== "published" || doc.deleted_at != null) {
       return {
         cartItemId: line.cartItemId,
+        documentId: line.documentId,
         title: doc?.title ?? "",
         slug: doc?.slug ?? "",
         coverUrl: null,
@@ -89,6 +90,7 @@ export async function calculateCart(
     if (!readyFiles.has(fileKey)) {
       return {
         cartItemId: line.cartItemId,
+        documentId: line.documentId,
         title: doc.title,
         slug: doc.slug,
         coverUrl: doc.cover_image_key ? publicUrl(doc.cover_image_key) : null,
@@ -102,6 +104,7 @@ export async function calculateCart(
 
     return {
       cartItemId: line.cartItemId,
+      documentId: line.documentId,
       title: doc.title,
       slug: doc.slug,
       coverUrl: doc.cover_image_key ? publicUrl(doc.cover_image_key) : null,
