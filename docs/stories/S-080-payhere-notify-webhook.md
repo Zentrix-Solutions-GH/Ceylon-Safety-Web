@@ -1,7 +1,7 @@
 ---
 id: S-080
 title: PayHere notify webhook and fulfilment transaction
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-080-payhere-notify-webhook
@@ -79,8 +79,37 @@ PayHere's server-to-server notification becomes the only thing that marks a card
 | Sandbox end to end with a PayHere test card, recorded in Evidence | manual | story file |
 
 ## Plan
+
 Prior art: grepped docs/ for notify, payment_events, fulfil, chargeback, event_key. Found commerce design v6 sections 5.3, 6.1, 9 and 11, schema doc section 7 outcome table and section 18.1 state machine; this story implements them (supersedes the first-draft S-016b).
-<!-- Filled in by /story-run at Step 3. Sensitive: the owner approves the plan before coding; security-reviewer runs. -->
+
+### Owner decisions (confirmed before coding)
+
+| Item | Decision |
+|---|---|
+| Q60 / REQ-052b — failed/cancelled rules | **Option B**: immediately set order `failed`/`cancelled` on notification. Buyer creates a new checkout to retry. `release_coupon_use` called (no-op in Release 1). |
+| `payment_events.outcome` CHECK — failed/cancelled | Add `payment_failed` and `payment_cancelled` to CHECK via migration. |
+| `payment_events.outcome` CHECK — chargeback | Add `chargeback_applied` to CHECK in the same migration. |
+| M37 — pending expiry extension | Confirmed: 48 hours from now (never shorten an already-later value). |
+| `purchase_count` on chargeback | Decrement by 1 per document in the order (per schema doc). |
+| `event_key` hash algorithm | SHA-256 of raw body when no `payment_id` present. |
+| Middleware exclusion | Already handled: `/api/payhere/notify` is in `RATE_LIMIT_EXEMPT`; API routes pass through without cookie auth. No code change needed. |
+| PayHere `payment_method` field | Record `payment_description` from notification into `orders.payment_method`. Exact field name to verify against PayHere docs before launch (section 19 item 2). |
+
+### Files to create / edit
+
+1. `supabase/migrations/<timestamp>_payment-events-outcome-check.sql` — extend CHECK constraint with `payment_failed`, `payment_cancelled`, `chargeback_applied`
+2. `lib/payhere/verify.ts` — `verifyNotifySignature(fields, secret): boolean`; `parseNotifyBody(raw): NotifyFields`
+3. `lib/orders/fulfil.ts` — `fulfilNotification(orderId, event, supabase)` — the locked outcome transaction
+4. `app/api/payhere/notify/route.ts` — replace 501 stub with full POST handler
+
+### DB migrations
+
+- Extend `payment_events.outcome` CHECK: add `payment_failed`, `payment_cancelled`, `chargeback_applied`.
+
+### Test files
+
+- `lib/payhere/__tests__/verify.test.ts`
+- `app/api/payhere/notify/__tests__/route.test.ts`
 
 ## Evidence
 <!-- Paste scripts/check.sh output here after Step 7. -->
