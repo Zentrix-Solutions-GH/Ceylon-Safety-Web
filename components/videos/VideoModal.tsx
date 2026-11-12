@@ -42,9 +42,8 @@ export function VideoModal({ videoId, onClose }: VideoModalProps) {
   // Scroll lock
   useEffect(() => {
     if (state.status !== "ready") return;
-    const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
+    return () => { document.body.style.overflow = ""; };
   }, [state.status]);
 
   // Focus trap and Escape

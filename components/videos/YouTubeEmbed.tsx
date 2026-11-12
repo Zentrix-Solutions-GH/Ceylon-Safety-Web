@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { t } from "@/messages/en";
-
-const YOUTUBE_ID_RE = /^[A-Za-z0-9_-]{11}$/;
+import { YOUTUBE_ID_RE } from "@/lib/youtube";
 const PLACEHOLDER = "/images/video-placeholder.jpg";
 
 interface YouTubeEmbedProps {
@@ -36,7 +35,7 @@ export function YouTubeEmbed({ youtubeId, thumbnailUrl, title }: YouTubeEmbedPro
           src={src}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
-          sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-forms"
+          sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-forms allow-pointer-lock"
           className="h-full w-full border-0"
         />
       </div>
