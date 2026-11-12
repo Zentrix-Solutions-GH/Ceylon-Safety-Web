@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useRef } from "react";
+import { useId, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { t } from "@/messages/en";
 import type { SearchScope } from "@/types/api";
@@ -8,11 +8,13 @@ import type { SearchScope } from "@/types/api";
 type Props = {
   scope: SearchScope;
   className?: string;
+  defaultValue?: string;
 };
 
-export default function SearchBar({ scope, className }: Props) {
+export default function SearchBar({ scope, className, defaultValue }: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = useId();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,14 +31,15 @@ export default function SearchBar({ scope, className }: Props) {
       onSubmit={handleSubmit}
       className={className}
     >
-      <label htmlFor="search-input" className="sr-only">
+      <label htmlFor={inputId} className="sr-only">
         {t("search.bar.label")}
       </label>
       <input
         ref={inputRef}
-        id="search-input"
+        id={inputId}
         type="search"
         name="q"
+        defaultValue={defaultValue}
         placeholder={t("search.bar.placeholder")}
         maxLength={100}
         className="flex-1 bg-transparent px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none"

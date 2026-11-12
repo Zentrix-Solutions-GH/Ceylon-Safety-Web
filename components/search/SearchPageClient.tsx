@@ -19,19 +19,20 @@ export function SearchPageClient() {
   const params = useSearchParams();
   const q = (params.get("q") ?? "").trim();
   const scope = resolveScope(params.get("scope"));
-  const { status, items, search } = useSearch();
+  const { status, items, search, abort } = useSearch();
 
   useEffect(() => {
     if (q) {
       search(q, scope);
     }
+    return abort;
     // Only re-run when q or scope change (from URL).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, scope]);
 
   return (
     <div className="space-y-6">
-      <SearchBar scope={scope} className="flex overflow-hidden rounded-full border border-gray-200 bg-white shadow-sm" />
+      <SearchBar key={q} scope={scope} defaultValue={q} className="flex overflow-hidden rounded-full border border-gray-200 bg-white shadow-sm" />
       {!q ? (
         <p className="text-sm text-gray-500">{t("search.bar.empty_prompt")}</p>
       ) : (

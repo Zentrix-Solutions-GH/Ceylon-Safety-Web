@@ -9,6 +9,7 @@ export type UseSearchResult = {
   status: SearchStatus;
   items: SearchResultItem[];
   search: (query: string, scope: SearchScope) => void;
+  abort: () => void;
 };
 
 export function useSearch(): UseSearchResult {
@@ -52,5 +53,9 @@ export function useSearch(): UseSearchResult {
       });
   }, []);
 
-  return { status, items, search };
+  const abort = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  return { status, items, search, abort };
 }

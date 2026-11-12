@@ -93,4 +93,12 @@ describe("SearchPageClient", () => {
     expect(mockFetch).not.toHaveBeenCalled();
     expect(screen.getByText(/enter a search term/i)).toBeInTheDocument();
   });
+
+  it("AC7: unknown scope falls back to home in the fetch URL", async () => {
+    setup("fire", "unknown-scope");
+    mockFetch.mockResolvedValueOnce(makeOkResponse());
+    render(<SearchPageClient />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    expect(mockFetch.mock.calls[0][0]).toContain("scope=home");
+  });
 });

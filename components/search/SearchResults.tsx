@@ -61,7 +61,7 @@ export default function SearchResults({ status, items }: Props) {
               {item.coverImageKey && (
                 <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded">
                   <Image
-                    src={`${publicConfig.mediaCdnUrl}/${item.coverImageKey}`}
+                    src={`${publicConfig.mediaCdnUrl}/${item.coverImageKey.replace(/^\/+/, "")}`}
                     alt=""
                     fill
                     className="object-cover"

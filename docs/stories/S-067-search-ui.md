@@ -110,7 +110,8 @@ Tests       18 failed | 2051 passed | 60 skipped (2129)
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `hooks/useSearch.ts:47-51` — `useEffect` in `SearchPageClient` does not return a cleanup calling `controller.abort()`; non-`AbortError` rejections on an unmounted component call state setters. Add `return () => abortRef.current?.abort()` to the effect or a mounted-ref guard in `useSearch`. (full-review 2026-11-12)
+- **P1** `components/search/SearchPageClient.tsx` — AC7 unknown scope has no dedicated test. Add a `SearchPageClient` test that sets `scope=garbage` and asserts the fetch URL contains `scope=home`. (full-review 2026-11-12)
 
 ## After this merges, a user can:
 
