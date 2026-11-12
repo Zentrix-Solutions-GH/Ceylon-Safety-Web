@@ -45,12 +45,7 @@ export async function fulfilNotification(
   const downloadLimit = await fetchDownloadLimit(sb);
 
   // Delegate to the locked PL/pgSQL function (AC4, AC10).
-  // Cast to any because fulfil_payhere_locked is not yet in the generated types
-  // (requires Supabase running to regenerate; check.sh skips types-freshness check
-  // when Supabase is not running).
-  const { data, error } = await (sb as unknown as {
-    rpc: (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
-  }).rpc("fulfil_payhere_locked", {
+  const { data, error } = await sb.rpc("fulfil_payhere_locked", {
     p_order_id:       orderId,
     p_event_id:       event.eventId,
     p_status_code:    event.statusCode,

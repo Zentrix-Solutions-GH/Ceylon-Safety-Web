@@ -187,6 +187,38 @@ describe("POST /api/payhere/notify", () => {
     expect(mockFulfil).not.toHaveBeenCalled();
   });
 
+  it("returns 500 when payment_events insert fails with a non-duplicate error", async () => {
+    const sb = {
+      from: vi.fn((table: string) => {
+        if (table === "orders") return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { id: ORDER_ID, order_number: ORDER_NUMBER, total_cents: 715545, status: "pending" },
+            error: null,
+          }),
+        };
+        if (table === "payment_events") return {
+          insert: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: null,
+            error: { code: "23503", message: "FK violation" },
+          }),
+        };
+        return {};
+      }),
+    };
+    mockAdmin.mockReturnValue(sb as never);
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const body = makeBody();
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toHaveProperty("error", "storage_error");
+    expect(mockFulfil).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
   it("returns 200 for amount mismatch and does not call fulfil", async () => {
     const sb = {
       rpc: vi.fn().mockResolvedValue({}),

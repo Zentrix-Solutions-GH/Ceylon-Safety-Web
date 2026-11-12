@@ -5,7 +5,7 @@
 -- Requires Docker + local Supabase stack.
 
 BEGIN;
-SELECT plan(146);
+SELECT plan(148);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- UUID legend (all hex-valid, non-overlapping with earlier test files)
@@ -1555,7 +1555,7 @@ BEGIN
 END $$;
 SELECT ok(true, 'S-080/AC3: flag_mismatch_event sets rejected_mismatch and needs_review atomically');
 
--- S-080: fulfil_payhere_locked and flag_mismatch_event not executable by anon or authenticated
+-- S-080: fulfil_payhere_locked and flag_mismatch_event not executable by anon, authenticated, or public
 SELECT ok(
   NOT has_function_privilege('anon', 'public.fulfil_payhere_locked(uuid,uuid,integer,text,integer)', 'EXECUTE'),
   'S-080/AC5: anon cannot EXECUTE fulfil_payhere_locked'
@@ -1565,12 +1565,20 @@ SELECT ok(
   'S-080/AC5: authenticated cannot EXECUTE fulfil_payhere_locked'
 );
 SELECT ok(
+  NOT has_function_privilege('public', 'public.fulfil_payhere_locked(uuid,uuid,integer,text,integer)', 'EXECUTE'),
+  'S-080/AC5: public role cannot EXECUTE fulfil_payhere_locked'
+);
+SELECT ok(
   NOT has_function_privilege('anon', 'public.flag_mismatch_event(uuid,uuid)', 'EXECUTE'),
   'S-080/AC5: anon cannot EXECUTE flag_mismatch_event'
 );
 SELECT ok(
   NOT has_function_privilege('authenticated', 'public.flag_mismatch_event(uuid,uuid)', 'EXECUTE'),
   'S-080/AC5: authenticated cannot EXECUTE flag_mismatch_event'
+);
+SELECT ok(
+  NOT has_function_privilege('public', 'public.flag_mismatch_event(uuid,uuid)', 'EXECUTE'),
+  'S-080/AC5: public role cannot EXECUTE flag_mismatch_event'
 );
 
 SELECT * FROM finish();

@@ -39,7 +39,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const config = payhereConfig();
 
   // AC1 step 2: verify signature (constant-time)
-  if (!verifyNotifySignature(fields, config.secret)) {
+  const signatureValid = verifyNotifySignature(fields, config.secret);
+  if (!signatureValid) {
     return NextResponse.json({ error: "invalid_signature" }, { status: 400 });
   }
 
@@ -76,7 +77,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const statusCode = parseInt(fields.status_code, 10);
-  const signatureValid = true; // we only get here if sig passed
 
   const { data: insertedEvent, error: insertErr } = await sb
     .from("payment_events")
@@ -148,9 +148,7 @@ async function runFulfilment(
     // both UPDATEs in one transaction body, so the append-only trigger is satisfied.
     // (Calling set_config + UPDATE as two separate PostgREST requests would fail
     // because each request runs in its own transaction and the GUC is gone.)
-    const { error: flagErr } = await (sb as unknown as {
-      rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
-    }).rpc("flag_mismatch_event", { p_event_id: eventId, p_order_id: orderId });
+    const { error: flagErr } = await sb.rpc("flag_mismatch_event", { p_event_id: eventId, p_order_id: orderId });
     if (flagErr) {
       console.error(`payhere_notify: flag_mismatch_error order_id=${orderId}`);
       return NextResponse.json({ error: "storage_error" }, { status: 500 });
