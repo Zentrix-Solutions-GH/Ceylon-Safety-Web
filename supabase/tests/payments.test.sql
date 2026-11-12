@@ -1502,8 +1502,12 @@ DECLARE
   v_evt uuid := 'f3000001-0000-0000-0000-000000000007';
   v_result jsonb;
 BEGIN
-  -- Reset order to pending so the unknown-status path is reachable
-  UPDATE public.orders SET status = 'pending' WHERE id = 'f1000001-0000-0000-0000-000000000001';
+  -- Reset order to pending; must also clear paid_at and payment_method because
+  -- orders_paid_at_consistency CHECK forbids paid_at IS NOT NULL when status = 'pending'.
+  UPDATE public.orders
+    SET status = 'pending', paid_at = NULL, payment_method = NULL,
+        needs_review = false, review_reason = NULL
+    WHERE id = 'f1000001-0000-0000-0000-000000000001';
 
   INSERT INTO public.payment_events (id, order_id, event_key, status_code, received_at)
   VALUES (v_evt, 'f1000001-0000-0000-0000-000000000001', 's080:99:007', 99, now())
@@ -1527,9 +1531,10 @@ DECLARE
   v_outcome text;
   v_needs_review bool;
 BEGIN
-  -- Reset order
+  -- Reset order; clear paid_at to satisfy orders_paid_at_consistency CHECK.
   UPDATE public.orders
-    SET status = 'pending', needs_review = false, review_reason = NULL
+    SET status = 'pending', paid_at = NULL, payment_method = NULL,
+        needs_review = false, review_reason = NULL
     WHERE id = 'f1000001-0000-0000-0000-000000000001';
 
   INSERT INTO public.payment_events (id, order_id, event_key, status_code, received_at)
