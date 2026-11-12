@@ -1,11 +1,11 @@
 ---
 id: S-067
 title: Search bar + search results page
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-067-search-ui
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/89"
 depends_on: [S-064, S-066]
 reqs: [REQ-015c, REQ-171, REQ-172, REQ-173, REQ-174]
 ---
@@ -23,24 +23,24 @@ A search bar on Home and a results page at `/search`, so a visitor can find arti
 
 ## Acceptance criteria
 
-- [ ] AC1: `components/search/SearchBar.tsx` takes a `scope` (`home`, `articles` or `documents`). `components/home/HomeSearchBar.tsx` places it on the Home page with scope `home`. Submitting goes to `/search?scope=<scope>&q=<text>`.
-- [ ] AC2: `app/(public)/search/page.tsx` is a cached shell. The query and scope are read in the browser (inside `Suspense`) and results come from `api/search` (S-064) in the browser. The page is `noindex`.
-- [ ] AC3: The input allows at most 100 characters. An empty or whitespace query shows a short prompt and makes no request.
-- [ ] AC4: Results show kind label, title, short text and cover image. An article links to `/articles/[slug]`. A document links to `/documents?document=<slug>`.
-- [ ] AC5: No results shows exactly "No results found."
-- [ ] AC6: While loading a skeleton shows. On `rate_limited` the page shows "Too many searches. Please wait a minute." On any other error: "Something went wrong. Try again."
-- [ ] AC7: The scope in the address is validated; an unknown scope falls back to `home` without an error page.
-- [ ] AC8: Results never come from a cache and are not kept after navigating away. The search bar is a labelled form control reachable by keyboard; results are a list with a heading.
-- [ ] AC9: `hooks/useSearch.ts` cancels an older request when a newer one starts.
+- [x] AC1: `components/search/SearchBar.tsx` takes a `scope` (`home`, `articles` or `documents`). `components/home/HomeSearchBar.tsx` places it on the Home page with scope `home`. Submitting goes to `/search?scope=<scope>&q=<text>`.
+- [x] AC2: `app/(public)/search/page.tsx` is a cached shell. The query and scope are read in the browser (inside `Suspense`) and results come from `api/search` (S-064) in the browser. The page is `noindex`.
+- [x] AC3: The input allows at most 100 characters. An empty or whitespace query shows a short prompt and makes no request.
+- [x] AC4: Results show kind label, title, short text and cover image. An article links to `/articles/[slug]`. A document links to `/documents?document=<slug>`.
+- [x] AC5: No results shows exactly "No results found."
+- [x] AC6: While loading a skeleton shows. On `rate_limited` the page shows "Too many searches. Please wait a minute." On any other error: "Something went wrong. Try again."
+- [x] AC7: The scope in the address is validated; an unknown scope falls back to `home` without an error page.
+- [x] AC8: Results never come from a cache and are not kept after navigating away. The search bar is a labelled form control reachable by keyboard; results are a list with a heading.
+- [x] AC9: `hooks/useSearch.ts` cancels an older request when a newer one starts.
 
 ## Edge cases
 
-- [ ] EC1: Query typed with leading and trailing spaces is trimmed before the call.
-- [ ] EC2: Query with `<script>` text shows as plain text in the page; nothing runs.
-- [ ] EC3: Two quick searches: only the newest result is shown.
-- [ ] EC4: Browser back from a result returns to the same results.
-- [ ] EC5: A very slow network shows the skeleton, then the results; no double render.
-- [ ] EC6: Query of 100 characters of operators returns within the call's own limit and the page does not hang.
+- [x] EC1: Query typed with leading and trailing spaces is trimmed before the call.
+- [x] EC2: Query with `<script>` text shows as plain text in the page; nothing runs.
+- [x] EC3: Two quick searches: only the newest result is shown.
+- [ ] EC4: Browser back from a result returns to the same results. (architecture correct — URL-driven; not covered by unit test; e2e absent)
+- [ ] EC5: A very slow network shows the skeleton, then the results; no double render. (architecturally correct; no test)
+- [x] EC6: Query of 100 characters of operators returns within the call's own limit and the page does not hang. (maxLength enforced; backend limit in S-064)
 
 ## Contract
 
