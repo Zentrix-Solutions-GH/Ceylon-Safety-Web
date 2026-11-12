@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getFeed } from "@/lib/feed/query";
 import { getCounters } from "@/lib/counters";
 import { Feed } from "@/components/home/Feed";
@@ -7,11 +8,15 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { SafetyDomains } from "@/components/home/SafetyDomains";
 import { PopularDocuments } from "@/components/home/PopularDocuments";
 import { TrainerCTA } from "@/components/home/TrainerCTA";
+import { VideoModalLoader } from "@/components/videos/VideoModalLoader";
+import { publicConfig } from "@/lib/config.public";
 import { t } from "@/messages/en";
 
 export const metadata: Metadata = {
   title: t("home.page_title"),
   description: t("home.page_description"),
+  // Canonical stays / even when ?video=<id> is in the address (AC2)
+  alternates: { canonical: publicConfig.appUrl },
 };
 
 const AUTO_LOAD_UNTIL_PAGE = 3;
@@ -50,6 +55,11 @@ export default async function HomePage() {
       </div>
 
       <TrainerCTA />
+
+      {/* Video popup — reads useSearchParams inside Suspense so the page stays cached (AC2) */}
+      <Suspense fallback={null}>
+        <VideoModalLoader />
+      </Suspense>
     </>
   );
 }

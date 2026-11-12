@@ -6,10 +6,9 @@ import { serverConfig } from "@/lib/config";
 import { FEED_TAG, HOME_FIRST_PAGE_TAG } from "@/lib/cache/tags";
 import type { FeedItem, FeedPage, ArticleFeedItem, VideoFeedItem } from "@/types/api";
 import type { GetPublicVideoResult } from "@/types/video";
+import { YOUTUBE_ID_RE } from "@/lib/youtube";
 
 export const PAGE_SIZE = 12;
-
-const YOUTUBE_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 
 // ---------------------------------------------------------------------------
 // Cursor
