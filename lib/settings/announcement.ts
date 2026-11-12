@@ -11,7 +11,7 @@ export interface AnnouncementBanner {
 }
 
 function isSafeHref(href: string): boolean {
-  return href.startsWith("/") || href.startsWith("https://") || href.startsWith("http://");
+  return href.startsWith("/") || href.startsWith("https://");
 }
 
 const FALLBACK: AnnouncementBanner = {
@@ -60,7 +60,7 @@ const fetchAnnouncement = unstable_cache(
       return FALLBACK;
     }
   },
-  ["announcement-banner"],
+  [ANNOUNCEMENT_TAG],
   { revalidate: 300, tags: [ANNOUNCEMENT_TAG] }
 );
 

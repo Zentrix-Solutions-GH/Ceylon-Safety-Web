@@ -33,4 +33,6 @@ export const publicConfig = {
   turnstileSiteKey: requiredString("NEXT_PUBLIC_TURNSTILE_SITE_KEY", process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY),
   // Base URL for public media assets served from Cloudflare R2 (no trailing slash).
   mediaCdnUrl: requiredString("NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL", process.env.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL),
+  // Developer attribution URL — optional; omit to render text without a link.
+  developerUrl: process.env.NEXT_PUBLIC_DEVELOPER_URL?.trim() || "",
 } as const;

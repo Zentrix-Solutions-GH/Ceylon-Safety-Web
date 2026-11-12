@@ -64,7 +64,6 @@ export function HeroSlideshow() {
             className={`absolute inset-0 transition-opacity duration-1000 ${
               isCurrent ? "opacity-100" : "opacity-0"
             }`}
-            style={isCurrent && prev !== null ? { animation: "heroFadeIn 1s ease-in-out" } : undefined}
           >
             <Image
               src={slide.src}

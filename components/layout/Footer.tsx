@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef } from "react";
+import React, { useRef, useState } from "react";
+import { publicConfig } from "@/lib/config.public";
 import Link from "next/link";
 import Image from "next/image";
 import { t } from "@/messages/en";
@@ -88,9 +89,12 @@ export default function Footer({ settings }: FooterProps) {
     );
   }
 
-  const address = settings?.footer_address ?? "No. XX, Wennawatta Road, Nugegoda, Sri Lanka";
-  const phone = settings?.contact_phone ?? "+94 9 266 6630";
-  const email = settings?.contact_email ?? "support@ceylonsafety.lk";
+  const [newsletterDone, setNewsletterDone] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+
+  const address = settings?.footer_address ?? "";
+  const phone = settings?.contact_phone ?? "";
+  const email = settings?.contact_email ?? "";
 
   return (
     <footer aria-label={t("footer.label")} className="bg-surface-dark text-white">
@@ -113,14 +117,15 @@ export default function Footer({ settings }: FooterProps) {
             <p className="text-xs text-gray-400 leading-relaxed">
               CeylonSafety is advancing occupational health, environmental protection and industrial safety compliance standards across civil construction, apparel manufacturing, tea estates, and ports in Sri Lanka.
             </p>
-            {/* Social icons */}
+            {/* Social icons — only rendered when a URL is configured */}
             <div className="mt-4 flex items-center gap-2">
               {[
-                { href: settings?.social_linkedin ?? "#", icon: <LinkedInIcon />, label: "LinkedIn" },
-                { href: settings?.social_youtube ?? "#", icon: <YouTubeIcon />, label: "YouTube" },
-                { href: settings?.social_facebook ?? "#", icon: <FacebookIcon />, label: "Facebook" },
-                { href: settings?.social_instagram ?? "#", icon: <InstagramIcon />, label: "Instagram" },
-              ].map(({ href, icon, label }) => (
+                { href: settings?.social_linkedin ?? null, icon: <LinkedInIcon />, label: "LinkedIn" },
+                { href: settings?.social_youtube ?? null, icon: <YouTubeIcon />, label: "YouTube" },
+                { href: settings?.social_facebook ?? null, icon: <FacebookIcon />, label: "Facebook" },
+                { href: settings?.social_instagram ?? null, icon: <InstagramIcon />, label: "Instagram" },
+              ].filter((s): s is { href: string; icon: React.ReactElement; label: string } => s.href !== null)
+               .map(({ href, icon, label }) => (
                 <a
                   key={label}
                   href={href}
@@ -143,19 +148,28 @@ export default function Footer({ settings }: FooterProps) {
             <p className="mb-4 text-xs text-gray-400">
               Receive timely Safety digest delivered the latest from Sri Lanka in the Standard industry specific updates
             </p>
-            <form onSubmit={(e) => e.preventDefault()} className="flex overflow-hidden rounded-md border border-white/20">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 bg-transparent px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="shrink-0 bg-primary px-4 py-2.5 text-xs font-bold text-white hover:bg-primary-dark transition-colors tracking-wider"
+            {newsletterDone ? (
+              <p className="text-sm text-green-400 py-2.5">Thanks! We&apos;ll keep you updated.</p>
+            ) : (
+              <form
+                onSubmit={(e) => { e.preventDefault(); if (newsletterEmail) setNewsletterDone(true); }}
+                className="flex overflow-hidden rounded-md border border-white/20"
               >
-                SUBSCRIBE
-              </button>
-            </form>
+                <input
+                  type="email"
+                  value={newsletterEmail}
+                  onChange={(e) => setNewsletterEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="flex-1 bg-transparent px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  className="shrink-0 bg-primary px-4 py-2.5 text-xs font-bold text-white hover:bg-primary-dark transition-colors tracking-wider"
+                >
+                  SUBSCRIBE
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </div>
@@ -231,9 +245,13 @@ export default function Footer({ settings }: FooterProps) {
       <div className="border-t border-white/10">
         <div className="mx-auto max-w-6xl px-4 py-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-500">
           <span>&copy; {year} Ceylon Safety. All Rights Reserved | Designed &amp; Developed by{" "}
-            <a href="https://zentrixsolution.tech" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white underline">
-              Zentrix Solutions
-            </a>
+            {publicConfig.developerUrl ? (
+              <a href={publicConfig.developerUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white underline">
+                Zentrix Solutions
+              </a>
+            ) : (
+              <span className="text-gray-400">Zentrix Solutions</span>
+            )}
           </span>
           <div className="flex flex-wrap gap-4">
             <Link href="/privacy" className="hover:text-gray-300 transition-colors">Privacy Policy</Link>

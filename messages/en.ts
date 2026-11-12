@@ -530,6 +530,16 @@ const en = {
   "home.hero.slide3_alt": "Fire safety equipment",
   "home.hero.slide4_alt": "Electrical safety inspection",
   "home.hero.slide_indicator": "Slide {n}",
+
+  // --- home latest section (UI redesign) ---
+  "home.latest.heading": "Latest Today",
+  "home.latest.description": "Fresh safety updates, articles and resources published today",
+
+  // --- password visibility toggles ---
+  "auth.sign_in.show_password": "Show password",
+  "auth.sign_in.hide_password": "Hide password",
+  "auth.sign_up.show_password": "Show password",
+  "auth.sign_up.hide_password": "Hide password",
 } as const;
 
 export type MessageKey = keyof typeof en;

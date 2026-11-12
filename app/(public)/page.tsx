@@ -40,8 +40,8 @@ export default async function HomePage() {
         <div className="mx-auto max-w-6xl px-4">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Latest Today</h2>
-              <p className="text-sm text-gray-500 mt-0.5">Fresh safety updates, articles and resources published today</p>
+              <h2 className="text-xl font-bold text-gray-900">{t("home.latest.heading")}</h2>
+              <p className="text-sm text-gray-500 mt-0.5">{t("home.latest.description")}</p>
             </div>
             <Counters data={counters} />
           </div>
