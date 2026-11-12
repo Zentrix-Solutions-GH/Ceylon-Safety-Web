@@ -111,6 +111,7 @@ describe("notify route — replay / duplicate handling (AC2, AC10)", () => {
 
     const res = await POST(makeRequest());
     expect(res.status).toBe(200);
+    expect(await res.json()).toHaveProperty("ok", true);
     expect(fulfilNotification).not.toHaveBeenCalled();
   });
 
@@ -121,6 +122,7 @@ describe("notify route — replay / duplicate handling (AC2, AC10)", () => {
 
     const res = await POST(makeRequest());
     expect(res.status).toBe(200);
+    expect(await res.json()).toHaveProperty("ok", true);
     expect(fulfilNotification).not.toHaveBeenCalled();
   });
 
@@ -131,6 +133,7 @@ describe("notify route — replay / duplicate handling (AC2, AC10)", () => {
 
     const res = await POST(makeRequest());
     expect(res.status).toBe(200);
+    expect(await res.json()).toHaveProperty("ok", true);
     expect(fulfilNotification).toHaveBeenCalledOnce();
   });
 });

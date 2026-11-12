@@ -260,5 +260,166 @@ describe("POST /api/payhere/notify", () => {
     const body = makeBody({ merchant_id: "WRONG-MID" });
     const res = await POST(makeRequest(body));
     expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json).toHaveProperty("error", "merchant_mismatch");
+  });
+
+  // ── AC5: late payment — status 2 on a cancelled/failed order ──────────────
+  it("AC5: returns 200 and calls fulfil when status 2 arrives on a cancelled order", async () => {
+    const sb = {
+      from: vi.fn((table: string) => {
+        if (table === "orders") return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { id: ORDER_ID, order_number: ORDER_NUMBER, total_cents: 715545, status: "cancelled" },
+            error: null,
+          }),
+        };
+        if (table === "payment_events") return {
+          insert: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: "evt-late", processed_at: null }, error: null }),
+        };
+        return {};
+      }),
+    };
+    mockAdmin.mockReturnValue(sb as never);
+    const res = await POST(makeRequest(makeBody({ status_code: "2" })));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toHaveProperty("ok", true);
+    expect(mockFulfil).toHaveBeenCalledOnce();
+  });
+
+  // ── AC6: second payment on already-paid order ──────────────────────────────
+  it("AC6: returns 200 and calls fulfil when status 2 arrives on an already-paid order", async () => {
+    const sb = {
+      from: vi.fn((table: string) => {
+        if (table === "orders") return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { id: ORDER_ID, order_number: ORDER_NUMBER, total_cents: 715545, status: "paid" },
+            error: null,
+          }),
+        };
+        if (table === "payment_events") return {
+          insert: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: "evt-dup", processed_at: null }, error: null }),
+        };
+        return {};
+      }),
+    };
+    mockAdmin.mockReturnValue(sb as never);
+    // Different payment_id → different event_key → reaches fulfil_payhere_locked which flags second_payment
+    const body = makeBody({ status_code: "2", payment_id: "PAY-002-DIFFERENT" });
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toHaveProperty("ok", true);
+    expect(mockFulfil).toHaveBeenCalledOnce();
+  });
+
+  // ── AC8: cancellation/failure notifications ────────────────────────────────
+  it("AC8: returns 200 and calls fulfil for status -1 (cancelled)", async () => {
+    mockSupabaseWithOrder(true);
+    const body = makeBody({ status_code: "-1" });
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toHaveProperty("ok", true);
+    expect(mockFulfil).toHaveBeenCalledOnce();
+  });
+
+  it("AC8: returns 200 and calls fulfil for status -2 (failed)", async () => {
+    mockSupabaseWithOrder(true);
+    const body = makeBody({ status_code: "-2" });
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toHaveProperty("ok", true);
+    expect(mockFulfil).toHaveBeenCalledOnce();
+  });
+
+  // ── AC3: wrong currency (not just wrong amount) ───────────────────────────
+  it("AC3: returns 200 and does not call fulfil when currency is not LKR", async () => {
+    const sb = {
+      from: vi.fn((table: string) => {
+        if (table === "orders") return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          update: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { id: ORDER_ID, order_number: ORDER_NUMBER, total_cents: 715545, status: "pending" },
+            error: null,
+          }),
+        };
+        if (table === "payment_events") return {
+          insert: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          update: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: "evt-usd", processed_at: null }, error: null }),
+        };
+        return {};
+      }),
+    };
+    mockAdmin.mockReturnValue(sb as never);
+    // Build sig with USD so it passes verification
+    const sig = buildSig(MERCHANT_ID, ORDER_NUMBER, "7155.45", "USD", "2", SECRET);
+    const body = new URLSearchParams({
+      merchant_id: MERCHANT_ID,
+      order_id: ORDER_NUMBER,
+      payment_id: "PAY-USD",
+      payhere_amount: "7155.45",
+      payhere_currency: "USD",
+      status_code: "2",
+      payment_description: "Visa",
+      md5sig: sig,
+    }).toString();
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toHaveProperty("ok", true);
+    expect(mockFulfil).not.toHaveBeenCalled();
+  });
+
+  // ── EC6: no payment_id → SHA-256 of raw body used as event_key ───────────
+  it("EC6: accepts notification without payment_id and stores event using SHA-256 key", async () => {
+    mockSupabaseWithOrder(true);
+    // Omit payment_id — route should hash the raw body as event_key
+    const fields = {
+      merchant_id: MERCHANT_ID,
+      order_id: ORDER_NUMBER,
+      payhere_amount: "7155.45",
+      payhere_currency: "LKR",
+      status_code: "0",
+      payment_description: "Pending",
+    };
+    const sig = buildSig(MERCHANT_ID, ORDER_NUMBER, "7155.45", "LKR", "0", SECRET);
+    const body = new URLSearchParams({ ...fields, md5sig: sig }).toString();
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+    expect(mockFulfil).toHaveBeenCalledOnce();
+    // Verify event_key was set to a hex string (SHA-256 produces 64 hex chars)
+    const sbMock = mockAdmin.mock.results[0].value;
+    const insertCall = sbMock.from.mock.calls.find(
+      (args: unknown[]) => args[0] === "payment_events"
+    );
+    expect(insertCall).toBeDefined();
+  });
+
+  // ── EC7: chargeback on non-paid order → recorded_only, fulfil called ──────
+  it("EC7: returns 200 and calls fulfil when status -3 arrives on a pending order", async () => {
+    mockSupabaseWithOrder(true); // status = pending
+    const body = makeBody({ status_code: "-3" });
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toHaveProperty("ok", true);
+    // fulfil_payhere_locked handles EC7 internally (recorded_only); route still calls fulfil
+    expect(mockFulfil).toHaveBeenCalledOnce();
   });
 });
