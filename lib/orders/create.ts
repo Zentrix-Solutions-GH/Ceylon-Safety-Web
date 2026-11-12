@@ -278,7 +278,7 @@ export async function createCheckout(
 
   const appUrl = publicConfig.appUrl;
   const payhereFields = buildPayHereRequest(
-    { orderNumber: result.order_number, totalCents },
+    { orderNumber: result.order_number, totalCents, itemCount: lines.items.length },
     {
       firstName: input.billing.firstName,
       lastName: input.billing.lastName,

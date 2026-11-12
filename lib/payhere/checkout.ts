@@ -5,9 +5,13 @@ import { centsToDecimal } from "./money";
 import type { PayHereConfig } from "./types";
 import type { PayHereFormFields } from "@/types/payhere";
 
+// PayHere items field limit (verified against PayHere integration docs, section 19 item 7).
+const ITEMS_MAX_LENGTH = 255;
+
 export interface PayHereOrderInput {
   orderNumber: string;
   totalCents: number;
+  itemCount: number;
 }
 
 export interface PayHereBillingInput {
@@ -52,6 +56,9 @@ export function buildPayHereRequest(
   const currency = "LKR";
   const hash = buildHash(config.merchantId, order.orderNumber, amount, currency, config.secret);
 
+  const rawItems = `CeylonSafety documents (${order.itemCount} item${order.itemCount === 1 ? "" : "s"})`;
+  const items = rawItems.length > ITEMS_MAX_LENGTH ? rawItems.slice(0, ITEMS_MAX_LENGTH) : rawItems;
+
   return {
     checkout_url: config.checkoutUrl,
     merchant_id: config.merchantId,
@@ -59,7 +66,7 @@ export function buildPayHereRequest(
     cancel_url: urls.cancelUrl,
     notify_url: urls.notifyUrl,
     order_id: order.orderNumber,
-    items: "CeylonSafety documents",
+    items,
     currency,
     amount,
     first_name: billing.firstName,

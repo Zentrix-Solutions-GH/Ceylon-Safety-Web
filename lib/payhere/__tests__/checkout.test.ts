@@ -27,6 +27,7 @@ const liveConfig = {
 const baseOrder = {
   orderNumber: "CS-2026-00001",
   totalCents: 715545,
+  itemCount: 3,
 };
 
 const baseBilling = {
@@ -108,5 +109,20 @@ describe("buildPayHereRequest", () => {
   it("order_id is the order number", () => {
     const fields = buildPayHereRequest(baseOrder, baseBilling, baseUrls, sandboxConfig);
     expect(fields.order_id).toBe("CS-2026-00001");
+  });
+
+  it("items includes item count in description (AC2)", () => {
+    const fields = buildPayHereRequest(baseOrder, baseBilling, baseUrls, sandboxConfig);
+    expect(fields.items).toBe("CeylonSafety documents (3 items)");
+  });
+
+  it("items uses singular for 1 item (AC2)", () => {
+    const fields = buildPayHereRequest({ ...baseOrder, itemCount: 1 }, baseBilling, baseUrls, sandboxConfig);
+    expect(fields.items).toBe("CeylonSafety documents (1 item)");
+  });
+
+  it("items is truncated to 255 characters (EC4)", () => {
+    const fields = buildPayHereRequest({ ...baseOrder, itemCount: 999 }, baseBilling, baseUrls, sandboxConfig);
+    expect(fields.items.length).toBeLessThanOrEqual(255);
   });
 });
