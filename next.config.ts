@@ -24,6 +24,11 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       // R2 public bucket and YouTube thumbnails added during S-001 infra setup
+      // localhost: dev server serves media at localhost:3000 when NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL points there
+      {
+        protocol: "http",
+        hostname: "localhost",
+      },
     ],
   },
   async headers() {
