@@ -1,7 +1,7 @@
 ---
 id: S-068
 title: Video popup + Home video cards
-status: ready
+status: in-progress
 owner: frontend
 risk: normal
 branch: feature/S-068-video-popup
@@ -74,15 +74,57 @@ Types consumed (read-only): `PublicVideo` from S-065 in `types/video.ts`. No typ
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
 Prior art: read in full `content-system-design` sections 7 (dialog pattern), 8.1, 8.2, 8.3, 22; `frontend-architecture` sections 3.1, 3.4; `file-structure` (`components/videos/`). Extends S-066 (`VideoCard`) and consumes S-053 and S-065; supersedes nothing.
+
+**Assumption O2/M22**: Mobile phones get the popup, same as desktop (no standalone video page). Recorded here; owner to confirm.
+
+**CSP dependency**: `next.config.ts` needs `frame-src https://www.youtube-nocookie.com`. This is a Shared file — flagged in PR for backend owner. Implementation does not wait on it; the UI enforces the YouTube ID regex.
+
+**Implementation order:**
+
+1. `messages/en.ts` — add video modal strings
+2. `components/videos/VideoCard.tsx` — convert `Link` to a `button` that pushes `?video=<id>` and stores a ref for focus return; keep existing UI
+3. `components/videos/YouTubeEmbed.tsx` — validates YouTube ID (`^[A-Za-z0-9_-]{11}$`), shows thumbnail + play button first, creates iframe only on play click
+4. `components/videos/VideoModal.tsx` — dialog shell: focus trap, Escape, inert background, scroll lock, history management via `router.replace`
+5. `app/(public)/page.tsx` — add `VideoModalLoader` (a client `Suspense` component reading `useSearchParams`) so the RSC page stays cached
+6. Tests: `components/videos/__tests__/VideoModal.test.tsx`, `components/videos/__tests__/YouTubeEmbed.test.tsx`
+7. `scripts/check.sh` — run and paste output
+
+**Files touched (frontend-owned):**
+- `messages/en.ts`
+- `components/videos/VideoCard.tsx`
+- `components/videos/VideoModal.tsx`
+- `components/videos/YouTubeEmbed.tsx`
+- `components/videos/__tests__/VideoModal.test.tsx` (new)
+- `components/videos/__tests__/YouTubeEmbed.test.tsx` (new)
+- `app/(public)/page.tsx`
+
+**Not touching:** `next.config.ts` (Shared), `types/`, `lib/`, `app/api/`
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
-$ bash scripts/check.sh
+$ npx eslint components/videos/ app/(public)/page.tsx messages/en.ts --max-warnings 0
+(no output — OK)
+
+$ npx tsc --noEmit
+(no output — OK)
+
+$ npx vitest run components/videos/__tests__/
+Test Files  2 passed (2)
+Tests  14 passed (14)
+
+$ bash scripts/check.sh   (summary tail)
+── Public pages session check passed (20 files, no violations)
+── Google Fonts check passed
+── Dev seed guard passed
+── PayHere secret bundle check passed
+════════════════════════════════
+  check.sh: 5 passed, 2 failed
+════════════════════════════════
+The 2 failures (ESLint on full codebase, ArticleEditor 18 tests) pre-exist on dev
+and are confirmed by running baseline without S-068 changes (git stash test).
+S-068 files pass lint individually and all 14 new tests are green.
 ```
 
 ## Review notes

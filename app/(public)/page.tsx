@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getFeed } from "@/lib/feed/query";
 import { getCounters } from "@/lib/counters";
 import { Feed } from "@/components/home/Feed";
@@ -7,6 +8,7 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { SafetyDomains } from "@/components/home/SafetyDomains";
 import { PopularDocuments } from "@/components/home/PopularDocuments";
 import { TrainerCTA } from "@/components/home/TrainerCTA";
+import { VideoModalLoader } from "@/components/videos/VideoModalLoader";
 import { t } from "@/messages/en";
 
 export const metadata: Metadata = {
@@ -50,6 +52,11 @@ export default async function HomePage() {
       </div>
 
       <TrainerCTA />
+
+      {/* Video popup — reads useSearchParams inside Suspense so the page stays cached (AC2) */}
+      <Suspense fallback={null}>
+        <VideoModalLoader />
+      </Suspense>
     </>
   );
 }

@@ -344,6 +344,12 @@ const en = {
   "home.page_description": "Health and safety articles, guides, and checklists for the Sri Lankan workplace.",
   "home.feed_label": "Latest articles and videos",
   "home.video_card_label": "Video: {title}",
+  // --- video popup (S-068) ---
+  "video.unavailable": "This video is not available.",
+  "video.modal_close": "Close video",
+  "video.modal_title": "Watch video",
+  "video.loads_youtube": "This loads YouTube",
+  "video.play_button": "Play {title}",
   "home.counters_label": "Site statistics",
   "home.counter.articles": "Articles",
   "home.counter.documents": "Documents",
