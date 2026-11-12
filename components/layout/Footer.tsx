@@ -128,7 +128,7 @@ export default function Footer({ settings, categories = [] }: FooterProps) {
               Sri Lanka&apos;s National Safety Hub
             </p>
             <p className="text-xs text-gray-400 leading-relaxed">
-              CeylonSafety is advancing occupational health, environmental protection and industrial safety compliance standards across civil construction, apparel manufacturing, tea estates, and ports in Sri Lanka.
+              Sri Lanka&apos;s leading occupational health, environmental protection and industrial safety compliance platform serving civil construction, apparel manufacturing, tea estates, and ports.
             </p>
           </div>
 
@@ -298,7 +298,7 @@ export default function Footer({ settings, categories = [] }: FooterProps) {
             )}
           </span>
           <div className="flex flex-wrap gap-4">
-            <Link href="/privacy" className="hover:text-gray-300 transition-colors">{t("footer.privacy")}</Link>
+            <Link href="/privacy" className="hover:text-gray-300 transition-colors">{t("footer.privacy_policy")}</Link>
             <button ref={btnRef} type="button" onClick={handleCookieSettings} className="hover:text-gray-300 transition-colors">
               {t("footer.cookie_settings")}
             </button>

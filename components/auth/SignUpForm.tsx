@@ -282,10 +282,6 @@ export function SignUpForm() {
         <div className="mt-8 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-gray-400">
           <span className="flex items-center gap-1"><Shield className="h-3 w-3 text-green-500" /> Enterprise Security Enforced</span>
           <span>•</span>
-          <Link href="/terms" className="hover:text-gray-600">Terms of Service</Link>
-          <span>•</span>
-          <Link href="/privacy" className="hover:text-gray-600">Privacy Policy</Link>
-          <span>•</span>
           <Link href="/disclaimer" className="hover:text-gray-600">Statutory Disclaimer</Link>
         </div>
       </div>

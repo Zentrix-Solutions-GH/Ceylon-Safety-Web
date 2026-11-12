@@ -131,6 +131,7 @@ const en = {
   "footer.social.linkedin": "LinkedIn",
   "footer.social.youtube": "YouTube",
   "footer.cookie_settings": "Cookie settings",
+  "footer.privacy_policy": "Privacy Policy",
 
   // --- sign-up screen (S-041) ---
   "auth.sign_up.heading": "Create your account",
@@ -539,8 +540,8 @@ const en = {
   // --- password visibility toggles ---
   "auth.sign_in.show_password": "Show password",
   "auth.sign_in.hide_password": "Hide password",
-  "auth.sign_up.show_password": "Show password",
-  "auth.sign_up.hide_password": "Hide password",
+  "auth.sign_up.show_password": "Show",
+  "auth.sign_up.hide_password": "Hide",
 
   // --- trainer CTA section ---
   "home.trainer_cta.eyebrow": "Ceylon Safety Trainers",
