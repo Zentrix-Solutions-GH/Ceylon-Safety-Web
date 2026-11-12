@@ -31,7 +31,7 @@ const mockFulfil = vi.mocked(fulfilNotification);
 const SECRET = "test-secret";
 const MERCHANT_ID = "TEST-MID";
 const ORDER_NUMBER = "CS-2026-00001";
-const ORDER_ID = "550e8400-e29b-41d4-a716-446655440001";
+const ORDER_ID = "550e8400-e29b-41d4-a716-446655440001"; // RFC 4122 example UUID, not a real order
 
 function buildSig(
   merchantId: string,
@@ -421,5 +421,45 @@ describe("POST /api/payhere/notify", () => {
     expect(json).toHaveProperty("ok", true);
     // fulfil_payhere_locked handles EC7 internally (recorded_only); route still calls fulfil
     expect(mockFulfil).toHaveBeenCalledOnce();
+  });
+
+  // ── EC5: 20 notifications for different orders simultaneously ─────────────
+  // Verifies that the route processes independent orders without cross-order
+  // interference. The advisory lock is per-order (hashtext(order_id)), so
+  // concurrent notifications for different orders must not block each other.
+  it("EC5: 20 concurrent notifications for different orders all succeed independently", async () => {
+    const CONCURRENCY = 20;
+
+    // Each request gets its own isolated mock (independent orders, independent events).
+    mockAdmin.mockImplementation(() => ({
+      from: vi.fn((table: string) => {
+        const orderId = `order-${Math.random()}`;
+        if (table === "orders") return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { id: orderId, order_number: ORDER_NUMBER, total_cents: 715545, status: "pending" },
+            error: null,
+          }),
+        };
+        if (table === "payment_events") return {
+          insert: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: `evt-${orderId}`, processed_at: null }, error: null }),
+        };
+        return {};
+      }),
+    }));
+
+    const requests = Array.from({ length: CONCURRENCY }, (_, i) =>
+      POST(makeRequest(makeBody({ order_id: `ORD-${i}`, payment_id: `PAY-${i}` }))),
+    );
+
+    const results = await Promise.all(requests);
+
+    // All 20 must succeed with 200
+    expect(results.every(r => r.status === 200)).toBe(true);
+    // Each triggered exactly one fulfilNotification call
+    expect(mockFulfil).toHaveBeenCalledTimes(CONCURRENCY);
   });
 });
