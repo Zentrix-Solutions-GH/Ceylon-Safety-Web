@@ -98,4 +98,47 @@ describe("VideoModal", () => {
     expect(screen.queryByText(/like/i)).toBeNull();
     expect(screen.queryByText(/comment/i)).toBeNull();
   });
+
+  it("AC6: focus moves into the popup on open", async () => {
+    render(<VideoModal videoId="abc123" onClose={vi.fn()} />);
+    await waitFor(() => screen.getByRole("dialog"));
+    const closeBtn = screen.getByRole("button", { name: /close/i });
+    // close button should receive focus on open
+    expect(document.activeElement).toBe(closeBtn);
+  });
+
+  it("AC6: Tab on the last focusable element wraps to the first (close button)", async () => {
+    render(<VideoModal videoId="abc123" onClose={vi.fn()} />);
+    await waitFor(() => screen.getByRole("dialog"));
+    const buttons = screen.getAllByRole("button");
+    const lastBtn = buttons[buttons.length - 1];
+    const firstBtn = buttons[0];
+    lastBtn.focus();
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: false });
+    expect(document.activeElement).toBe(firstBtn);
+  });
+
+  it("AC6: Shift+Tab on the first focusable element wraps to the last (play button)", async () => {
+    render(<VideoModal videoId="abc123" onClose={vi.fn()} />);
+    await waitFor(() => screen.getByRole("dialog"));
+    const buttons = screen.getAllByRole("button");
+    const firstBtn = buttons[0];
+    const lastBtn = buttons[buttons.length - 1];
+    firstBtn.focus();
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(lastBtn);
+  });
+
+  it("AC6: background main element gets inert attribute while modal is open", async () => {
+    const main = document.createElement("main");
+    main.id = "main-content";
+    document.body.appendChild(main);
+
+    render(<VideoModal videoId="abc123" onClose={vi.fn()} />);
+    await waitFor(() => screen.getByRole("dialog"));
+    expect(main.hasAttribute("inert")).toBe(true);
+    expect(main.getAttribute("aria-hidden")).toBe("true");
+
+    document.body.removeChild(main);
+  });
 });
