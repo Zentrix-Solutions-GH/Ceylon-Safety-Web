@@ -204,6 +204,7 @@ export function SignUpForm() {
                   type="email"
                   autoComplete="email"
                   required
+                  aria-invalid={fieldErrors.email ? "true" : undefined}
                   placeholder="name@workplace.lk"
                   className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                 />

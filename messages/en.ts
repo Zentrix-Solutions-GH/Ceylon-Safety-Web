@@ -578,7 +578,7 @@ const en = {
   "footer.newsletter.email_placeholder": "Enter your email",
   "footer.newsletter.subscribe": "SUBSCRIBE",
   "footer.newsletter.thanks": "Thanks! We’ll keep you updated.",
-  "footer.accreditation.body": "CeylonSafety content is reviewed against OSHA international and SLS standards and by registered safety professionals in Sri Lanka.",
+  "footer.accreditation.body": "All content is reviewed against OSHA international and SLS standards by registered safety professionals in Sri Lanka.",
   "footer.accreditation.cta": "Get Registered Online",
   "footer.links.knowledge": "Knowledge",
   "footer.links.articles": "Articles & Case Studies",
