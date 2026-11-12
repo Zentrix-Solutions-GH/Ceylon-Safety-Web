@@ -3,6 +3,10 @@ import { getFeed } from "@/lib/feed/query";
 import { getCounters } from "@/lib/counters";
 import { Feed } from "@/components/home/Feed";
 import { Counters } from "@/components/home/Counters";
+import { HeroSection } from "@/components/home/HeroSection";
+import { SafetyDomains } from "@/components/home/SafetyDomains";
+import { PopularDocuments } from "@/components/home/PopularDocuments";
+import { TrainerCTA } from "@/components/home/TrainerCTA";
 import { t } from "@/messages/en";
 
 export const metadata: Metadata = {
@@ -23,9 +27,29 @@ export default async function HomePage() {
     : { items: [], nextCursor: null };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <Feed firstPage={firstPage} autoLoadUntilPage={AUTO_LOAD_UNTIL_PAGE} />
-      <Counters data={counters} />
-    </div>
+    <>
+      <HeroSection />
+      {/* pt-8 compensates for the search bar that overflows the hero by ~50% of its height */}
+      <div className="pt-8">
+        <PopularDocuments />
+        <SafetyDomains />
+      </div>
+
+      {/* Latest Today */}
+      <div className="bg-white py-10">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">{t("home.latest.heading")}</h2>
+              <p className="text-sm text-gray-500 mt-0.5">{t("home.latest.description")}</p>
+            </div>
+            <Counters data={counters} />
+          </div>
+          <Feed firstPage={firstPage} autoLoadUntilPage={AUTO_LOAD_UNTIL_PAGE} />
+        </div>
+      </div>
+
+      <TrainerCTA />
+    </>
   );
 }

@@ -4,17 +4,28 @@
 
 /* No dark mode in v1 — decision F4. Do not add dark: variants or prefers-color-scheme colour rules. */
 
+@keyframes heroFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @layer base {
   :root {
-    /* ── Brand colours (placeholder palette — swap values when Q47 final files arrive) ── */
-    --primary: 357 95% 46%;             /* #E30613 brand red */
+    /* ── Brand colours ── */
+    --primary: 0 100% 38%;              /* #C00000 brand red */
     --primary-foreground: 0 0% 100%;
+    --primary-dark: 0 100% 31%;         /* #a00000 hover / pressed state */
+    --primary-darker: 0 100% 27%;       /* #8B0000 deep accent / left panel overlay */
+    --primary-deepest: 0 100% 15%;      /* #4a0000 gradient bottom / deepest overlay */
 
-    /* brand-red-text: text-only red, must be ≥4.5:1 on white. #E30613 = 4.83:1 ✓ */
-    --brand-red-text: 357 95% 46%;
+    /* brand-red-text: text-only red, must be ≥4.5:1 on white. #C00000 = 5.9:1 ✓ */
+    --brand-red-text: 0 100% 38%;
 
     /* logo-red: large-area and logo red only — separate semantic role from brand-red-text */
-    --logo-red: 357 95% 46%;
+    --logo-red: 0 100% 38%;
+
+    /* surface-dark: dark section backgrounds (hero, footer) */
+    --surface-dark: 0 0% 10%;           /* #1a1a1a */
 
     /* ── Semantic status colours ── */
     --success: 142 71% 45%;             /* #22c552 */

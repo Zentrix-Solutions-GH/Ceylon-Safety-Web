@@ -32,12 +32,31 @@ vi.mock("next/navigation", () => ({
   useParams: vi.fn(() => ({})),
 }));
 
+// Header is an async RSC that awaits getAnnouncementBanner — mock it so the
+// component resolves synchronously in jsdom tests.
+vi.mock("@/lib/settings/announcement", () => ({
+  getAnnouncementBanner: vi.fn().mockResolvedValue({
+    enabled: false,
+    text: "",
+    linkLabel: "",
+    linkHref: "/",
+  }),
+}));
+
 import Header from "../Header";
 import { useAuth } from "@/hooks/useAuth";
 import { usePathname } from "next/navigation";
 
 const mockUseAuth = vi.mocked(useAuth);
 const mockUsePathname = vi.mocked(usePathname);
+
+// Header is an async RSC. Call and await it directly to get the resolved JSX,
+// then pass to render() so client sub-components (hooks etc.) work normally.
+async function renderHeader() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ui = await (Header as any)();
+  return render(ui);
+}
 
 describe("Header", () => {
   let mockSignOut: ReturnType<typeof vi.fn>;
@@ -49,15 +68,17 @@ describe("Header", () => {
   });
 
   describe("EC6: text wordmark", () => {
-    it("renders the CeylonSafety text wordmark", () => {
-      render(<Header />);
-      expect(screen.getByText("CeylonSafety")).toBeInTheDocument();
+    it("renders the CeylonSafety text wordmark", async () => {
+      await renderHeader();
+      // Redesigned header renders the wordmark as two separate spans: CEYLON + SAFETY.
+      expect(screen.getByText("CEYLON")).toBeInTheDocument();
+      expect(screen.getByText("SAFETY")).toBeInTheDocument();
     });
   });
 
   describe("AC1: nav links", () => {
-    it("renders all 6 main nav items", () => {
-      render(<Header />);
+    it("renders all 6 main nav items", async () => {
+      await renderHeader();
       expect(screen.getAllByRole("link", { name: "Home" }).length).toBeGreaterThan(0);
       expect(screen.getAllByRole("link", { name: "Articles" }).length).toBeGreaterThan(0);
       expect(screen.getAllByRole("link", { name: "Documents" }).length).toBeGreaterThan(0);
@@ -66,8 +87,8 @@ describe("Header", () => {
       expect(screen.getAllByRole("link", { name: "Contact Coach" }).length).toBeGreaterThan(0);
     });
 
-    it("renders nav links in the correct order", () => {
-      render(<Header />);
+    it("renders nav links in the correct order", async () => {
+      await renderHeader();
       const nav = screen.getByRole("navigation", { name: /site navigation/i });
       const links = Array.from(nav.querySelectorAll("a"));
       const texts = links.map((l) => l.textContent?.trim());
@@ -84,17 +105,17 @@ describe("Header", () => {
       expect(jobsIdx).toBeLessThan(contactIdx);
     });
 
-    it("sets aria-current=page on the active link", () => {
+    it("sets aria-current=page on the active link", async () => {
       mockUsePathname.mockReturnValue("/articles");
-      render(<Header />);
+      await renderHeader();
       const nav = screen.getByRole("navigation", { name: /site navigation/i });
       const articlesLink = nav.querySelector('a[href="/articles"]');
       expect(articlesLink).toHaveAttribute("aria-current", "page");
     });
 
-    it("does not set aria-current on inactive links", () => {
+    it("does not set aria-current on inactive links", async () => {
       mockUsePathname.mockReturnValue("/articles");
-      render(<Header />);
+      await renderHeader();
       const nav = screen.getByRole("navigation", { name: /site navigation/i });
       const homeLink = nav.querySelector('a[href="/"]');
       expect(homeLink).not.toHaveAttribute("aria-current", "page");
@@ -102,9 +123,9 @@ describe("Header", () => {
   });
 
   describe("AC2: placeholder while session loads", () => {
-    it("hides Sign In and Sign Up while loading, shows aria-busy placeholder", () => {
+    it("hides Sign In and Sign Up while loading, shows aria-busy placeholder", async () => {
       mockUseAuth.mockReturnValue({ user: null, isLoading: true, signOut: mockSignOut });
-      render(<Header />);
+      await renderHeader();
       expect(screen.queryByRole("link", { name: "Sign In" })).toBeNull();
       expect(screen.queryByRole("link", { name: "Sign Up" })).toBeNull();
       expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument();
@@ -112,30 +133,30 @@ describe("Header", () => {
   });
 
   describe("AC3: signed-out state", () => {
-    it("shows Sign In and Sign Up links", () => {
-      render(<Header />);
+    it("shows Sign In and Sign Up links", async () => {
+      await renderHeader();
       expect(screen.getByRole("link", { name: "Sign In" })).toBeInTheDocument();
       expect(screen.getByRole("link", { name: "Sign Up" })).toBeInTheDocument();
     });
 
-    it("Sign In links to /sign-in and Sign Up links to /sign-up", () => {
-      render(<Header />);
+    it("Sign In links to /sign-in and Sign Up links to /sign-up", async () => {
+      await renderHeader();
       expect(screen.getByRole("link", { name: "Sign In" })).toHaveAttribute("href", "/sign-in");
       expect(screen.getByRole("link", { name: "Sign Up" })).toHaveAttribute("href", "/sign-up");
     });
   });
 
   describe("AC3: signed-in state", () => {
-    it("shows the user name when signed in", () => {
+    it("shows the user name when signed in", async () => {
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: mockSignOut });
-      render(<Header />);
+      await renderHeader();
       expect(screen.getByText("Kamal")).toBeInTheDocument();
     });
 
     it("calls signOut when the Sign out button is clicked", async () => {
       const user = userEvent.setup();
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: mockSignOut });
-      render(<Header />);
+      await renderHeader();
       await user.click(screen.getByRole("button", { name: "Kamal" }));
       await user.click(screen.getByRole("menuitem", { name: /sign out/i }));
       expect(mockSignOut).toHaveBeenCalledOnce();
@@ -144,7 +165,7 @@ describe("Header", () => {
     it("closes the menu after successful sign-out", async () => {
       const user = userEvent.setup();
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: mockSignOut });
-      render(<Header />);
+      await renderHeader();
       await user.click(screen.getByRole("button", { name: "Kamal" }));
       expect(screen.getByRole("menu")).toBeInTheDocument();
       await user.click(screen.getByRole("menuitem", { name: /sign out/i }));
@@ -155,29 +176,29 @@ describe("Header", () => {
   });
 
   describe("AC4: cart link", () => {
-    it("renders a cart link pointing to /cart", () => {
-      render(<Header />);
+    it("renders a cart link pointing to /cart", async () => {
+      await renderHeader();
       const cartLink = screen.getByRole("link", { name: /cart/i });
       expect(cartLink).toHaveAttribute("href", "/cart");
     });
   });
 
   describe("AC5: mobile sheet", () => {
-    it("has an Open menu button", () => {
-      render(<Header />);
+    it("has an Open menu button", async () => {
+      await renderHeader();
       expect(screen.getByRole("button", { name: /open menu/i })).toBeInTheDocument();
     });
 
     it("opens a dialog sheet when the menu button is clicked", async () => {
       const user = userEvent.setup();
-      render(<Header />);
+      await renderHeader();
       await user.click(screen.getByRole("button", { name: /open menu/i }));
       expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
 
     it("closes the dialog when Escape is pressed", async () => {
       const user = userEvent.setup();
-      render(<Header />);
+      await renderHeader();
       await user.click(screen.getByRole("button", { name: /open menu/i }));
       expect(screen.getByRole("dialog")).toBeInTheDocument();
       await user.keyboard("{Escape}");
@@ -188,7 +209,7 @@ describe("Header", () => {
 
     it("returns focus to the open menu button after Escape closes the sheet", async () => {
       const user = userEvent.setup();
-      render(<Header />);
+      await renderHeader();
       const openBtn = screen.getByRole("button", { name: /open menu/i });
       await user.click(openBtn);
       expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -203,21 +224,21 @@ describe("Header", () => {
   });
 
   describe("EC2: user with no display name", () => {
-    it("shows Account when the signed-in user has no name", () => {
+    it("shows Account when the signed-in user has no name", async () => {
       mockUseAuth.mockReturnValue({ user: { name: null }, isLoading: false, signOut: mockSignOut });
-      render(<Header />);
+      await renderHeader();
       expect(screen.getByRole("button", { name: "Account" })).toBeInTheDocument();
     });
   });
 
   describe("EC3: long display name", () => {
-    it("truncates a long display name", () => {
+    it("truncates a long display name", async () => {
       mockUseAuth.mockReturnValue({
         user: { name: "Thisarathna Jayawickrama" },
         isLoading: false,
         signOut: mockSignOut,
       });
-      render(<Header />);
+      await renderHeader();
       const nameBtn = screen.getByRole("button", { name: "Thisarathna Jayawickrama" });
       // The name span inside the button should have the truncate class.
       const truncEl = nameBtn.querySelector(".truncate") ?? nameBtn;
@@ -248,7 +269,7 @@ describe("Header", () => {
       }));
 
       const user = userEvent.setup();
-      render(<Header />);
+      await renderHeader();
       await user.click(screen.getByRole("button", { name: /open menu/i }));
       expect(screen.getByRole("dialog")).toBeInTheDocument();
 
@@ -268,7 +289,7 @@ describe("Header", () => {
       const user = userEvent.setup();
       const failingSignOut = vi.fn().mockRejectedValue(new Error("offline"));
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: failingSignOut });
-      render(<Header />);
+      await renderHeader();
       await user.click(screen.getByRole("button", { name: "Kamal" }));
       await user.click(screen.getByRole("menuitem", { name: /sign out/i }));
       await waitFor(() => {
@@ -280,7 +301,7 @@ describe("Header", () => {
       const user = userEvent.setup();
       const failingSignOut = vi.fn().mockRejectedValue(new Error("offline"));
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: failingSignOut });
-      render(<Header />);
+      await renderHeader();
       await user.click(screen.getByRole("button", { name: "Kamal" }));
       await user.click(screen.getByRole("menuitem", { name: /sign out/i }));
       await waitFor(() => {
@@ -297,7 +318,7 @@ describe("Header", () => {
     it("arrow keys cycle focus between menu items", async () => {
       const user = userEvent.setup();
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: mockSignOut });
-      render(<Header />);
+      await renderHeader();
       await user.click(screen.getByRole("button", { name: "Kamal" }));
       const items = screen.getAllByRole("menuitem");
       items[0].focus();
@@ -312,7 +333,7 @@ describe("Header", () => {
     it("Escape closes dropdown and returns focus to account button", async () => {
       const user = userEvent.setup();
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: mockSignOut });
-      render(<Header />);
+      await renderHeader();
       const accountBtn = screen.getByRole("button", { name: "Kamal" });
       await user.click(accountBtn);
       const items = screen.getAllByRole("menuitem");
@@ -327,7 +348,7 @@ describe("Header", () => {
     it("Tab closes dropdown and returns focus to account button", async () => {
       const user = userEvent.setup();
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: mockSignOut });
-      render(<Header />);
+      await renderHeader();
       const accountBtn = screen.getByRole("button", { name: "Kamal" });
       await user.click(accountBtn);
       const items = screen.getAllByRole("menuitem");
@@ -347,7 +368,7 @@ describe("Header", () => {
         () => new Promise<void>((_, reject) => { rejectSignOut = reject; })
       );
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: slowSignOut });
-      render(<Header />);
+      await renderHeader();
 
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: "Kamal" }));
@@ -372,7 +393,7 @@ describe("Header", () => {
         () => new Promise<void>((_, reject) => { rejectSignOut = reject; })
       );
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: slowSignOut });
-      render(<Header />);
+      await renderHeader();
 
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: "Kamal" }));
@@ -393,7 +414,7 @@ describe("Header", () => {
         () => new Promise<void>((_, reject) => { rejectSignOut = reject; })
       );
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: slowSignOut });
-      render(<Header />);
+      await renderHeader();
 
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: "Kamal" }));
@@ -416,7 +437,7 @@ describe("Header", () => {
         () => new Promise<void>((resolve) => { resolveSignOut = resolve; })
       );
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: slowSignOut });
-      const { unmount } = render(<Header />);
+      const { unmount } = await renderHeader();
 
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: "Kamal" }));
@@ -434,7 +455,7 @@ describe("Header", () => {
         () => new Promise<void>((_, reject) => { rejectSignOut = reject; })
       );
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: slowSignOut });
-      const { unmount } = render(<Header />);
+      const { unmount } = await renderHeader();
 
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: "Kamal" }));
@@ -451,7 +472,7 @@ describe("Header", () => {
     it("closes the dropdown when clicking outside it", async () => {
       const user = userEvent.setup();
       mockUseAuth.mockReturnValue({ user: { name: "Kamal" }, isLoading: false, signOut: mockSignOut });
-      render(<Header />);
+      await renderHeader();
       await user.click(screen.getByRole("button", { name: "Kamal" }));
       expect(screen.getByRole("menu")).toBeInTheDocument();
       await user.click(document.body);

@@ -72,8 +72,8 @@ SELECT ok(
 -- Exact total count
 SELECT is(
   (SELECT count(*)::int FROM public.site_settings),
-  33,
-  'AC2: exactly 33 site_settings keys seeded'
+  37,
+  'AC2: exactly 37 site_settings keys seeded'
 );
 
 -- Spot-check required keys exist
