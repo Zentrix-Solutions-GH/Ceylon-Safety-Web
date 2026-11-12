@@ -62,7 +62,9 @@ describe("GET /api/orders/[id]/status — authentication (AC6)", () => {
   });
 
   it("returns 401 when user is suspended (S17)", async () => {
-    mockAuth.mockResolvedValue({ ok: false, code: "not_allowed" } as never);
+    // requireActiveAccount returns not_allowed for both unauthenticated and suspended users.
+    // This test uses a distinct "suspended" reason code to document the suspended path explicitly.
+    mockAuth.mockResolvedValue({ ok: false, code: "not_allowed", reason: "suspended" } as never);
     const res = await GET(makeRequest(VALID_ORDER_ID), { params: makeParams(VALID_ORDER_ID) });
     expect(res.status).toBe(401);
   });

@@ -2,11 +2,10 @@
 // e.g. 715545 → "7155.45"
 export function centsToDecimal(cents: number): string {
   if (!Number.isInteger(cents)) throw new Error("cents must be an integer");
-  const abs = Math.abs(cents);
-  const whole = Math.floor(abs / 100);
-  const pence = abs % 100;
-  const sign = cents < 0 ? "-" : "";
-  return `${sign}${whole}.${String(pence).padStart(2, "0")}`;
+  if (cents < 0) throw new Error("cents must not be negative");
+  const whole = Math.floor(cents / 100);
+  const pence = cents % 100;
+  return `${whole}.${String(pence).padStart(2, "0")}`;
 }
 
 // Strictly parses a decimal string with one or two decimal places into cents.

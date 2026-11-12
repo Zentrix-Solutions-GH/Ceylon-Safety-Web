@@ -28,11 +28,13 @@ import { requireActiveAccount } from "@/lib/auth/server";
 import { calculateCart } from "@/lib/cart/calculate";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { createCheckout } from "@/lib/orders/create";
+import { buildPayHereRequest } from "@/lib/payhere/checkout";
 
 const mockRequireActiveAccount = vi.mocked(requireActiveAccount);
 const mockCreateClient = vi.mocked(_createSupabaseServerClient);
 const mockCalculateCart = vi.mocked(calculateCart);
 const mockCheckRateLimit = vi.mocked(checkRateLimit);
+const mockBuildPayHereRequest = vi.mocked(buildPayHereRequest);
 
 const fakeUser = { id: "user-1", email: "buyer@example.com", status: "active" };
 
@@ -460,6 +462,34 @@ describe("createCheckout — S-079 payhereFields returned (AC5)", () => {
     if (!result.ok) return;
     expect(result.data?.payhereFields).toBeDefined();
     expect(result.data?.payhereFields?.checkout_url).toBe("https://sandbox.payhere.lk/pay/checkout");
+  });
+
+  it("returnUrl and cancelUrl use order UUID (order_id), not order number (AC5)", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockCheckRateLimit.mockResolvedValue({ ok: true });
+    mockCalculateCart.mockResolvedValue(fakeCartResponse);
+
+    const db = makeSupabaseMock();
+    (db.single as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ data: { id: "rev-terms-ac5" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "rev-refund-ac5" }, error: null });
+    (db.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { action: "created", order_id: "uuid-ac5-order-id", order_number: "CS-2026-99999" },
+      error: null,
+    });
+    mockCreateClient.mockResolvedValue(db as never);
+
+    await createCheckout(validInput);
+
+    expect(mockBuildPayHereRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ orderNumber: "CS-2026-99999" }),
+      expect.anything(),
+      expect.objectContaining({
+        returnUrl: expect.stringContaining("?order=uuid-ac5-order-id"),
+        cancelUrl: expect.stringContaining("?order=uuid-ac5-order-id"),
+      }),
+      expect.anything(),
+    );
   });
 
   it("returns payment_unavailable when payhereConfig() throws (missing env vars)", async () => {

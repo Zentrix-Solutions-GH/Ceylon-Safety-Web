@@ -194,6 +194,16 @@ export async function createCheckout(
     return { ok: false, code: "terms_required" };
   }
 
+  // P0 fix: validate PayHere config before any DB write so a missing env var
+  // cannot strand an order in pending with no way to retrieve payment fields.
+  let phConfig: ReturnType<typeof payhereConfig>;
+  try {
+    phConfig = payhereConfig();
+  } catch (err) {
+    console.error("[checkout] PayHere config missing — cannot build payment request", err);
+    return { ok: false, code: "payment_unavailable" };
+  }
+
   // AC3/EC1: rebuild cart and verify price
   const cartResult = await rebuildAndValidateCart(user.id, input);
   if (!cartResult.ok) {
@@ -267,33 +277,33 @@ export async function createCheckout(
   // AC7: save billing to profile if requested (best-effort)
   await saveProfileIfRequested(supabase, user.id, input.billing, billingAddress);
 
-  // Build PayHere form fields (S-079)
-  let phConfig: ReturnType<typeof payhereConfig>;
+  // Build PayHere form fields (S-079). Config already validated above.
+  // Wrapped in try/catch: centsToDecimal can throw if totalCents is non-integer
+  // due to a data bug; keep the same payment_unavailable recovery path.
+  const appUrl = publicConfig.appUrl;
+  let payhereFields: ReturnType<typeof buildPayHereRequest>;
   try {
-    phConfig = payhereConfig();
+    payhereFields = buildPayHereRequest(
+      { orderNumber: result.order_number, totalCents, itemCount: lines.items.length },
+      {
+        firstName: input.billing.firstName,
+        lastName: input.billing.lastName,
+        email: user.email ?? "",
+        phone: input.billing.phone,
+        address: input.billing.address,
+        city: input.billing.city,
+      },
+      {
+        returnUrl: `${appUrl}/checkout/success?order=${result.order_id}`,
+        cancelUrl: `${appUrl}/checkout/cancel?order=${result.order_id}`,
+        notifyUrl: `${appUrl}/api/payhere/notify`,
+      },
+      phConfig,
+    );
   } catch (err) {
-    console.error("[checkout] PayHere config missing — cannot build payment request", err);
+    console.error("[checkout] Failed to build PayHere request", err);
     return { ok: false, code: "payment_unavailable" };
   }
-
-  const appUrl = publicConfig.appUrl;
-  const payhereFields = buildPayHereRequest(
-    { orderNumber: result.order_number, totalCents, itemCount: lines.items.length },
-    {
-      firstName: input.billing.firstName,
-      lastName: input.billing.lastName,
-      email: user.email ?? "",
-      phone: input.billing.phone,
-      address: input.billing.address,
-      city: input.billing.city,
-    },
-    {
-      returnUrl: `${appUrl}/checkout/success?order=${result.order_id}`,
-      cancelUrl: `${appUrl}/checkout/cancel?order=${result.order_id}`,
-      notifyUrl: `${appUrl}/api/payhere/notify`,
-    },
-    phConfig,
-  );
 
   // AC11
   return {

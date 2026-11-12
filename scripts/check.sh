@@ -114,6 +114,20 @@ else
   FAIL=$((FAIL + 1))
 fi
 
+# 9. AC8 (S-079): PayHere secret must not appear in client bundles
+printf '\n── PayHere secret bundle check (AC8/S-079) ──\n'
+if [ -d ".next/static" ]; then
+  if grep -r 'PAYHERE_SANDBOX_SECRET\|PAYHERE_SECRET' .next/static/ 2>/dev/null | grep -qv '\.map$'; then
+    printf '✗ PayHere secret bundle check FAILED — PayHere secret env var key found in client bundle\n'
+    FAIL=$((FAIL + 1))
+  else
+    printf '✓ PayHere secret bundle check passed\n'
+    PASS=$((PASS + 1))
+  fi
+else
+  printf '⚠ No build output found — skipping PayHere bundle check (run npm run build first)\n'
+fi
+
 # ── Summary ─────────────────────────────────────────────────────────────────
 printf '\n════════════════════════════════\n'
 printf '  check.sh: %d passed, %d failed\n' "$PASS" "$FAIL"

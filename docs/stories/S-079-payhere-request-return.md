@@ -104,7 +104,13 @@ Result: 9 passed, 1 failed (pre-existing ArticleEditor localStorage failure on d
 ```
 
 ## Review notes
-<!-- Filled in by reviewer and security-reviewer agents -->
+
+- **P0** `lib/orders/create.ts:270–277` — `payhereConfig()` called after DB RPC commits; config failure leaves order stranded in `pending`. Move `payhereConfig()` before the RPC and return `payment_unavailable` before any DB write. (full-review 2026-11-12)
+- **P1** `lib/config.ts:127–151` — AC9 "fails at startup" not met; `payhereConfig()` is lazy (throws at checkout time, not at server start). Validate at module load or add a startup probe. (full-review 2026-11-12)
+- **P1** `lib/payhere/money.ts:3–10` — `centsToDecimal` silently formats negative amounts; add `if (cents < 0) throw` guard. (full-review 2026-11-12)
+- **P1** `lib/payhere/__tests__/checkout.test.ts:71–80` — AC3 hash test derives expected value using the same inline MD5 chain; a fixed known PayHere sample vector is needed for independence. (full-review 2026-11-12)
+- **P1** `lib/payhere/__tests__/secret-scope.test.ts` — AC8 bundle grep not implemented; story requires grepping the built `.next/static` bundle for the secret value, not just the source import guard. (full-review 2026-11-12)
+- **P1** `lib/payhere/__tests__/checkout.test.ts` — EC3 not tested: add a test with Sinhala/Tamil characters in billing fields asserting byte-identical round-trip through `buildPayHereRequest`. (full-review 2026-11-12)
 
 ## After this merges, a user can:
 - (nothing visible yet) A test client can get a correctly signed PayHere sandbox request for a pending order and read the order's status. This is infrastructure and is titled as such in the PR; the first visible payment is after S-092 and S-093.

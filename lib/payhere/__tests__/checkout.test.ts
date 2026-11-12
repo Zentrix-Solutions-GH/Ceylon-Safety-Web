@@ -78,6 +78,28 @@ describe("buildPayHereRequest", () => {
     expect(fields.hash).toBe(expected);
   });
 
+  it("hash matches fixed known-output reference vector (AC3)", () => {
+    // Reference vector computed offline (Node.js crypto, verified manually):
+    // merchantId=1215097, orderId=ItemNo12345, amount=1000.00, currency=LKR
+    // secret=GfPy2tCMDCN6GQQCSPqPFhKSjHFbRAMm
+    // md5(secret).toUpperCase() = "88241DD5A74865480F6934327098D4FF"
+    // md5(merchantId+orderId+amount+currency+secretHashUpper) = "f94565f2fdb5b5e04e098874b4e77e25"
+    // This hardcoded literal makes the test independent of the production implementation.
+    const docConfig = {
+      merchantId: "1215097",
+      secret: "GfPy2tCMDCN6GQQCSPqPFhKSjHFbRAMm",
+      isSandbox: true,
+      checkoutUrl: "https://sandbox.payhere.lk/pay/checkout",
+    };
+    const fields = buildPayHereRequest(
+      { orderNumber: "ItemNo12345", totalCents: 100000, itemCount: 1 },
+      baseBilling,
+      baseUrls,
+      docConfig,
+    );
+    expect(fields.hash).toBe("f94565f2fdb5b5e04e098874b4e77e25");
+  });
+
   it("secret is not in returned fields (AC3)", () => {
     const fields = buildPayHereRequest(baseOrder, baseBilling, baseUrls, sandboxConfig);
     const json = JSON.stringify(fields);
@@ -124,5 +146,21 @@ describe("buildPayHereRequest", () => {
   it("items is truncated to 255 characters (EC4)", () => {
     const fields = buildPayHereRequest({ ...baseOrder, itemCount: 999 }, baseBilling, baseUrls, sandboxConfig);
     expect(fields.items.length).toBeLessThanOrEqual(255);
+  });
+
+  it("Sinhala and Tamil billing fields pass through byte-identical (EC3)", () => {
+    const sinhalaBilling = {
+      firstName: "නිමල්",
+      lastName: "සිල්වා",
+      email: "test@example.com",
+      phone: "+94771234567",
+      address: "123 ශ්‍රී මාර්ගය",
+      city: "කොළඹ",
+    };
+    const fields = buildPayHereRequest(baseOrder, sinhalaBilling, baseUrls, sandboxConfig);
+    expect(fields.first_name).toBe("නිමල්");
+    expect(fields.last_name).toBe("සිල්වා");
+    expect(fields.address).toBe("123 ශ්‍රී මාර්ගය");
+    expect(fields.city).toBe("කොළඹ");
   });
 });

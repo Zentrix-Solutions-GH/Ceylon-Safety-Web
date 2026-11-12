@@ -124,7 +124,10 @@ export const cspConfig = {
   ),
 } as const;
 
-// PayHere config — server only. Throws at first use if required env vars are absent (AC9).
+// PayHere config — server only. Throws with the missing variable name if required env vars are
+// absent (AC9). Called before any DB write in createCheckout so a missing env var returns
+// payment_unavailable without stranding an order. Full startup-time validation (before the first
+// request) requires Next.js instrumentation.ts, deferred to S-129 (live credentials story).
 export function payhereConfig(): {
   merchantId: string;
   secret: string;
