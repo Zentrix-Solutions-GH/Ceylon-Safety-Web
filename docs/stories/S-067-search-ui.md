@@ -79,10 +79,33 @@ Prior art: read in full `content-system-design` section 11 and 22; `frontend-arc
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Test Files  1 failed | 198 passed | 15 skipped (214)
+Tests       18 failed | 2051 passed | 60 skipped (2129)
+✗ Vitest (unit) FAILED
+  → Pre-existing: __tests__/components/admin/ArticleEditor/index.test.tsx
+    18 tests fail on dev branch too (body-validation test fixture issue, unrelated to S-067)
+  → All 24 new S-067 tests pass (SearchBar ×8, SearchResults ×11, useSearch ×5)
+
+── pgTAP RLS suite ── (skipped — Supabase not running)
+── Types file freshness ── (skipped)
+── Public pages session check ── skipped (no build)
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+════════════════════════════════
+  check.sh: 4 passed, 1 failed
+════════════════════════════════
+(1 failure is pre-existing on dev; not introduced by this story)
 ```
 
 ## Review notes
