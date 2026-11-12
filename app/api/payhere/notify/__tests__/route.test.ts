@@ -352,8 +352,9 @@ describe("POST /api/payhere/notify", () => {
 
   // ── AC3: wrong currency (not just wrong amount) ───────────────────────────
   it("AC3: returns 200 and does not call fulfil when currency is not LKR", async () => {
+    const rpcMock = vi.fn().mockResolvedValue({ error: null });
     const sb = {
-      rpc: vi.fn().mockResolvedValue({}),
+      rpc: rpcMock,
       from: vi.fn((table: string) => {
         if (table === "orders") return {
           select: vi.fn().mockReturnThis(),
@@ -375,6 +376,7 @@ describe("POST /api/payhere/notify", () => {
       }),
     };
     mockAdmin.mockReturnValue(sb as never);
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     // Build sig with USD so it passes verification
     const sig = buildSig(MERCHANT_ID, ORDER_NUMBER, "7155.45", "USD", "2", SECRET);
     const body = new URLSearchParams({
@@ -392,6 +394,16 @@ describe("POST /api/payhere/notify", () => {
     const json = await res.json();
     expect(json).toHaveProperty("ok", true);
     expect(mockFulfil).not.toHaveBeenCalled();
+    // AC3: flag_mismatch_event RPC called (atomic GUC + UPDATE in one transaction)
+    expect(rpcMock).toHaveBeenCalledWith(
+      "flag_mismatch_event",
+      expect.objectContaining({ p_event_id: "evt-usd", p_order_id: ORDER_ID })
+    );
+    // AC3: alert log line emitted with order id (single template-literal string)
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining("amount_mismatch")
+    );
+    consoleError.mockRestore();
   });
 
   // ── EC6: no payment_id → SHA-256 of raw body used as event_key ───────────

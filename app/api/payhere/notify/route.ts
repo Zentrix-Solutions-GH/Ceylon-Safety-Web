@@ -143,21 +143,18 @@ async function runFulfilment(
   // may carry amount=0 or partial amounts; amount mismatch is only meaningful for
   // a successful payment where the actual charged amount must match the order total.
   if (statusCode === 2 && (fields.payhere_currency !== "LKR" || amountCents !== orderTotalCents)) {
-    // AC3: mismatch — record outcome and flag.
-    // The append-only trigger on payment_events requires the session GUC
-    // ceylonsafety.nulling_payload = 'true' before any UPDATE is permitted.
-    await (sb as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<unknown> }).rpc(
-      "set_config",
-      { setting: "ceylonsafety.nulling_payload", value: "true", is_local: true },
-    );
-    await sb
-      .from("payment_events")
-      .update({ outcome: "rejected_mismatch", processed_at: new Date().toISOString() })
-      .eq("id", eventId);
-    await sb
-      .from("orders")
-      .update({ needs_review: true, review_reason: "amount_or_currency_mismatch" })
-      .eq("id", orderId);
+    // AC3: mismatch — record outcome and flag the order for review.
+    // flag_mismatch_event sets ceylonsafety.nulling_payload = 'true' and performs
+    // both UPDATEs in one transaction body, so the append-only trigger is satisfied.
+    // (Calling set_config + UPDATE as two separate PostgREST requests would fail
+    // because each request runs in its own transaction and the GUC is gone.)
+    const { error: flagErr } = await (sb as unknown as {
+      rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+    }).rpc("flag_mismatch_event", { p_event_id: eventId, p_order_id: orderId });
+    if (flagErr) {
+      console.error(`payhere_notify: flag_mismatch_error order_id=${orderId}`);
+      return NextResponse.json({ error: "storage_error" }, { status: 500 });
+    }
     console.error(`payhere_notify: amount_mismatch order_id=${orderId}`);
     return NextResponse.json({ ok: true }, { status: 200 });
   }

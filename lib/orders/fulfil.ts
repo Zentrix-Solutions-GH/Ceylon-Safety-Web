@@ -22,7 +22,7 @@ async function fetchDownloadLimit(sb: SB): Promise<number> {
 export interface FulfilInput {
   eventId: string;
   statusCode: number;
-  paymentId: string;
+  paymentId: string | undefined;
   paymentDescription: string;
   amountCents: number | null; // null when PayHere omits the amount field (e.g. EC6 no-payment-id)
   currency: string;
