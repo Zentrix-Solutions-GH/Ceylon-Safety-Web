@@ -42,11 +42,11 @@ export default function SearchResults({ status, items }: Props) {
     return <p className="text-sm text-red-600">{t("search.results.error")}</p>;
   }
 
-  if (status === "success" && items.length === 0) {
+  if (status === "idle") return null;
+
+  if (items.length === 0) {
     return <p className="text-sm text-gray-500">{t("search.results.none")}</p>;
   }
-
-  if (status === "idle" || items.length === 0) return null;
 
   return (
     <section>

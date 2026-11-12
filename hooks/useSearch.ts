@@ -33,12 +33,10 @@ export function useSearch(): UseSearchResult {
         if (genRef.current !== gen) return;
         if (res.status === 429) {
           setStatus("rate_limited");
-          setItems([]);
           return;
         }
         if (!res.ok) {
           setStatus("error");
-          setItems([]);
           return;
         }
         const json = await res.json();
