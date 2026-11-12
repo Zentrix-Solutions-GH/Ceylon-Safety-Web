@@ -1,11 +1,11 @@
 ---
 id: S-068
 title: Video popup + Home video cards
-status: in-progress
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-068-video-popup
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/90
 depends_on: [S-053, S-066]
 reqs: [REQ-017, REQ-061, REQ-062, REQ-063, REQ-064, REQ-196]
 ---
@@ -24,25 +24,25 @@ Clicking a video card on Home opens the YouTube video in a popup, at the address
 
 ## Acceptance criteria
 
-- [ ] AC1: Clicking a video card (from S-066) opens `VideoModal` over the Home page and sets the address to `/?video=<our video id>` (our row id, never the YouTube id). The feed behind keeps its place and loaded pages.
-- [ ] AC2: The value of `video` is read only in a client component inside `Suspense` (`useSearchParams` rule); the Home page itself stays cached. The page is `noindex` while a video is open (set in the browser) and the canonical address stays `/`.
-- [ ] AC3: The popup first shows the thumbnail and title with a play button and the line "This loads YouTube". The player iframe is created only after the visitor presses play.
-- [ ] AC4: The embed address is built by our code from the fixed host `www.youtube-nocookie.com` and the video id returned by `getPublishedVideo` (S-065), which must match `^[A-Za-z0-9_-]{11}$`; if it does not match, no iframe is created.
-- [ ] AC5: A hidden, deleted, scheduled or unknown video id shows the Home page with the notice "This video is not available." and no popup.
-- [ ] AC6: Dialog behaviour: focus moves into the popup and stays inside, Escape and the close button close it, focus returns to the card that opened it, the page behind is inert, scrolling is locked and restored.
-- [ ] AC7: Closing removes `video` from the address without reloading the page and without losing the scroll place.
-- [ ] AC8: A direct visit to `/?video=<id>` (shared link, refresh) shows Home with the popup open.
-- [ ] AC9: The popup shows the player and title only. No like or comment controls (video likes and comments are Release 2).
-- [ ] AC10: Popup fills the screen at 375 px width and is usable by keyboard.
+- [x] AC1: Clicking a video card (from S-066) opens `VideoModal` over the Home page and sets the address to `/?video=<our video id>` (our row id, never the YouTube id). The feed behind keeps its place and loaded pages.
+- [x] AC2: The value of `video` is read only in a client component inside `Suspense` (`useSearchParams` rule); the Home page itself stays cached. The page is `noindex` while a video is open (set in the browser) and the canonical address stays `/`.
+- [x] AC3: The popup first shows the thumbnail and title with a play button and the line "This loads YouTube". The player iframe is created only after the visitor presses play.
+- [x] AC4: The embed address is built by our code from the fixed host `www.youtube-nocookie.com` and the video id returned by `getPublishedVideo` (S-065), which must match `^[A-Za-z0-9_-]{11}$`; if it does not match, no iframe is created.
+- [x] AC5: A hidden, deleted, scheduled or unknown video id shows the Home page with the notice "This video is not available." and no popup.
+- [x] AC6: Dialog behaviour: focus moves into the popup and stays inside, Escape and the close button close it, focus returns to the card that opened it, the page behind is inert, scrolling is locked and restored.
+- [x] AC7: Closing removes `video` from the address without reloading the page and without losing the scroll place.
+- [x] AC8: A direct visit to `/?video=<id>` (shared link, refresh) shows Home with the popup open.
+- [x] AC9: The popup shows the player and title only. No like or comment controls (video likes and comments are Release 2).
+- [ ] AC10: Popup fills the screen at 375 px width and is usable by keyboard. (e2e not yet verified — Playwright not set up)
 
 ## Edge cases
 
-- [ ] EC1: A video removed on YouTube: the player shows YouTube's own message; our popup stays usable and closable.
-- [ ] EC2: `video=` with script text, a very long value or an id of another item type shows the not-available notice, nothing else.
-- [ ] EC3: Browser Back while the popup is open closes it (history entry), then Back again leaves Home.
-- [ ] EC4: Opening a second video while one is open replaces it and stops the first player.
-- [ ] EC5: Thumbnail missing (copy failed, S-053 placeholder): the generic placeholder shows.
-- [ ] EC6: User prefers reduced motion: no open or close animation.
+- [x] EC1: A video removed on YouTube: the player shows YouTube's own message; our popup stays usable and closable.
+- [x] EC2: `video=` with script text, a very long value or an id of another item type shows the not-available notice, nothing else.
+- [x] EC3: Browser Back while the popup is open closes it (history entry), then Back again leaves Home. (VideoCard Link pushes history entry; replace on close pops it)
+- [x] EC4: Opening a second video while one is open replaces it and stops the first player. (key={videoId} remounts VideoModal)
+- [x] EC5: Thumbnail missing (copy failed, S-053 placeholder): the generic placeholder shows.
+- [ ] EC6: User prefers reduced motion: no open or close animation. (no animation implemented — no motion-reduce needed)
 
 ## Contract
 
@@ -112,7 +112,7 @@ $ npx tsc --noEmit
 
 $ npx vitest run components/videos/__tests__/
 Test Files  2 passed (2)
-Tests  14 passed (14)
+Tests  15 passed (15)
 
 $ bash scripts/check.sh   (summary tail)
 ── Public pages session check passed (20 files, no violations)
