@@ -1,4 +1,4 @@
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockReplace = vi.fn();
@@ -11,25 +11,27 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-vi.mock("@/lib/feed/query", () => ({
-  getPublishedVideo: vi.fn().mockResolvedValue({
-    ok: true,
-    video: {
-      id: "abc123",
-      youtubeId: "dQw4w9WgXcQ",
-      title: "Safety Video",
-      description: null,
-      thumbnailKey: "thumb.jpg",
-      categoryId: "cat-1",
-    },
-  }),
-}));
+const SAMPLE_VIDEO = {
+  id: "abc123",
+  youtubeId: "dQw4w9WgXcQ",
+  title: "Safety Video",
+  description: null,
+  thumbnailKey: "thumb.jpg",
+  categoryId: "cat-1",
+};
+
+function mockFetchOk() {
+  global.fetch = vi.fn().mockResolvedValue({
+    json: () => Promise.resolve({ ok: true, video: SAMPLE_VIDEO }),
+  } as unknown as Response);
+}
 
 import { VideoModalLoader } from "../VideoModalLoader";
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockVideoId = null;
+  mockFetchOk();
 });
 
 describe("VideoModalLoader", () => {
@@ -55,5 +57,59 @@ describe("VideoModalLoader", () => {
     });
     const meta = document.head.querySelector('meta[data-video-popup="1"]') as HTMLMetaElement;
     expect(meta?.content).toBe("noindex");
+  });
+
+  it("AC2: removes noindex meta tag after modal closes", async () => {
+    mockVideoId = "abc123";
+    const { rerender } = render(<VideoModalLoader />);
+    await waitFor(() => {
+      expect(document.head.querySelector('meta[data-video-popup="1"]')).not.toBeNull();
+    });
+    // Simulate URL param being removed (modal closed)
+    mockVideoId = null;
+    rerender(<VideoModalLoader />);
+    await waitFor(() => {
+      expect(document.head.querySelector('meta[data-video-popup="1"]')).toBeNull();
+    });
+  });
+
+  it("AC7: close button calls router.replace removing ?video= param", async () => {
+    mockVideoId = "abc123";
+    // Set a base URL for the test
+    Object.defineProperty(window, "location", {
+      value: { href: "http://localhost/?video=abc123" },
+      writable: true,
+    });
+    render(<VideoModalLoader />);
+    await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/", { scroll: false });
+    });
+  });
+
+  it("AC6: close returns focus to the trigger element", async () => {
+    mockVideoId = "abc123";
+    // Create a fake trigger and make it the active element
+    const trigger = document.createElement("button");
+    trigger.textContent = "Open video";
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    Object.defineProperty(window, "location", {
+      value: { href: "http://localhost/?video=abc123" },
+      writable: true,
+    });
+
+    render(<VideoModalLoader />);
+    await waitFor(() => screen.getByRole("dialog"));
+
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    // requestAnimationFrame in jsdom runs synchronously with fake timers; flush it
+    await waitFor(() => {
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    document.body.removeChild(trigger);
   });
 });

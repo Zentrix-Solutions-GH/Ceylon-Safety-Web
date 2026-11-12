@@ -11,15 +11,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-// Mock getPublishedVideo
-vi.mock("@/lib/feed/query", () => ({
-  getPublishedVideo: vi.fn(),
-}));
-
 import { VideoModal } from "../VideoModal";
-import { getPublishedVideo } from "@/lib/feed/query";
-
-const mockGetPublishedVideo = vi.mocked(getPublishedVideo);
 
 const SAMPLE_VIDEO: PublicVideo = {
   id: "abc123",
@@ -30,14 +22,20 @@ const SAMPLE_VIDEO: PublicVideo = {
   categoryId: "cat-1",
 };
 
+function mockFetch(response: { ok: boolean; video?: PublicVideo; code?: string }) {
+  global.fetch = vi.fn().mockResolvedValue({
+    json: () => Promise.resolve(response),
+  } as unknown as Response);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGetPublishedVideo.mockResolvedValue({ ok: true, video: SAMPLE_VIDEO });
+  mockFetch({ ok: true, video: SAMPLE_VIDEO });
 });
 
 describe("VideoModal", () => {
   it("AC5: shows not-available notice for unknown video id", async () => {
-    mockGetPublishedVideo.mockResolvedValue({ ok: false, code: "not_found" });
+    mockFetch({ ok: false, code: "not_found" });
     render(<VideoModal videoId="unknown-id" onClose={vi.fn()} />);
     await waitFor(() => {
       expect(screen.getByText(/this video is not available/i)).toBeInTheDocument();
@@ -46,7 +44,7 @@ describe("VideoModal", () => {
   });
 
   it("AC5, EC2: script injection in video id shows not-available", async () => {
-    mockGetPublishedVideo.mockResolvedValue({ ok: false, code: "not_found" });
+    mockFetch({ ok: false, code: "not_found" });
     render(<VideoModal videoId="<script>alert(1)</script>" onClose={vi.fn()} />);
     await waitFor(() => {
       expect(screen.getByText(/this video is not available/i)).toBeInTheDocument();
@@ -54,7 +52,7 @@ describe("VideoModal", () => {
   });
 
   it("AC5, EC2: extremely long id shows not-available", async () => {
-    mockGetPublishedVideo.mockResolvedValue({ ok: false, code: "not_found" });
+    mockFetch({ ok: false, code: "not_found" });
     render(<VideoModal videoId={"x".repeat(500)} onClose={vi.fn()} />);
     await waitFor(() => {
       expect(screen.getByText(/this video is not available/i)).toBeInTheDocument();
@@ -85,8 +83,8 @@ describe("VideoModal", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
-  it("network error from getPublishedVideo shows unavailable notice", async () => {
-    mockGetPublishedVideo.mockRejectedValue(new Error("network error"));
+  it("network error from fetch shows unavailable notice", async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error("network error"));
     render(<VideoModal videoId="abc123" onClose={vi.fn()} />);
     await waitFor(() => {
       expect(screen.getByText(/this video is not available/i)).toBeInTheDocument();

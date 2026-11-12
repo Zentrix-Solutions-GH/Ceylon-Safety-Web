@@ -129,7 +129,11 @@ S-068 files pass lint individually and all 14 new tests are green.
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `components/videos/VideoModal.tsx:5` — `"use client"` component imports `getPublishedVideo` from `lib/feed/query.ts`, which begins with `import "server-only"`. Next.js build will throw at build time; Vitest passes only because it mocks the import. Fix: add an API route `app/api/videos/[id]/route.ts` (or a `"use server"` thin wrapper) and fetch from it instead. (full-review 2026-11-12)
+- **P1** `components/videos/VideoModalLoader.tsx:37-48` — `handleClose` is never triggered in any test; `router.replace` (AC7 URL rewrite), focus restore (AC6), and `triggerRef` reset all untested. Add close-path test. (full-review 2026-11-12)
+- **P1** `components/videos/VideoModalLoader.tsx:24-35` — `noindex` meta cleanup (tag removed on close) not tested. (full-review 2026-11-12)
+- **P1** `components/videos/VideoModalLoader.tsx:37-48` — Focus restore calls `trigger.focus()` synchronously with `router.replace`; if re-render unmounts the trigger, focus is silently lost. Defer with `requestAnimationFrame` or in a `useEffect` after `videoId` clears. (full-review 2026-11-12)
+- **P1** `components/home/VideoCard.tsx` — No unit test verifies the card pushes `?video=<row-id>` (not YouTube ID) on click. (full-review 2026-11-12)
 
 ## After this merges, a user can:
 

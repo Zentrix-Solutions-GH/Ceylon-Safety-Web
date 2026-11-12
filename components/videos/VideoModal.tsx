@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { t } from "@/messages/en";
-import { getPublishedVideo } from "@/lib/feed/query";
 import { YouTubeEmbed } from "./YouTubeEmbed";
 import { publicConfig } from "@/lib/config.public";
 import type { PublicVideo } from "@/types/video";
@@ -24,16 +23,19 @@ export function VideoModal({ videoId, onClose }: VideoModalProps) {
 
   useEffect(() => {
     let cancelled = false;
-    void getPublishedVideo(videoId).then((result) => {
-      if (cancelled) return;
-      if (result.ok) {
-        setState({ status: "ready", video: result.video });
-      } else {
-        setState({ status: "unavailable" });
-      }
-    }).catch(() => {
-      if (!cancelled) setState({ status: "unavailable" });
-    });
+    fetch(`/api/videos/${encodeURIComponent(videoId)}`)
+      .then((res) => res.json())
+      .then((data: { ok: boolean; video?: PublicVideo }) => {
+        if (cancelled) return;
+        if (data.ok && data.video) {
+          setState({ status: "ready", video: data.video });
+        } else {
+          setState({ status: "unavailable" });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setState({ status: "unavailable" });
+      });
     return () => { cancelled = true; };
   }, [videoId]);
 

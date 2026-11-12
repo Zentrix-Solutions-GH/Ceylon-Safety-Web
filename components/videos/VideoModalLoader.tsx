@@ -39,12 +39,13 @@ export function VideoModalLoader() {
     const url = new URL(window.location.href);
     url.searchParams.delete("video");
     router.replace(url.pathname + (url.search || ""), { scroll: false });
-    // Return focus to the element that opened the modal (AC6)
+    // Defer focus restore so the re-render triggered by router.replace
+    // completes before we attempt to focus the trigger element (AC6)
     const trigger = triggerRef.current;
     triggerRef.current = null;
-    if (trigger instanceof HTMLElement) {
-      trigger.focus();
-    }
+    requestAnimationFrame(() => {
+      if (trigger instanceof HTMLElement) trigger.focus();
+    });
   }
 
   if (!videoId) return null;
