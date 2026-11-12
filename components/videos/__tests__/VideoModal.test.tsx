@@ -1,5 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { axe, toHaveNoViolations } from "jest-axe";
+expect.extend(toHaveNoViolations);
 import type { PublicVideo } from "@/types/video";
 
 // Mock next/navigation
@@ -140,5 +142,12 @@ describe("VideoModal", () => {
     expect(main.getAttribute("aria-hidden")).toBe("true");
 
     document.body.removeChild(main);
+  });
+
+  it("AC10: open modal has no axe accessibility violations", async () => {
+    const { container } = render(<VideoModal videoId="abc123" onClose={vi.fn()} />);
+    await waitFor(() => screen.getByRole("dialog"));
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
