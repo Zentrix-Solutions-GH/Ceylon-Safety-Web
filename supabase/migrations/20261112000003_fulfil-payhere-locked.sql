@@ -250,9 +250,11 @@ END;
 $$;
 
 -- Only the service role (webhook handler) may call this function.
--- Supabase's ALTER DEFAULT PRIVILEGES grants EXECUTE on public functions to
--- anon and authenticated automatically; revoke both.
-REVOKE EXECUTE ON FUNCTION public.fulfil_payhere_locked(uuid, uuid, int, text, int)
-  FROM anon;
-REVOKE EXECUTE ON FUNCTION public.fulfil_payhere_locked(uuid, uuid, int, text, int)
-  FROM authenticated;
+-- PostgreSQL grants EXECUTE to PUBLIC on new functions by default; Supabase's
+-- ALTER DEFAULT PRIVILEGES additionally grants to anon and authenticated.
+-- REVOKE FROM anon/authenticated alone does not block them because they still
+-- inherit EXECUTE from PUBLIC. The correct pattern is REVOKE ALL FROM PUBLIC
+-- (strips the implicit inheritance path), then explicitly revoke from anon and
+-- authenticated to ensure no path remains.
+REVOKE ALL ON FUNCTION public.fulfil_payhere_locked(uuid, uuid, int, text, int)
+  FROM PUBLIC, anon, authenticated;
