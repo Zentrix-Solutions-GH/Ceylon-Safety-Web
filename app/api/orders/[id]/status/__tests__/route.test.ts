@@ -60,6 +60,12 @@ describe("GET /api/orders/[id]/status — authentication (AC6)", () => {
     const res = await GET(makeRequest(VALID_ORDER_ID), { params: makeParams(VALID_ORDER_ID) });
     expect(res.status).toBe(401);
   });
+
+  it("returns 401 when user is suspended (S17)", async () => {
+    mockAuth.mockResolvedValue({ ok: false, code: "not_allowed" } as never);
+    const res = await GET(makeRequest(VALID_ORDER_ID), { params: makeParams(VALID_ORDER_ID) });
+    expect(res.status).toBe(401);
+  });
 });
 
 describe("GET /api/orders/[id]/status — validation (AC8)", () => {
