@@ -7,6 +7,7 @@ import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import { Mark, Node, type Extensions } from "@tiptap/core";
 import ImageBlock from "@/components/admin/ArticleEditor/blocks/ImageBlock";
+import VideoBlock from "@/components/admin/ArticleEditor/blocks/VideoBlock";
 import { t, type MessageKey } from "@/messages/en";
 import { SCHEMA_VERSION, MAX_LINK_LENGTH, MAX_TOP_BLOCKS, MAX_LIST_DEPTH, ALLOWED_FONTS, type AllowedFont, validateLinkHref } from "@/lib/content/schema";
 
@@ -80,6 +81,51 @@ const ImageExtension = Node.create({
   },
 });
 
+// NodeView wrapper — renders VideoBlock inside the Tiptap canvas
+export function VideoNodeView({ node, deleteNode }: NodeViewProps) {
+  const { video_id, title, thumbnailKey, status } = node.attrs as {
+    video_id: string;
+    title: string;
+    thumbnailKey: string;
+    status: "ready" | "hidden" | "deleted";
+  };
+  return (
+    <NodeViewWrapper>
+      <VideoBlock
+        videoId={video_id}
+        title={title ?? ""}
+        thumbnailKey={thumbnailKey ?? ""}
+        status={status ?? "ready"}
+        onRemove={deleteNode}
+      />
+    </NodeViewWrapper>
+  );
+}
+
+const VideoExtension = Node.create({
+  name: "video",
+  group: "block",
+  atom: true,
+  addAttributes() {
+    return {
+      node_id: { default: null },
+      video_id: { default: "" },
+      title: { default: "" },
+      thumbnailKey: { default: "" },
+      status: { default: "ready" },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "figure[data-video-node]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["figure", { "data-video-node": "true", ...HTMLAttributes }];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(VideoNodeView);
+  },
+});
+
 // Module-level constant — not recreated on render (prevents editor teardown on re-render)
 const EXTENSIONS: Extensions = [
   StarterKit.configure({ heading: { levels: [2, 3] } }),
@@ -90,6 +136,7 @@ const EXTENSIONS: Extensions = [
   }),
   NamedFont,
   ImageExtension,
+  VideoExtension,
 ];
 
 const STYLES: Array<{ value: "paragraph" | "h2" | "h3" | "blockquote"; labelKey: MessageKey }> = [
@@ -157,13 +204,25 @@ export interface ImageAttrs {
   caption: string;
 }
 
+export interface VideoAttrs {
+  node_id: string;
+  video_id: string;
+  title: string;
+  thumbnailKey: string;
+  status: "ready" | "hidden" | "deleted";
+}
+
 interface RichTextEditorProps {
   initialContent?: object;
   onChange: (json: object) => void;
-  onEditorReady?: (helpers: { insertImage: (attrs: ImageAttrs) => void }) => void;
+  onEditorReady?: (helpers: {
+    insertImage: (attrs: ImageAttrs) => void;
+    insertVideo: (attrs: VideoAttrs) => void;
+  }) => void;
+  onInsertVideoClick?: () => void;
 }
 
-export function RichTextEditor({ initialContent, onChange, onEditorReady }: RichTextEditorProps) {
+export function RichTextEditor({ initialContent, onChange, onEditorReady, onInsertVideoClick }: RichTextEditorProps) {
   const [pasteToast, setPasteToast] = useState<string | null>(null);
   const [isAtBlockLimit, setIsAtBlockLimit] = useState(false);
   const [linkInputOpen, setLinkInputOpen] = useState(false);
@@ -251,12 +310,15 @@ export function RichTextEditor({ initialContent, onChange, onEditorReady }: Rich
     setIsAtBlockLimit(topBlocks > MAX_TOP_BLOCKS);
   }, [editor]);
 
-  // Expose insertImage helper to parent (ArticleEditor)
+  // Expose insertImage and insertVideo helpers to parent (ArticleEditor)
   useEffect(() => {
     if (!editor || !onEditorReadyRef.current) return;
     onEditorReadyRef.current({
       insertImage: (attrs: ImageAttrs) => {
         editor.chain().focus().insertContent({ type: "image", attrs }).run();
+      },
+      insertVideo: (attrs: VideoAttrs) => {
+        editor.chain().focus().insertContent({ type: "video", attrs }).run();
       },
     });
   }, [editor]);
@@ -416,6 +478,17 @@ export function RichTextEditor({ initialContent, onChange, onEditorReady }: Rich
         >
           {t("editor.toolbar.numbered_symbol")}
         </button>
+
+        {onInsertVideoClick && (
+          <button
+            type="button"
+            aria-label={t("editor.toolbar.insert_video")}
+            disabled={isAtBlockLimit}
+            onClick={onInsertVideoClick}
+          >
+            {t("editor.toolbar.insert_video")}
+          </button>
+        )}
       </div>
 
       {/* Inline link input — replaces window.prompt */}

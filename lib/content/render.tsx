@@ -4,7 +4,6 @@
 import React from "react";
 import { validateBody, MAX_LINKS } from "@/lib/content/schema";
 import { checkLink } from "@/lib/content/links";
-import { isValidYouTubeId } from "@/lib/content/youtube";
 import { publicConfig } from "@/lib/config.public";
 import type {
   ArticleBody,
@@ -18,6 +17,7 @@ import type {
   ListItemNode,
   ImageNode,
   VideoNode,
+  ResolvedVideoNode,
 } from "@/types/article";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -151,16 +151,17 @@ function renderImage(node: ImageNode, key: number): React.ReactNode {
 }
 
 function renderVideo(node: VideoNode, key: number): React.ReactNode {
-  const { video_id } = node.attrs;
-  if (!isValidYouTubeId(video_id)) return null; // drop invalid ID
+  const { video_id, title, thumbnailKey } = node.attrs;
+  if (!video_id) return null;
+  const thumbSrc = thumbnailKey ? `${publicConfig.mediaCdnUrl}/${thumbnailKey}` : undefined;
   return (
-    <div key={key} data-block="video">
-      <iframe
-        src={`https://www.youtube-nocookie.com/embed/${video_id}`}
-        allowFullScreen
-        title="Embedded video"
-      />
-    </div>
+    <a key={key} href={`/?video=${video_id}`} data-block="video">
+      {thumbSrc && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={thumbSrc} alt={title ?? ""} />
+      )}
+      {title && <span>{title}</span>}
+    </a>
   );
 }
 
@@ -207,7 +208,12 @@ function renderBlock(node: ArticleNode, key: number): React.ReactNode {
  * Re-validates the body at render time; drops invalid blocks.
  * Never uses dangerouslySetInnerHTML.
  */
-export function renderArticleBody(body: ArticleBody): React.ReactElement {
+export function renderArticleBody(body: ArticleBody, resolvedVideos?: ResolvedVideoNode[]): React.ReactElement {
+  const hiddenVideoIds = new Set(
+    (resolvedVideos ?? [])
+      .filter(r => r.status === "hidden" || r.status === "deleted" || r.status === "not_found")
+      .map(r => r.videoId)
+  );
   // Re-validate (may have been hand-edited after save).
   // On failure, log and continue rendering what we can — the render loop handles per-block drops.
   const validation = validateBody(body);
@@ -242,6 +248,13 @@ export function renderArticleBody(body: ArticleBody): React.ReactElement {
     }
 
     linksSeen += blockLinks;
+
+    // Skip video blocks whose video_id is hidden/deleted (AC5 public renderer)
+    if (node.type === "video") {
+      const videoId = (node as VideoNode).attrs?.video_id;
+      if (videoId && hiddenVideoIds.has(videoId)) continue;
+    }
+
     const el = renderBlock(node, i);
     if (el !== null) elements.push(el);
   }
