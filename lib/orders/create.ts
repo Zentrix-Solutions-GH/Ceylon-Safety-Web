@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import { requireActiveAccount } from "@/lib/auth/server";
 import { calculateCart } from "@/lib/cart/calculate";
+import { buildPayHereRequest } from "@/lib/payhere/checkout";
+import { payhereConfig, publicConfig } from "@/lib/config";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/types/api";
@@ -145,7 +147,7 @@ async function saveProfileIfRequested(
   billingAddress: { address: string; city: string },
 ): Promise<void> {
   if (!billing.saveToProfile) return;
-  await supabase
+  const { error } = await supabase
     .from("profiles")
     .update({
       first_name: billing.firstName,
@@ -156,6 +158,7 @@ async function saveProfileIfRequested(
       tax_id: billing.taxId ?? null,
     })
     .eq("id", userId);
+  if (error) console.warn("[checkout] profile save failed — billing not updated", { code: error.code });
 }
 
 // ─── createCheckout ───────────────────────────────────────────────────────────
@@ -190,6 +193,16 @@ export async function createCheckout(
   // AC8: terms acceptance check (before fetching revisions)
   if (!input.acceptedTerms) {
     return { ok: false, code: "terms_required" };
+  }
+
+  // P0 fix: validate PayHere config before any DB write so a missing env var
+  // cannot strand an order in pending with no way to retrieve payment fields.
+  let phConfig: ReturnType<typeof payhereConfig>;
+  try {
+    phConfig = payhereConfig();
+  } catch (err) {
+    console.error("[checkout] PayHere config missing — cannot build payment request", err);
+    return { ok: false, code: "payment_unavailable" };
   }
 
   // AC3/EC1: rebuild cart and verify price
@@ -250,10 +263,15 @@ export async function createCheckout(
   );
 
   if (rpcError || !rpcResult) {
+    console.error("[checkout] RPC error", { code: rpcError?.code, message: rpcError?.message });
     return { ok: false, code: "unknown" };
   }
 
   const result = rpcResult as unknown as { action: string; order_id: string; order_number: string };
+  if (typeof result.action !== "string") {
+    console.error("[checkout] RPC returned unexpected shape", { rpcResult });
+    return { ok: false, code: "unknown" };
+  }
 
   if (result.action === "payment_in_progress") {
     return { ok: false, code: "payment_in_progress" };
@@ -265,6 +283,34 @@ export async function createCheckout(
   // AC7: save billing to profile if requested (best-effort)
   await saveProfileIfRequested(supabase, user.id, input.billing, billingAddress);
 
+  // Build PayHere form fields (S-079). Config already validated above.
+  // Wrapped in try/catch: centsToDecimal can throw if totalCents is non-integer
+  // due to a data bug; keep the same payment_unavailable recovery path.
+  const appUrl = publicConfig.appUrl;
+  let payhereFields: ReturnType<typeof buildPayHereRequest>;
+  try {
+    payhereFields = buildPayHereRequest(
+      { orderNumber: result.order_number, totalCents, itemCount: lines.items.length },
+      {
+        firstName: input.billing.firstName,
+        lastName: input.billing.lastName,
+        email: user.email ?? "",
+        phone: input.billing.phone,
+        address: input.billing.address,
+        city: input.billing.city,
+      },
+      {
+        returnUrl: `${appUrl}/checkout/success?order=${result.order_id}`,
+        cancelUrl: `${appUrl}/checkout/cancel?order=${result.order_id}`,
+        notifyUrl: `${appUrl}/api/payhere/notify`,
+      },
+      phConfig,
+    );
+  } catch (err) {
+    console.error("[checkout] Failed to build PayHere request", err);
+    return { ok: false, code: "payment_unavailable" };
+  }
+
   // AC11
   return {
     ok: true,
@@ -272,6 +318,7 @@ export async function createCheckout(
       orderId: result.order_id,
       orderNumber: result.order_number,
       totalCents,
+      payhereFields,
     },
   };
 }
@@ -365,10 +412,15 @@ export async function createBankOrder(
   );
 
   if (rpcError || !rpcResult) {
+    console.error("[bank-order] RPC error", { code: rpcError?.code, message: rpcError?.message });
     return { ok: false, code: "unknown" };
   }
 
   const result = rpcResult as unknown as { action: string; order_id: string; order_number: string };
+  if (typeof result.action !== "string") {
+    console.error("[bank-order] RPC returned unexpected shape", { rpcResult });
+    return { ok: false, code: "unknown" };
+  }
 
   if (result.action !== "created") {
     return { ok: false, code: "unknown" };
@@ -409,9 +461,16 @@ export async function cancelPendingOrder(
     { p_user_id: user.id, p_order_id: orderId },
   );
 
-  if (rpcError || !rpcResult) return { ok: false, code: "unknown" };
+  if (rpcError || !rpcResult) {
+    console.error("[cancel] RPC error", { code: rpcError?.code, message: rpcError?.message });
+    return { ok: false, code: "unknown" };
+  }
 
-  const result = rpcResult as { action: string };
+  const result = rpcResult as unknown as { action: string };
+  if (typeof result.action !== "string") {
+    console.error("[cancel] RPC returned unexpected shape", { rpcResult });
+    return { ok: false, code: "unknown" };
+  }
 
   switch (result.action) {
     case "cancelled":           return { ok: true };

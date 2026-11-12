@@ -6,8 +6,8 @@ import { t } from "@/messages/en";
 import { generateSlug, isReservedSlug } from "@/lib/content/slug";
 import { saveArticle } from "@/lib/articles/actions/saveArticle";
 import PublishTimePicker from "./PublishTimePicker";
-import type { ImageAttrs } from "./RichTextEditor";
-import type { ArticleEditData, ArticleBody } from "@/types/article";
+import type { ImageAttrs, VideoAttrs } from "./RichTextEditor";
+import type { ArticleEditData, ArticleBody, ResolvedVideoNode } from "@/types/article";
 import type { Author } from "@/types/author";
 import type { Category } from "@/types/article";
 
@@ -17,6 +17,7 @@ const RichTextEditor = dynamic(
 );
 
 const ImageUploadField = dynamic(() => import("./ImageUploadField"), { ssr: false });
+const ItemPickerModal = dynamic(() => import("./ItemPickerModal"), { ssr: false });
 
 // ─── localStorage helpers ─────────────────────────────────────────────────────
 
@@ -61,6 +62,21 @@ function clearBackup(articleId: string): void {
   } catch {
     // EC2: silently ignore
   }
+}
+
+// ─── Patch video node statuses from resolvedVideos ───────────────────────────
+
+function patchVideoStatuses(body: ArticleBody, resolvedVideos: ResolvedVideoNode[]): ArticleBody {
+  if (!resolvedVideos.length || !body.content?.length) return body;
+  const statusMap = new Map(resolvedVideos.map((r) => [r.videoId, r.status]));
+  const patched = body.content.map((node) => {
+    if (node.type !== "video") return node;
+    const videoId = (node.attrs as Record<string, unknown>).video_id as string;
+    const status = statusMap.get(videoId);
+    if (!status || status === "published") return node;
+    return { ...node, attrs: { ...node.attrs, status } };
+  });
+  return { ...body, content: patched };
 }
 
 // ─── Publish gating ───────────────────────────────────────────────────────────
@@ -137,7 +153,10 @@ export default function ArticleEditor({ initialData, authors, categories }: Arti
   const [scheduledAt, setScheduledAt] = useState<string | null>(initialData.publishedAt);
 
   // ── Body / save state ───────────────────────────────────────────────────────
-  const [body, setBody] = useState<ArticleBody | object>(initialData.body);
+  // Patch video node statuses so hidden/deleted blocks show the warning banner (AC5)
+  // Computed once from initialData — initialData is stable (passed by parent server component).
+  const patchedInitialBody = patchVideoStatuses(initialData.body, initialData.resolvedVideos);
+  const [body, setBody] = useState<ArticleBody | object>(patchedInitialBody);
   const [bodyVersion, setBodyVersion] = useState(initialData.bodyVersion);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -149,6 +168,10 @@ export default function ArticleEditor({ initialData, authors, categories }: Arti
   // ── Image dialog ────────────────────────────────────────────────────────────
   const [showImageDialog, setShowImageDialog] = useState(false);
   const insertImageRef = useRef<((attrs: ImageAttrs) => void) | null>(null);
+
+  // ── Video picker dialog ──────────────────────────────────────────────────────
+  const [showVideoDialog, setShowVideoDialog] = useState(false);
+  const insertVideoRef = useRef<((attrs: VideoAttrs) => void) | null>(null);
 
   const isPublished = initialData.status === "published";
   const slugLocked = isPublished;
@@ -173,10 +196,11 @@ export default function ArticleEditor({ initialData, authors, categories }: Arti
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
 
-  // ─── Image editor helpers ────────────────────────────────────────────────────
+  // ─── Editor helpers ──────────────────────────────────────────────────────────
   const handleEditorReady = useCallback(
-    (helpers: { insertImage: (attrs: ImageAttrs) => void }) => {
+    (helpers: { insertImage: (attrs: ImageAttrs) => void; insertVideo: (attrs: VideoAttrs) => void }) => {
       insertImageRef.current = helpers.insertImage;
+      insertVideoRef.current = helpers.insertVideo;
     },
     []
   );
@@ -198,6 +222,18 @@ export default function ArticleEditor({ initialData, authors, categories }: Arti
       caption: attrs.caption,
     });
     setShowImageDialog(false);
+  }
+
+  function handleInsertVideo(picked: { id: string; title: string; thumbnailKey: string }) {
+    if (!insertVideoRef.current) return;
+    insertVideoRef.current({
+      node_id: crypto.randomUUID(),
+      video_id: picked.id,
+      title: picked.title,
+      thumbnailKey: picked.thumbnailKey,
+      status: "ready",
+    });
+    setShowVideoDialog(false);
   }
 
   // ─── Slug auto-generation ────────────────────────────────────────────────────
@@ -421,10 +457,18 @@ export default function ArticleEditor({ initialData, authors, categories }: Arti
         </div>
       )}
 
+      {showVideoDialog && (
+        <ItemPickerModal
+          onPick={handleInsertVideo}
+          onClose={() => setShowVideoDialog(false)}
+        />
+      )}
+
       <RichTextEditor
-        initialContent={initialData.body}
+        initialContent={patchedInitialBody}
         onChange={(newBody) => { setBody(newBody); setIsDirty(true); }}
         onEditorReady={handleEditorReady}
+        onInsertVideoClick={() => setShowVideoDialog(true)}
       />
 
       <div>

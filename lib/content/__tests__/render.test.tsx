@@ -40,22 +40,25 @@ describe("renderArticleBody — AC10", () => {
     expect(container.textContent).toContain("Good");
   });
 
-  it("drops a video node with an invalid YouTube ID", () => {
+  it("renders a video node with any non-empty video_id as a link card", () => {
     const body = makeBody([
       { type: "video", attrs: { node_id: "n1", video_id: "tooshort" } },
       { type: "paragraph", content: [{ type: "text", text: "After" }] },
     ]);
     const { container } = render(renderArticleBody(body));
-    expect(container.querySelector("iframe")).toBeNull();
+    const link = container.querySelector("a[data-block='video']");
+    expect(link).not.toBeNull();
     expect(container.textContent).toContain("After");
   });
 
-  it("renders a video node with a valid YouTube ID", () => {
+  it("renders a video node with a valid video_id as a link card", () => {
     const body = makeBody([
       { type: "video", attrs: { node_id: "n1", video_id: "dQw4w9WgXcQ" } },
     ]);
     const { container } = render(renderArticleBody(body));
-    expect(container.querySelector("iframe")).not.toBeNull();
+    const link = container.querySelector("a[data-block='video']");
+    expect(link).not.toBeNull();
+    expect((link as HTMLAnchorElement).href).toContain("/?video=dQw4w9WgXcQ");
   });
 
   it("renders a document_spot node as 'not shown' (no error)", () => {
