@@ -25,16 +25,20 @@ vi.mock("next/dynamic", () => ({
   },
 }));
 
+vi.mock("@/lib/videos/actions/listPickerItemsAction", () => ({
+  listPickerItemsAction: vi.fn().mockResolvedValue({ ok: true, items: [], hasMore: false }),
+}));
+
 vi.mock("@/components/admin/ArticleEditor/RichTextEditor", () => ({
   RichTextEditor: function MockRTE({
     onChange,
     onEditorReady,
   }: {
     onChange?: (body: object) => void;
-    onEditorReady?: (api: { insertImage: () => void }) => void;
+    onEditorReady?: (api: { insertImage: () => void; insertVideo: () => void }) => void;
   }) {
     React.useEffect(() => {
-      onEditorReady?.({ insertImage: () => {} });
+      onEditorReady?.({ insertImage: () => {}, insertVideo: () => {} });
     }, [onEditorReady]);
     return (
       <button
