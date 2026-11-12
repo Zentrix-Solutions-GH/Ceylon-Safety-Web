@@ -143,6 +143,7 @@ describe("POST /api/payhere/notify", () => {
     const body = makeBody();
     const res = await POST(makeRequest(body));
     expect(res.status).toBe(200);
+    expect(await res.json()).toHaveProperty("ok", true);
     expect(mockFulfil).not.toHaveBeenCalled();
   });
 
@@ -151,6 +152,7 @@ describe("POST /api/payhere/notify", () => {
     const body = makeBody({ status_code: "2" });
     const res = await POST(makeRequest(body));
     expect(res.status).toBe(200);
+    expect(await res.json()).toHaveProperty("ok", true);
     expect(mockFulfil).toHaveBeenCalledOnce();
   });
 
@@ -181,6 +183,7 @@ describe("POST /api/payhere/notify", () => {
     const body = makeBody();
     const res = await POST(makeRequest(body));
     expect(res.status).toBe(200);
+    expect(await res.json()).toHaveProperty("ok", true);
     expect(mockFulfil).not.toHaveBeenCalled();
   });
 
@@ -214,6 +217,7 @@ describe("POST /api/payhere/notify", () => {
     const body = makeBody({ status_code: "2" });
     const res = await POST(makeRequest(body));
     expect(res.status).toBe(200);
+    expect(await res.json()).toHaveProperty("ok", true);
     expect(mockFulfil).not.toHaveBeenCalled();
   });
 
@@ -222,6 +226,7 @@ describe("POST /api/payhere/notify", () => {
     const body = makeBody({ status_code: "0" });
     const res = await POST(makeRequest(body));
     expect(res.status).toBe(200);
+    expect(await res.json()).toHaveProperty("ok", true);
     expect(mockFulfil).toHaveBeenCalledOnce();
   });
 
@@ -252,6 +257,7 @@ describe("POST /api/payhere/notify", () => {
     const body = makeBody({ status_code: "-3" });
     const res = await POST(makeRequest(body));
     expect(res.status).toBe(200);
+    expect(await res.json()).toHaveProperty("ok", true);
     expect(mockFulfil).toHaveBeenCalledOnce();
   });
 
@@ -457,8 +463,10 @@ describe("POST /api/payhere/notify", () => {
 
     const results = await Promise.all(requests);
 
-    // All 20 must succeed with 200
+    // All 20 must succeed with 200 and ok:true
     expect(results.every(r => r.status === 200)).toBe(true);
+    const bodies = await Promise.all(results.map(r => r.json()));
+    expect(bodies.every((b: Record<string, unknown>) => b.ok === true)).toBe(true);
     // Each triggered exactly one fulfilNotification call
     expect(mockFulfil).toHaveBeenCalledTimes(CONCURRENCY);
   });

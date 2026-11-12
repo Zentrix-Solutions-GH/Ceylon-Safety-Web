@@ -84,6 +84,24 @@ describe("notify route — fulfil failure (AC11)", () => {
     expect(body).toHaveProperty("error", "fulfil_error");
   });
 
+  it("AC13: does not log the raw form body or payment_id in any log call", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    await POST(makeRequest());
+    const allArgs = [
+      ...errorSpy.mock.calls.flat(),
+      ...warnSpy.mock.calls.flat(),
+      ...infoSpy.mock.calls.flat(),
+    ].map(a => (typeof a === "string" ? a : JSON.stringify(a)));
+    // Raw body fields (payment_id, md5sig) must not appear in logs
+    expect(allArgs.some(s => s.includes("pay-999"))).toBe(false);
+    expect(allArgs.some(s => s.includes("md5sig"))).toBe(false);
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+    infoSpy.mockRestore();
+  });
+
   it("AC11: does not mark payment_event processed when fulfil throws", async () => {
     await POST(makeRequest());
     // The update mock should NOT have been called with outcome or processed_at
