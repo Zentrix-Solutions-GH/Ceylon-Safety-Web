@@ -457,7 +457,7 @@ describe("POST /api/payhere/notify", () => {
         };
         return {};
       }),
-    }));
+    } as never));
 
     const requests = Array.from({ length: CONCURRENCY }, (_, i) =>
       POST(makeRequest(makeBody({ order_id: `ORD-${i}`, payment_id: `PAY-${i}` }))),
