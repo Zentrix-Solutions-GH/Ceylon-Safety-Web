@@ -5,7 +5,6 @@ import { publicConfig } from "@/lib/config.public";
 import Link from "next/link";
 import Image from "next/image";
 import { t } from "@/messages/en";
-import type { MessageKey } from "@/messages/en";
 
 export interface FooterSettings {
   contact_email?: string | null;
@@ -27,24 +26,31 @@ interface FooterProps {
   categories?: FooterCategory[];
 }
 
-const QUICK_LINKS: { labelKey: MessageKey; href: string }[] = [
-  { labelKey: "footer.links.knowledge", href: "/articles" },
-  { labelKey: "footer.links.articles", href: "/articles" },
-  { labelKey: "footer.links.documents", href: "/documents" },
-  { labelKey: "footer.links.courses", href: "/courses" },
-  { labelKey: "footer.links.contact", href: "/contact-coach" },
-  { labelKey: "footer.links.certification", href: "/certifications" },
+function isSafeSocialUrl(url: string | null | undefined): url is string {
+  return typeof url === "string" && url.startsWith("https://");
+}
+
+const QUICK_LINKS: { label: string; href: string }[] = [
+  { label: t("nav.home"), href: "/" },
+  { label: t("nav.articles"), href: "/articles" },
+  { label: t("nav.documents"), href: "/documents" },
+  { label: t("nav.courses"), href: "/courses" },
+  { label: t("nav.jobs"), href: "/jobs" },
+  { label: t("nav.contact_coach"), href: "/contact-coach" },
+  { label: t("footer.terms"), href: "/terms" },
+  { label: t("footer.privacy"), href: "/privacy" },
+  { label: t("footer.refund_policy"), href: "/refund" },
+  { label: t("footer.disclaimer"), href: "/disclaimer" },
 ];
 
-const INDUSTRY_SECTORS: { labelKey: MessageKey; href: string }[] = [
-  { labelKey: "footer.sectors.construction", href: "/articles?category=construction" },
-  { labelKey: "footer.sectors.industrial", href: "/articles?category=industrial" },
-  { labelKey: "footer.sectors.logistics", href: "/articles?category=logistics" },
-  { labelKey: "footer.sectors.healthcare", href: "/articles?category=healthcare" },
-  { labelKey: "footer.sectors.agriculture", href: "/articles?category=agriculture" },
+const INDUSTRY_SECTORS: { label: string; href: string }[] = [
+  { label: "Construction Safety", href: "/articles?category=construction" },
+  { label: "Industrial/Manufacturing", href: "/articles?category=industrial" },
+  { label: "Logistics Safety", href: "/articles?category=logistics" },
+  { label: "Healthcare & Hospitality", href: "/articles?category=healthcare" },
+  { label: "Agriculture & Tea Estates", href: "/articles?category=agriculture" },
 ];
 
-// LinkedIn SVG
 function LinkedInIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
@@ -53,7 +59,6 @@ function LinkedInIcon() {
   );
 }
 
-// YouTube SVG
 function YouTubeIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
@@ -62,7 +67,6 @@ function YouTubeIcon() {
   );
 }
 
-// Facebook SVG
 function FacebookIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
@@ -71,7 +75,6 @@ function FacebookIcon() {
   );
 }
 
-// Instagram SVG
 function InstagramIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
@@ -80,9 +83,11 @@ function InstagramIcon() {
   );
 }
 
-export default function Footer({ settings }: FooterProps) {
+export default function Footer({ settings, categories = [] }: FooterProps) {
   const year = new Date().getFullYear();
   const btnRef = useRef<HTMLButtonElement>(null);
+  const [newsletterDone, setNewsletterDone] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState("");
 
   function handleCookieSettings() {
     window.dispatchEvent(
@@ -90,15 +95,22 @@ export default function Footer({ settings }: FooterProps) {
     );
   }
 
-  const [newsletterDone, setNewsletterDone] = useState(false);
-  const [newsletterEmail, setNewsletterEmail] = useState("");
-
+  const hasContact = !!(settings?.contact_email || settings?.contact_phone);
   const address = settings?.footer_address ?? "";
   const phone = settings?.contact_phone ?? "";
   const email = settings?.contact_email ?? "";
 
+  const socialLinks = [
+    { href: settings?.social_linkedin, icon: <LinkedInIcon />, label: t("footer.social.linkedin") },
+    { href: settings?.social_youtube, icon: <YouTubeIcon />, label: t("footer.social.youtube") },
+    { href: settings?.social_facebook, icon: <FacebookIcon />, label: t("footer.social.facebook") },
+    { href: settings?.social_instagram, icon: <InstagramIcon />, label: t("footer.social.instagram") },
+  ].filter((s): s is { href: string; icon: React.ReactElement; label: string } => isSafeSocialUrl(s.href));
+
+  const hasCategories = categories.length > 0;
+
   return (
-    <footer aria-label={t("footer.label")} className="bg-surface-dark text-white">
+    <footer role="contentinfo" aria-label={t("footer.label")} className="bg-surface-dark text-white">
 
       {/* Top section — brand + newsletter */}
       <div className="border-b border-white/10">
@@ -118,27 +130,6 @@ export default function Footer({ settings }: FooterProps) {
             <p className="text-xs text-gray-400 leading-relaxed">
               CeylonSafety is advancing occupational health, environmental protection and industrial safety compliance standards across civil construction, apparel manufacturing, tea estates, and ports in Sri Lanka.
             </p>
-            {/* Social icons — only rendered when a URL is configured */}
-            <div className="mt-4 flex items-center gap-2">
-              {[
-                { href: settings?.social_linkedin ?? null, icon: <LinkedInIcon />, label: "LinkedIn" },
-                { href: settings?.social_youtube ?? null, icon: <YouTubeIcon />, label: "YouTube" },
-                { href: settings?.social_facebook ?? null, icon: <FacebookIcon />, label: "Facebook" },
-                { href: settings?.social_instagram ?? null, icon: <InstagramIcon />, label: "Instagram" },
-              ].filter((s): s is { href: string; icon: React.ReactElement; label: string } => s.href !== null)
-               .map(({ href, icon, label }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={label}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-gray-300 hover:bg-primary hover:text-white transition-colors"
-                >
-                  {icon}
-                </a>
-              ))}
-            </div>
           </div>
 
           {/* Newsletter */}
@@ -181,12 +172,12 @@ export default function Footer({ settings }: FooterProps) {
 
           {/* Quick Links */}
           <div>
-            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">{t("footer.section.quick_links")}</h4>
+            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">{t("footer.quick_links")}</h4>
             <ul className="space-y-2">
               {QUICK_LINKS.map((l) => (
-                <li key={l.href + l.labelKey}>
+                <li key={l.href + l.label}>
                   <Link href={l.href} className="text-xs text-gray-400 hover:text-white transition-colors">
-                    {t(l.labelKey)}
+                    {l.label}
                   </Link>
                 </li>
               ))}
@@ -198,46 +189,98 @@ export default function Footer({ settings }: FooterProps) {
             <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">{t("footer.section.industry_sectors")}</h4>
             <ul className="space-y-2">
               {INDUSTRY_SECTORS.map((l) => (
-                <li key={l.href + l.labelKey}>
+                <li key={l.href}>
                   <Link href={l.href} className="text-xs text-gray-400 hover:text-white transition-colors">
-                    {t(l.labelKey)}
+                    {l.label}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Headquarters */}
+          {/* Contact + Follow us */}
           <div>
-            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">{t("footer.section.headquarters")}</h4>
-            <ul className="space-y-3 text-xs text-gray-400">
-              <li className="flex gap-2">
-                <span className="mt-0.5 shrink-0">📍</span>
-                <span>{address}</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="shrink-0">📞</span>
-                <a href={`tel:${phone.replace(/\s/g, "")}`} className="hover:text-white transition-colors">{phone}</a>
-              </li>
-              <li className="flex gap-2">
-                <span className="shrink-0">✉️</span>
-                <a href={`mailto:${email}`} className="hover:text-white transition-colors break-all">{email}</a>
-              </li>
-            </ul>
+            {hasContact && (
+              <>
+                <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">{t("footer.contact")}</h4>
+                <ul className="space-y-3 text-xs text-gray-400 mb-6">
+                  {address && (
+                    <li className="flex gap-2">
+                      <span className="mt-0.5 shrink-0">📍</span>
+                      <span>{address}</span>
+                    </li>
+                  )}
+                  {phone && (
+                    <li className="flex gap-2">
+                      <span className="shrink-0">📞</span>
+                      <a href={`tel:${phone.replace(/\s/g, "")}`} className="hover:text-white transition-colors">{phone}</a>
+                    </li>
+                  )}
+                  {email && (
+                    <li className="flex gap-2">
+                      <span className="shrink-0">✉️</span>
+                      <div>
+                        <a href={`mailto:${email}`} aria-label={t("footer.email_link")} className="hover:text-white transition-colors break-all">{t("footer.email_link")}</a>
+                        <p className="mt-0.5 break-all">{email}</p>
+                      </div>
+                    </li>
+                  )}
+                </ul>
+              </>
+            )}
+            {socialLinks.length > 0 && (
+              <>
+                <h4 className="mb-3 text-xs font-bold uppercase tracking-widest text-white">{t("footer.follow")}</h4>
+                <div className="flex flex-wrap gap-2">
+                  {socialLinks.map(({ href, icon, label }) => (
+                    <a
+                      key={label}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={label}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-gray-300 hover:bg-primary hover:text-white transition-colors"
+                    >
+                      {icon}
+                    </a>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Accreditation Affiliates */}
+          {/* Categories OR Accreditation */}
           <div>
-            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">{t("footer.section.accreditation")}</h4>
-            <p className="mb-3 text-xs text-gray-400 leading-relaxed">
-              {t("footer.accreditation.body")}
-            </p>
-            <Link
-              href="/certifications"
-              className="inline-block rounded border border-primary px-3 py-1.5 text-[11px] font-semibold text-primary hover:bg-primary hover:text-white transition-colors"
-            >
-              {t("footer.accreditation.cta")}
-            </Link>
+            {hasCategories ? (
+              <>
+                <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">{t("footer.categories")}</h4>
+                <ul className="space-y-2">
+                  {categories.map((c) => (
+                    <li key={c.slug}>
+                      <Link
+                        href={`/articles?category=${c.slug}`}
+                        className="text-xs text-gray-400 hover:text-white transition-colors"
+                      >
+                        {c.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <>
+                <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">{t("footer.section.accreditation")}</h4>
+                <p className="mb-3 text-xs text-gray-400 leading-relaxed">
+                  {t("footer.accreditation.body")}
+                </p>
+                <Link
+                  href="/certifications"
+                  className="inline-block rounded border border-primary px-3 py-1.5 text-[11px] font-semibold text-primary hover:bg-primary hover:text-white transition-colors"
+                >
+                  {t("footer.accreditation.cta")}
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -245,7 +288,7 @@ export default function Footer({ settings }: FooterProps) {
       {/* Bottom bar */}
       <div className="border-t border-white/10">
         <div className="mx-auto max-w-6xl px-4 py-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-500">
-          <span>&copy; {year} Ceylon Safety. All Rights Reserved | Designed &amp; Developed by{" "}
+          <span>&copy; {year} CeylonSafety. All Rights Reserved | Designed &amp; Developed by{" "}
             {publicConfig.developerUrl ? (
               <a href={publicConfig.developerUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white underline">
                 Zentrix Solutions
@@ -255,11 +298,11 @@ export default function Footer({ settings }: FooterProps) {
             )}
           </span>
           <div className="flex flex-wrap gap-4">
-            <Link href="/privacy" className="hover:text-gray-300 transition-colors">Privacy Policy</Link>
+            <Link href="/privacy" className="hover:text-gray-300 transition-colors">{t("footer.privacy")}</Link>
             <button ref={btnRef} type="button" onClick={handleCookieSettings} className="hover:text-gray-300 transition-colors">
-              Cookie Policy
+              {t("footer.cookie_settings")}
             </button>
-            <Link href="/terms" className="hover:text-gray-300 transition-colors">Terms &amp; Conditions</Link>
+            <Link href="/terms" className="hover:text-gray-300 transition-colors">{t("footer.terms")} &amp; Conditions</Link>
             <Link href="/sitemap" className="hover:text-gray-300 transition-colors">Site Map</Link>
           </div>
         </div>

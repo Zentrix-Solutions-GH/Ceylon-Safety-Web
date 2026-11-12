@@ -52,8 +52,8 @@ const mockUsePathname = vi.mocked(usePathname);
 
 // Header is an async RSC. Call and await it directly to get the resolved JSX,
 // then pass to render() so client sub-components (hooks etc.) work normally.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function renderHeader() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ui = await (Header as any)();
   return render(ui);
 }

@@ -53,7 +53,7 @@ export function HeroSection() {
       {/* Search bar — positioned at the bottom edge, translated down 50% to straddle the section boundary */}
       <div className="absolute bottom-0 left-0 right-0 z-20 translate-y-1/2 px-4">
         <div className="mx-auto max-w-3xl">
-          <form action="/search" method="get" className="flex overflow-hidden rounded-full border border-gray-200 bg-white shadow-2xl">
+          <form action="/search" method="get" onSubmit={(e) => e.preventDefault()} className="flex overflow-hidden rounded-full border border-gray-200 bg-white shadow-2xl">
             <div className="flex flex-1 items-center gap-2 px-5 py-3.5">
               <Search className="h-4 w-4 shrink-0 text-gray-400" />
               <input

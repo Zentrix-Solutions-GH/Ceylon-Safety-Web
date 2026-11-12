@@ -130,6 +130,7 @@ const en = {
   "footer.social.instagram": "Instagram",
   "footer.social.linkedin": "LinkedIn",
   "footer.social.youtube": "YouTube",
+  "footer.cookie_settings": "Cookie settings",
 
   // --- sign-up screen (S-041) ---
   "auth.sign_up.heading": "Create your account",
