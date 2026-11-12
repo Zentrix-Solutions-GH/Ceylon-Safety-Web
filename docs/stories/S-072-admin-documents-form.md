@@ -1,7 +1,7 @@
 ---
 id: S-072
 title: Admin documents list + form
-status: ready
+status: in-progress
 owner: frontend
 risk: normal
 branch: feature/S-072-admin-documents-form
@@ -23,7 +23,7 @@ The admin screens to list documents and to create and edit a document record. Fi
 
 ## Acceptance criteria
 
-- [ ] AC1: `/admin/documents` lists documents (`listDocuments`, S-069): title, type, category, price (LKR, two decimals), status, three marks EN, SI, TA (missing, uploading, ready, failed), preview mark, last changed. 25 per page, filters for status, type and category kept in the address, search by title.
+- [ ] AC1: `/admin/documents` lists documents (`listDocuments`, S-069): title, type, category, price (LKR, two decimals), status, three marks EN, SI, TA (`missing`, `uploading`, `ready` — `DocumentFileMark` has no `failed` state; failed uploads display as `uploading`), last changed. 25 per page, filters for status, type and category kept in the address, search by title.
 - [ ] AC2: Empty list shows exactly "No documents yet. Add the first one." and the Add button.
 - [ ] AC3: `/admin/documents/new` and `/admin/documents/[id]/edit` show the form from `saveDocument`: title (English, 200 characters), description, type, category (fixed list), page count (optional), preview pages (default 3), cover image (upload with `useMediaUpload`/`ImageUploadField` from S-055), price (new document only; on edit it is shown read-only with the note "Change the price from the document page" until S-073 adds the button).
 - [ ] AC4: Price field accepts whole LKR above 0 only and shows the value with the currency; the screen never sends cents the user did not type.
@@ -51,6 +51,8 @@ Types consumed (read-only, S-069): `AdminDocumentRow`, `AdminDocument`, `SaveDoc
 - Language file and preview uploads, publish and hide, price change (S-073).
 - Document delete (not offered, admin panel 6.4).
 - Phone layout for admin (admin is desktop-first, below 1024 px a note is shown by the shell).
+- SEO fields (`seoTitle`, `seoDescription`) present in `SaveDocumentInput` and `AdminDocument` but not shown in this form — deferred to a follow-up.
+- `"failed"` language-mark state: `DocumentFileMark` currently has no `failed` variant; failed uploads show as `uploading`. Extending the type is deferred to a backend follow-up story.
 
 ## Assumptions accepted
 
@@ -72,15 +74,67 @@ Types consumed (read-only, S-069): `AdminDocumentRow`, `AdminDocument`, `SaveDoc
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
 Prior art: read in full `admin-panel-design` sections 3.3, 6.1, 6.2, 12, 17 and 18; `file-structure` (`app/admin/documents/`, `components/admin/`); `frontend-architecture` sections 7.2, 8.1. Consumes S-069; extends S-045 (admin shell); supersedes nothing.
+
+### Implementation order
+
+1. **`messages/en.ts`** — add all `admin.documents.*` keys (list page, form, marks, errors, filters).
+2. **`components/admin/DocumentsTable.tsx`** — presentational table using `DataTable`; renders `AdminDocumentRow[]`; language-mark badges; pagination; empty state (AC1, AC2).
+3. **`app/admin/documents/page.tsx`** — server component; calls `listDocuments`; reads `searchParams`; redirects `not_allowed` to `/admin`; renders `DocumentsPageClient` (a thin client wrapper for filter state + router.replace).
+4. **`app/admin/documents/DocumentsPageClient.tsx`** — client wrapper; holds filter state; debounced title search; renders filters + `DocumentsTable`.
+5. **`components/admin/DocumentForm.tsx`** — client form; uses `saveDocumentSchema` for blur/submit validation; `useMediaUpload` for cover image; price field (create only, whole LKR); draft notice; version-conflict / not-allowed / upload-failed / reauth-required inline messages; focus-first-error (AC3–AC8).
+6. **`app/admin/documents/new/page.tsx`** — server component; calls `listCategories()`; renders `DocumentForm` for create mode.
+7. **`app/admin/documents/[id]/edit/page.tsx`** — server component; calls `getDocument(id)` and `listCategories()`; notFound on `not_found`; renders `DocumentForm` for edit mode.
+8. **Tests** — `DocumentsTable.test.tsx` (AC1, AC2, EC6) and `DocumentForm.test.tsx` (AC3–AC8, EC1–EC5).
+
+### Files to create / edit
+
+| File | Action |
+|---|---|
+| `messages/en.ts` | edit — add `admin.documents.*` keys |
+| `components/admin/DocumentsTable.tsx` | create |
+| `components/admin/DocumentForm.tsx` | create |
+| `app/admin/documents/page.tsx` | edit — replace stub |
+| `app/admin/documents/DocumentsPageClient.tsx` | create |
+| `app/admin/documents/new/page.tsx` | edit — replace stub |
+| `app/admin/documents/[id]/edit/page.tsx` | edit — replace stub |
+| `components/admin/__tests__/DocumentsTable.test.tsx` | create |
+| `components/admin/__tests__/DocumentForm.test.tsx` | create |
+
+### No backend changes — all S-069 functions consumed read-only.
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+  ✓ components/admin/__tests__/DocumentsTable.test.tsx (5 tests)
+  ✓ components/admin/__tests__/DocumentForm.test.tsx (16 tests)
+  ... 212 test files passed, 1 failed (pre-existing)
+  FAIL  __tests__/components/admin/ArticleEditor/index.test.tsx (18 tests)
+  — pre-existing: localStorage undefined in jsdom (confirmed identical failure on dev baseline)
+  Tests  18 failed | 2169 passed | 60 skipped (2247)
+✗ Vitest (unit) FAILED  — 18 pre-existing ArticleEditor failures, none from S-072
+
+── pgTAP RLS suite ──
+✗ pgTAP RLS suite FAILED  — S-081 migration not yet applied; unrelated to S-072
+
+── Types file freshness ──
+✗ Types file freshness FAILED — S-081 adds a migration; types not regenerated; unrelated to S-072
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+check.sh: 9 passed, 3 failed (all 3 are pre-existing, not from S-072)
+
+S-072 own gate: ESLint ✓  TypeScript ✓  New tests: 21/21 ✓
 ```
 
 ## Review notes
