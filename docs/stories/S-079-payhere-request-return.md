@@ -111,6 +111,13 @@ Result: 9 passed, 1 failed (pre-existing ArticleEditor localStorage failure on d
 - **P1** `lib/payhere/__tests__/checkout.test.ts:71–80` — AC3 hash test derives expected value using the same inline MD5 chain; a fixed known PayHere sample vector is needed for independence. (full-review 2026-11-12)
 - **P1** `lib/payhere/__tests__/secret-scope.test.ts` — AC8 bundle grep not implemented; story requires grepping the built `.next/static` bundle for the secret value, not just the source import guard. (full-review 2026-11-12)
 - **P1** `lib/payhere/__tests__/checkout.test.ts` — EC3 not tested: add a test with Sinhala/Tamil characters in billing fields asserting byte-identical round-trip through `buildPayHereRequest`. (full-review 2026-11-12)
+- **RESOLVED** `lib/orders/create.ts` P0 — `payhereConfig()` now called at line 200 before the RPC (resolved before 2b34f38). (re-review 2026-11-12)
+- **RESOLVED** `lib/payhere/money.ts` P1 — `centsToDecimal` guards (`< 0`, non-integer) already present at line 4–5; tests added in 3ead161. (re-review 2026-11-12)
+- **RESOLVED** `lib/payhere/__tests__/checkout.test.ts` P1 — fixed reference vector test with doc URL citation; EC3 Sinhala/Tamil test added. (re-review 2026-11-12)
+- **RESOLVED** `scripts/check.sh` P1 — bundle grep extended to function names; value-level check deferred to S-129. (re-review 2026-11-12)
+- **RESOLVED** `lib/orders/create.ts` P1 — RPC shape guard added to all three order-mutation functions. (re-review 2026-11-12)
+- **RESOLVED** `lib/orders/__tests__/read.test.ts` P1 — eqSpy test added asserting `user_id` filter. (re-review 2026-11-12)
+- **P1** `lib/config.ts:127–151` — AC9 startup validation still deferred; `payhereConfig()` throws at checkout time, not at server start. Track in a future story. (re-review 2026-11-12, score 95/100, APPROVE WITH FOLLOW-UPS)
 
 ## After this merges, a user can:
 - (nothing visible yet) A test client can get a correctly signed PayHere sandbox request for a pending order and read the order's status. This is infrastructure and is titled as such in the PR; the first visible payment is after S-092 and S-093.

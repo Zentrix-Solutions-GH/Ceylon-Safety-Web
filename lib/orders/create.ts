@@ -466,7 +466,7 @@ export async function cancelPendingOrder(
     return { ok: false, code: "unknown" };
   }
 
-  const result = rpcResult as { action: string };
+  const result = rpcResult as unknown as { action: string };
   if (typeof result.action !== "string") {
     console.error("[cancel] RPC returned unexpected shape", { rpcResult });
     return { ok: false, code: "unknown" };
