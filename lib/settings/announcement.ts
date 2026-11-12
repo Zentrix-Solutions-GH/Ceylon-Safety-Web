@@ -1,6 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import { ANNOUNCEMENT_TAG } from "@/lib/cache/tags";
 
 export interface AnnouncementBanner {
@@ -15,10 +15,10 @@ function isSafeHref(href: string): boolean {
 }
 
 const FALLBACK: AnnouncementBanner = {
-  enabled: true,
-  text: "Certified Industrial PPE & Fall Protection Equipment | Special Bulk Rates for Sri Lankan Sites",
-  linkLabel: "Shop Now",
-  linkHref: "/documents",
+  enabled: false,
+  text: "",
+  linkLabel: "",
+  linkHref: "/",
 };
 
 const KEYS = ["announcement_enabled", "announcement_text", "announcement_link_label", "announcement_link_href"] as const;
@@ -26,7 +26,7 @@ const KEYS = ["announcement_enabled", "announcement_text", "announcement_link_la
 const fetchAnnouncement = unstable_cache(
   async (): Promise<AnnouncementBanner> => {
     try {
-      const supabase = createSupabaseServiceRoleClient();
+      const supabase = createSupabaseAnonClient();
       const { data, error } = await supabase
         .from("site_settings")
         .select("key, value")

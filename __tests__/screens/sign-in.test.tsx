@@ -41,7 +41,7 @@ describe("SignInForm — AC1: renders required fields and controls", () => {
   it("renders email, password fields and Turnstile", () => {
     render(<SignInForm />);
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
     expect(screen.getByTestId("turnstile")).toBeInTheDocument();
   });
 
@@ -80,8 +80,8 @@ describe("SignInForm — AC1/happy path: submits and redirects", () => {
     mockSignIn.mockResolvedValue({ ok: true, redirectTo: "/dashboard" });
     render(<SignInForm />);
     await userEvent.type(screen.getByLabelText(/email/i), "user@example.com");
-    await userEvent.type(screen.getByLabelText(/password/i), "secret123");
-    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await userEvent.type(screen.getByLabelText(/^password$/i), "secret123");
+    await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
     await waitFor(() => {
       expect(mockSignIn).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -99,8 +99,8 @@ describe("SignInForm — AC1/happy path: submits and redirects", () => {
     mockSignIn.mockResolvedValue({ ok: true, redirectTo: "/protected-page" });
     render(<SignInForm />);
     await userEvent.type(screen.getByLabelText(/email/i), "user@example.com");
-    await userEvent.type(screen.getByLabelText(/password/i), "secret123");
-    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await userEvent.type(screen.getByLabelText(/^password$/i), "secret123");
+    await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
     await waitFor(() => {
       expect(mockSignIn).toHaveBeenCalledWith(
         expect.objectContaining({ next: "/protected-page" })
@@ -119,8 +119,8 @@ describe("SignInForm — AC2: invalid_credentials shows mapped message", () => {
     mockSignIn.mockResolvedValue({ ok: false, code: "invalid_credentials" });
     render(<SignInForm />);
     await userEvent.type(screen.getByLabelText(/email/i), "user@example.com");
-    await userEvent.type(screen.getByLabelText(/password/i), "wrongpass");
-    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await userEvent.type(screen.getByLabelText(/^password$/i), "wrongpass");
+    await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(/email or password is not correct/i);
     });
@@ -138,8 +138,8 @@ describe("SignInForm — AC3: email_not_verified redirects to /verify-email", ()
     mockSignIn.mockResolvedValue({ ok: false, code: "email_not_verified" });
     render(<SignInForm />);
     await userEvent.type(screen.getByLabelText(/email/i), "user@example.com");
-    await userEvent.type(screen.getByLabelText(/password/i), "correct123");
-    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await userEvent.type(screen.getByLabelText(/^password$/i), "correct123");
+    await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith("/verify-email");
     });
@@ -156,8 +156,8 @@ describe("SignInForm — AC4: account_suspended shows suspension message", () =>
     mockSignIn.mockResolvedValue({ ok: false, code: "account_suspended" });
     render(<SignInForm />);
     await userEvent.type(screen.getByLabelText(/email/i), "banned@example.com");
-    await userEvent.type(screen.getByLabelText(/password/i), "mypass123");
-    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await userEvent.type(screen.getByLabelText(/^password$/i), "mypass123");
+    await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(/suspended/i);
     });
@@ -281,8 +281,8 @@ describe("SignInForm — AC8: captcha_failed and rate_limited map via errorMessa
     mockSignIn.mockResolvedValue({ ok: false, code: "captcha_failed" });
     render(<SignInForm />);
     await userEvent.type(screen.getByLabelText(/email/i), "user@example.com");
-    await userEvent.type(screen.getByLabelText(/password/i), "pass123");
-    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await userEvent.type(screen.getByLabelText(/^password$/i), "pass123");
+    await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(/security check/i);
     });
@@ -292,8 +292,8 @@ describe("SignInForm — AC8: captcha_failed and rate_limited map via errorMessa
     mockSignIn.mockResolvedValue({ ok: false, code: "rate_limited" });
     render(<SignInForm />);
     await userEvent.type(screen.getByLabelText(/email/i), "user@example.com");
-    await userEvent.type(screen.getByLabelText(/password/i), "pass123");
-    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await userEvent.type(screen.getByLabelText(/^password$/i), "pass123");
+    await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(/too many/i);
     });
@@ -353,8 +353,8 @@ describe("SignInForm — exception resilience: button re-enables after thrown er
     mockSignIn.mockRejectedValue(new Error("network"));
     render(<SignInForm />);
     await userEvent.type(screen.getByLabelText(/email/i), "x@x.com");
-    await userEvent.type(screen.getByLabelText(/password/i), "pass");
-    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await userEvent.type(screen.getByLabelText(/^password$/i), "pass");
+    await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
     // pending=false when finally runs: button label reverts from 'Signing in...' to 'Sign in'
     await waitFor(() => {
       expect(screen.queryByText(/signing in/i)).not.toBeInTheDocument();
@@ -365,8 +365,8 @@ describe("SignInForm — exception resilience: button re-enables after thrown er
     mockSignIn.mockRejectedValue(new Error("network"));
     render(<SignInForm />);
     await userEvent.type(screen.getByLabelText(/email/i), "x@x.com");
-    await userEvent.type(screen.getByLabelText(/password/i), "pass");
-    await userEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await userEvent.type(screen.getByLabelText(/^password$/i), "pass");
+    await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
     await waitFor(() => {
       expect(screen.getByRole("alert")).toBeInTheDocument();
     });

@@ -540,6 +540,55 @@ const en = {
   "auth.sign_in.hide_password": "Hide password",
   "auth.sign_up.show_password": "Show password",
   "auth.sign_up.hide_password": "Hide password",
+
+  // --- trainer CTA section ---
+  "home.trainer_cta.eyebrow": "Ceylon Safety Trainers",
+  "home.trainer_cta.heading": "Need a Certified Safety Trainer for Your Site or Factory?",
+  "home.trainer_cta.body": "Connect with our network of 1,240+ verified occupational safety trainers. We’ll match you with certified professionals for your industry and location across Sri Lanka.",
+  "home.trainer_cta.cta": "Contact a Trainer →",
+
+  // --- sign-in form left panel ---
+  "auth.sign_in.panel.tagline": "Welcome back. Stay safe, keep learning.",
+  "auth.sign_in.panel.description": "The national gateway for accredited occupational health and safety resources in Sri Lanka.",
+  "auth.sign_in.panel.badge_trainers": "Certified Trainers",
+  "auth.sign_in.panel.badge_audit": "Statutory Audit Ready",
+  "auth.sign_in.panel.portal_label": "Secure Portal Login",
+  "auth.sign_in.panel.return_link": "← Return to Portal",
+  "auth.sign_in.panel.remember_device": "Remember this device",
+  "auth.sign_in.panel.ssl": "256-bit SSL",
+
+  // --- sign-up form left panel ---
+  "auth.sign_up.panel.tagline": "Join Sri Lanka’s safety community.",
+  "auth.sign_up.panel.description": "Access accredited safety documents, certified training courses, and connect with verified safety professionals across Sri Lanka.",
+  "auth.sign_up.panel.badge_docs": "Safety Documents",
+  "auth.sign_up.panel.badge_free": "To Register",
+  "auth.sign_up.panel.portal_label": "Create Your Account",
+  "auth.sign_up.panel.return_link": "← Return to Portal",
+  "auth.sign_up.panel.ssl": "256-bit SSL",
+
+  // --- footer sections ---
+  "footer.section.quick_links": "Quick Links",
+  "footer.section.industry_sectors": "Industry Sectors",
+  "footer.section.headquarters": "Headquarters",
+  "footer.section.accreditation": "Accreditation Affiliates",
+  "footer.newsletter.heading": "Stay Updated on Sri Lanka Statutory Safety Changes",
+  "footer.newsletter.body": "Receive timely Safety digest delivered the latest from Sri Lanka in the Standard industry specific updates",
+  "footer.newsletter.email_placeholder": "Enter your email",
+  "footer.newsletter.subscribe": "SUBSCRIBE",
+  "footer.newsletter.thanks": "Thanks! We’ll keep you updated.",
+  "footer.accreditation.body": "CeylonSafety content is reviewed against OSHA international and SLS standards and by registered safety professionals in Sri Lanka.",
+  "footer.accreditation.cta": "Get Registered Online",
+  "footer.links.knowledge": "Knowledge",
+  "footer.links.articles": "Articles & Case Studies",
+  "footer.links.documents": "Document & AI Template",
+  "footer.links.courses": "Accreditations & Courses",
+  "footer.links.contact": "Contact Us",
+  "footer.links.certification": "Certification Portal (SLS)",
+  "footer.sectors.construction": "Construction Safety",
+  "footer.sectors.industrial": "Industrial/Manufacturing",
+  "footer.sectors.logistics": "Logistics Safety Protocols",
+  "footer.sectors.healthcare": "Healthcare & Hospitality",
+  "footer.sectors.agriculture": "Agriculture & Tea Estates",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -8,6 +8,7 @@ import { Mail, Lock, User, Shield, Eye, EyeOff } from "lucide-react";
 import { signUp } from "@/lib/auth/actions/sign-up";
 import { errorMessage, t } from "@/messages/en";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
+import { publicConfig } from "@/lib/config.public";
 
 interface FieldErrors {
   firstName?: string;
@@ -82,11 +83,10 @@ export function SignUpForm() {
       <div className="relative hidden lg:flex lg:w-[45%] flex-col justify-between overflow-hidden bg-primary-darker">
         <div className="absolute inset-0">
           <Image
-            src="https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=1200&q=80"
+            src={`${publicConfig.mediaCdnUrl}/auth/sign-up-bg.jpg`}
             alt=""
             fill
             className="object-cover object-center opacity-30"
-            unoptimized
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-b from-primary-darker/80 via-primary-darker/70 to-primary-deepest/90" />
@@ -106,21 +106,20 @@ export function SignUpForm() {
 
         <div className="relative z-10 px-8 pb-4">
           <h2 className="text-3xl font-bold text-white leading-tight mb-3">
-            Join Sri Lanka&apos;s<br />safety community.
+            {t("auth.sign_up.panel.tagline")}
           </h2>
           <p className="text-white/80 text-sm leading-relaxed mb-8">
-            Access accredited safety documents, certified training courses, and connect with
-            verified safety professionals across Sri Lanka.
+            {t("auth.sign_up.panel.description")}
           </p>
 
           <div className="grid grid-cols-2 gap-4 mb-8">
             <div className="rounded-lg bg-white/10 backdrop-blur-sm p-4 border border-white/20">
               <div className="text-2xl font-black text-white">5,000+</div>
-              <div className="text-xs font-semibold text-white/70 uppercase tracking-wide mt-1">Safety Documents</div>
+              <div className="text-xs font-semibold text-white/70 uppercase tracking-wide mt-1">{t("auth.sign_up.panel.badge_docs")}</div>
             </div>
             <div className="rounded-lg bg-white/10 backdrop-blur-sm p-4 border border-white/20">
               <div className="text-2xl font-black text-white">Free</div>
-              <div className="text-xs font-semibold text-white/70 uppercase tracking-wide mt-1">To Register</div>
+              <div className="text-xs font-semibold text-white/70 uppercase tracking-wide mt-1">{t("auth.sign_up.panel.badge_free")}</div>
             </div>
           </div>
         </div>
@@ -134,13 +133,13 @@ export function SignUpForm() {
       {/* Right panel — form */}
       <div className="flex flex-1 flex-col justify-between bg-white px-6 py-8 sm:px-10 lg:px-16">
         <div className="flex justify-end text-sm text-gray-500 lg:hidden">
-          <Link href="/" className="text-primary font-semibold">← Return to Portal</Link>
+          <Link href="/" className="text-primary font-semibold">{t("auth.sign_up.panel.return_link")}</Link>
         </div>
 
         <div className="my-auto w-full max-w-md mx-auto">
           <div className="flex items-center gap-2 mb-6">
             <span className="h-2 w-2 rounded-full bg-primary" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-gray-500">Create Your Account</span>
+            <span className="text-xs font-semibold uppercase tracking-widest text-gray-500">{t("auth.sign_up.panel.portal_label")}</span>
           </div>
 
           <h1 className="text-3xl font-bold text-gray-900 mb-1">{t("auth.sign_up.heading")}</h1>

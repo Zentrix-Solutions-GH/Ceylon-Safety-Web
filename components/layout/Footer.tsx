@@ -5,6 +5,7 @@ import { publicConfig } from "@/lib/config.public";
 import Link from "next/link";
 import Image from "next/image";
 import { t } from "@/messages/en";
+import type { MessageKey } from "@/messages/en";
 
 export interface FooterSettings {
   contact_email?: string | null;
@@ -26,21 +27,21 @@ interface FooterProps {
   categories?: FooterCategory[];
 }
 
-const QUICK_LINKS: { label: string; href: string }[] = [
-  { label: "Knowledge", href: "/articles" },
-  { label: "Articles & Case Studies", href: "/articles" },
-  { label: "Document & AI Template", href: "/documents" },
-  { label: "Accreditations & Courses", href: "/courses" },
-  { label: "Contact Us", href: "/contact-coach" },
-  { label: "Certification Portal (SLS)", href: "/certifications" },
+const QUICK_LINKS: { labelKey: MessageKey; href: string }[] = [
+  { labelKey: "footer.links.knowledge", href: "/articles" },
+  { labelKey: "footer.links.articles", href: "/articles" },
+  { labelKey: "footer.links.documents", href: "/documents" },
+  { labelKey: "footer.links.courses", href: "/courses" },
+  { labelKey: "footer.links.contact", href: "/contact-coach" },
+  { labelKey: "footer.links.certification", href: "/certifications" },
 ];
 
-const INDUSTRY_SECTORS: { label: string; href: string }[] = [
-  { label: "Construction Safety", href: "/articles?category=construction" },
-  { label: "Industrial/Manufacturing", href: "/articles?category=industrial" },
-  { label: "Logistics Safety Protocols", href: "/articles?category=logistics" },
-  { label: "Healthcare & Hospitality", href: "/articles?category=healthcare" },
-  { label: "Agriculture & Tea Estates", href: "/articles?category=agriculture" },
+const INDUSTRY_SECTORS: { labelKey: MessageKey; href: string }[] = [
+  { labelKey: "footer.sectors.construction", href: "/articles?category=construction" },
+  { labelKey: "footer.sectors.industrial", href: "/articles?category=industrial" },
+  { labelKey: "footer.sectors.logistics", href: "/articles?category=logistics" },
+  { labelKey: "footer.sectors.healthcare", href: "/articles?category=healthcare" },
+  { labelKey: "footer.sectors.agriculture", href: "/articles?category=agriculture" },
 ];
 
 // LinkedIn SVG
@@ -143,13 +144,13 @@ export default function Footer({ settings }: FooterProps) {
           {/* Newsletter */}
           <div className="lg:max-w-sm w-full">
             <h3 className="mb-1 text-base font-bold text-white">
-              Stay Updated on Sri Lanka Statutory Safety Changes
+              {t("footer.newsletter.heading")}
             </h3>
             <p className="mb-4 text-xs text-gray-400">
-              Receive timely Safety digest delivered the latest from Sri Lanka in the Standard industry specific updates
+              {t("footer.newsletter.body")}
             </p>
             {newsletterDone ? (
-              <p className="text-sm text-green-400 py-2.5">Thanks! We&apos;ll keep you updated.</p>
+              <p className="text-sm text-green-400 py-2.5">{t("footer.newsletter.thanks")}</p>
             ) : (
               <form
                 onSubmit={(e) => { e.preventDefault(); if (newsletterEmail) setNewsletterDone(true); }}
@@ -159,14 +160,14 @@ export default function Footer({ settings }: FooterProps) {
                   type="email"
                   value={newsletterEmail}
                   onChange={(e) => setNewsletterEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  placeholder={t("footer.newsletter.email_placeholder")}
                   className="flex-1 bg-transparent px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none"
                 />
                 <button
                   type="submit"
                   className="shrink-0 bg-primary px-4 py-2.5 text-xs font-bold text-white hover:bg-primary-dark transition-colors tracking-wider"
                 >
-                  SUBSCRIBE
+                  {t("footer.newsletter.subscribe")}
                 </button>
               </form>
             )}
@@ -180,12 +181,12 @@ export default function Footer({ settings }: FooterProps) {
 
           {/* Quick Links */}
           <div>
-            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">Quick Links</h4>
+            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">{t("footer.section.quick_links")}</h4>
             <ul className="space-y-2">
               {QUICK_LINKS.map((l) => (
-                <li key={l.href + l.label}>
+                <li key={l.href + l.labelKey}>
                   <Link href={l.href} className="text-xs text-gray-400 hover:text-white transition-colors">
-                    {l.label}
+                    {t(l.labelKey)}
                   </Link>
                 </li>
               ))}
@@ -194,12 +195,12 @@ export default function Footer({ settings }: FooterProps) {
 
           {/* Industry Sectors */}
           <div>
-            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">Industry Sectors</h4>
+            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">{t("footer.section.industry_sectors")}</h4>
             <ul className="space-y-2">
               {INDUSTRY_SECTORS.map((l) => (
-                <li key={l.href + l.label}>
+                <li key={l.href + l.labelKey}>
                   <Link href={l.href} className="text-xs text-gray-400 hover:text-white transition-colors">
-                    {l.label}
+                    {t(l.labelKey)}
                   </Link>
                 </li>
               ))}
@@ -208,7 +209,7 @@ export default function Footer({ settings }: FooterProps) {
 
           {/* Headquarters */}
           <div>
-            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">Headquarters</h4>
+            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">{t("footer.section.headquarters")}</h4>
             <ul className="space-y-3 text-xs text-gray-400">
               <li className="flex gap-2">
                 <span className="mt-0.5 shrink-0">📍</span>
@@ -227,15 +228,15 @@ export default function Footer({ settings }: FooterProps) {
 
           {/* Accreditation Affiliates */}
           <div>
-            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">Accreditation Affiliates</h4>
+            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-white">{t("footer.section.accreditation")}</h4>
             <p className="mb-3 text-xs text-gray-400 leading-relaxed">
-              CeylonSafety content is reviewed against OSHA international and SLS standards and by registered safety professionals in Sri Lanka.
+              {t("footer.accreditation.body")}
             </p>
             <Link
               href="/certifications"
               className="inline-block rounded border border-primary px-3 py-1.5 text-[11px] font-semibold text-primary hover:bg-primary hover:text-white transition-colors"
             >
-              Get Registered Online
+              {t("footer.accreditation.cta")}
             </Link>
           </div>
         </div>

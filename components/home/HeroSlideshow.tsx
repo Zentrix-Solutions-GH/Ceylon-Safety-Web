@@ -3,24 +3,13 @@
 import { useEffect, useReducer } from "react";
 import Image from "next/image";
 import { t } from "@/messages/en";
+import { publicConfig } from "@/lib/config.public";
 
 const SLIDES = [
-  {
-    src: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80",
-    altKey: "home.hero.slide1_alt" as const,
-  },
-  {
-    src: "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=1920&q=80",
-    altKey: "home.hero.slide2_alt" as const,
-  },
-  {
-    src: "https://images.unsplash.com/photo-1565688534245-05d6b5be184a?w=1920&q=80",
-    altKey: "home.hero.slide3_alt" as const,
-  },
-  {
-    src: "https://images.unsplash.com/photo-1612178537253-bccd437b730e?w=1920&q=80",
-    altKey: "home.hero.slide4_alt" as const,
-  },
+  { srcPath: "/home/hero-slide-1.jpg", altKey: "home.hero.slide1_alt" as const },
+  { srcPath: "/home/hero-slide-2.jpg", altKey: "home.hero.slide2_alt" as const },
+  { srcPath: "/home/hero-slide-3.jpg", altKey: "home.hero.slide3_alt" as const },
+  { srcPath: "/home/hero-slide-4.jpg", altKey: "home.hero.slide4_alt" as const },
 ];
 
 const INTERVAL_MS = 4500;
@@ -66,7 +55,7 @@ export function HeroSlideshow() {
             }`}
           >
             <Image
-              src={slide.src}
+              src={`${publicConfig.mediaCdnUrl}${slide.srcPath}`}
               alt={t(slide.altKey)}
               fill
               className="object-cover object-center opacity-40"

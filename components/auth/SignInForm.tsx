@@ -10,6 +10,7 @@ import { startGoogleSignIn } from "@/lib/auth/actions/start-google-sign-in";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 import { t, errorMessage } from "@/messages/en";
 import { GoogleLogo } from "@/components/icons/GoogleLogo";
+import { publicConfig } from "@/lib/config.public";
 
 function isSocialAppBrowser(): boolean {
   if (typeof window === "undefined") return false;
@@ -106,11 +107,10 @@ export function SignInForm() {
         {/* Background construction image */}
         <div className="absolute inset-0">
           <Image
-            src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1200&q=80"
+            src={`${publicConfig.mediaCdnUrl}/auth/sign-in-bg.jpg`}
             alt=""
             fill
             className="object-cover object-center opacity-30"
-            unoptimized
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-b from-primary-darker/80 via-primary-darker/70 to-primary-deepest/90" />
@@ -130,21 +130,20 @@ export function SignInForm() {
 
         <div className="relative z-10 px-8 pb-4">
           <h2 className="text-3xl font-bold text-white leading-tight mb-3">
-            Welcome back.<br />Stay safe, keep learning.
+            {t("auth.sign_in.panel.tagline")}
           </h2>
           <p className="text-white/80 text-sm leading-relaxed mb-8">
-            The national gateway for accredited occupational compliance, technical field certifications,
-            and verified safety documentation across Sri Lanka.
+            {t("auth.sign_in.panel.description")}
           </p>
 
           <div className="grid grid-cols-2 gap-4 mb-8">
             <div className="rounded-lg bg-white/10 backdrop-blur-sm p-4 border border-white/20">
               <div className="text-2xl font-black text-white">1,240+</div>
-              <div className="text-xs font-semibold text-white/70 uppercase tracking-wide mt-1">Certified Trainers</div>
+              <div className="text-xs font-semibold text-white/70 uppercase tracking-wide mt-1">{t("auth.sign_in.panel.badge_trainers")}</div>
             </div>
             <div className="rounded-lg bg-white/10 backdrop-blur-sm p-4 border border-white/20">
               <div className="text-2xl font-black text-white">100%</div>
-              <div className="text-xs font-semibold text-white/70 uppercase tracking-wide mt-1">Statutory Audit Ready</div>
+              <div className="text-xs font-semibold text-white/70 uppercase tracking-wide mt-1">{t("auth.sign_in.panel.badge_audit")}</div>
             </div>
           </div>
         </div>
@@ -158,13 +157,13 @@ export function SignInForm() {
       {/* Right panel — form */}
       <div className="flex flex-1 flex-col justify-between bg-white px-6 py-8 sm:px-10 lg:px-16">
         <div className="flex justify-end text-sm text-gray-500 lg:hidden">
-          <Link href="/" className="text-primary font-semibold">← Return to Portal</Link>
+          <Link href="/" className="text-primary font-semibold">{t("auth.sign_in.panel.return_link")}</Link>
         </div>
 
         <div className="my-auto w-full max-w-md mx-auto">
           <div className="flex items-center gap-2 mb-6">
             <span className="h-2 w-2 rounded-full bg-primary" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-gray-500">Secure Portal Login</span>
+            <span className="text-xs font-semibold uppercase tracking-widest text-gray-500">{t("auth.sign_in.panel.portal_label")}</span>
           </div>
 
           <h1 className="text-3xl font-bold text-gray-900 mb-1">{t("auth.sign_in.heading")}</h1>
@@ -265,11 +264,11 @@ export function SignInForm() {
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" name="remember" className="h-4 w-4 rounded border-gray-300 accent-primary" />
-                <span className="text-sm text-gray-600">Remember this device</span>
+                <span className="text-sm text-gray-600">{t("auth.sign_in.panel.remember_device")}</span>
               </label>
               <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
                 <Shield className="h-3.5 w-3.5" />
-                256-bit SSL
+                {t("auth.sign_in.panel.ssl")}
               </span>
             </div>
 
