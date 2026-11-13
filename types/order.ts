@@ -47,6 +47,13 @@ export interface BankOrderResult {
   orderNumber: string;
 }
 
+export interface FinalizeResult {
+  orderId: string;
+  invoiceOk: boolean;
+  emailOk: boolean;
+  finalizedAt: string | null;
+}
+
 export interface MyOrderItem {
   orderItemId: string;
   documentId: string;
