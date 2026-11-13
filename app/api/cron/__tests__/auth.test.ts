@@ -10,10 +10,12 @@ vi.mock("@/lib/jobs", async (importOriginal) => {
   return {
     ...actual,
     JOB_REGISTRY: { test: vi.fn().mockResolvedValue({ ok: true }) },
+    pingHeartbeat: vi.fn().mockResolvedValue(undefined),
   };
 });
 
 import { POST, GET } from "../[job]/route";
+import { pingHeartbeat } from "@/lib/jobs";
 
 function makeRequest(secret: string | null, job = "test") {
   const headers = new Headers();
@@ -37,6 +39,8 @@ describe("cron route auth", () => {
       params: Promise.resolve({ job: "test" }),
     });
     expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body).toMatchObject({ ok: false });
   });
 
   it("POST with wrong secret returns 401", async () => {
@@ -44,14 +48,18 @@ describe("cron route auth", () => {
       params: Promise.resolve({ job: "test" }),
     });
     expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body).toMatchObject({ ok: false });
   });
 
-  it("POST with correct secret and known job returns 200", async () => {
+  it("POST with correct secret and known job returns 200 with ok:true body", async () => {
     const res = await POST(
       makeRequest("correct-secret-32-chars-xxxxxxxxx"),
       { params: Promise.resolve({ job: "test" }) }
     );
     expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({ ok: true });
   });
 
   it("POST with correct secret and unknown job returns 404", async () => {
@@ -60,5 +68,15 @@ describe("cron route auth", () => {
       { params: Promise.resolve({ job: "nonexistent" }) }
     );
     expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body).toMatchObject({ ok: false });
+  });
+
+  it("AC7: pingHeartbeat is called after a successful job run", async () => {
+    await POST(
+      makeRequest("correct-secret-32-chars-xxxxxxxxx"),
+      { params: Promise.resolve({ job: "test" }) },
+    );
+    expect(vi.mocked(pingHeartbeat)).toHaveBeenCalledWith("test");
   });
 });

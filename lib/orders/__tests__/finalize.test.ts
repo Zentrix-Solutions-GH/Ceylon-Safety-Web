@@ -192,3 +192,35 @@ describe("runFinalizeNow", () => {
     errorSpy.mockRestore();
   });
 });
+
+describe("EC6: bank transfer orders (no payment event) finalized by same job", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("EC6: finalizePaidOrders processes a bank-transfer order that has no payment_events row", async () => {
+    const { finalizePaidOrders } = await import("@/lib/orders/finalize");
+
+    // A bank-transfer order appears in claim_unfinalized_orders (paid status set
+    // by manual admin action) but has no payment_events row. The job must
+    // process it without error and return ok:true.
+    const sb = {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        lt: vi.fn().mockResolvedValue({ data: [], error: null }),
+        update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+      }),
+      rpc: vi.fn().mockResolvedValue({
+        data: [{ id: "bank-order-1" }],
+        error: null,
+      }),
+    } as unknown as SB;
+
+    const result = await finalizePaidOrders(sb);
+    expect(result.ok).toBe(true);
+    // The rpc must have been called — the bank-transfer order was claimed
+    expect((sb as unknown as { rpc: ReturnType<typeof vi.fn> }).rpc).toHaveBeenCalledWith(
+      "claim_unfinalized_orders",
+    );
+  });
+});

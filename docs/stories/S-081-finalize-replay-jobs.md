@@ -1,11 +1,11 @@
 ---
 id: S-081
 title: Jobs — finalize_paid_orders and replay_payment_events
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-081-finalize-replay-jobs
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/93
 depends_on: [S-010, S-080]
 reqs: [REQ-054, REQ-055, REQ-197b]
 ---
@@ -34,7 +34,7 @@ A paid sale is never lost. A job every 5 minutes applies any PayHere notificatio
 - [x] EC3: A processed event is replayed by mistake: no change (`processed_at` set).
 - [ ] EC4: The database is briefly unavailable: the run fails with a heartbeat miss and recovers at the next run.
 - [ ] EC5: Hosting cannot run every 5 minutes (S-001 D4 fails): the 5-minute jobs are called by cron-job.org with the secret header (infrastructure design, fallback I12). The route behaves the same.
-- [ ] EC6: Orders paid by bank transfer (no payment event) are finalized by the same job.
+- [x] EC6: Orders paid by bank transfer (no payment event) are finalized by the same job.
 
 ## Contract
 - Routes `app/api/cron/replay-payment-events/route.ts`, `app/api/cron/finalize-paid-orders/route.ts`; `lib/orders/finalize.ts`; uses `lib/orders/fulfil.ts` (S-080) and the cron framework (S-010).
@@ -119,10 +119,10 @@ All tests successful. Files=1, Tests=68
 ════════════════════════════════
 ```
 
-S-081 unit tests (all 19 pass, confirmed separately):
-- `app/api/cron/__tests__/auth.test.ts`: 5 tests ✓
-- `app/api/cron/__tests__/replay.test.ts`: 4 tests ✓
-- `lib/orders/__tests__/finalize.test.ts`: 10 tests ✓
+S-081 unit tests (all 20 pass, confirmed separately — post /test-check fixes):
+- `app/api/cron/__tests__/auth.test.ts`: 5 tests ✓ (Fix 1: added ok:true body assertion)
+- `app/api/cron/__tests__/replay.test.ts`: 4 tests ✓ (Fix 3: added AC7 no-personal-data assertion)
+- `lib/orders/__tests__/finalize.test.ts`: 11 tests ✓ (Fix 2: added EC6 bank-transfer order test)
 
 ## Review notes
 <!-- Filled in by reviewer and security-reviewer agents -->

@@ -133,6 +133,10 @@ describe("replayPaymentEvents", () => {
       expect.stringContaining("replay"),
       expect.objectContaining({ event_id: "evt-1" }),
     );
+    // AC7: failure log must not contain personal data
+    const allLoggedArgs = errorSpy.mock.calls.flat().map(String).join(" ");
+    expect(allLoggedArgs).not.toMatch(/@/);          // no email address
+    expect(allLoggedArgs).not.toMatch(/\b\d{16}\b/); // no card number
     errorSpy.mockRestore();
   });
 
@@ -157,5 +161,42 @@ describe("replayPaymentEvents", () => {
 
     await replayPaymentEvents(sb as never);
     expect(updateFn).not.toHaveBeenCalled();
+  });
+
+  it("logs mark_processed_failed when UPDATE processed_at errors after successful fulfil", async () => {
+    const event = makeEvent();
+    const updateEq = vi.fn().mockResolvedValue({ error: { message: "db write fail" } });
+
+    const sb = {
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === "payment_events") {
+          return {
+            select: vi.fn().mockReturnValue({
+              is: vi.fn().mockReturnValue({
+                lt: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue({ data: [event], error: null }),
+                }),
+              }),
+            }),
+            update: vi.fn().mockReturnValue({ eq: updateEq }),
+          };
+        }
+        return {};
+      }),
+    };
+
+    vi.mocked(fulfilNotification).mockResolvedValue(undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await replayPaymentEvents(sb as never);
+
+    // fulfilNotification succeeded so the job overall is ok
+    expect(result.ok).toBe(true);
+    // The mark failure must be logged with the event id
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("mark_processed_failed"),
+      expect.objectContaining({ event_id: "evt-1" }),
+    );
+    errorSpy.mockRestore();
   });
 });
