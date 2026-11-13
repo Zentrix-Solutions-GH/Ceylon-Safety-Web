@@ -34,22 +34,21 @@ describe("cron route auth", () => {
     expect(res.status).toBe(405);
   });
 
-  it("POST with no secret returns 401", async () => {
+  it("POST with no secret returns 401 with empty body", async () => {
     const res = await POST(makeRequest(null), {
       params: Promise.resolve({ job: "test" }),
     });
     expect(res.status).toBe(401);
-    const body = await res.json();
-    expect(body).toMatchObject({ ok: false });
+    // Route returns NextResponse(null) for auth failures — no JSON body
+    expect(await res.text()).toBe("");
   });
 
-  it("POST with wrong secret returns 401", async () => {
+  it("POST with wrong secret returns 401 with empty body", async () => {
     const res = await POST(makeRequest("wrong-secret"), {
       params: Promise.resolve({ job: "test" }),
     });
     expect(res.status).toBe(401);
-    const body = await res.json();
-    expect(body).toMatchObject({ ok: false });
+    expect(await res.text()).toBe("");
   });
 
   it("POST with correct secret and known job returns 200 with ok:true body", async () => {
@@ -62,21 +61,20 @@ describe("cron route auth", () => {
     expect(body).toMatchObject({ ok: true });
   });
 
-  it("POST with correct secret and unknown job returns 404", async () => {
+  it("POST with correct secret and unknown job returns 404 with empty body", async () => {
     const res = await POST(
       makeRequest("correct-secret-32-chars-xxxxxxxxx"),
       { params: Promise.resolve({ job: "nonexistent" }) }
     );
     expect(res.status).toBe(404);
-    const body = await res.json();
-    expect(body).toMatchObject({ ok: false });
+    expect(await res.text()).toBe("");
   });
 
-  it("AC7: pingHeartbeat is called after a successful job run", async () => {
+  it("AC7: pingHeartbeat is called with job name and 'success' after a successful run", async () => {
     await POST(
       makeRequest("correct-secret-32-chars-xxxxxxxxx"),
       { params: Promise.resolve({ job: "test" }) },
     );
-    expect(vi.mocked(pingHeartbeat)).toHaveBeenCalledWith("test");
+    expect(vi.mocked(pingHeartbeat)).toHaveBeenCalledWith("test", "success");
   });
 });
