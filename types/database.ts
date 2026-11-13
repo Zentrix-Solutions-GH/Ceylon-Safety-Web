@@ -1124,6 +1124,11 @@ isOneToOne: false
             "cancel_order_locked":
 { Args: { "p_order_id": string,"p_user_id": string }; Returns: Json
                            },
+"claim_unfinalized_orders":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "id": string
+            }[]
+                           },
 "complete_document_file":
 { Args: { "p_checksum_sha256": string,"p_file_id": string,"p_size_bytes": number }; Returns: undefined
                            },

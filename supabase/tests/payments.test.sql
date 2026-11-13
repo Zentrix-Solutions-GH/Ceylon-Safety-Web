@@ -5,7 +5,7 @@
 -- Requires Docker + local Supabase stack.
 
 BEGIN;
-SELECT plan(148);
+SELECT plan(154);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- UUID legend (all hex-valid, non-overlapping with earlier test files)
@@ -1579,6 +1579,65 @@ SELECT ok(
 SELECT ok(
   NOT has_function_privilege('public', 'public.flag_mismatch_event(uuid,uuid)', 'EXECUTE'),
   'S-080/AC5: public role cannot EXECUTE flag_mismatch_event'
+);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- S-081: claim_unfinalized_orders() functional tests
+-- ─────────────────────────────────────────────────────────────────────────────
+
+SELECT has_function(
+  'public', 'claim_unfinalized_orders',
+  'S-081: claim_unfinalized_orders function exists'
+);
+
+-- Test: function returns paid orders with finalized_at IS NULL
+-- and skips orders with finalized_at already set.
+SAVEPOINT s081_claim;
+
+-- Mark test order as paid+unfinalized (finalized_at already null by default)
+UPDATE public.orders
+   SET status = 'paid', paid_at = now() - interval '1 minute',
+       payment_method = 'card', finalized_at = NULL
+ WHERE id = '11000001-0000-0000-0000-000000000001';
+
+SELECT ok(
+  EXISTS (SELECT 1 FROM public.claim_unfinalized_orders() WHERE id = '11000001-0000-0000-0000-000000000001'),
+  'S-081: claim_unfinalized_orders returns paid+unfinalized order'
+);
+
+-- Mark finalized_at to simulate already-done order
+UPDATE public.orders
+   SET finalized_at = now()
+ WHERE id = '11000001-0000-0000-0000-000000000001';
+
+SELECT ok(
+  NOT EXISTS (SELECT 1 FROM public.claim_unfinalized_orders() WHERE id = '11000001-0000-0000-0000-000000000001'),
+  'S-081: claim_unfinalized_orders skips orders with finalized_at already set'
+);
+
+-- Verify a pending order (status != ''paid'') is not claimed
+UPDATE public.orders
+   SET status = 'pending', paid_at = NULL, payment_method = NULL, finalized_at = NULL
+ WHERE id = '11000001-0000-0000-0000-000000000001';
+
+SELECT ok(
+  NOT EXISTS (SELECT 1 FROM public.claim_unfinalized_orders() WHERE id = '11000001-0000-0000-0000-000000000001'),
+  'S-081: claim_unfinalized_orders skips non-paid orders'
+);
+
+ROLLBACK TO SAVEPOINT s081_claim;
+RELEASE SAVEPOINT s081_claim;
+
+-- EXECUTE privilege: anon and authenticated must not be able to call it
+-- (zz-schema-verification dynamic loop already covers this; these named
+-- assertions make the S-081 intent explicit in this file).
+SELECT ok(
+  NOT has_function_privilege('anon', 'public.claim_unfinalized_orders()', 'EXECUTE'),
+  'S-081: anon cannot EXECUTE claim_unfinalized_orders'
+);
+SELECT ok(
+  NOT has_function_privilege('authenticated', 'public.claim_unfinalized_orders()', 'EXECUTE'),
+  'S-081: authenticated cannot EXECUTE claim_unfinalized_orders'
 );
 
 SELECT * FROM finish();

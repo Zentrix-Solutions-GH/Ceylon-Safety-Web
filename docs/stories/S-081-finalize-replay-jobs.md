@@ -1,11 +1,11 @@
 ---
 id: S-081
 title: Jobs — finalize_paid_orders and replay_payment_events
-status: ready
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-081-finalize-replay-jobs
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/93
 depends_on: [S-010, S-080]
 reqs: [REQ-054, REQ-055, REQ-197b]
 ---
@@ -19,22 +19,22 @@ A paid sale is never lost. A job every 5 minutes applies any PayHere notificatio
 - REQ-197b (CONFIRMED): the hosting test decides what the scheduler can do (every 5 minutes is a fact to verify, D4 in S-001).
 
 ## Acceptance criteria
-- [ ] AC1: `GET`/`POST /api/cron/replay-payment-events` (framework from S-010: secret header `CRON_SECRET` compared in constant time, heartbeat ping, idempotent) selects `payment_events` with `processed_at` empty and `received_at` older than 2 minutes and applies each through `lib/orders/fulfil.ts` (S-080). Each event is applied exactly once even if the job and PayHere's retry run together.
-- [ ] AC2: An event that still fails is left unprocessed, raises an alert immediately, and is picked up again at the next run. Any event unprocessed after 2 minutes counts as an alert condition (commerce section 15).
-- [ ] AC3: `/api/cron/finalize-paid-orders` claims paid orders with `finalized_at` empty using a row lock that skips orders already being worked on (an index makes the query cheap), and runs the finalize steps in order: (1) invoice (S-087), (2) receipt email for card orders or approval email for bank orders (S-086), (3) set `finalized_at` only when both exist. Running it twice at the same moment is safe.
-- [ ] AC4: The steps are separate functions in `lib/orders/finalize.ts` (`ensureInvoice`, `ensureReceiptEmail`) and the loop treats a failing step as "retry next run" without touching the order's payment state. The email never waits for the invoice: the loop sends it even if the invoice step failed in the same run (S-086 attaches the PDF only if it exists).
-- [ ] AC5: A paid order still unfinalized after 30 minutes raises an alert.
-- [ ] AC6: `runFinalizeNow(orderId)` runs the same idempotent work for one order. The notification route (S-080) calls it after the response is sent, using the host's after-response facility if the hosting test (commerce 19 item 21) shows one; otherwise it is not called and the 5-minute job does the work.
-- [ ] AC7: The job lists last-run times through the heartbeat of S-010; failures are logged without personal data.
-- [ ] AC8: The cron entry for `finalize-paid-orders` is added to the host schedule (S-010) only together with the real steps of S-086 and S-087, so staging never alerts about orders that cannot be finalized yet. The replay entry is added with this story.
+- [x] AC1: `GET`/`POST /api/cron/replay-payment-events` (framework from S-010: secret header `CRON_SECRET` compared in constant time, heartbeat ping, idempotent) selects `payment_events` with `processed_at` empty and `received_at` older than 2 minutes and applies each through `lib/orders/fulfil.ts` (S-080). Each event is applied exactly once even if the job and PayHere's retry run together.
+- [x] AC2: An event that still fails is left unprocessed, raises an alert immediately, and is picked up again at the next run. Any event unprocessed after 2 minutes counts as an alert condition (commerce section 15).
+- [x] AC3: `/api/cron/finalize-paid-orders` claims paid orders with `finalized_at` empty using a row lock that skips orders already being worked on (an index makes the query cheap), and runs the finalize steps in order: (1) invoice (S-087), (2) receipt email for card orders or approval email for bank orders (S-086), (3) set `finalized_at` only when both exist. Running it twice at the same moment is safe.
+- [x] AC4: The steps are separate functions in `lib/orders/finalize.ts` (`ensureInvoice`, `ensureReceiptEmail`) and the loop treats a failing step as "retry next run" without touching the order's payment state. The email never waits for the invoice: the loop sends it even if the invoice step failed in the same run (S-086 attaches the PDF only if it exists).
+- [x] AC5: A paid order still unfinalized after 30 minutes raises an alert.
+- [x] AC6: `runFinalizeNow(orderId)` runs the same idempotent work for one order. The notification route (S-080) calls it after the response is sent, using the host's after-response facility if the hosting test (commerce 19 item 21) shows one; otherwise it is not called and the 5-minute job does the work.
+- [x] AC7: The job lists last-run times through the heartbeat of S-010; failures are logged without personal data.
+- [x] AC8: The cron entry for `finalize-paid-orders` is added to the host schedule (S-010) only together with the real steps of S-086 and S-087, so staging never alerts about orders that cannot be finalized yet. The replay entry is added with this story.
 
 ## Edge cases
-- [ ] EC1: The invoice step fails but the payment succeeded: the receipt still goes out with a link to the order page; the invoice appears later; the payment is unaffected.
-- [ ] EC2: Two job runs overlap: the row lock skips orders already claimed; no double email (the unique `email_logs` row of S-086 is a second guard).
-- [ ] EC3: A processed event is replayed by mistake: no change (`processed_at` set).
+- [x] EC1: The invoice step fails but the payment succeeded: the receipt still goes out with a link to the order page; the invoice appears later; the payment is unaffected.
+- [x] EC2: Two job runs overlap: the row lock skips orders already claimed; no double email (the unique `email_logs` row of S-086 is a second guard).
+- [x] EC3: A processed event is replayed by mistake: no change (`processed_at` set).
 - [ ] EC4: The database is briefly unavailable: the run fails with a heartbeat miss and recovers at the next run.
 - [ ] EC5: Hosting cannot run every 5 minutes (S-001 D4 fails): the 5-minute jobs are called by cron-job.org with the secret header (infrastructure design, fallback I12). The route behaves the same.
-- [ ] EC6: Orders paid by bank transfer (no payment event) are finalized by the same job.
+- [x] EC6: Orders paid by bank transfer (no payment event) are finalized by the same job.
 
 ## Contract
 - Routes `app/api/cron/replay-payment-events/route.ts`, `app/api/cron/finalize-paid-orders/route.ts`; `lib/orders/finalize.ts`; uses `lib/orders/fulfil.ts` (S-080) and the cron framework (S-010).
@@ -43,6 +43,7 @@ A paid sale is never lost. A job every 5 minutes applies any PayHere notificatio
 ## Out of scope
 - The invoice (S-087) and email content (S-086): this story provides the loop and the contract the steps fill. Until those merge the step functions return "not ready" and the finalize cron entry stays off (AC8).
 - Reconcile and expiry (S-082).
+- AC6 (runFinalizeNow): `runFinalizeNow` is implemented and exported but is NOT called from the notify route (S-080) in this story. The story notes it should be called "after the response is sent, using the host's after-response facility if the hosting test shows one". The hosting test result (S-001 D4 / infrastructure design section 9) has not yet been determined. Until it is, the 5-minute replay job does the finalization work. This is the explicit fallback path stated in AC6.
 
 ## Assumptions accepted
 - The 5-minute and 15-minute frequencies depend on the hosting test result (infrastructure design section 9, D4).
@@ -63,11 +64,65 @@ Prior art: grepped docs/ for finalize, replay, finalized_at, cron. Found commerc
 <!-- Filled in by /story-run at Step 3. Sensitive: the owner approves the plan before coding. -->
 
 ## Evidence
-<!-- Paste scripts/check.sh output here after Step 7. -->
 
 ```
 $ bash scripts/check.sh
+(on branch feature/S-081-finalize-replay-jobs, 2026-11-13)
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  1 failed | 210 passed | 15 skipped (226)
+      Tests  18 failed | 2148 passed | 60 skipped (2226)
+   Duration  130.70s
+✗ Vitest (unit) FAILED
+  NOTE: 18 failures in __tests__/components/admin/ArticleEditor/index.test.tsx
+  are PRE-EXISTING on dev (confirmed by git stash test before S-081 work).
+  Cause: localStorage.clear() undefined in JSDOM (ArticleEditor test setup bug,
+  belongs to a prior frontend story, not S-081).
+
+── pgTAP RLS suite ──
+All tests successful. Files=1, Tests=110
+✓ pgTAP RLS suite passed
+
+── pgTAP seed suite ──
+All tests successful. Files=1, Tests=68
+✓ pgTAP seed suite passed
+
+── pgTAP dev seed suite ──
+✓ pgTAP dev seed suite passed
+
+── EC3 dev seed guard ──
+✓ EC3 dev seed guard (execution) passed
+
+── Types file freshness ──
+✓ Types file freshness passed
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+── Google Fonts check (AC5) ──
+✓ Google Fonts check (AC5) passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+── PayHere secret bundle check (AC8/S-079) ──
+✓ PayHere secret bundle check passed
+
+════════════════════════════════
+  check.sh: 11 passed, 1 failed
+════════════════════════════════
 ```
+
+S-081 unit tests (all 20 pass, confirmed separately — post /test-check fixes):
+- `app/api/cron/__tests__/auth.test.ts`: 5 tests ✓ (Fix 1: added ok:true body assertion)
+- `app/api/cron/__tests__/replay.test.ts`: 4 tests ✓ (Fix 3: added AC7 no-personal-data assertion)
+- `lib/orders/__tests__/finalize.test.ts`: 11 tests ✓ (Fix 2: added EC6 bank-transfer order test)
 
 ## Review notes
 <!-- Filled in by reviewer and security-reviewer agents -->
