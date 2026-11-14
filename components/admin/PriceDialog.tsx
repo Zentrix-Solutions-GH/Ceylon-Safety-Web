@@ -59,13 +59,19 @@ export function PriceDialog({ documentId, currentPriceCents, onPriceChange }: Pr
     setError(null);
     setPending(true);
 
-    const newPriceCentsNum = Math.round(parseFloat(newPriceLkr) * 100);
+    const parsedLkr = parseFloat(newPriceLkr);
+    if (!isFinite(parsedLkr) || parsedLkr <= 0) {
+      setError(errorMessage("validation_failed"));
+      setPending(false);
+      return;
+    }
+    const newPriceCentsNum = Math.round(parsedLkr * 100);
     const pct = changePercent(currentPriceCents, newPriceCentsNum);
     const isLarge = pct > 50;
 
     const result = await changeDocumentPrice({
       documentId,
-      newPriceLkr: parseFloat(newPriceLkr),
+      newPriceLkr: parsedLkr,
       confirmedLargeChange: confirmedLarge || !isLarge,
       authenticatorCode: mfaCode,
     });

@@ -1,4 +1,4 @@
-// S-073: DocumentLanguageFiles — AC1, AC2, AC3, AC4, EC1, EC2, EC6
+// S-073: DocumentLanguageFiles — AC1, AC2, AC3, AC4, EC1, EC2, EC6, EC7
 import * as React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -252,6 +252,39 @@ describe("DocumentLanguageFiles", () => {
     vi.unstubAllGlobals();
   });
 
+  // AC3: file_too_large server reason shown as component error
+  it("AC3: shows server file_too_large error message", async () => {
+    const user = userEvent.setup();
+    const xhrMock = {
+      open: vi.fn(), send: vi.fn(), setRequestHeader: vi.fn(), abort: vi.fn(),
+      upload: { addEventListener: vi.fn() },
+      addEventListener: vi.fn(), status: 200,
+    };
+    let onloadFn: (() => void) | undefined;
+    xhrMock.addEventListener.mockImplementation((event: string, fn: () => void) => {
+      if (event === "load") onloadFn = fn;
+    });
+    vi.stubGlobal("XMLHttpRequest", vi.fn(() => xhrMock));
+
+    mockStart.mockResolvedValue({
+      ok: true,
+      upload: { fileId: "file-lt", uploadUrl: "https://r2.example.com/upload" },
+    } satisfies StartUploadResult);
+    mockComplete.mockResolvedValue({
+      ok: false, code: "validation_failed", reason: "file_too_large",
+    } satisfies UploadStatus);
+
+    render(
+      <DocumentLanguageFiles documentId="doc-1" slots={allMissingSlots} onSlotsChange={noop} />
+    );
+    const inputs = document.querySelectorAll("input[type='file']");
+    await user.upload(inputs[0] as HTMLInputElement, makePptxFile());
+    if (onloadFn) onloadFn();
+
+    expect(await screen.findByText("This file is too large.")).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
   // AC3: upload_failed shows retry button
   it("AC3: upload_failed shows retry button", async () => {
     const user = userEvent.setup();
@@ -313,6 +346,126 @@ describe("DocumentLanguageFiles", () => {
     });
     // Old "Ready" should still be visible
     expect(screen.getAllByText("Ready").length).toBeGreaterThan(0);
+  });
+
+  // EC1: serverMark="uploading" on mount shows Uploading status and retry
+  it("EC1: on return with serverMark uploading, shows Uploading status", () => {
+    const uploadingSlots: DocumentLanguageSlot[] = [
+      { language: "en", full: "uploading", previews: ["missing", "missing", "missing"] },
+      { language: "si", full: "missing", previews: ["missing", "missing", "missing"] },
+      { language: "ta", full: "missing", previews: ["missing", "missing", "missing"] },
+    ];
+    render(<DocumentLanguageFiles documentId="doc-1" slots={uploadingSlots} onSlotsChange={noop} />);
+    expect(screen.getByText("Uploading…")).toBeInTheDocument();
+  });
+
+  // EC6: cancel mid-upload preserves previous Ready badge
+  it("EC6: cancelling upload leaves previous Ready badge in place", async () => {
+    const user = userEvent.setup();
+    // English full is already ready
+    const readySlots: DocumentLanguageSlot[] = [
+      { language: "en", full: "ready", previews: ["missing", "missing", "missing"] },
+      { language: "si", full: "missing", previews: ["missing", "missing", "missing"] },
+      { language: "ta", full: "missing", previews: ["missing", "missing", "missing"] },
+    ];
+    // start never resolves (simulates in-flight upload)
+    mockStart.mockReturnValue(new Promise(() => {}));
+
+    render(<DocumentLanguageFiles documentId="doc-1" slots={readySlots} onSlotsChange={noop} />);
+
+    // Click Replace on the English full slot
+    const replaceButtons = screen.getAllByRole("button", { name: /Replace/i });
+    await user.click(replaceButtons[0]);
+    const inputs = document.querySelectorAll("input[type='file']");
+    await user.upload(inputs[0] as HTMLInputElement, makePptxFile("new.pptx"));
+
+    await waitFor(() => expect(mockStart).toHaveBeenCalled());
+
+    // Cancel the upload
+    await user.click(screen.getByRole("button", { name: /Cancel/i }));
+
+    // After cancel, serverMark is still "ready" (parent slot unchanged)
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+  });
+
+  // AC2 XHR: file goes directly to R2 (PUT to uploadUrl, never through our routes)
+  it("AC2: XHR PUT sent directly to the R2 upload URL", async () => {
+    const user = userEvent.setup();
+    const onSlotsChange = vi.fn();
+    const xhrMock = {
+      open: vi.fn(),
+      send: vi.fn(),
+      setRequestHeader: vi.fn(),
+      abort: vi.fn(),
+      upload: { addEventListener: vi.fn() },
+      addEventListener: vi.fn(),
+      status: 200,
+    };
+    let onloadFn: (() => void) | undefined;
+    xhrMock.addEventListener.mockImplementation((event: string, fn: () => void) => {
+      if (event === "load") onloadFn = fn;
+    });
+    vi.stubGlobal("XMLHttpRequest", vi.fn(() => xhrMock));
+
+    mockStart.mockResolvedValue({
+      ok: true,
+      upload: { fileId: "file-r2", uploadUrl: "https://r2.example.com/direct" },
+    } satisfies StartUploadResult);
+    mockComplete.mockResolvedValue({ ok: true, fileId: "file-r2", status: "ready" } satisfies UploadStatus);
+
+    render(<DocumentLanguageFiles documentId="doc-1" slots={allMissingSlots} onSlotsChange={onSlotsChange} />);
+    const inputs = document.querySelectorAll("input[type='file']");
+    await user.upload(inputs[0] as HTMLInputElement, makePptxFile("test.pptx"));
+    if (onloadFn) onloadFn();
+
+    await waitFor(() => {
+      expect(xhrMock.open).toHaveBeenCalledWith("PUT", "https://r2.example.com/direct");
+    });
+    vi.unstubAllGlobals();
+  });
+
+  // AC3: file_too_large server reason shown as rendered error
+  it("AC3: file_too_large server reason shows mapped error message", async () => {
+    const user = userEvent.setup();
+    const xhrMock = {
+      open: vi.fn(), send: vi.fn(), setRequestHeader: vi.fn(), abort: vi.fn(),
+      upload: { addEventListener: vi.fn() },
+      addEventListener: vi.fn(), status: 200,
+    };
+    let onloadFn: (() => void) | undefined;
+    xhrMock.addEventListener.mockImplementation((event: string, fn: () => void) => {
+      if (event === "load") onloadFn = fn;
+    });
+    vi.stubGlobal("XMLHttpRequest", vi.fn(() => xhrMock));
+
+    mockStart.mockResolvedValue({
+      ok: true,
+      upload: { fileId: "file-big", uploadUrl: "https://r2.example.com/upload" },
+    } satisfies StartUploadResult);
+    mockComplete.mockResolvedValue({
+      ok: false, code: "validation_failed", reason: "file_too_large",
+    } satisfies UploadStatus);
+
+    render(<DocumentLanguageFiles documentId="doc-1" slots={allMissingSlots} onSlotsChange={noop} />);
+    const inputs = document.querySelectorAll("input[type='file']");
+    await user.upload(inputs[0] as HTMLInputElement, makePptxFile());
+    if (onloadFn) onloadFn();
+
+    expect(await screen.findByText("This file is too large.")).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  // EC1: serverMark="uploading" on initial render (browser closed mid-upload)
+  it("EC1: shows Uploading status when server reports uploading on initial render", () => {
+    const slotsWithUploading: DocumentLanguageSlot[] = [
+      { language: "en", full: "uploading", previews: ["missing", "missing", "missing"] },
+      { language: "si", full: "missing", previews: ["missing", "missing", "missing"] },
+      { language: "ta", full: "missing", previews: ["missing", "missing", "missing"] },
+    ];
+    render(
+      <DocumentLanguageFiles documentId="doc-1" slots={slotsWithUploading} onSlotsChange={noop} />
+    );
+    expect(screen.getByText(/Uploading/)).toBeInTheDocument();
   });
 
   // EC2: two languages uploading at once

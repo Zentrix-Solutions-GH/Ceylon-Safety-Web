@@ -115,6 +115,13 @@ function FileUploadBox({ documentId, language, kind, sortOrder, serverMark, onRe
 
       xhr.addEventListener("load", async () => {
         xhrRef.current = null;
+        // R2 returns non-2xx on rejection; treat those as upload_failed without
+        // calling completeDocumentFileUpload (which expects a successful transfer).
+        if (xhr.status < 200 || xhr.status >= 300) {
+          setState({ status: "failed", error: t("admin.documents.upload.error.upload_failed"), progress: 0 });
+          resolve();
+          return;
+        }
         const completeResult = await completeDocumentFileUpload(fileId);
         if (!completeResult.ok) {
           const reason = completeResult.code === "validation_failed" ? (completeResult as { reason?: string }).reason : undefined;

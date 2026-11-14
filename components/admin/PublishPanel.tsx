@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
 import { t, errorMessage } from "@/messages/en";
-import { setDocumentStatus } from "@/lib/admin/actions";
-import { countArticleRefs } from "@/lib/articles/countArticleRefs";
+import { setDocumentStatus, countArticleRefs } from "@/lib/admin/actions";
 import type { DocumentStatus } from "@/types/document";
 
 // ---------------------------------------------------------------------------
@@ -18,6 +17,7 @@ const LANGUAGE_LABEL_KEYS: Record<string, string> = {
 function parseMissingList(missing: string[]): string[] {
   return missing.map((m) => {
     const [, lang] = m.split(":");
+    if (!lang) return m;
     const key = LANGUAGE_LABEL_KEYS[lang];
     return key ? t(key as Parameters<typeof t>[0]) : lang;
   });
@@ -117,7 +117,6 @@ export function PublishPanel({ documentId, status, updatedAt, onStatusChange }: 
   }
 
   const isPublished = status === "published";
-  const isHidden = status === "hidden";
 
   return (
     <div className="space-y-3">
@@ -133,16 +132,14 @@ export function PublishPanel({ documentId, status, updatedAt, onStatusChange }: 
             {pending ? t("admin.documents.publish.publishing") : t("admin.documents.publish.button")}
           </button>
         )}
-        {(isPublished || isHidden) && (
+        {isPublished && (
           <button
             type="button"
             disabled={pending}
-            onClick={isPublished ? handleHideClick : handlePublish}
+            onClick={handleHideClick}
             className="inline-flex items-center rounded px-3 py-1.5 text-sm font-medium border disabled:opacity-50"
           >
-            {pending
-              ? (isPublished ? t("admin.documents.hide.hiding") : t("admin.documents.publish.publishing"))
-              : (isPublished ? t("admin.documents.hide.button") : t("admin.documents.publish.button"))}
+            {pending ? t("admin.documents.hide.hiding") : t("admin.documents.hide.button")}
           </button>
         )}
       </div>

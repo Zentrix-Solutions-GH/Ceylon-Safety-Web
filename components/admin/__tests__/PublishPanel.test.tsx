@@ -1,4 +1,4 @@
-// S-073: PublishPanel — AC5, AC6, AC8, AC11, EC3, EC8, EC10
+// S-073: PublishPanel — AC5, AC6, AC8, AC11, EC3, EC7, EC8, EC10
 import * as React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -8,13 +8,10 @@ import type { SetDocumentStatusResult } from "@/types/document";
 
 vi.mock("@/lib/admin/actions", () => ({
   setDocumentStatus: vi.fn(),
-}));
-vi.mock("@/lib/articles/countArticleRefs", () => ({
   countArticleRefs: vi.fn(),
 }));
 
-import { setDocumentStatus } from "@/lib/admin/actions";
-import { countArticleRefs } from "@/lib/articles/countArticleRefs";
+import { setDocumentStatus, countArticleRefs } from "@/lib/admin/actions";
 
 const mockSet = setDocumentStatus as ReturnType<typeof vi.fn>;
 const mockCount = countArticleRefs as ReturnType<typeof vi.fn>;
@@ -54,6 +51,22 @@ describe("PublishPanel", () => {
     // Missing items listed
     expect(await screen.findByText(/Sinhala/)).toBeInTheDocument();
     expect(await screen.findByText(/Tamil/)).toBeInTheDocument();
+  });
+
+  // parseMissingList contract: backend sends "kind:lang"; second segment is the language code
+  it("parseMissingList: 'full:en' maps to English language label", async () => {
+    const user = userEvent.setup();
+    mockSet.mockResolvedValue({
+      ok: false,
+      code: "validation_failed",
+      reason: "files_missing",
+      missing: ["full:en"],
+    } satisfies SetDocumentStatusResult);
+
+    render(<PublishPanel {...BASE_PROPS} />);
+    await user.click(screen.getByRole("button", { name: "Publish" }));
+
+    expect(await screen.findByText(/English/)).toBeInTheDocument();
   });
 
   // EC3: already_done shows "This was already done."
@@ -141,6 +154,22 @@ describe("PublishPanel", () => {
     ).toBeInTheDocument();
   });
 
+  // EC7: role lost while on screen — not_allowed maps to "You do not have permission to do this."
+  it("EC7: not_allowed shows the permission-denied message", async () => {
+    const user = userEvent.setup();
+    mockSet.mockResolvedValue({
+      ok: false,
+      code: "not_allowed",
+    } satisfies SetDocumentStatusResult);
+
+    render(<PublishPanel {...BASE_PROPS} />);
+    await user.click(screen.getByRole("button", { name: "Publish" }));
+
+    expect(
+      await screen.findByText("You do not have permission to do this.")
+    ).toBeInTheDocument();
+  });
+
   // EC10: publish while one language is uploading → files_missing lists that language
   it("EC10: publish while language uploading returns files_missing for that language", async () => {
     const user = userEvent.setup();
@@ -155,5 +184,42 @@ describe("PublishPanel", () => {
     await user.click(screen.getByRole("button", { name: "Publish" }));
 
     expect(await screen.findByText(/English/)).toBeInTheDocument();
+  });
+
+  // EC7: role lost — not_allowed shows permission error
+  it("EC7: not_allowed shows permission error message", async () => {
+    const user = userEvent.setup();
+    const onStatusChange = vi.fn();
+    mockSet.mockResolvedValue({
+      ok: false,
+      code: "not_allowed",
+    } satisfies SetDocumentStatusResult);
+
+    render(<PublishPanel {...BASE_PROPS} onStatusChange={onStatusChange} />);
+    await user.click(screen.getByRole("button", { name: "Publish" }));
+
+    expect(await screen.findByText("You do not have permission to do this.")).toBeInTheDocument();
+    expect(onStatusChange).not.toHaveBeenCalled();
+  });
+
+  // EC8 (hide path): version_conflict on Hide shows conflict message, status unchanged
+  it("EC8: hide version_conflict shows conflict message and does not change status", async () => {
+    const user = userEvent.setup();
+    const onStatusChange = vi.fn();
+    mockCount.mockResolvedValue({ ok: true, count: 0 });
+    mockSet.mockResolvedValue({
+      ok: false,
+      code: "version_conflict",
+    } satisfies SetDocumentStatusResult);
+
+    render(<PublishPanel {...BASE_PROPS} status="published" onStatusChange={onStatusChange} />);
+    await user.click(screen.getByRole("button", { name: "Hide" }));
+
+    expect(
+      await screen.findByText(
+        "Someone else changed this while you were editing. Reload to see their changes. Your text is kept."
+      )
+    ).toBeInTheDocument();
+    expect(onStatusChange).not.toHaveBeenCalled();
   });
 });
