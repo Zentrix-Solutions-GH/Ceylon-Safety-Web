@@ -135,6 +135,8 @@ describe("PriceDialog", () => {
         "Someone else changed this while you were editing. Reload to see their changes. Your text is kept."
       )
     ).toBeInTheDocument();
+    // onPriceChange must not have been called — price is unchanged
+    expect(BASE_PROPS.onPriceChange).not.toHaveBeenCalled();
   });
 
   // AC7: successful price change calls onPriceChange

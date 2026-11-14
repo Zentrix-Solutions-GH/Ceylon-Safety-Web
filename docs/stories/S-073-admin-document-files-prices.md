@@ -136,7 +136,7 @@ $ bash scripts/check.sh   (run 2026-11-13)
   Tests  18 failed | 2187 passed | 60 skipped (2265)
 ```
 
-S-073 owns 36 tests across 4 files; all 36 pass.
+S-073 owns 43 tests across 4 files; all 43 pass. (Updated after round-2 fixes added EC1, EC6, EC7, EC8-hide, AC2 XHR, AC3 file_too_large tests.)
 
 ## Review notes
 
