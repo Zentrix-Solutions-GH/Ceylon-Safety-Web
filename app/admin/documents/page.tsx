@@ -15,6 +15,9 @@ type SearchParams = {
   page?: string;
 };
 
+const VALID_STATUSES: DocumentStatus[] = ["draft", "published", "hidden"];
+const VALID_KINDS: DocKind[] = ["checklist", "safety_sign", "toolbox_talk"];
+
 export default async function AdminDocumentsPage({
   searchParams,
 }: {
@@ -24,10 +27,17 @@ export default async function AdminDocumentsPage({
   const rawPage = params.page ? parseInt(params.page, 10) : 1;
   const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
 
+  const status = VALID_STATUSES.includes(params.status as DocumentStatus)
+    ? (params.status as DocumentStatus)
+    : undefined;
+  const docKind = VALID_KINDS.includes(params.kind as DocKind)
+    ? (params.kind as DocKind)
+    : undefined;
+
   const [listResult, categories] = await Promise.all([
     listDocuments({
-      status: params.status as DocumentStatus | undefined,
-      docKind: params.kind as DocKind | undefined,
+      status,
+      docKind,
       categoryId: params.category,
       search: params.search,
       page,
@@ -36,8 +46,7 @@ export default async function AdminDocumentsPage({
   ]);
 
   if (!listResult.ok) {
-    if (listResult.code === "not_allowed") redirect("/admin");
-    redirect("/admin/documents");
+    redirect("/admin");
   }
 
   return (
@@ -47,8 +56,8 @@ export default async function AdminDocumentsPage({
       page={listResult.page}
       pageSize={listResult.pageSize}
       categories={categories}
-      initialStatus={(params.status ?? "") as DocumentStatus | ""}
-      initialKind={(params.kind ?? "") as DocKind | ""}
+      initialStatus={status ?? ""}
+      initialKind={docKind ?? ""}
       initialCategory={params.category ?? ""}
       initialTitle={params.search ?? ""}
     />

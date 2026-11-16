@@ -199,7 +199,7 @@ const DETAIL_COLUMNS = `
   document_files(kind, language, sort_order, status, is_current)
 `;
 
-const PAGE_SIZE = 25;
+export const DOCUMENTS_PAGE_SIZE = 25;
 
 // ---------------------------------------------------------------------------
 // listDocuments (AC1)
@@ -213,8 +213,8 @@ export async function listDocuments(
 
   const supabase = createSupabaseServiceRoleClient();
   const page = Math.max(1, filter.page ?? 1);
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
+  const from = (page - 1) * DOCUMENTS_PAGE_SIZE;
+  const to = from + DOCUMENTS_PAGE_SIZE - 1;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = (supabase as any)
@@ -238,7 +238,7 @@ export async function listDocuments(
     rows: rows.map(mapDocumentRow),
     total: count ?? 0,
     page,
-    pageSize: PAGE_SIZE,
+    pageSize: DOCUMENTS_PAGE_SIZE,
   };
 }
 

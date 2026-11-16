@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { t } from "@/messages/en";
 import { DocumentsTable } from "@/components/admin/DocumentsTable";
+import { DOCUMENTS_PAGE_SIZE } from "@/lib/admin/actions/documents";
 import type { AdminDocumentRow, DocumentStatus, DocKind } from "@/types/document";
 import type { Category } from "@/types/article";
 
@@ -20,7 +21,6 @@ interface Props {
   initialTitle: string;
 }
 
-const PAGE_SIZE = 25;
 
 export default function DocumentsPageClient({
   initialRows,
@@ -40,7 +40,7 @@ export default function DocumentsPageClient({
   const [titleFilter, setTitleFilter] = useState(initialTitle);
   const titleDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const pageCount = Math.max(1, Math.ceil(total / (pageSize || PAGE_SIZE)));
+  const pageCount = Math.max(1, Math.ceil(total / (pageSize || DOCUMENTS_PAGE_SIZE)));
 
   const updateParam = useCallback(
     (key: string, value: string) => {

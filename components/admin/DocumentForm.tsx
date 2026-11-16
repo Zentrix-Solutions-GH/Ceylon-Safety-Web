@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { t } from "@/messages/en";
 import { saveDocumentSchema } from "@/lib/validation/document";
 import { saveDocument } from "@/lib/admin/actions/documents";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
 import { resizeImage } from "@/lib/content/image-resize";
+import { publicUrl } from "@/lib/media/publicUrl";
 import type { AdminDocument, DocKind, SaveDocumentInput } from "@/types/document";
 import type { Category } from "@/types/article";
 import type { AllowedImageMime } from "@/types/media";
@@ -145,7 +146,7 @@ export function DocumentForm({ mode, document: doc, categories }: Props) {
         pageCount: pageCount ? parseInt(pageCount, 10) : null,
         previewPages,
         coverImageKey: coverImageKey ?? null,
-        ...(mode === "create" ? { priceLkr: Number(priceLkr) } : {}),
+        ...(mode === "create" ? { priceLkr: priceLkr ? Number(priceLkr) : undefined } : {}),
         ...(mode === "edit" && doc
           ? { documentId: doc.id, updatedAt: doc.updatedAt }
           : {}),
@@ -164,9 +165,16 @@ export function DocumentForm({ mode, document: doc, categories }: Props) {
     }
   }
 
+  useEffect(() => {
+    return () => {
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+    };
+  }, [coverPreview]);
+
   async function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (coverPreview) URL.revokeObjectURL(coverPreview);
     const preview = URL.createObjectURL(file);
     setCoverPreview(preview);
     const variants = await resizeImage(file);
@@ -330,7 +338,7 @@ export function DocumentForm({ mode, document: doc, categories }: Props) {
           {(coverPreview || coverImageKey) && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={coverPreview ?? ""}
+              src={coverPreview ?? publicUrl(coverImageKey!)}
               alt="Cover preview"
               className="mb-2 h-32 w-auto rounded-md object-cover"
             />
