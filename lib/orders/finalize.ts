@@ -71,24 +71,8 @@ export async function finalizeOrder(
 // run finalizeOrder for each. Alert if any order is paid for > 30 minutes
 // without being finalized (AC5).
 export async function finalizePaidOrders(sb: SB): Promise<{ ok: boolean }> {
-  // AC5: alert on orders paid > 30 minutes ago with finalized_at IS NULL.
-  const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-  const { data: late } = await sb
-    .from("orders")
-    .select("id")
-    .eq("status", "paid")
-    .is("finalized_at", null)
-    .lt("paid_at", thirtyMinAgo);
-
-  if (late && late.length > 0) {
-    console.error("finalize: unfinalized_paid_orders_alert", {
-      count: late.length,
-      order_ids: late.map((r) => r.id),
-    });
-  }
-
-  // Claim orders via FOR UPDATE SKIP LOCKED by calling a DB function.
-  // The function returns a set of order ids it has locked and returns.
+  // Claim orders via claimed_at column guard (UPDATE-based, survives RPC boundary).
+  // The function claims up to 50 orders by setting claimed_at = NOW() and returns their ids.
   const { data: claimed, error } = await sb.rpc("claim_unfinalized_orders");
 
   if (error) {
@@ -104,6 +88,23 @@ export async function finalizePaidOrders(sb: SB): Promise<{ ok: boolean }> {
     } catch (err) {
       console.error("finalize: order_loop_error", { order_id: row.id, message: safeErrorMessage(err) });
     }
+  }
+
+  // AC5: alert on orders paid > 30 minutes ago with finalized_at IS NULL.
+  // Run after the claim loop so orders currently being processed are excluded.
+  const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const { data: late } = await sb
+    .from("orders")
+    .select("id")
+    .eq("status", "paid")
+    .is("finalized_at", null)
+    .lt("paid_at", thirtyMinAgo);
+
+  if (late && late.length > 0) {
+    console.error("finalize: unfinalized_paid_orders_alert", {
+      count: late.length,
+      order_ids: late.map((r) => r.id),
+    });
   }
 
   return { ok: true };

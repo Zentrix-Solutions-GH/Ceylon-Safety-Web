@@ -125,7 +125,13 @@ S-081 unit tests (all 20 pass, confirmed separately — post /test-check fixes):
 - `lib/orders/__tests__/finalize.test.ts`: 11 tests ✓ (Fix 2: added EC6 bank-transfer order test)
 
 ## Review notes
-<!-- Filled in by reviewer and security-reviewer agents -->
+
+- **P0** `supabase/migrations/20261113000001_claim-unfinalized-orders.sql` — `FOR UPDATE SKIP LOCKED` lock is transaction-scoped; Supabase `.rpc()` auto-commits the transaction, releasing the lock before `finalizeOrder` runs. Replaced with UPDATE-based `claimed_at` column guard. (full-review 2026-11-16)
+- **P0** `__tests__/cron-route.test.ts` — no test for handler returning `{ ok: false }`; cron route was calling `pingHeartbeat("success")` even on soft failure. Added EC4 describe block; fixed route to check `result.ok`. (full-review 2026-11-16)
+- **P1** `lib/errors.ts:1-2` — docstring said "without exposing any personal data" but function does not scrub PII from DB constraint errors. Corrected to warn callers not to log alongside personal data. (full-review 2026-11-16)
+- **P1** `lib/orders/__tests__/finalize.test.ts` — no test verifying `finalized_at` DB write path guard. Added AC3 test asserting `update` is not called when stubs return `ok:false`. (full-review 2026-11-16)
+- **P1** `lib/orders/finalize.ts` — AC5 alert query ran before the claim loop, flagging orders mid-flight. Moved to after the loop so currently-claimed orders are excluded. (full-review 2026-11-16)
+- **P1** `docs/stories/S-081-finalize-replay-jobs.md` — AC6 `runFinalizeNow` wiring to notify route deferred pending hosting test (D4 / section 9). Already documented in Out of Scope. No code change needed; checkbox remains checked for the implemented export. (full-review 2026-11-16)
 
 ## After this merges, a user can:
 - Not lose a payment: a notification whose first processing failed is applied within about 5 minutes without anyone doing anything (observable in staging by forcing a failed processing and watching the event become processed).

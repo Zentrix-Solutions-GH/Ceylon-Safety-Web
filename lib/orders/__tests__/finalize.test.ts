@@ -78,6 +78,27 @@ describe("finalizeOrder", () => {
     expect(result.finalizedAt).toBeNull();
     errorSpy.mockRestore();
   });
+
+  it("AC3: finalized_at guard — update NOT called while stubs return ok:false", async () => {
+    // Verifies the guard: `if (!invoiceOk || !emailOk) return { finalizedAt: null }`.
+    // The DB update is NOT called when either step returns ok:false.
+    const { finalizeOrder } = await import("@/lib/orders/finalize");
+    const updateEq = vi.fn().mockResolvedValue({ error: null });
+    const updateFn = vi.fn().mockReturnValue({ eq: updateEq });
+    const sb = {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        lt: vi.fn().mockResolvedValue({ data: [], error: null }),
+        update: updateFn,
+      }),
+      rpc: vi.fn(),
+    } as unknown as SB;
+    const result = await finalizeOrder("order-7", sb);
+    expect(result.finalizedAt).toBeNull();
+    expect(updateFn).not.toHaveBeenCalled();
+  });
 });
 
 describe("finalizePaidOrders", () => {

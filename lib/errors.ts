@@ -1,5 +1,6 @@
-// Returns the error message string without exposing any personal data or secrets.
-// Use this whenever logging an error to ensure no sensitive data leaks into logs.
+// Returns the error message string from an unknown thrown value.
+// Does NOT scrub PII — DB constraint errors may embed field values.
+// Never log the result alongside payment data or personal fields.
 export function safeErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (
