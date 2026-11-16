@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { t } from "@/messages/en";
 import { DocumentsTable } from "@/components/admin/DocumentsTable";
-import { DOCUMENTS_PAGE_SIZE } from "@/lib/admin/actions/documents";
+const DOCUMENTS_PAGE_SIZE = 25;
 import type { AdminDocumentRow, DocumentStatus, DocKind } from "@/types/document";
 import type { Category } from "@/types/article";
 

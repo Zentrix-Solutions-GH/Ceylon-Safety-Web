@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { t } from "@/messages/en";
 import { saveDocumentSchema } from "@/lib/validation/document";
-import { saveDocument } from "@/lib/admin/actions/documents";
+import { saveDocument } from "@/lib/admin/actions";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
 import { resizeImage } from "@/lib/content/image-resize";
 import { publicUrl } from "@/lib/media/publicUrl";
