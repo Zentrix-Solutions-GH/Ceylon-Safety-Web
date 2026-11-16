@@ -1,11 +1,11 @@
 ---
 id: S-074
 title: Documents page + filters
-status: in-progress
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-074-documents-page-filters
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/95
 depends_on: [S-027, S-071]
 reqs: [REQ-055, REQ-056, REQ-057, REQ-058, REQ-060, REQ-060c]
 ---
