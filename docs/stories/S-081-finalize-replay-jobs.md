@@ -132,6 +132,9 @@ S-081 unit tests (all 20 pass, confirmed separately — post /test-check fixes):
 - **P1** `lib/orders/__tests__/finalize.test.ts` — no test verifying `finalized_at` DB write path guard. Added AC3 test asserting `update` is not called when stubs return `ok:false`. (full-review 2026-11-16)
 - **P1** `lib/orders/finalize.ts` — AC5 alert query ran before the claim loop, flagging orders mid-flight. Moved to after the loop so currently-claimed orders are excluded. (full-review 2026-11-16)
 - **P1** `docs/stories/S-081-finalize-replay-jobs.md` — AC6 `runFinalizeNow` wiring to notify route deferred pending hosting test (D4 / section 9). Already documented in Out of Scope. No code change needed; checkbox remains checked for the implemented export. (full-review 2026-11-16)
+- **P1** `lib/orders/finalize.ts:94-101` — AC5 alert query had no `claimed_at` filter; orders claimed by a concurrent overlapping run would appear and generate false alerts. Added `.or("claimed_at.is.null,claimed_at.lt.tenMinAgo")` guard mirroring the RPC window. (full-review 2026-11-16 round 2)
+- **P1** `lib/orders/__tests__/finalize.test.ts` — AC4 independence test proved nothing (both stubs return ok:false; could not distinguish email called vs not called). Added `steps` injection to `finalizeOrder`; replaced test with one that injects a throwing invoice mock and asserts `emailMock` was called. (full-review 2026-11-16 round 2)
+- **CI** `types/database.ts` — `claimed_at` column added by migration but not in types file; CI db-tests failed. Regenerated Row/Insert/Update types. (full-review 2026-11-16 round 2)
 
 ## After this merges, a user can:
 - Not lose a payment: a notification whose first processing failed is applied within about 5 minutes without anyone doing anything (observable in staging by forcing a failed processing and watching the event become processed).
