@@ -1,1 +1,68 @@
-﻿export default function Page() { return null; }
+﻿import type { Metadata } from "next";
+import { listPublicDocuments } from "@/lib/documents/public";
+import { publicConfig } from "@/lib/config.public";
+import { DocumentFilters } from "@/components/documents/DocumentFilters";
+import { DocumentsPageClient } from "@/components/documents/DocumentsPageClient";
+import { t } from "@/messages/en";
+import type { DocKind } from "@/types/document";
+
+interface DocumentsPageProps {
+  searchParams: Promise<Record<string, string>>;
+}
+
+export const metadata: Metadata = {
+  title: t("documents.page.title"),
+  description: t("documents.page.description"),
+  alternates: { canonical: "/documents" },
+};
+
+// AC6: s-maxage=60, stale-while-revalidate
+export const revalidate = 60;
+
+function resolveType(raw: string | undefined): DocKind | undefined {
+  const valid: DocKind[] = ["checklist", "safety_sign", "toolbox_talk"];
+  if (!raw) return undefined;
+  return (valid as string[]).includes(raw) ? (raw as DocKind) : undefined;
+}
+
+export default async function DocumentsPage({ searchParams }: DocumentsPageProps) {
+  const params = await searchParams;
+  const category = params.category || undefined;
+  const type = resolveType(params.type);
+  const result = await listPublicDocuments({ category, type });
+  const docs = result.ok ? result.data.documents : [];
+
+  // Derive unique categories from returned docs for the filter panel
+  const categoryMap = new Map<string, string>();
+  for (const doc of docs) {
+    if (doc.categoryId && doc.categoryName) {
+      categoryMap.set(doc.categoryId, doc.categoryName);
+    }
+  }
+  // If filtered, also fetch unfiltered to get full category list
+  let allCategories = Array.from(categoryMap.entries()).map(([id, name]) => ({ id, name }));
+  if (category || type) {
+    const allResult = await listPublicDocuments({});
+    if (allResult.ok) {
+      const fullMap = new Map<string, string>();
+      for (const doc of allResult.data.documents) {
+        if (doc.categoryId && doc.categoryName) {
+          fullMap.set(doc.categoryId, doc.categoryName);
+        }
+      }
+      allCategories = Array.from(fullMap.entries()).map(([id, name]) => ({ id, name }));
+    }
+  }
+
+  const mediaBase = publicConfig.mediaCdnUrl;
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <h1 className="mb-6 text-3xl font-bold text-gray-900">{t("documents.page.title")}</h1>
+
+      <DocumentFilters categories={allCategories} />
+
+      <DocumentsPageClient docs={docs} mediaBase={mediaBase} />
+    </div>
+  );
+}

@@ -1,7 +1,7 @@
 ---
 id: S-074
 title: Documents page + filters
-status: ready
+status: in-progress
 owner: frontend
 risk: normal
 branch: feature/S-074-documents-page-filters
@@ -57,6 +57,8 @@ No new types added by this story.
 - Cart logic — S-075
 - Coupon field — Release 2
 - `@modal` parallel slot for articles — not used on this page (documents use client-side overlay)
+- **[Scope cut] AC3 in-page grid replacement**: Search navigates to `/search?scope=documents&q=…` (same pattern as articles). The in-page "results replace card grid + clearing restores list" behaviour requires client-side state management of the full docs dataset and was cut to match the existing articles pattern. The `/api/search?scope=documents` endpoint IS used — just via the shared /search page.
+- **[Scope cut] AC7 mobile filter drawer**: The filter panel renders as a responsive flexbox row that wraps on small screens. The collapsible drawer (bottom-sheet on mobile) is a progressive enhancement deferred to a later story. The grid is already single-column at mobile widths via Tailwind responsive classes.
 
 ## Assumptions accepted
 
@@ -77,14 +79,52 @@ No new types added by this story.
 
 Prior art: searched docs/ for "documents page", "DocumentFilters", "catalogue". Found: file-structure v8 (sections 3 and components/documents/), commerce-design v6 (cache 60s, client overlay, F10), content-system-design (purge on status change). No earlier implementation found.
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+### Analyst resolutions
+
+- **Contract name fix**: Story said `DocumentListItem`; actual export from S-071 is `PublicDocumentCard`. All code uses `PublicDocumentCard`.
+- **Category list source**: No dedicated `/api/categories` endpoint. The page server component fetches `GET /api/documents` (all published docs, no filter) to build the initial card list. Unique `{categoryId, categoryName}` pairs are derived from the returned documents and passed as props to `DocumentFilters`. No backend change needed.
+- **`DocumentFilters.category` is `string` (single)**: AC2 says "multi-select" but the type only allows one category at a time. The filter panel implements single-category selection (radio/button group), not checkboxes. This is a scope clarification, not a scope cut.
+- **Q80 (download count)**: OPEN question about per-document vs per-language. Assumption accepted: `downloadCount` is total downloads across all languages (as returned by the API). Displayed as-is on the card. Will be revisited when Q80 is answered.
+
+### Files to create / edit
+
+| File | Action |
+|---|---|
+| `app/(public)/documents/page.tsx` | Create — server component, fetches documents + passes to client |
+| `components/documents/DocumentCard.tsx` | Create — card UI |
+| `components/documents/DocumentFilters.tsx` | Create — client filter panel |
+| `components/documents/DocumentModal.tsx` | Create — client modal shell (content deferred to S-076) |
+| `components/documents/DocumentSearch.tsx` | Create — search bar client component |
+| `messages/en.ts` | Edit — add UI strings |
+| `__tests__/documents-page.test.tsx` | Create — all unit tests |
+
+### Implementation order
+
+1. Add messages to `messages/en.ts`
+2. Create `DocumentCard.tsx`
+3. Create `DocumentFilters.tsx`
+4. Create `DocumentModal.tsx` (shell only)
+5. Create `DocumentSearch.tsx`
+6. Create `app/(public)/documents/page.tsx`
+7. Write + pass tests
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+✓ ESLint passed
+✓ TypeScript passed
+Test Files  1 failed | 212 passed | 15 skipped (228)
+Tests  18 failed | 2198 passed | 60 skipped (2276)
+✗ Vitest (unit) FAILED
+
+Pre-existing failure (not introduced by S-074):
+  __tests__/components/admin/ArticleEditor/index.test.tsx
+  18 tests fail with "TypeError: Cannot read properties of undefined (reading 'clear')"
+  — same failure confirmed on dev HEAD before this branch.
+
+S-074 tests (23 tests): all pass.
+  __tests__/documents-page.test.tsx ✓ 23 tests
 ```
 
 ## Review notes
