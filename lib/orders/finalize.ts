@@ -26,19 +26,23 @@ export async function ensureReceiptEmail(_orderId: string, _sb: SB): Promise<{ o
 export async function finalizeOrder(
   orderId: string,
   sb: SB,
+  steps: {
+    invoice: typeof ensureInvoice;
+    email: typeof ensureReceiptEmail;
+  } = { invoice: ensureInvoice, email: ensureReceiptEmail },
 ): Promise<FinalizeResult> {
   let invoiceOk = false;
   let emailOk = false;
 
   try {
-    const r = await ensureInvoice(orderId, sb);
+    const r = await steps.invoice(orderId, sb);
     invoiceOk = r.ok;
   } catch (err) {
     console.error("finalize: ensureInvoice threw", { order_id: orderId, message: safeErrorMessage(err) });
   }
 
   try {
-    const r = await ensureReceiptEmail(orderId, sb);
+    const r = await steps.email(orderId, sb);
     emailOk = r.ok;
   } catch (err) {
     console.error("finalize: ensureReceiptEmail threw", { order_id: orderId, message: safeErrorMessage(err) });
@@ -91,14 +95,17 @@ export async function finalizePaidOrders(sb: SB): Promise<{ ok: boolean }> {
   }
 
   // AC5: alert on orders paid > 30 minutes ago with finalized_at IS NULL.
-  // Run after the claim loop so orders currently being processed are excluded.
+  // Run after the claim loop. Exclude orders freshly claimed (within 10 minutes)
+  // to avoid false positives from a concurrent overlapping run.
   const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const { data: late } = await sb
     .from("orders")
     .select("id")
     .eq("status", "paid")
     .is("finalized_at", null)
-    .lt("paid_at", thirtyMinAgo);
+    .lt("paid_at", thirtyMinAgo)
+    .or(`claimed_at.is.null,claimed_at.lt.${tenMinAgo}`);
 
   if (late && late.length > 0) {
     console.error("finalize: unfinalized_paid_orders_alert", {

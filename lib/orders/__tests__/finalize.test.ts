@@ -20,7 +20,8 @@ function makeSb(options: {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       is: vi.fn().mockReturnThis(),
-      lt: vi.fn().mockResolvedValue({ data: options.lateOrders ?? [], error: null }),
+      lt: vi.fn().mockReturnThis(),
+      or: vi.fn().mockResolvedValue({ data: options.lateOrders ?? [], error: null }),
       update: vi.fn().mockReturnValue({ eq: updateEq }),
     }),
     rpc: vi.fn().mockResolvedValue({
@@ -34,26 +35,37 @@ function makeSb(options: {
 describe("finalizeOrder", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("AC4: invoice failure does not block the email step", async () => {
+  it("AC4: invoice throwing does not block the email step", async () => {
     const { finalizeOrder } = await import("@/lib/orders/finalize");
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
+    const emailMock = vi.fn().mockResolvedValue({ ok: true });
     const sb = makeSb();
-    const result = await finalizeOrder("order-1", sb as unknown as SB);
+    const result = await finalizeOrder("order-1", sb as unknown as SB, {
+      invoice: vi.fn().mockRejectedValue(new Error("invoice exploded")),
+      email: emailMock,
+    });
 
-    // Result must be returned; payment is unaffected.
-    expect(result.orderId).toBe("order-1");
+    // Invoice threw but email step must have been called (AC4 independence).
+    expect(emailMock).toHaveBeenCalledOnce();
+    // invoiceOk is false (threw), emailOk is true — finalizedAt still null (both required).
+    expect(result.invoiceOk).toBe(false);
+    expect(result.emailOk).toBe(true);
+    expect(result.finalizedAt).toBeNull();
     errorSpy.mockRestore();
   });
 
   it("EC1: invoice step fails but email step still runs; finalized_at stays null until both succeed", async () => {
     const { finalizeOrder } = await import("@/lib/orders/finalize");
+    const emailMock = vi.fn().mockResolvedValue({ ok: false });
     const sb = makeSb();
-    const result = await finalizeOrder("order-3", sb as unknown as SB);
+    const result = await finalizeOrder("order-3", sb as unknown as SB, {
+      invoice: vi.fn().mockResolvedValue({ ok: false }),
+      email: emailMock,
+    });
 
-    // Both steps are stubs (ok:false) in this story — finalizedAt must be null
-    // so the job re-picks the order on the next run when real steps arrive.
-    expect(result.orderId).toBe("order-3");
+    // Email step was called even though invoice returned ok:false (AC4 independence).
+    expect(emailMock).toHaveBeenCalledOnce();
     expect(result.finalizedAt).toBeNull();
   });
 
@@ -90,7 +102,8 @@ describe("finalizeOrder", () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        lt: vi.fn().mockResolvedValue({ data: [], error: null }),
+        lt: vi.fn().mockReturnThis(),
+        or: vi.fn().mockResolvedValue({ data: [], error: null }),
         update: updateFn,
       }),
       rpc: vi.fn(),
@@ -126,7 +139,8 @@ describe("finalizePaidOrders", () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        lt: vi.fn().mockResolvedValue({ data: [], error: null }),
+        lt: vi.fn().mockReturnThis(),
+        or: vi.fn().mockResolvedValue({ data: [], error: null }),
         update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
       }),
       rpc,
@@ -140,7 +154,7 @@ describe("finalizePaidOrders", () => {
     expect(r2.ok).toBe(true);
   });
 
-  it("AC5: logs alert when paid orders unfinalized > 30 minutes", async () => {
+  it("AC5: logs alert when paid orders unfinalized > 30 minutes (and not freshly claimed)", async () => {
     const { finalizePaidOrders } = await import("@/lib/orders/finalize");
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -149,7 +163,8 @@ describe("finalizePaidOrders", () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        lt: vi.fn().mockResolvedValue({ data: [{ id: "late-1" }], error: null }),
+        lt: vi.fn().mockReturnThis(),
+        or: vi.fn().mockResolvedValue({ data: [{ id: "late-1" }], error: null }),
         update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
       }),
       rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
@@ -171,7 +186,8 @@ describe("finalizePaidOrders", () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        lt: vi.fn().mockResolvedValue({ data: [], error: null }),
+        lt: vi.fn().mockReturnThis(),
+        or: vi.fn().mockResolvedValue({ data: [], error: null }),
         update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
       }),
       rpc: vi.fn().mockResolvedValue({ data: null, error: { message: "db fail" } }),
@@ -200,7 +216,8 @@ describe("runFinalizeNow", () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        lt: vi.fn().mockResolvedValue({ data: [], error: null }),
+        lt: vi.fn().mockReturnThis(),
+        or: vi.fn().mockResolvedValue({ data: [], error: null }),
         update: vi.fn().mockReturnValue({
           eq: vi.fn().mockRejectedValue(new Error("db down")),
         }),
@@ -228,7 +245,8 @@ describe("EC6: bank transfer orders (no payment event) finalized by same job", (
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        lt: vi.fn().mockResolvedValue({ data: [], error: null }),
+        lt: vi.fn().mockReturnThis(),
+        or: vi.fn().mockResolvedValue({ data: [], error: null }),
         update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
       }),
       rpc: vi.fn().mockResolvedValue({
