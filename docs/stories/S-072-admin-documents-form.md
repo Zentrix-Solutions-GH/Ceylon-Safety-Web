@@ -139,7 +139,13 @@ S-072 own gate: ESLint ✓  TypeScript ✓  New tests: 21/21 ✓
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+Round 1 (/full-review 2026-11-14, REQUEST CHANGES, score 80/100):
+- **P1** `components/admin/DocumentForm.tsx` — broken cover image on edit: `coverImageKey` truthy + `coverPreview` null rendered `src=""`. Fixed: `publicUrl(coverImageKey!)` as fallback src; added `useEffect` cleanup + revoke-before-create in `handleCoverChange`.
+- **P1** `app/admin/documents/page.tsx` — infinite redirect loop on DB error: unknown error redirected back to self. Fixed: all `!listResult.ok` paths now redirect to `/admin`.
+- **P2** `components/admin/DocumentForm.tsx` — Object URL never revoked. Fixed (see P1 above).
+- **P2** `app/admin/documents/DocumentsPageClient.tsx` + `lib/admin/actions/documents.ts` — `PAGE_SIZE = 25` duplicated. Fixed: exported as `DOCUMENTS_PAGE_SIZE` from lib; client imports it.
+- **P2** `components/admin/DocumentForm.tsx` — `Number("")` → `0` in handleSubmit price path. Fixed: `priceLkr ? Number(priceLkr) : undefined`.
+- **P2** `app/admin/documents/page.tsx` — URL params `status`/`kind` cast without validation. Fixed: validated against `VALID_STATUSES` / `VALID_KINDS` arrays; invalid values silently discarded.
 
 ## After this merges, a user can:
 
