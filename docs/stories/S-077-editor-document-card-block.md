@@ -1,11 +1,11 @@
 ---
 id: S-077
 title: Editor document card block
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-077-editor-document-card-block
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/96"
 depends_on: [S-056, S-071]
 reqs: [REQ-034, REQ-034b]
 ---
