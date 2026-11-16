@@ -79,3 +79,47 @@ describe("validateBody — AC7: link scheme validation", () => {
     expect(result.ok).toBe(false);
   });
 });
+
+// ─── S-077: document_card block type ─────────────────────────────────────────
+
+describe("validateBody — AC7: document_card block type", () => {
+  it("accepts a document_card block", () => {
+    const result = validateBody(makeBody({
+      content: [{
+        type: "document_card",
+        attrs: {
+          node_id: "node-1",
+          document_id: "doc-1",
+          slug: "safety-checklist",
+          title: "Safety Checklist",
+          price: 150000,
+        },
+      }],
+    }));
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects an unknown block type", () => {
+    const result = validateBody(makeBody({
+      content: [{ type: "unknown_block_xyz" }],
+    }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; reason: string }).reason).toMatch(/unknown block type/i);
+  });
+
+  it("rejects a document_card block missing required attrs", () => {
+    const result = validateBody(makeBody({
+      content: [{ type: "document_card", attrs: { node_id: "n1" } }],
+    }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; reason: string }).reason).toMatch(/missing required attrs/i);
+  });
+
+  it("rejects a document_card block with no attrs", () => {
+    const result = validateBody(makeBody({
+      content: [{ type: "document_card" }],
+    }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; reason: string }).reason).toMatch(/missing required attrs/i);
+  });
+});

@@ -6,7 +6,7 @@ import { t } from "@/messages/en";
 import { generateSlug, isReservedSlug } from "@/lib/content/slug";
 import { saveArticle } from "@/lib/articles/actions/saveArticle";
 import PublishTimePicker from "./PublishTimePicker";
-import type { ImageAttrs, VideoAttrs } from "./RichTextEditor";
+import type { ImageAttrs, VideoAttrs, DocumentCardAttrs } from "./RichTextEditor";
 import type { ArticleEditData, ArticleBody, ResolvedVideoNode } from "@/types/article";
 import type { Author } from "@/types/author";
 import type { Category } from "@/types/article";
@@ -18,6 +18,7 @@ const RichTextEditor = dynamic(
 
 const ImageUploadField = dynamic(() => import("./ImageUploadField"), { ssr: false });
 const ItemPickerModal = dynamic(() => import("./ItemPickerModal"), { ssr: false });
+const DocumentPickerModal = dynamic(() => import("./DocumentPickerModal"), { ssr: false });
 
 // ─── localStorage helpers ─────────────────────────────────────────────────────
 
@@ -173,6 +174,10 @@ export default function ArticleEditor({ initialData, authors, categories }: Arti
   const [showVideoDialog, setShowVideoDialog] = useState(false);
   const insertVideoRef = useRef<((attrs: VideoAttrs) => void) | null>(null);
 
+  // ── Document picker dialog ───────────────────────────────────────────────────
+  const [showDocumentDialog, setShowDocumentDialog] = useState(false);
+  const insertDocumentRef = useRef<((attrs: DocumentCardAttrs) => void) | null>(null);
+
   const isPublished = initialData.status === "published";
   const slugLocked = isPublished;
 
@@ -198,9 +203,10 @@ export default function ArticleEditor({ initialData, authors, categories }: Arti
 
   // ─── Editor helpers ──────────────────────────────────────────────────────────
   const handleEditorReady = useCallback(
-    (helpers: { insertImage: (attrs: ImageAttrs) => void; insertVideo: (attrs: VideoAttrs) => void }) => {
+    (helpers: { insertImage: (attrs: ImageAttrs) => void; insertVideo: (attrs: VideoAttrs) => void; insertDocument: (attrs: DocumentCardAttrs) => void }) => {
       insertImageRef.current = helpers.insertImage;
       insertVideoRef.current = helpers.insertVideo;
+      insertDocumentRef.current = helpers.insertDocument;
     },
     []
   );
@@ -234,6 +240,19 @@ export default function ArticleEditor({ initialData, authors, categories }: Arti
       status: "ready",
     });
     setShowVideoDialog(false);
+  }
+
+  function handleInsertDocument(picked: { id: string; slug: string; title: string; coverImageKey: string | null; priceCents: number }) {
+    if (!insertDocumentRef.current) return;
+    insertDocumentRef.current({
+      node_id: crypto.randomUUID(),
+      document_id: picked.id,
+      slug: picked.slug,
+      title: picked.title,
+      price: picked.priceCents,
+      previewUrl: picked.coverImageKey ?? undefined,
+    });
+    setShowDocumentDialog(false);
   }
 
   // ─── Slug auto-generation ────────────────────────────────────────────────────
@@ -464,11 +483,19 @@ export default function ArticleEditor({ initialData, authors, categories }: Arti
         />
       )}
 
+      {showDocumentDialog && (
+        <DocumentPickerModal
+          onPick={handleInsertDocument}
+          onClose={() => setShowDocumentDialog(false)}
+        />
+      )}
+
       <RichTextEditor
         initialContent={patchedInitialBody}
         onChange={(newBody) => { setBody(newBody); setIsDirty(true); }}
         onEditorReady={handleEditorReady}
         onInsertVideoClick={() => setShowVideoDialog(true)}
+        onInsertDocumentClick={() => setShowDocumentDialog(true)}
       />
 
       <div>
