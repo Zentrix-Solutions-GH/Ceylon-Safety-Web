@@ -594,3 +594,7 @@ export async function changeDocumentPrice(input: {
 
 // S-070 re-exports — upload and publish actions.
 export { startDocumentFileUpload, completeDocumentFileUpload, setDocumentStatus } from "@/lib/documents/index";
+
+// Server action wrapper so client components can call countArticleRefs without
+// importing server-only internals directly.
+export { countArticleRefs } from "@/lib/articles/countArticleRefs";

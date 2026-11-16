@@ -8,9 +8,10 @@ const en = {
   // --- error codes: common (auth design §17, M19) ---
   "errors.validation_failed": "This value is not valid.",
   "errors.validation_failed.already_done": "This has already been done.",
-  "errors.validation_failed.files_missing": "One or more required files are missing.",
-  "errors.validation_failed.confirm_large_change":
-    "Please confirm you want to make this large change.",
+  "errors.validation_failed.files_missing": "Upload all three language files and the preview first.",
+  "errors.validation_failed.file_type": "This file type is not accepted.",
+  "errors.validation_failed.file_too_large": "This file is too large.",
+  "errors.validation_failed.confirm_large_change": "Please confirm this large price change.",
   "errors.validation_failed.confirm_mismatch": "The confirmation does not match.",
   "errors.validation_failed.too_many_rows": "Too many rows selected.",
   "errors.not_allowed": "You do not have permission to do this.",
@@ -25,7 +26,7 @@ const en = {
   "errors.purge_failed":
     "Saved, but the cache could not be cleared. It will expire on its own.",
   "errors.reauth_required": "Please sign in again to continue.",
-  "errors.mfa_required": "A second factor is required. Please check your authenticator.",
+  "errors.mfa_required": "Enter the code from your authenticator app.",
   "errors.unknown": "Something went wrong. Please try again.",
 
   // --- error codes: auth-only (auth design §17) ---
@@ -620,6 +621,49 @@ const en = {
   "footer.sectors.logistics": "Logistics Safety Protocols",
   "footer.sectors.healthcare": "Healthcare & Hospitality",
   "footer.sectors.agriculture": "Agriculture & Tea Estates",
+
+  // Admin — document file upload (S-073)
+  "admin.documents.upload.language.en": "English",
+  "admin.documents.upload.language.si": "Sinhala",
+  "admin.documents.upload.language.ta": "Tamil",
+  "admin.documents.upload.full_label": "PowerPoint file",
+  "admin.documents.upload.preview_label": "Preview {n}",
+  "admin.documents.upload.status.missing": "Missing",
+  "admin.documents.upload.status.uploading": "Uploading…",
+  "admin.documents.upload.status.ready": "Ready",
+  "admin.documents.upload.status.failed": "Failed",
+  "admin.documents.upload.retry": "Retry",
+  "admin.documents.upload.cancel": "Cancel upload",
+  "admin.documents.upload.choose": "Choose file",
+  "admin.documents.upload.replace": "Replace",
+  "admin.documents.upload.uploading_progress": "Uploading {pct}%",
+  "admin.documents.upload.error.file_type": "This file type is not accepted.",
+  "admin.documents.upload.error.file_too_large": "This file is too large.",
+  "admin.documents.upload.error.upload_failed": "The upload did not finish. Try again.",
+
+  // Admin — publish / hide panel (S-073)
+  "admin.documents.publish.button": "Publish",
+  "admin.documents.hide.button": "Hide",
+  "admin.documents.publish.publishing": "Publishing…",
+  "admin.documents.hide.hiding": "Hiding…",
+  "admin.documents.hide.articles_warning": "Used in {n} articles. Those articles will show it as unavailable.",
+  "admin.documents.hide.confirm": "Hide document",
+  "admin.documents.hide.cancel": "Cancel",
+  "admin.documents.already_done": "This was already done.",
+
+  // Admin — price change dialog (S-073)
+  "admin.documents.price.change_button": "Change price",
+  "admin.documents.price.dialog_title": "Change price",
+  "admin.documents.price.old_label": "Current price",
+  "admin.documents.price.new_label": "New price",
+  "admin.documents.price.new_placeholder": "Enter new price in LKR",
+  "admin.documents.price.confirm_button": "Confirm change",
+  "admin.documents.price.confirming": "Saving…",
+  "admin.documents.price.cancel": "Cancel",
+  "admin.documents.price.large_change_warning": "This changes the price by {pct}%. Please confirm.",
+  "admin.documents.price.large_change_confirm": "I confirm this large price change",
+  "admin.documents.price.mfa_label": "Authenticator code",
+  "admin.documents.price.mfa_placeholder": "6-digit code",
 } as const;
 
 export type MessageKey = keyof typeof en;
