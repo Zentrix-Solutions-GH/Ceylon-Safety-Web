@@ -445,12 +445,14 @@ INSERT INTO public.order_items (
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.bank_transfer_slips (
-  id, order_id, uploaded_by, file_key, status
+  id, order_id, uploaded_by, file_key, mime_type, size_bytes, status
 ) VALUES (
   '02000092-0000-0000-0000-000000000001',
   '02000090-0000-0000-0000-000000000001',
   '02000010-0000-0000-0000-000000000002',
   'slips/02000090-0000-0000-0000-000000000001/slip-dev.jpg',
+  'image/jpeg',
+  245760,
   'uploaded'
 ) ON CONFLICT (id) DO NOTHING;
 
