@@ -63,6 +63,7 @@ function makeSupabase(options: {
     }),
     _ordersUpdateSpy: ordersUpdateSpy,
     _ordersEqSpy: ordersChain.eq,
+    _eventsEqSpy: eventsChain.eq,
   };
   return sb;
 }
@@ -118,6 +119,13 @@ describe("reconcileCardPayments", () => {
     });
     const result = await reconcileCardPayments(sb as never);
     expect(result.ok).toBe(false);
+  });
+
+  it("P1: payment_events filtered by outcome='applied' (not 'success')", async () => {
+    const order = makeOrder();
+    const sb = makeSupabase({ pendingOrders: [order] });
+    await reconcileCardPayments(sb as never);
+    expect(sb._eventsEqSpy).toHaveBeenCalledWith("outcome", "applied");
   });
 
   it("AC6: log contains order numbers but not billing data", async () => {

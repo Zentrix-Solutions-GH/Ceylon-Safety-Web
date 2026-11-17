@@ -40,7 +40,7 @@ export async function getPendingCardOrdersOlderThan(
   const { data: successEvents, error: evtError } = await sb
     .from("payment_events")
     .select("order_id")
-    .eq("outcome", "success")
+    .eq("outcome", "applied")
     .in("order_id", orderIds);
 
   if (evtError) {

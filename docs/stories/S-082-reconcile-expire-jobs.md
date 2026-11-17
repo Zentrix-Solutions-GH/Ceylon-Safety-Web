@@ -42,6 +42,7 @@ Unpaid card orders do not stay open forever, and a payment whose notification ne
 ## Out of scope
 - `expire_bank_orders` (S-084). Owner digest and alert email (S-100). The admin order list (S-103).
 - Marking an order paid from a look-up result (not allowed; commerce 11 "listed for the admin").
+- **Scope cut:** `expire_pending_orders()` SQL function returns only an INT (number cancelled). AC6 says "counts and order numbers" but logging individual order numbers from an atomic bulk SQL update would require changing the function signature to `RETURNS TABLE(id uuid)`. Expire logs count only (`cancelled=N`); reconcile logs full order numbers. This is acceptable for the expire path where the cancelled IDs are deterministically derivable from the DB state.
 
 ## Assumptions accepted
 - Card order lifetime 2 hours and slow-payment 48 hours (M37, "to confirm").
@@ -152,7 +153,10 @@ check-public-pages: OK — checked 20 file(s), no violations.
 ```
 
 ## Review notes
-<!-- Filled in by reviewer agent -->
+
+- **P0** `lib/orders/reconcile.ts:43` — `.eq("outcome", "success")` uses a value that does not exist in the `payment_events_outcome_check` constraint. Valid values: `'applied'`, `'duplicate_ignored'`, `'rejected_mismatch'`, etc. — no `'success'`. Consequence: exclusion step silently becomes a no-op; every pending card order >15 min is alerted on regardless of payment status. Fix: change to `.eq("outcome", "applied")`. (full-review 2026-11-17)
+- **P1** `lib/orders/expire.ts:25` — logs count only (`cancelled=N`); AC6 specifies "counts and order numbers". SQL fn returns only INT so order numbers are unavailable. Either change SQL fn to `RETURNS TABLE(id uuid)` or document as a scope cut. (full-review 2026-11-17)
+- **P1** `app/api/cron/__tests__/reconcile.test.ts` — no assertion that `.eq("outcome", "applied")` was called on the payment_events chain. This gap allowed the P0 to pass all tests. Add `expect(eventsChain.eq).toHaveBeenCalledWith("outcome", "applied")` after fixing P0. (full-review 2026-11-17)
 
 ## After this merges, a user can:
 - Find that an unpaid card order they abandoned is cancelled after 2 hours, and that a slow-payment order is kept for 48 hours.
