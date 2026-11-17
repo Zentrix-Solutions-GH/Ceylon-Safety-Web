@@ -570,6 +570,10 @@ const en = {
   "auth.sign_in.panel.return_link": "← Return to Portal",
   "auth.sign_in.panel.remember_device": "Remember this device",
   "auth.sign_in.panel.ssl": "256-bit SSL",
+  "auth.sign_in.subtitle": "Enter your credentials to access your courses, statutory documents, and trainer network.",
+  "auth.sign_in.email_hint": "Work or Corporate",
+  "auth.sign_in.or_email": "Or, Sign in with Email",
+  "auth.sign_in.enterprise_tag": "Enterprise Commerce for Businesses",
 
   // --- sign-up form left panel ---
   "auth.sign_up.panel.tagline": "Join Sri Lanka’s safety community.",
@@ -579,6 +583,16 @@ const en = {
   "auth.sign_up.panel.portal_label": "Create Your Account",
   "auth.sign_up.panel.return_link": "← Return to Portal",
   "auth.sign_up.panel.ssl": "256-bit SSL",
+  "auth.sign_up.panel.feature_1": "Standard Compliance Guarantee & Certification",
+  "auth.sign_up.panel.feature_2": "Direct Access to Island-wide Certified Training Centres",
+  "auth.sign_up.panel.feature_3": "Standardised Site Inspection Reports & Checklists",
+  "auth.sign_up.panel.stat_trainers": "Co-Trainers",
+  "auth.sign_up.panel.stat_specialists": "Safety Specialists",
+  "auth.sign_up.subtitle": "Start your journey to safety officers, compliance managers, and certifications.",
+  "auth.sign_up.compliance_suffix": "and Ceylon Safety compliance guidelines.",
+  "auth.sign_up.strength.weak": "Weak password",
+  "auth.sign_up.strength.fair": "Fair password",
+  "auth.sign_up.strength.strong": "Strong password",
 
   // --- footer sections ---
   "footer.section.quick_links": "Quick Links",

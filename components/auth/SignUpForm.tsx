@@ -19,17 +19,17 @@ interface FieldErrors {
   terms?: string;
 }
 
-function getPasswordStrength(pw: string): { score: number; label: string; color: string } {
-  if (!pw) return { score: 0, label: "", color: "" };
+function getPasswordStrength(pw: string): { score: number; color: string } {
+  if (!pw) return { score: 0, color: "" };
   let score = 0;
   if (pw.length >= 8) score++;
   if (pw.length >= 12) score++;
   if (/[A-Z]/.test(pw)) score++;
   if (/[0-9]/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
-  if (score <= 1) return { score, label: "Weak", color: "bg-red-500" };
-  if (score <= 3) return { score, label: "Fair", color: "bg-yellow-500" };
-  return { score, label: "Strong", color: "bg-green-500" };
+  if (score <= 1) return { score, color: "bg-red-500" };
+  if (score <= 3) return { score, color: "bg-yellow-500" };
+  return { score, color: "bg-green-500" };
 }
 
 export function SignUpForm() {
@@ -173,9 +173,9 @@ export function SignUpForm() {
               {/* Feature list */}
               <div className="mb-6 space-y-3">
                 {[
-                  "Standard Compliance Guarantee & Certification",
-                  "Direct Access to Island-wide Certified Training Centres",
-                  "Standardised Site Inspection Reports & Checklists",
+                  t("auth.sign_up.panel.feature_1"),
+                  t("auth.sign_up.panel.feature_2"),
+                  t("auth.sign_up.panel.feature_3"),
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-2.5">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
@@ -188,13 +188,13 @@ export function SignUpForm() {
                 <div className="rounded-lg border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
                   <div className="text-2xl font-black text-white">1,240+</div>
                   <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/70">
-                    Co-Trainers
+                    {t("auth.sign_up.panel.stat_trainers")}
                   </div>
                 </div>
                 <div className="rounded-lg border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
                   <div className="text-2xl font-black text-white">10,000+</div>
                   <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/70">
-                    Safety Specialists
+                    {t("auth.sign_up.panel.stat_specialists")}
                   </div>
                 </div>
               </div>
@@ -218,7 +218,7 @@ export function SignUpForm() {
 
               <h1 className="text-3xl font-bold text-gray-900 mb-1">{t("auth.sign_up.heading")}</h1>
               <p className="text-sm text-gray-500 mb-7">
-                Start your journey to safety officers, compliance managers, and certifications.
+                {t("auth.sign_up.subtitle")}
               </p>
 
               {topError && (
@@ -326,7 +326,7 @@ export function SignUpForm() {
                         ))}
                       </div>
                       <p className={`mt-1 text-xs font-medium ${strength.score <= 1 ? "text-red-500" : strength.score <= 3 ? "text-yellow-600" : "text-green-600"}`}>
-                        {strength.label} password
+                        {t(strength.score <= 1 ? "auth.sign_up.strength.weak" : strength.score <= 3 ? "auth.sign_up.strength.fair" : "auth.sign_up.strength.strong")}
                       </p>
                     </div>
                   )}
@@ -380,7 +380,7 @@ export function SignUpForm() {
                       <Link href="/terms" className="font-medium text-primary hover:underline">{t("auth.sign_up.terms_link")}</Link>
                       {" "}{t("auth.sign_up.and")}{" "}
                       <Link href="/privacy" className="font-medium text-primary hover:underline">{t("auth.sign_up.privacy_link")}</Link>
-                      {" "}and Ceylon Safety compliance guidelines.
+                      {" "}{t("auth.sign_up.compliance_suffix")}
                     </span>
                   </label>
                   {fieldErrors.terms && <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.terms}</p>}

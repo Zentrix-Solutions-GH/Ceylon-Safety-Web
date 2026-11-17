@@ -209,7 +209,7 @@ export function SignInForm() {
 
               <h1 className="mb-1 text-3xl font-bold text-gray-900">{t("auth.sign_in.heading")}</h1>
               <p className="mb-7 text-sm text-gray-500">
-                Enter your credentials to access your courses, statutory documents, and trainer network.
+                {t("auth.sign_in.subtitle")}
               </p>
 
               {topError && (
@@ -244,7 +244,7 @@ export function SignInForm() {
                 </div>
                 <div className="relative flex justify-center">
                   <span className="bg-white px-3 text-xs font-medium uppercase tracking-widest text-gray-400">
-                    {t("auth.sign_in.or")} Sign in with Email
+                    {t("auth.sign_in.or_email")}
                   </span>
                 </div>
               </div>
@@ -255,7 +255,7 @@ export function SignInForm() {
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                       {t("auth.sign_in.email")}
                     </label>
-                    <span className="text-xs text-gray-400">Work or Corporate</span>
+                    <span className="text-xs text-gray-400">{t("auth.sign_in.email_hint")}</span>
                   </div>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -338,7 +338,7 @@ export function SignInForm() {
             {/* Bottom links */}
             <div className="mt-8 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-gray-400">
               <span className="flex items-center gap-1">
-                <Shield className="h-3 w-3 text-green-500" /> Enterprise Commerce for Businesses
+                <Shield className="h-3 w-3 text-green-500" /> {t("auth.sign_in.enterprise_tag")}
               </span>
               <span>&bull;</span>
               <Link href="/terms" className="hover:text-gray-600">Terms of Service</Link>
