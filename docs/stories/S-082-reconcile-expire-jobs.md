@@ -27,14 +27,17 @@ Unpaid card orders do not stay open forever, and a payment whose notification ne
 - [x] AC6: Logs contain counts and order numbers only, no billing data. Each run pings its heartbeat.
 
 ## Edge cases
-- [ ] EC1: A payment completes at the very moment the expiry job runs: the order lock makes one of them win; a late success after cancellation is handled by S-080 (granted and flagged `needs_review`).
-- [ ] EC2: PayHere has no status look-up for the client's account type (commerce 19 item 8): the job still lists and alerts; the admin checks the PayHere portal.
-- [ ] EC3: A buyer's slow-payment order is 47 hours old: left alone.
-- [ ] EC4: The job is called by cron-job.org instead of the host cron (hosting fallback): same behaviour, the secret header is the only authentication.
+- [ ] EC1: A payment completes at the very moment the expiry job runs: the order lock makes one of them win; a late success after cancellation is handled by S-080 (granted and flagged `needs_review`). **Not unit-testable without a real DB; verified by design — DB-level row lock is the guard.**
+- [x] EC2: PayHere has no status look-up for the client's account type (commerce 19 item 8): the job still lists and alerts; the admin checks the PayHere portal.
+- [x] EC3: A buyer's slow-payment order is 47 hours old: left alone.
+- [x] EC4: The job is called by cron-job.org instead of the host cron (hosting fallback): same behaviour, the secret header is the only authentication.
 
 ## Contract
-- Routes `app/api/cron/expire-pending-orders/route.ts`, `app/api/cron/reconcile-payments/route.ts`; database function `expire_pending_orders()` (S-017); optional `lib/payhere/status.ts` look-up adapter, only if the interface exists.
-- Types: `types/order.ts` (ReconcileResult).
+- Jobs are dispatched via the existing shared route `app/api/cron/[job]/route.ts` (registered in `lib/jobs/index.ts`). No new route files created.
+- New library files: `lib/orders/expire.ts`, `lib/orders/reconcile.ts`, `lib/jobs/expire-pending-orders.ts`, `lib/jobs/reconcile-payments.ts`.
+- DB migration: `supabase/migrations/20261117000001_expire-pending-orders.sql` — `expire_pending_orders()` SQL function.
+- `lib/payhere/status.ts` look-up adapter: **omitted** — PayHere status look-up unconfirmed for this merchant account (assumption accepted).
+- Types: `types/order.ts` (ReconcileResult), `types/database.ts` (expire_pending_orders function registration).
 
 ## Out of scope
 - `expire_bank_orders` (S-084). Owner digest and alert email (S-100). The admin order list (S-103).
@@ -48,11 +51,22 @@ Unpaid card orders do not stay open forever, and a payment whose notification ne
 ## Test plan
 | Test | Type | File |
 |---|---|---|
-| AC1 expiry, bank orders untouched | integration | `app/api/cron/__tests__/expire.test.ts` |
-| AC2 48-hour order and extended order survive | integration | `app/api/cron/__tests__/expire.test.ts` |
-| AC3 old pending order raises an alert; order never marked paid | integration | `app/api/cron/__tests__/reconcile.test.ts` |
-| AC5 idempotent second run | integration | `app/api/cron/__tests__/expire.test.ts` |
-| Wrong cron secret rejected | unit | `app/api/cron/__tests__/auth.test.ts` |
+| AC1 expiry, rpc called, count returned | unit | `app/api/cron/__tests__/expire.test.ts` |
+| AC1 error path (rpc fails → ok:false) | unit | `app/api/cron/__tests__/expire.test.ts` |
+| AC1 pending_verification guard (bank orders, expires_at=NULL → cancelled:0) | unit | `app/api/cron/__tests__/expire.test.ts` |
+| AC2 / EC3 48-hour, 47-hour and reuse-extended orders not cancelled | unit | `app/api/cron/__tests__/expire.test.ts` |
+| AC5 expire idempotent (second call → cancelled:0) | unit | `app/api/cron/__tests__/expire.test.ts` |
+| AC3 pending order raises alert with order number | unit | `app/api/cron/__tests__/reconcile.test.ts` |
+| AC3 no pending orders → alertCount:0 | unit | `app/api/cron/__tests__/reconcile.test.ts` |
+| AC3 never marks order paid (update spy) | unit | `app/api/cron/__tests__/reconcile.test.ts` |
+| AC3 orders query fails → ok:false | unit | `app/api/cron/__tests__/reconcile.test.ts` |
+| AC3 events query fails → ok:false | unit | `app/api/cron/__tests__/reconcile.test.ts` |
+| AC4 getPendingCardOrdersOlderThan returns matches | unit | `app/api/cron/__tests__/reconcile.test.ts` |
+| AC4 payment_method=card filter applied | unit | `app/api/cron/__tests__/reconcile.test.ts` |
+| AC5 reconcile idempotent | unit | `app/api/cron/__tests__/reconcile.test.ts` |
+| AC6 log contains order numbers, no billing data | unit | `app/api/cron/__tests__/reconcile.test.ts` |
+| EC2 / EC4 wrong cron secret rejected | unit | `app/api/cron/__tests__/auth.test.ts` |
+| pgTAP: expire_pending_orders() compiles; anon/authenticated blocked; service_role passes | db | `supabase/tests/` (**requires `supabase start`**) |
 
 ## Plan
 Prior art: grepped docs/ for expire_pending_orders, reconcile_payments, expires_at. Found commerce design v6 sections 4.3, 5A, 11, schema doc section 14.1 and infrastructure design section 9; this story implements the card-side rows (supersedes the first-draft S-016c).
@@ -100,9 +114,9 @@ Pre-existing failure: __tests__/components/admin/ArticleEditor/index.test.tsx
   Cause: localStorage.clear() is undefined (localStorage not available in this test env)
   Confirmed pre-existing: same 18 failures on dev before this branch's changes.
 
-New tests added by S-082:
-  ✓ app/api/cron/__tests__/expire.test.ts (4 tests)
-  ✓ app/api/cron/__tests__/reconcile.test.ts (8 tests)
+New tests added by S-082 (after fix commit ae05a5a):
+  ✓ app/api/cron/__tests__/expire.test.ts (7 tests)
+  ✓ app/api/cron/__tests__/reconcile.test.ts (10 tests — includes events-failure, AC6 log spy)
 
 ── pgTAP RLS suite ──
 ⚠ Supabase not running — skipping pgTAP tests
