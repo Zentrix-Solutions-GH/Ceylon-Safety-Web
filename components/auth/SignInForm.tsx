@@ -118,7 +118,7 @@ export function SignInForm() {
             <span className="leading-tight">
               <span className="block text-sm font-bold text-white">Ceylon Safety</span>
               <span className="block text-[10px] font-semibold uppercase tracking-widest text-white/50">
-                National Compliance Portal
+                {t("auth.sign_in.portal_label")}
               </span>
             </span>
           </Link>
@@ -152,7 +152,7 @@ export function SignInForm() {
                 </Link>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm">
                   <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-                  Secure connection
+                  {t("auth.sign_in.secure_connection")}
                 </span>
               </div>
 
@@ -341,20 +341,20 @@ export function SignInForm() {
                 <Shield className="h-3 w-3 text-green-500" /> {t("auth.sign_in.enterprise_tag")}
               </span>
               <span>&bull;</span>
-              <Link href="/terms" className="hover:text-gray-600">Terms of Service</Link>
+              <Link href="/terms" className="hover:text-gray-600">{t("auth.footer.terms")}</Link>
               <span>&bull;</span>
-              <Link href="/privacy" className="hover:text-gray-600">Privacy Policy</Link>
+              <Link href="/privacy" className="hover:text-gray-600">{t("auth.footer.privacy")}</Link>
               <span>&bull;</span>
-              <Link href="/disclaimer" className="hover:text-gray-600">Statutory Disclaimer</Link>
+              <Link href="/disclaimer" className="hover:text-gray-600">{t("auth.sign_in.footer.disclaimer")}</Link>
             </div>
           </div>
         </div>
 
         {/* Page footer */}
         <footer className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center text-xs text-white/40">
-          <span>&copy; {new Date().getFullYear()} Ceylon Safety Council. The Most Official Registry.</span>
+          <span>&copy; {new Date().getFullYear()} {t("auth.sign_in.footer.copyright")}</span>
           <span>&bull;</span>
-          <span>Designed &amp; Developed by <span className="font-semibold text-white/60">Zentrix Solutions</span></span>
+          <span>{t("auth.footer.attribution")} <span className="font-semibold text-white/60">{t("auth.footer.attribution_brand")}</span></span>
         </footer>
       </div>
     </div>

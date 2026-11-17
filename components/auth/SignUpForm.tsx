@@ -119,7 +119,7 @@ export function SignUpForm() {
             <span className="leading-tight">
               <span className="block text-sm font-bold text-white">Ceylon Safety</span>
               <span className="block text-[10px] font-semibold uppercase tracking-widest text-white/50">
-                National Compliance Portal
+                {t("auth.sign_up.portal_label")}
               </span>
             </span>
           </Link>
@@ -146,7 +146,7 @@ export function SignUpForm() {
               <div className="mb-6">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm">
                   <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-                  Official Sri Lanka Safety Registry
+                  {t("auth.sign_up.panel.badge")}
                 </span>
               </div>
 
@@ -202,7 +202,7 @@ export function SignUpForm() {
 
             <div className="relative z-10 flex items-center gap-2 px-7 pb-6 text-xs text-white/60">
               <Shield className="h-3.5 w-3.5 shrink-0" />
-              <span>Accredited under National Safety Standards Framework</span>
+              <span>{t("auth.sign_up.panel.accreditation")}</span>
             </div>
           </div>
 
@@ -212,7 +212,7 @@ export function SignUpForm() {
               <div className="flex items-center gap-2 mb-6">
                 <span className="h-2 w-2 rounded-full bg-primary" />
                 <span className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-                  Secure Portal Registration
+                  {t("auth.sign_up.panel.portal_label")}
                 </span>
               </div>
 
@@ -410,20 +410,20 @@ export function SignUpForm() {
             </div>
 
             <div className="mt-8 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-gray-400">
-              <Link href="/terms" className="hover:text-gray-600">Terms of Service</Link>
+              <Link href="/terms" className="hover:text-gray-600">{t("auth.footer.terms")}</Link>
               <span>•</span>
-              <Link href="/privacy" className="hover:text-gray-600">Privacy Policy</Link>
+              <Link href="/privacy" className="hover:text-gray-600">{t("auth.footer.privacy")}</Link>
               <span>•</span>
-              <Link href="/disclaimer" className="hover:text-gray-600">Compliance Notice</Link>
+              <Link href="/disclaimer" className="hover:text-gray-600">{t("auth.sign_up.footer.disclaimer")}</Link>
             </div>
           </div>
         </div>
 
         {/* Page footer */}
         <footer className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center text-xs text-white/40">
-          <span>&copy; {new Date().getFullYear()} Ceylon Safety Council. Verified Enterprise Security.</span>
+          <span>&copy; {new Date().getFullYear()} {t("auth.sign_up.footer.copyright")}</span>
           <span>&bull;</span>
-          <span>Designed &amp; Developed by <span className="font-semibold text-white/60">Zentrix Solutions</span></span>
+          <span>{t("auth.footer.attribution")} <span className="font-semibold text-white/60">{t("auth.footer.attribution_brand")}</span></span>
         </footer>
       </div>
     </div>

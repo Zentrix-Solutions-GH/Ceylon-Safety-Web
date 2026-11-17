@@ -580,7 +580,7 @@ const en = {
   "auth.sign_up.panel.description": "Access accredited safety documents, certified training courses, and connect with verified safety professionals across Sri Lanka.",
   "auth.sign_up.panel.badge_docs": "Safety Documents",
   "auth.sign_up.panel.badge_free": "To Register",
-  "auth.sign_up.panel.portal_label": "Create Your Account",
+  "auth.sign_up.panel.portal_label": "Secure Portal Registration",
   "auth.sign_up.panel.return_link": "← Return to Portal",
   "auth.sign_up.panel.ssl": "256-bit SSL",
   "auth.sign_up.panel.feature_1": "Standard Compliance Guarantee & Certification",
@@ -593,6 +593,21 @@ const en = {
   "auth.sign_up.strength.weak": "Weak password",
   "auth.sign_up.strength.fair": "Fair password",
   "auth.sign_up.strength.strong": "Strong password",
+
+  // --- auth top-bar + chrome ---
+  "auth.sign_in.portal_label": "National Compliance Portal",
+  "auth.sign_in.secure_connection": "Secure connection",
+  "auth.sign_in.footer.disclaimer": "Statutory Disclaimer",
+  "auth.sign_in.footer.copyright": "Ceylon Safety Council. The Most Official Registry.",
+  "auth.sign_up.portal_label": "National Compliance Portal",
+  "auth.sign_up.panel.badge": "Official Sri Lanka Safety Registry",
+  "auth.sign_up.panel.accreditation": "Accredited under National Safety Standards Framework",
+  "auth.sign_up.footer.disclaimer": "Compliance Notice",
+  "auth.sign_up.footer.copyright": "Ceylon Safety Council. Verified Enterprise Security.",
+  "auth.footer.terms": "Terms of Service",
+  "auth.footer.privacy": "Privacy Policy",
+  "auth.footer.attribution": "Designed & Developed by",
+  "auth.footer.attribution_brand": "Zentrix Solutions",
 
   // --- footer sections ---
   "footer.section.quick_links": "Quick Links",
