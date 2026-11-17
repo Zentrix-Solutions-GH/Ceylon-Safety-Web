@@ -4,10 +4,17 @@ import { listArticles } from "@/lib/articles/listArticles";
 import { listCategories } from "@/lib/articles/listCategories";
 import { ArticleFilters } from "@/components/articles/ArticleFilters";
 import { ArticleGrid } from "@/components/articles/ArticleGrid";
+import { ArticleCardUI } from "@/components/articles/ArticleCard";
 import { t } from "@/messages/en";
 import type { ArticleRange } from "@/types/article";
 
 const VALID_RANGES: ArticleRange[] = ["newest", "week", "month"];
+const MEDIA_BASE = process.env.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL ?? "";
+
+function coverUrl(key: string | null): string | undefined {
+  if (!key) return undefined;
+  return `${MEDIA_BASE}/${key}`;
+}
 
 interface ArticlesPageProps {
   searchParams: Promise<Record<string, string>>;
@@ -36,13 +43,17 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   const category = params.category || undefined;
   const isFiltered = range !== "newest" || Boolean(category);
 
-  const [listResult, categories] = await Promise.all([
+  const [listResult, categories, popularResult] = await Promise.all([
     listArticles({ range, category }),
     listCategories(),
+    listArticles({ range: "month" }),
   ]);
 
   const items = listResult.ok ? listResult.data.items : [];
   const next = listResult.ok ? listResult.data.next : null;
+  const popularItems = popularResult.ok
+    ? popularResult.data.items.slice(0, 5)
+    : [];
 
   const isEmpty = items.length === 0;
   const emptyMessage = isFiltered
@@ -50,30 +61,113 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
     : t("articles.empty.all");
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="mb-6 text-3xl font-bold text-gray-900">{t("articles.page.title")}</h1>
-
-      <ArticleFilters categories={categories} />
-
-      {isEmpty ? (
-        <div className="mt-10 flex flex-col items-center gap-4 text-center text-gray-500">
-          <p>{emptyMessage}</p>
-          {isFiltered && (
-            <Link
-              href="/articles"
-              className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
-            >
-              {t("articles.filter.clear")}
-            </Link>
-          )}
-        </div>
-      ) : (
-        <ArticleGrid
-          initialItems={items}
-          initialNext={next}
-          range={range}
-          category={category}
+    <div>
+      {/* Knowledge Hub Hero Banner */}
+      <div className="relative overflow-hidden bg-gray-900">
+        {/* Background overlay pattern */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-30"
+          style={{ backgroundImage: "url('/images/safety-hero-bg.jpg')" }}
+          aria-hidden="true"
         />
+        <div className="absolute inset-0 bg-gradient-to-r from-red-900/80 to-gray-900/60" aria-hidden="true" />
+
+        <div className="relative mx-auto max-w-6xl px-4 py-14 text-white">
+          <div className="max-w-2xl">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-red-300">
+              Ceylon Safety
+            </p>
+            <h1 className="mb-3 text-4xl font-extrabold tracking-tight sm:text-5xl">
+              {t("articles.hub.title")}
+            </h1>
+            <p className="mb-8 text-sm text-gray-300 sm:text-base">
+              {t("articles.hub.subtitle")}
+            </p>
+
+            {/* Hero search bar */}
+            <form
+              action="/search"
+              method="get"
+              className="flex overflow-hidden rounded-lg shadow-lg"
+            >
+              <input type="hidden" name="scope" value="articles" />
+              <input
+                type="search"
+                name="q"
+                placeholder={t("articles.filter.search.placeholder")}
+                className="flex-1 bg-white px-5 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="shrink-0 bg-red-600 px-6 py-3.5 text-sm font-bold text-white hover:bg-red-700 transition-colors"
+              >
+                {t("articles.filter.search.button")}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters + Grid */}
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <ArticleFilters categories={categories} />
+
+        {/* Result count */}
+        {!isEmpty && (
+          <p className="mb-4 text-sm text-gray-500">
+            {t("articles.results.count", { count: String(items.length + (next ? "+": "")) })}
+          </p>
+        )}
+
+        {isEmpty ? (
+          <div className="mt-10 flex flex-col items-center gap-4 text-center text-gray-500">
+            <p>{emptyMessage}</p>
+            {isFiltered && (
+              <Link
+                href="/articles"
+                className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
+              >
+                {t("articles.filter.clear")}
+              </Link>
+            )}
+          </div>
+        ) : (
+          <ArticleGrid
+            initialItems={items}
+            initialNext={next}
+            range={range}
+            category={category}
+          />
+        )}
+      </div>
+
+      {/* Popular Last Month Section */}
+      {popularItems.length > 0 && (
+        <div className="border-t border-gray-100 bg-gray-50 py-10">
+          <div className="mx-auto max-w-6xl px-4">
+            <h2 className="mb-6 text-lg font-bold text-gray-900">
+              {t("articles.popular.heading")}
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              {popularItems.map((item) => (
+                <ArticleCardUI
+                  key={item.id}
+                  slug={item.slug}
+                  title={item.title}
+                  excerpt={item.excerpt}
+                  coverUrl={coverUrl(item.coverImageKey)}
+                  coverAlt={item.coverImageAlt ?? undefined}
+                  categoryName={item.category.name}
+                  authorName={item.authorName}
+                  publishedAt={item.publishedAt}
+                  likeCount={item.likeCount}
+                  commentCount={item.commentCount}
+                  compact
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

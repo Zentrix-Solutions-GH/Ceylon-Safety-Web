@@ -14,6 +14,8 @@ export interface ArticleCardUIProps {
   publishedAt: string;
   likeCount: number;
   commentCount: number;
+  /** Compact variant used in Popular Last Month strip */
+  compact?: boolean;
 }
 
 function formatDate(iso: string): string {
@@ -35,9 +37,39 @@ export function ArticleCardUI({
   publishedAt,
   likeCount,
   commentCount,
+  compact = false,
 }: ArticleCardUIProps) {
   const imgSrc = coverUrl ?? PLACEHOLDER;
   const imgAlt = coverAlt ?? title;
+
+  if (compact) {
+    return (
+      <Link
+        href={`/articles/${slug}`}
+        className="group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md"
+      >
+        <div className="relative aspect-video overflow-hidden bg-gray-100">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imgSrc}
+            alt={imgAlt}
+            loading="lazy"
+            className="h-full w-full object-cover transition group-hover:scale-105"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = PLACEHOLDER; }}
+          />
+        </div>
+        <div className="flex flex-1 flex-col gap-1 p-3">
+          {categoryName && (
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-red-600">
+              {categoryName}
+            </span>
+          )}
+          <h3 className="line-clamp-2 text-xs font-bold text-gray-900 leading-snug">{title}</h3>
+          <p className="mt-auto text-[10px] text-gray-400">{formatDate(publishedAt)}</p>
+        </div>
+      </Link>
+    );
+  }
 
   return (
     <Link
