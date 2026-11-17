@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { publicConfig } from "@/lib/config.public";
 import { listDocumentPickerItemsAction } from "@/lib/documents/actions/listDocumentPickerItemsAction";
 import { t } from "@/messages/en";
@@ -24,11 +24,17 @@ export default function DocumentPickerModal({ onPick, onClose }: DocumentPickerM
   const [items, setItems] = useState<DocumentPickerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(false);
 
   const fetchItems = useCallback(async (q: string) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setError(false);
-    const result = await listDocumentPickerItemsAction({ kind: "document", search: q || undefined });
+    const result = await listDocumentPickerItemsAction({ search: q || undefined });
+    if (controller.signal.aborted) return;
     if (result.ok) {
       setItems(result.items);
     } else {
@@ -38,11 +44,18 @@ export default function DocumentPickerModal({ onPick, onClose }: DocumentPickerM
     setLoading(false);
   }, []);
 
+  // Initial fetch on mount only
   useEffect(() => {
     fetchItems("");
+    return () => { abortRef.current?.abort(); };
   }, [fetchItems]);
 
+  // Debounced search — skip the initial render to avoid double-fetching ""
   useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
     const timer = setTimeout(() => { fetchItems(search); }, 300);
     return () => clearTimeout(timer);
   }, [search, fetchItems]);

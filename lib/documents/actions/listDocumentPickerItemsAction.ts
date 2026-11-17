@@ -5,7 +5,6 @@ import { listDocumentPickerItems } from "@/lib/documents/public";
 import type { ListDocumentPickerItemsResult } from "@/types/document";
 
 export async function listDocumentPickerItemsAction(input: {
-  kind: "document";
   search?: string;
   page?: number;
 }): Promise<ListDocumentPickerItemsResult> {

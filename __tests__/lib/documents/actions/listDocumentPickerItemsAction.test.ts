@@ -1,4 +1,4 @@
-// S-077: listDocumentPickerItemsAction — auth guard tests (S1, S2, S17)
+// S-077: listDocumentPickerItemsAction — auth guard tests (S1, S2, S3, S17)
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -43,39 +43,20 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-// ─── S1: unauthenticated ─────────────────────────────────────────────────────
+// ─── S1 / S2 / S17: auth denial propagated ───────────────────────────────────
+// requireStaff already distinguishes the three failure modes internally.
+// The action's contract is: any {ok:false} from requireStaff short-circuits
+// and prevents any call to listDocumentPickerItems.
 
-describe("listDocumentPickerItemsAction — S1: unauthenticated", () => {
-  it("returns not_allowed when no session exists", async () => {
-    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" });
+describe.each([
+  ["S1: unauthenticated",    { ok: false as const, code: "not_allowed" as const }],
+  ["S2: wrong role",         { ok: false as const, code: "not_allowed" as const }],
+  ["S17: suspended user",    { ok: false as const, code: "not_allowed" as const }],
+])("listDocumentPickerItemsAction — %s", (_label, authResult) => {
+  it("returns not_allowed and never calls listDocumentPickerItems", async () => {
+    vi.mocked(requireStaff).mockResolvedValue(authResult);
 
-    const result = await listDocumentPickerItemsAction({ kind: "document" });
-
-    expect(result).toEqual({ ok: false, code: "not_allowed" });
-    expect(listDocumentPickerItems).not.toHaveBeenCalled();
-  });
-});
-
-// ─── S2: wrong role ───────────────────────────────────────────────────────────
-
-describe("listDocumentPickerItemsAction — S2: wrong role (customer)", () => {
-  it("returns not_allowed when caller is not staff", async () => {
-    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" });
-
-    const result = await listDocumentPickerItemsAction({ kind: "document" });
-
-    expect(result).toEqual({ ok: false, code: "not_allowed" });
-    expect(listDocumentPickerItems).not.toHaveBeenCalled();
-  });
-});
-
-// ─── S17: suspended user ──────────────────────────────────────────────────────
-
-describe("listDocumentPickerItemsAction — S17: suspended user", () => {
-  it("returns not_allowed when staff account is suspended", async () => {
-    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" });
-
-    const result = await listDocumentPickerItemsAction({ kind: "document" });
+    const result = await listDocumentPickerItemsAction({});
 
     expect(result).toEqual({ ok: false, code: "not_allowed" });
     expect(listDocumentPickerItems).not.toHaveBeenCalled();
@@ -85,11 +66,10 @@ describe("listDocumentPickerItemsAction — S17: suspended user", () => {
 // ─── S3: malformed input ─────────────────────────────────────────────────────
 
 describe("listDocumentPickerItemsAction — S3: malformed input", () => {
-  it("still calls requireStaff and returns ok:false when auth fails, regardless of input shape", async () => {
+  it("returns not_allowed when auth fails regardless of input shape", async () => {
     vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" });
 
-    // Pass a deliberately wrong kind value at runtime
-    const result = await listDocumentPickerItemsAction({ kind: "document", search: undefined, page: undefined });
+    const result = await listDocumentPickerItemsAction({ search: undefined, page: undefined });
 
     expect(result).toEqual({ ok: false, code: "not_allowed" });
     expect(listDocumentPickerItems).not.toHaveBeenCalled();
@@ -99,7 +79,7 @@ describe("listDocumentPickerItemsAction — S3: malformed input", () => {
     vi.mocked(requireStaff).mockResolvedValue({ ok: true, user: STAFF_USER });
     vi.mocked(listDocumentPickerItems).mockResolvedValue(PICKER_RESULT);
 
-    const result = await listDocumentPickerItemsAction({ kind: "document" });
+    const result = await listDocumentPickerItemsAction({});
 
     expect(result.ok).toBe(true);
     expect(listDocumentPickerItems).toHaveBeenCalledWith({ search: undefined, page: undefined });
@@ -113,7 +93,7 @@ describe("listDocumentPickerItemsAction — happy path", () => {
     vi.mocked(requireStaff).mockResolvedValue({ ok: true, user: STAFF_USER });
     vi.mocked(listDocumentPickerItems).mockResolvedValue(PICKER_RESULT);
 
-    const result = await listDocumentPickerItemsAction({ kind: "document" });
+    const result = await listDocumentPickerItemsAction({});
 
     expect(result).toEqual(PICKER_RESULT);
     expect(requireStaff).toHaveBeenCalledWith("articles.*");
@@ -124,7 +104,7 @@ describe("listDocumentPickerItemsAction — happy path", () => {
     vi.mocked(requireStaff).mockResolvedValue({ ok: true, user: STAFF_USER });
     vi.mocked(listDocumentPickerItems).mockResolvedValue(PICKER_RESULT);
 
-    await listDocumentPickerItemsAction({ kind: "document", search: "safety", page: 2 });
+    await listDocumentPickerItemsAction({ search: "safety", page: 2 });
 
     expect(listDocumentPickerItems).toHaveBeenCalledWith({ search: "safety", page: 2 });
   });

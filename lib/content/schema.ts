@@ -119,6 +119,12 @@ function validateNode(
     if (!attrs.node_id || !attrs.document_id || !attrs.slug || !attrs.title) {
       return { ok: false, reason: `document_card block is missing required attrs (node_id, document_id, slug, title)` };
     }
+    if (typeof attrs.price !== "number" || attrs.price < 0) {
+      return { ok: false, reason: `document_card block has invalid price (must be a non-negative number)` };
+    }
+    if (attrs.previewUrl !== undefined && (typeof attrs.previewUrl !== "string" || attrs.previewUrl.includes("://"))) {
+      return { ok: false, reason: `document_card previewUrl must be a relative path, not an absolute URL` };
+    }
   }
 
   // Validate marks on text nodes

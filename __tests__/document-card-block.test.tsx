@@ -134,9 +134,7 @@ describe("DocumentPickerModal — AC4: lists published documents", () => {
     // Wait for async fetch
     await screen.findByText("Safety Checklist");
 
-    expect(vi.mocked(listDocumentPickerItemsAction)).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "document" }),
-    );
+    expect(vi.mocked(listDocumentPickerItemsAction)).toHaveBeenCalled();
   });
 
   it("calls onPick with correct data when a document is selected", async () => {

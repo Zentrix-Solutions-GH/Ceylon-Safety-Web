@@ -122,6 +122,37 @@ describe("validateBody — AC7: document_card block type", () => {
     expect(result.ok).toBe(false);
     expect((result as { ok: false; reason: string }).reason).toMatch(/missing required attrs/i);
   });
+
+  it("rejects a document_card block with a negative price", () => {
+    const result = validateBody(makeBody({
+      content: [{ type: "document_card", attrs: { node_id: "n1", document_id: "d1", slug: "s", title: "T", price: -1 } }],
+    }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; reason: string }).reason).toMatch(/invalid price/i);
+  });
+
+  it("rejects a document_card block with a non-number price", () => {
+    const result = validateBody(makeBody({
+      content: [{ type: "document_card", attrs: { node_id: "n1", document_id: "d1", slug: "s", title: "T", price: "free" } }],
+    }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; reason: string }).reason).toMatch(/invalid price/i);
+  });
+
+  it("rejects a document_card block with an absolute previewUrl", () => {
+    const result = validateBody(makeBody({
+      content: [{ type: "document_card", attrs: { node_id: "n1", document_id: "d1", slug: "s", title: "T", price: 100, previewUrl: "https://evil.com/track.gif" } }],
+    }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; reason: string }).reason).toMatch(/relative path/i);
+  });
+
+  it("accepts a document_card block with a relative previewUrl", () => {
+    const result = validateBody(makeBody({
+      content: [{ type: "document_card", attrs: { node_id: "n1", document_id: "d1", slug: "s", title: "T", price: 100, previewUrl: "docs/doc-1/preview.jpg" } }],
+    }));
+    expect(result.ok).toBe(true);
+  });
 });
 
 // ─── S-077: extractRefs tracks document_card nodes ───────────────────────────

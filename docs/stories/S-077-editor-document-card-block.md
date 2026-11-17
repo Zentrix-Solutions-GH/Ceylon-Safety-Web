@@ -122,7 +122,9 @@ New S-077 tests: 24 pass (0 fail)
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `components/admin/ArticleEditor/DocumentPickerModal.tsx:28–39` — Race condition: no AbortController; stale in-flight request can overwrite fresh results. Add AbortController to `fetchItems`. (full-review 2026-11-17)
+- **P1** `lib/content/schema.ts:117–121` — `price` attr not validated in `validateBody`; zero/negative price passes schema and is stored/rendered verbatim. Add `typeof attrs.price !== "number" || attrs.price < 0` guard. (full-review 2026-11-17)
+- **P1** `lib/content/schema.ts:116–122` / `lib/content/render.tsx:197–200` — `previewUrl` stored in article body rendered as `<img src>` with no origin check in public renderer. Validate it is a relative path or https URL matching mediaCdnUrl in `validateBody`. (full-review 2026-11-17)
 
 ## After this merges
 
