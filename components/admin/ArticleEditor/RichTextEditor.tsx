@@ -8,6 +8,7 @@ import Link from "@tiptap/extension-link";
 import { Mark, Node, type Extensions } from "@tiptap/core";
 import ImageBlock from "@/components/admin/ArticleEditor/blocks/ImageBlock";
 import VideoBlock from "@/components/admin/ArticleEditor/blocks/VideoBlock";
+import DocumentCardBlock from "@/components/admin/ArticleEditor/blocks/DocumentCardBlock";
 import { t, type MessageKey } from "@/messages/en";
 import { SCHEMA_VERSION, MAX_LINK_LENGTH, MAX_TOP_BLOCKS, MAX_LIST_DEPTH, ALLOWED_FONTS, type AllowedFont, validateLinkHref } from "@/lib/content/schema";
 
@@ -126,6 +127,54 @@ const VideoExtension = Node.create({
   },
 });
 
+// DocumentCard node view — renders DocumentCardBlock inside the Tiptap canvas (AC2)
+export function DocumentCardNodeView({ node, deleteNode }: NodeViewProps) {
+  const { document_id, slug, title, price, previewUrl } = node.attrs as {
+    document_id: string;
+    slug: string;
+    title: string;
+    price: number;
+    previewUrl?: string;
+  };
+  return (
+    <NodeViewWrapper>
+      <DocumentCardBlock
+        documentId={document_id}
+        slug={slug}
+        title={title ?? ""}
+        price={price ?? 0}
+        previewUrl={previewUrl}
+        onRemove={deleteNode}
+      />
+    </NodeViewWrapper>
+  );
+}
+
+const DocumentCardExtension = Node.create({
+  name: "document_card",
+  group: "block",
+  atom: true,
+  addAttributes() {
+    return {
+      node_id: { default: null },
+      document_id: { default: "" },
+      slug: { default: "" },
+      title: { default: "" },
+      price: { default: 0 },
+      previewUrl: { default: null },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "figure[data-document-card-node]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["figure", { "data-document-card-node": "true", ...HTMLAttributes }];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(DocumentCardNodeView);
+  },
+});
+
 // Module-level constant — not recreated on render (prevents editor teardown on re-render)
 const EXTENSIONS: Extensions = [
   StarterKit.configure({ heading: { levels: [2, 3] } }),
@@ -137,6 +186,7 @@ const EXTENSIONS: Extensions = [
   NamedFont,
   ImageExtension,
   VideoExtension,
+  DocumentCardExtension,
 ];
 
 const STYLES: Array<{ value: "paragraph" | "h2" | "h3" | "blockquote"; labelKey: MessageKey }> = [
@@ -212,17 +262,28 @@ export interface VideoAttrs {
   status: "ready" | "hidden" | "deleted";
 }
 
+export interface DocumentCardAttrs {
+  node_id: string;
+  document_id: string;
+  slug: string;
+  title: string;
+  price: number;
+  previewUrl?: string;
+}
+
 interface RichTextEditorProps {
   initialContent?: object;
   onChange: (json: object) => void;
   onEditorReady?: (helpers: {
     insertImage: (attrs: ImageAttrs) => void;
     insertVideo: (attrs: VideoAttrs) => void;
+    insertDocument: (attrs: DocumentCardAttrs) => void;
   }) => void;
   onInsertVideoClick?: () => void;
+  onInsertDocumentClick?: () => void;
 }
 
-export function RichTextEditor({ initialContent, onChange, onEditorReady, onInsertVideoClick }: RichTextEditorProps) {
+export function RichTextEditor({ initialContent, onChange, onEditorReady, onInsertVideoClick, onInsertDocumentClick }: RichTextEditorProps) {
   const [pasteToast, setPasteToast] = useState<string | null>(null);
   const [isAtBlockLimit, setIsAtBlockLimit] = useState(false);
   const [linkInputOpen, setLinkInputOpen] = useState(false);
@@ -319,6 +380,9 @@ export function RichTextEditor({ initialContent, onChange, onEditorReady, onInse
       },
       insertVideo: (attrs: VideoAttrs) => {
         editor.chain().focus().insertContent({ type: "video", attrs }).run();
+      },
+      insertDocument: (attrs: DocumentCardAttrs) => {
+        editor.chain().focus().insertContent({ type: "document_card", attrs }).run();
       },
     });
   }, [editor]);
@@ -487,6 +551,17 @@ export function RichTextEditor({ initialContent, onChange, onEditorReady, onInse
             onClick={onInsertVideoClick}
           >
             {t("editor.toolbar.insert_video")}
+          </button>
+        )}
+
+        {onInsertDocumentClick && (
+          <button
+            type="button"
+            aria-label={t("editor.toolbar.insert_document")}
+            disabled={isAtBlockLimit}
+            onClick={onInsertDocumentClick}
+          >
+            {t("editor.toolbar.insert_document")}
           </button>
         )}
       </div>

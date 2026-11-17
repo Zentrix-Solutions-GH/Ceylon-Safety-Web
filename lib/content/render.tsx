@@ -17,8 +17,10 @@ import type {
   ListItemNode,
   ImageNode,
   VideoNode,
+  DocumentCardNode,
   ResolvedVideoNode,
 } from "@/types/article";
+import DocumentSpot from "@/components/articles/DocumentSpot";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -184,8 +186,21 @@ function renderBlock(node: ArticleNode, key: number): React.ReactNode {
     case "video":
       return renderVideo(node, key);
     case "document_spot":
-      // Not shown until S-071 resolves document cards
       return null;
+    case "document_card": {
+      const dc = node as DocumentCardNode;
+      const { slug, title, price, previewUrl } = dc.attrs;
+      if (!slug || !title) return null;
+      return (
+        <DocumentSpot
+          key={key}
+          slug={slug}
+          title={title}
+          price={price}
+          previewUrl={previewUrl}
+        />
+      );
+    }
     case "course_spot":
       // Release 3
       return null;
