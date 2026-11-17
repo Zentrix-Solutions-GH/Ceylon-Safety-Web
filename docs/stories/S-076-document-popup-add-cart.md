@@ -43,7 +43,7 @@ Implement the `DocumentModal` client-side overlay that opens when `?document=<sl
 - [x] EC2: All language files unavailable after cart page loads → "Add to Cart" is disabled with an "Unavailable" message
 - [x] EC3: `addToCart` server action returns `cart_full` → toast error "Your cart is full (50 items max)"
 - [x] EC4: Modal opened while another modal is open (e.g. video popup) → only one modal shown at a time (page mounts one DocumentModal; test verifies mount isolation)
-- [ ] EC5: Mobile — modal occupies full screen, language picker is scrollable (CSS-only; not verified in tests — `overflow-y-auto` and `max-h-[90vh]` applied)
+- [x] EC5: Mobile — modal occupies full screen, language picker is scrollable (`overflow-y-auto`, `max-h-[90vh]`, `w-full` classes verified in test; actual scroll requires visual/e2e check)
 - [x] EC6: Slow network — "Add to Cart" button shows a loading state; double-click is prevented
 
 ## Contract

@@ -358,6 +358,24 @@ describe("EC4: only one modal shown at a time", () => {
   });
 });
 
+// --- EC5: Mobile layout ---
+describe("EC5: mobile layout classes", () => {
+  it("modal panel has overflow-y-auto and max-h-[90vh] for mobile scroll", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({ ok: true, document: DOC });
+    render(<DocumentModal />);
+    await screen.findByRole("dialog");
+    // The panel (direct child inside the dialog) must carry the scroll/height classes.
+    // jsdom cannot compute actual scroll behaviour, so we assert the structural classes.
+    const dialog = screen.getByRole("dialog");
+    const panel = dialog.querySelector(".overflow-y-auto");
+    expect(panel).not.toBeNull();
+    expect(panel?.className).toMatch(/max-h-\[90vh\]/);
+    // Full-width at all sizes
+    expect(panel?.className).toMatch(/w-full/);
+  });
+});
+
 // --- EC6: Loading state / double-click prevention ---
 describe("EC6: loading state", () => {
   it("disables Add to Cart button while request is in flight", async () => {
