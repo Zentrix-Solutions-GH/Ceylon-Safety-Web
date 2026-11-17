@@ -41,6 +41,12 @@ export function ArticleFilters({ categories }: ArticleFiltersProps) {
     router.replace(buildUrl(range, currentCategory));
   }
 
+  const rangeLabels: Record<ArticleRange, string> = {
+    newest: t("articles.filter.range.newest"),
+    week: t("articles.filter.range.week"),
+    month: t("articles.filter.range.month"),
+  };
+
   return (
     <div className="mb-6 space-y-3">
       {/* Category pills */}
@@ -77,27 +83,20 @@ export function ArticleFilters({ categories }: ArticleFiltersProps) {
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
           {t("articles.filter.range.label")}:
         </span>
-        {VALID_RANGES.map((r) => {
-          const labels: Record<ArticleRange, string> = {
-            newest: t("articles.filter.range.newest"),
-            week: t("articles.filter.range.week"),
-            month: t("articles.filter.range.month"),
-          };
-          return (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setRange(r)}
-              className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
-                currentRange === r
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {labels[r]}
-            </button>
-          );
-        })}
+        {VALID_RANGES.map((r) => (
+          <button
+            key={r}
+            type="button"
+            onClick={() => setRange(r)}
+            className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+              currentRange === r
+                ? "bg-gray-900 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            {rangeLabels[r]}
+          </button>
+        ))}
       </div>
     </div>
   );

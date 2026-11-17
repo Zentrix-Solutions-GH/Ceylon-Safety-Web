@@ -146,6 +146,24 @@ describe("SignUpForm — AC2: error codes", () => {
     });
   });
 
+  it("EC3: mismatched passwords shows error next to confirm field without calling signUp", async () => {
+    const user = userEvent.setup();
+    render(<SignUpForm />);
+
+    await user.type(screen.getByLabelText(/first name/i), "A");
+    await user.type(screen.getByLabelText(/last name/i), "B");
+    await user.type(screen.getByLabelText(/email/i), "a@b.com");
+    await user.type(screen.getByLabelText("Password"), "StrongPass123!");
+    await user.type(screen.getByLabelText("Re-enter password"), "Different999!");
+    await user.click(screen.getByRole("checkbox", { name: /agree/i }));
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Passwords do not match")).toBeInTheDocument()
+    );
+    expect(mockSignUp).not.toHaveBeenCalled();
+  });
+
   it("EC1: captcha_failed shows mapped message", async () => {
     mockSignUp.mockResolvedValue({ ok: false, code: "captcha_failed" });
     const user = userEvent.setup();

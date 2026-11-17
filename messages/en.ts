@@ -86,7 +86,6 @@ const en = {
   "auth.sign_in.submitting": "Signing in…",
   "auth.sign_in.no_account": "Don't have an account?",
   "auth.sign_in.sign_up_link": "Create one",
-  "auth.sign_in.or": "or",
   "auth.sign_in.google_button": "Continue with Google",
   "auth.sign_in.social_app_hint": "For Google sign-in, open this page in your phone's normal browser",
   "auth.sign_in.copy_link": "Copy link",
