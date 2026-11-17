@@ -66,6 +66,16 @@ describe("expirePendingOrders", () => {
     expect(result.cancelled).toBe(0);
   });
 
+  it("AC6: log contains only count — no billing data", async () => {
+    const sb = makeSupabase({ rpcData: 2 });
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    await expirePendingOrders(sb as never);
+    const allOutput = logSpy.mock.calls.map((c) => c.join(" ")).join(" ");
+    expect(allOutput).toContain("2");
+    expect(allOutput).not.toMatch(/amount|email|name|phone|address/i);
+    logSpy.mockRestore();
+  });
+
   it("AC5 (idempotency): second call with no expired orders returns cancelled:0", async () => {
     const sb = makeSupabase({ rpcData: 0 });
     const r1 = await expirePendingOrders(sb as never);
