@@ -198,11 +198,12 @@ SELECT has_column('public', 'bank_transfer_slips', 'uploaded_at',      'AC2: ban
 
 -- EC7: reject without reason refused
 SELECT throws_ok(
-  $$INSERT INTO public.bank_transfer_slips (order_id, uploaded_by, file_key, status)
+  $$INSERT INTO public.bank_transfer_slips (order_id, uploaded_by, file_key, mime_type, size_bytes, status)
     VALUES (
       '12000001-0000-0000-0000-000000000001',
       'a1100000-0000-0000-0000-000000000001',
       'slips/12/slip-bad.pdf',
+      'application/pdf', 1024,
       'rejected'
     )$$,
   '23514', NULL,
@@ -212,26 +213,27 @@ SELECT throws_ok(
 -- AC2: multiple slips per order allowed (re-upload scenario)
 DO $$
 BEGIN
-  INSERT INTO public.bank_transfer_slips (id, order_id, uploaded_by, file_key, status)
+  INSERT INTO public.bank_transfer_slips (id, order_id, uploaded_by, file_key, mime_type, size_bytes, status)
   VALUES
     ('17000001-0000-0000-0000-000000000001',
      '12000001-0000-0000-0000-000000000001',
      'a1100000-0000-0000-0000-000000000001',
-     'slips/12/slip-a.jpg', 'uploaded'),
+     'slips/12/slip-a.jpg', 'image/jpeg', 51200, 'uploaded'),
     ('17000001-0000-0000-0000-000000000002',
      '12000001-0000-0000-0000-000000000001',
      'a1100000-0000-0000-0000-000000000001',
-     'slips/12/slip-b.jpg', 'uploaded');
+     'slips/12/slip-b.jpg', 'image/jpeg', 51200, 'uploaded');
 END $$;
 SELECT ok(true, 'AC2: multiple slips per order allowed');
 
 -- AC2: file_key NOT NULL UNIQUE
 SELECT throws_ok(
-  $$INSERT INTO public.bank_transfer_slips (order_id, uploaded_by, file_key)
+  $$INSERT INTO public.bank_transfer_slips (order_id, uploaded_by, file_key, mime_type, size_bytes)
     VALUES (
       '12000001-0000-0000-0000-000000000001',
       'a1100000-0000-0000-0000-000000000001',
-      'slips/12/slip-a.jpg'
+      'slips/12/slip-a.jpg',
+      'image/jpeg', 51200
     )$$,
   '23505', NULL,
   'AC2: file_key UNIQUE enforced on bank_transfer_slips'
