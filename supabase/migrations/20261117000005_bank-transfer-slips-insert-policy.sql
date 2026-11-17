@@ -3,15 +3,16 @@
 -- Without it, authenticated users cannot insert rows despite the server-side
 -- ownership checks in uploadBankSlip.
 
-CREATE POLICY slips_insert_own ON public.bank_transfer_slips
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    uploaded_by = (SELECT auth.uid())
-    AND order_id IN (
-      SELECT id FROM public.orders
-      WHERE user_id = (SELECT auth.uid())
-        AND status = 'pending_verification'
-        AND payment_provider = 'bank_transfer'
-    )
-  );
+DO $$ BEGIN
+  CREATE POLICY slips_insert_own ON public.bank_transfer_slips
+    FOR INSERT TO authenticated
+    WITH CHECK (
+      uploaded_by = (SELECT auth.uid())
+      AND order_id IN (
+        SELECT id FROM public.orders
+        WHERE user_id = (SELECT auth.uid())
+          AND status = 'pending_verification'
+          AND payment_provider = 'bank_transfer'
+      )
+    );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

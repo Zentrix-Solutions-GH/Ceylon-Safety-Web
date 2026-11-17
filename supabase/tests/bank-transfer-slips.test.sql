@@ -10,7 +10,7 @@
 --   Slip B1:          e9400000-0000-0000-0000-000000000002  (belongs to Buyer B)
 
 BEGIN;
-SELECT plan(8);
+SELECT plan(11);
 
 -- ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -153,6 +153,33 @@ SELECT throws_ok(
   '42501',
   NULL,
   'buyer B cannot insert a slip on another buyer''s order (RLS violation)'
+);
+
+RESET ROLE;
+
+-- ── 8. buyer_slip_summary: file_key column absent from view ──────────────────
+
+SELECT hasnt_column(
+  'public', 'buyer_slip_summary', 'file_key',
+  'buyer_slip_summary does not expose file_key column'
+);
+
+-- ── 9–10. buyer_slip_summary: cross-buyer row isolation via RLS ───────────────
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims = '{"sub": "e9100000-0000-0000-0000-000000000001", "role": "authenticated"}';
+
+SELECT is(
+  (SELECT count(*)::int FROM public.buyer_slip_summary),
+  2,  -- slip A1 + the one inserted in test 6 (slip A2)
+  'buyer A sees only their own rows in buyer_slip_summary'
+);
+
+SELECT is(
+  (SELECT count(*)::int FROM public.buyer_slip_summary
+    WHERE id = 'e9400000-0000-0000-0000-000000000002'),
+  0,
+  'buyer A cannot read buyer B slip via buyer_slip_summary'
 );
 
 RESET ROLE;

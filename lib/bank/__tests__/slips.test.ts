@@ -34,6 +34,7 @@ import { putObject, deleteObject } from "@/lib/r2/storage";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { validateSlipFile } from "@/lib/bank/validate";
 import { uploadBankSlip } from "@/lib/bank/slips";
+import { cancelPendingOrder } from "@/lib/orders/create";
 
 const mockRequireActiveAccount = vi.mocked(requireActiveAccount);
 const mockCreateClient = vi.mocked(createSupabaseServerClient);
@@ -247,7 +248,10 @@ describe("uploadBankSlip — AC8: atomicity", () => {
     mockCreateClient.mockResolvedValue(db as never);
     const result = await uploadBankSlip(fakeOrderId, makeFormData());
     expect(result).toMatchObject({ ok: false });
-    expect(mockDeleteObject).toHaveBeenCalledOnce();
+    expect(mockDeleteObject).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.stringContaining(fakeOrderId),
+    );
   });
 
   it("does not call deleteObject when R2 put fails (nothing was stored)", async () => {
@@ -321,5 +325,49 @@ describe("uploadBankSlip — EC4: concurrent uploads", () => {
 });
 
 // ─── AC7: cancel refused after slip ──────────────────────────────────────────
-// Covered in lib/orders/__tests__/cancel.test.ts:90-92 (slip_uploaded → not_allowed, EC8).
-// No duplicate test here — the cancel logic lives in cancelPendingOrder, not uploadBankSlip.
+
+describe("uploadBankSlip + cancelPendingOrder — AC7: cancel refused with slip", () => {
+  it("cancelPendingOrder returns not_allowed after a slip has been uploaded for the order", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    const db = {
+      from: vi.fn((table: string) => {
+        if (table === "orders") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { id: fakeOrderId, user_id: fakeUser.id, status: "pending_verification", payment_provider: "bank_transfer" },
+              error: null,
+            }),
+          };
+        }
+        if (table === "bank_transfer_slips") {
+          return { insert: vi.fn().mockResolvedValue({ error: null }) };
+        }
+        return {};
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: { action: "slip_uploaded" }, error: null }),
+    };
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const uploadResult = await uploadBankSlip(fakeOrderId, makeFormData());
+    expect(uploadResult).toMatchObject({ ok: true });
+
+    const cancelResult = await cancelPendingOrder(fakeOrderId);
+    expect(cancelResult).toMatchObject({ ok: false, code: "not_allowed" });
+  });
+});
+
+// ─── AC9: no logging of slip data ────────────────────────────────────────────
+
+describe("uploadBankSlip — AC9: no logging of slip data", () => {
+  it("does not log file key, mime type, or order id on success", async () => {
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    const db = makeDb();
+    mockCreateClient.mockResolvedValue(db as never);
+    await uploadBankSlip(fakeOrderId, makeFormData());
+    expect(consoleSpy).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+});

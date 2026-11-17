@@ -42,7 +42,18 @@ export async function uploadBankSlip(
   if (order.payment_provider !== "bank_transfer") return { ok: false, code: "not_found" };
   if (order.status !== "pending_verification") return { ok: false, code: "not_allowed" };
 
-  // Rate limit per order (AC5): 10 uploads per hour.
+  // Extract file from FormData.
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { ok: false, code: "validation_failed" };
+
+  // Validate file content type and size (AC2) before consuming the rate limit.
+  const validateResult = await validateSlipFile(file, SLIP_MAX_BYTES);
+  if (!validateResult.ok) return validateResult;
+  if (!validateResult.data) return { ok: false, code: "validation_failed" };
+  const { mimeType, sizeBytes, bytes } = validateResult.data;
+
+  // Rate limit per order (AC5): 10 uploads per hour — checked after validation so
+  // malformed or oversized requests do not consume quota.
   const rlResult = await checkRateLimit({
     limitName: "slip_upload",
     key: `order:${orderId}`,
@@ -52,20 +63,11 @@ export async function uploadBankSlip(
   });
   if (!rlResult.ok) return { ok: false, code: "rate_limited" };
 
-  // Extract file from FormData.
-  const file = formData.get("file");
-  if (!(file instanceof File)) return { ok: false, code: "validation_failed" };
-
-  // Validate file content type and size (AC2).
-  const validateResult = await validateSlipFile(file, SLIP_MAX_BYTES);
-  if (!validateResult.ok) return validateResult;
-  const { mimeType, sizeBytes, bytes } = validateResult.data!;
-
   // Generate server-controlled key (AC3) — the original filename is discarded.
   const ext = mimeType === "application/pdf" ? "pdf" : mimeType === "image/png" ? "png" : "jpg";
   const slipId = crypto.randomUUID();
   const cfg = r2Config();
-  if (!cfg) return { ok: false, code: "unknown" };
+  if (!cfg) return { ok: false, code: "upload_failed" };
   const key = `slips/${orderId}/${slipId}.${ext}`;
 
   // Upload to private bucket (AC3). If this fails, nothing was written — no cleanup needed.
