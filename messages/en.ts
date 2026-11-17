@@ -77,7 +77,7 @@ const en = {
   "customer.header_label": "Customer navigation",
 
   // --- sign-in screen (S-042) ---
-  "auth.sign_in.heading": "Sign in to your account",
+  "auth.sign_in.heading": "Sign in",
   "auth.sign_in.email": "Email address",
   "auth.sign_in.password": "Password",
   "auth.sign_in.forgot_password": "Forgot password?",
@@ -137,8 +137,9 @@ const en = {
   "auth.sign_up.heading": "Create your account",
   "auth.sign_up.first_name": "First name",
   "auth.sign_up.last_name": "Last name",
-  "auth.sign_up.email": "Email address",
+  "auth.sign_up.email": "Work or personal email",
   "auth.sign_up.password": "Password",
+  "auth.sign_up.confirm_password": "Confirm password",
   "auth.sign_up.terms": "I agree to the",
   "auth.sign_up.terms_link": "Terms of Service",
   "auth.sign_up.and": "and",
