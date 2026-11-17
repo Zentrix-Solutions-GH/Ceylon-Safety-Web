@@ -17,6 +17,9 @@ export function DocumentsPageClient({ docs, mediaBase }: DocumentsPageClientProp
   const searchParams = useSearchParams();
   const scrollRef = useRef<number>(0);
 
+  // EC3: detect whether any filter is active for the empty-state message
+  const isFiltered = Boolean(searchParams.get("category") || searchParams.get("type"));
+
   // EC2: only open modal for slugs that exist in the current docs list
   const knownSlugs = new Set(docs.map((d) => d.slug));
 
@@ -43,7 +46,7 @@ export function DocumentsPageClient({ docs, mediaBase }: DocumentsPageClientProp
 
   return (
     <>
-      <DocumentGrid docs={docs} mediaBase={mediaBase} onOpen={onOpen} />
+      <DocumentGrid docs={docs} mediaBase={mediaBase} onOpen={onOpen} isFiltered={isFiltered} />
       <DocumentModal slug={modalSlug} onClose={onClose} />
     </>
   );

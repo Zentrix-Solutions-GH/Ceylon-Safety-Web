@@ -217,7 +217,12 @@ import { DocumentGrid } from "@/components/documents/DocumentGrid";
 describe("DocumentGrid", () => {
   it("EC1: renders empty state when no documents", () => {
     render(<DocumentGrid docs={[]} mediaBase={MEDIA_BASE} onOpen={vi.fn()} />);
-    expect(screen.getByText(/no documents/i)).toBeInTheDocument();
+    expect(screen.getByText(/no documents are available/i)).toBeInTheDocument();
+  });
+
+  it("EC3: renders filtered empty state when isFiltered=true", () => {
+    render(<DocumentGrid docs={[]} mediaBase={MEDIA_BASE} onOpen={vi.fn()} isFiltered={true} />);
+    expect(screen.getByText(/no documents match/i)).toBeInTheDocument();
   });
 
   it("AC1: renders a card for each document", () => {

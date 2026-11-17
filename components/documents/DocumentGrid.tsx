@@ -8,13 +8,14 @@ interface DocumentGridProps {
   docs: PublicDocumentCard[];
   mediaBase: string;
   onOpen: (slug: string) => void;
+  isFiltered?: boolean;
 }
 
-export function DocumentGrid({ docs, mediaBase, onOpen }: DocumentGridProps) {
+export function DocumentGrid({ docs, mediaBase, onOpen, isFiltered = false }: DocumentGridProps) {
   if (docs.length === 0) {
     return (
       <div className="mt-10 flex flex-col items-center gap-4 py-16 text-center text-gray-500">
-        <p>{t("documents.empty.all")}</p>
+        <p>{isFiltered ? t("documents.empty.filtered") : t("documents.empty.all")}</p>
       </div>
     );
   }
