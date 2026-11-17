@@ -1,11 +1,11 @@
 ---
 id: S-076
 title: Document popup + language + locked preview + Add to cart
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-076-document-popup-add-cart
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/97
 depends_on: [S-074, S-075]
 reqs: [REQ-055, REQ-058, REQ-059, REQ-060, REQ-060b, REQ-060c, REQ-060d, REQ-044, REQ-044d]
 ---
