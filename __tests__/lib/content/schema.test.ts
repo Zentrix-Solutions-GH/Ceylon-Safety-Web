@@ -154,6 +154,14 @@ describe("validateBody — AC7: document_card block type", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("rejects a document_card block with a leading-slash previewUrl (would cause double-slash CDN URL)", () => {
+    const result = validateBody(makeBody({
+      content: [{ type: "document_card", attrs: { node_id: "n1", document_id: "d1", slug: "s", title: "T", price: 100, previewUrl: "/docs/doc-1/preview.jpg" } }],
+    }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; reason: string }).reason).toMatch(/relative path/i);
+  });
+
   it("rejects a document_card block with a protocol-relative previewUrl", () => {
     const result = validateBody(makeBody({
       content: [{ type: "document_card", attrs: { node_id: "n1", document_id: "d1", slug: "s", title: "T", price: 100, previewUrl: "//evil.com/track.gif" } }],

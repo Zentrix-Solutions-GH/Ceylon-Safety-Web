@@ -125,7 +125,7 @@ function validateNode(
     if (attrs.previewUrl !== undefined && (
       typeof attrs.previewUrl !== "string" ||
       attrs.previewUrl.includes("://") ||
-      attrs.previewUrl.startsWith("//") ||
+      attrs.previewUrl.startsWith("/") ||
       attrs.previewUrl.startsWith(".")
     )) {
       return { ok: false, reason: `document_card previewUrl must be a relative path, not an absolute URL` };
