@@ -5,6 +5,7 @@ import { testJob } from "./test";
 import { replayPaymentEventsJob } from "./replay-payment-events";
 import { expirePendingOrdersJob } from "./expire-pending-orders";
 import { reconcilePaymentsJob } from "./reconcile-payments";
+import { expireBankOrdersJob } from "./expire-bank-orders";
 
 export type JobHandler = () => Promise<{ ok: boolean }>;
 
@@ -14,6 +15,7 @@ export const JOB_REGISTRY: Record<string, JobHandler> = {
   "replay-payment-events": replayPaymentEventsJob,
   "expire-pending-orders": expirePendingOrdersJob,
   "reconcile-payments": reconcilePaymentsJob,
+  "expire-bank-orders": expireBankOrdersJob,
 };
 
 // Constant-time string comparison — prevents timing side-channel on the secret.
