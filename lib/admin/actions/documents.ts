@@ -199,7 +199,7 @@ const DETAIL_COLUMNS = `
   document_files(kind, language, sort_order, status, is_current)
 `;
 
-export const DOCUMENTS_PAGE_SIZE = 25;
+const DOCUMENTS_PAGE_SIZE = 25;
 
 // ---------------------------------------------------------------------------
 // listDocuments (AC1)

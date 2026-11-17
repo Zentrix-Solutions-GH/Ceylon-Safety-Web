@@ -177,8 +177,14 @@ export function DocumentForm({ mode, document: doc, categories }: Props) {
     if (coverPreview) URL.revokeObjectURL(coverPreview);
     const preview = URL.createObjectURL(file);
     setCoverPreview(preview);
-    const variants = await resizeImage(file);
-    await uploadMedia(variants, file.type as AllowedImageMime);
+    try {
+      const variants = await resizeImage(file);
+      await uploadMedia(variants, file.type as AllowedImageMime);
+    } catch {
+      URL.revokeObjectURL(preview);
+      setCoverPreview(null);
+      setFormError(t("admin.documents.form_error_upload_failed"));
+    }
   }
 
   const pageTitle =
@@ -339,7 +345,7 @@ export function DocumentForm({ mode, document: doc, categories }: Props) {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={coverPreview ?? publicUrl(coverImageKey!)}
-              alt="Cover preview"
+              alt={t("admin.documents.form_cover_preview_alt")}
               className="mb-2 h-32 w-auto rounded-md object-cover"
             />
           )}
@@ -357,7 +363,7 @@ export function DocumentForm({ mode, document: doc, categories }: Props) {
             </p>
           )}
           {uploadStatus === "uploading" && (
-            <p className="mt-1 text-xs text-muted-foreground">Uploading…</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("admin.documents.form_cover_uploading")}</p>
           )}
         </div>
 

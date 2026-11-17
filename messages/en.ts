@@ -671,6 +671,8 @@ const en = {
   "admin.documents.form_page_count_placeholder": "Number of pages (optional)",
   "admin.documents.form_preview_pages_label": "Preview pages",
   "admin.documents.form_cover_label": "Cover image",
+  "admin.documents.form_cover_preview_alt": "Cover preview",
+  "admin.documents.form_cover_uploading": "Uploading…",
   "admin.documents.form_price_label": "Price (LKR)",
   "admin.documents.form_price_placeholder": "Whole number, e.g. 1500",
   "admin.documents.form_price_readonly_note": "Change the price from the document page",

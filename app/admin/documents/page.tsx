@@ -17,6 +17,7 @@ type SearchParams = {
 
 const VALID_STATUSES: DocumentStatus[] = ["draft", "published", "hidden"];
 const VALID_KINDS: DocKind[] = ["checklist", "safety_sign", "toolbox_talk"];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function AdminDocumentsPage({
   searchParams,
@@ -38,7 +39,7 @@ export default async function AdminDocumentsPage({
     listDocuments({
       status,
       docKind,
-      categoryId: params.category,
+      categoryId: params.category && UUID_RE.test(params.category) ? params.category : undefined,
       search: params.search,
       page,
     }),

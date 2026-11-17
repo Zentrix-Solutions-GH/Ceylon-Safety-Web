@@ -139,6 +139,16 @@ S-072 own gate: ESLint ✓  TypeScript ✓  New tests: 21/21 ✓
 
 ## Review notes
 
+Round 2 (/full-review 2026-11-16, APPROVE WITH FOLLOW-UPS, score 78/100):
+- **P0** `components/admin/__tests__/DocumentForm.test.tsx` — `focusFirstError` moves `document.activeElement` but no test asserts it. Add assertion on `document.activeElement` after failed submit. (follow-up)
+- **P0** `e2e/admin-documents.spec.ts` — entirely absent; story test plan requires axe/keyboard test (AC9) and create-then-edit e2e. (follow-up)
+- **P1** `components/admin/DocumentForm.tsx:174` — `handleCoverChange` had no try/catch around `resizeImage`; uncaught error leaves orphaned object URL. Fixed in this round.
+- **P1** `components/admin/__tests__/DocumentsPageClient.test.tsx` — does not exist; `DocumentsPageClient` has zero unit tests. (follow-up)
+- **P2** `lib/admin/actions/documents.ts:202` — `export const DOCUMENTS_PAGE_SIZE` in a `'use server'` barrel caused build failure. Fixed: removed export.
+- **P2** `lib/media/publicUrl.ts` — imported `lib/config` (server-only); client components using `publicUrl` broke the build. Fixed: imports `lib/config.public` instead.
+- **P2** `components/admin/DocumentForm.tsx` — hardcoded `alt="Cover preview"` and `"Uploading…"` bypass messages/en.ts. Fixed.
+- **P2** `app/admin/documents/page.tsx` — `params.category` passed without UUID validation. Fixed.
+
 Round 1 (/full-review 2026-11-14, REQUEST CHANGES, score 80/100):
 - **P1** `components/admin/DocumentForm.tsx` — broken cover image on edit: `coverImageKey` truthy + `coverPreview` null rendered `src=""`. Fixed: `publicUrl(coverImageKey!)` as fallback src; added `useEffect` cleanup + revoke-before-create in `handleCoverChange`.
 - **P1** `app/admin/documents/page.tsx` — infinite redirect loop on DB error: unknown error redirected back to self. Fixed: all `!listResult.ok` paths now redirect to `/admin`.
