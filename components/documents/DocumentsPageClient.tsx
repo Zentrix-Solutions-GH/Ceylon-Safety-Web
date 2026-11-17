@@ -51,13 +51,6 @@ export function DocumentsPageClient({ docs, mediaBase, allSlugs }: DocumentsPage
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
-  function onClose() {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("document");
-    const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }
-
   return (
     <DocumentGrid docs={docs} mediaBase={mediaBase} onOpen={onOpen} isFiltered={isFiltered} />
   );
