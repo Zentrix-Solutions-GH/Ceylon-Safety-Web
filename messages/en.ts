@@ -211,6 +211,16 @@ const en = {
   "editor.picker.error": "Could not load videos. Please try again.",
   "editor.picker.title": "Insert video",
   "editor.picker.close": "Close",
+  "editor.doc_picker.title": "Insert document card",
+  "editor.doc_picker.search_placeholder": "Search documents…",
+  "editor.doc_picker.loading": "Loading…",
+  "editor.doc_picker.no_documents": "No published documents yet.",
+  "editor.doc_picker.no_documents_link": "Go to Documents",
+  "editor.doc_picker.error": "Could not load documents. Please try again.",
+  "editor.doc_picker.close": "Close",
+  "editor.toolbar.insert_document": "Insert document card",
+  "editor.document_card.remove": "Remove document card",
+  "editor.document_card.view_label": "View document",
   "editor.image.alt_label": "Alt text",
   "editor.image.alt_placeholder": "Describe the image",
   "editor.image.decorative_label": "This image is decorative",
@@ -717,6 +727,30 @@ const en = {
   "admin.documents.hide.cancel": "Cancel",
   "admin.documents.already_done": "This was already done.",
 
+  // Public — documents catalogue page (S-074)
+  "documents.page.title": "Safety Documents",
+  "documents.page.description": "Browse and download health & safety documents including checklists, safety signs, and toolbox talks.",
+  "documents.filter.category.label": "Category",
+  "documents.filter.category.all": "All categories",
+  "documents.filter.type.label": "Type",
+  "documents.filter.type.all": "All types",
+  "documents.filter.type.checklist": "Checklist",
+  "documents.filter.type.safety_sign": "Safety Sign",
+  "documents.filter.type.toolbox_talk": "Toolbox Talk",
+  "documents.filter.clear": "Clear filters",
+  "documents.filter.search.placeholder": "Search documents…",
+  "documents.filter.search.label": "Search documents",
+  "documents.filter.search.button": "Search",
+  "documents.empty.all": "No documents are available yet. Check back soon.",
+  "documents.empty.filtered": "No documents match your current filters.",
+  "documents.card.price": "LKR {price}",
+  "documents.card.pages": "{n} pages",
+  "documents.card.downloads": "{n} downloads",
+  "documents.card.unavailable": "Currently unavailable",
+  "documents.modal.close": "Close document preview",
+  "documents.modal.loading": "Loading document…",
+  "documents.modal.label": "Document preview",
+
   // Admin — price change dialog (S-073)
   "admin.documents.price.change_button": "Change price",
   "admin.documents.price.dialog_title": "Change price",
@@ -730,6 +764,34 @@ const en = {
   "admin.documents.price.large_change_confirm": "I confirm this large price change",
   "admin.documents.price.mfa_label": "Authenticator code",
   "admin.documents.price.mfa_placeholder": "6-digit code",
+
+  // --- DocumentModal (S-076) ---
+  "document_modal.close": "Close",
+  "document_modal.loading": "Loading document…",
+  "document_modal.aria_label": "{title}",
+  "document_modal.cover_alt": "{title} cover",
+  "document_modal.preview_placeholder_alt": "Preview not available",
+  "document_modal.price": "LKR {price}",
+  "document_modal.add_to_cart": "Add to Cart",
+  "document_modal.adding": "Adding…",
+  "document_modal.buy_now": "Buy Now",
+  "document_modal.buying": "Processing…",
+  "document_modal.unavailable_label": "Unavailable",
+  "document_modal.unavailable_message": "This document is no longer available.",
+  "document_modal.toast.added": "Added to cart",
+  "document_modal.toast.already_in_cart": "Already in your cart",
+  "document_modal.toast.cart_full": "Your cart is full (50 items max)",
+  "document_modal.toast.unavailable": "This document is no longer available",
+
+  // --- LanguagePicker (S-076) ---
+  "language_picker.label": "Choose language",
+  "language_picker.en": "English",
+  "language_picker.si": "Sinhala",
+  "language_picker.ta": "Tamil",
+
+  // --- LockedPreview (S-076) ---
+  "locked_preview.alt": "Locked preview of {title}",
+  "locked_preview.placeholder_alt": "No preview available",
 } as const;
 
 export type MessageKey = keyof typeof en;

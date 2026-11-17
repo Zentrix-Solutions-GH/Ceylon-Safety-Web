@@ -18,6 +18,7 @@ export type ArticleNode =
   | ImageNode
   | VideoNode
   | DocumentSpotNode
+  | DocumentCardNode
   | CourseSpotNode
   | AdSlotNode;
 
@@ -70,6 +71,18 @@ export interface VideoNode {
 export interface DocumentSpotNode {
   type: "document_spot";
   attrs: { node_id: string; document_id: string };
+}
+
+export interface DocumentCardNode {
+  type: "document_card";
+  attrs: {
+    node_id: string;
+    document_id: string;
+    slug: string;
+    title: string;
+    price: number;
+    previewUrl?: string;
+  };
 }
 
 export interface CourseSpotNode {
