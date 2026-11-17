@@ -160,6 +160,9 @@ check-public-pages: OK — checked 20 file(s), no violations.
 - **P1** `supabase/migrations/20261117000001_expire-pending-orders.sql:7` — `release_coupon_use` is never called in the function body. AC1 says "release_coupon_use is called (no-op in Release 1)". The comment falsely claims the hook is present. Fix: add `PERFORM release_coupon_use(o.id);` per row (create empty stub function), or formally scope-cut and remove the misleading comment. (full-review 2026-11-17)
 - **P1** `app/api/cron/__tests__/reconcile.test.ts` — no assertion on `.eq("status", "pending")` in `getPendingCardOrdersOlderThan` tests; filter is mock-invisible. (full-review 2026-11-17)
 - **P1** `app/api/cron/__tests__/reconcile.test.ts` — no assertion on `.lt("created_at", cutoff)` time-arithmetic in `getPendingCardOrdersOlderThan`; core ">15 min" requirement is untested at unit level. (full-review 2026-11-17)
+- **P0** `supabase/tests/expire-pending-orders.test.sql` — pgTAP had 0 correctness cases; plan mismatch (plan(9) but only 8 assertions); INSERT used wrong column names (`total_price` instead of `total_cents`, missing `order_number`/`subtotal_cents`). Fixed in commit bdffb3d: 7 valid plans, 3 correctness cases, correct schema columns, unique e8-prefix UUIDs. (abevicrama review 2026-11-17)
+- **P1** `app/api/cron/__tests__/expire.test.ts` — missing AC6 log-privacy assertion. Fixed in commit bdffb3d: added test verifying count is logged and no PII (amount/email/name/phone) appears in output. (abevicrama review 2026-11-17)
+- **P1** No partial index for the reconcile query (`status='pending' AND payment_method='card' AND created_at < $1`). Fixed in commit bdffb3d: `migration/20261117000003_idx-orders-pending-card.sql` adds `idx_orders_pending_card_created`. (abevicrama review 2026-11-17)
 
 ## After this merges, a user can:
 - Find that an unpaid card order they abandoned is cancelled after 2 hours, and that a slow-payment order is kept for 48 hours.
