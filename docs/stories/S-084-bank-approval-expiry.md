@@ -1,11 +1,12 @@
 ---
 id: S-084
 title: Bank approval backend — approve, reject, second approval, expiry job
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-084-bank-approval-expiry
-pr: ~
+pr: "102"
+pr_url: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/102
 depends_on: [S-038, S-083]
 reqs: [REQ-154b, REQ-154c, REQ-144, REQ-150]
 ---
@@ -20,19 +21,19 @@ Staff can safely turn a verified bank slip into a paid order. Approval grants th
 - REQ-154c (OPEN, Q72): who checks and how fast, the wait before expiry, what to do for a wrong amount. The wait is a setting (see Assumptions); the wrong-amount case is the admin's decision (reject with a reason, or approve only if the amount is right) and is not coded as a rule.
 
 ## Acceptance criteria
-- [ ] AC1: `getBankTransferQueue()` (needs `bank_transfers.review`) lists `pending_verification` orders that have an `uploaded` slip, oldest first, with order number, buyer name, the amount to check and slips waiting for a second approval shown separately. Staff without the permission get `not_allowed`.
-- [ ] AC2: `/api/bank-slip/[slipId]` (admin only, `requireStaff('bank_transfers.review')`) returns a short-lived signed link (about 60 seconds) to the private file, with `no-store`; every open writes no personal data to logs.
-- [ ] AC3: `approveBankOrder(orderId, slipId, code)` needs `bank_transfers.review` and a fresh authenticator code (step-up helper, S-038; a correct code stays valid 5 minutes for further money actions). Without a fresh code it returns `mfa_required`.
-- [ ] AC4: Self-approval is blocked: the call is refused with `not_allowed` if the order's buyer is the staff member's own account, or the buyer's email or phone equals the staff member's own email or phone (S3, M7).
-- [ ] AC5: A slip for an order above LKR 25,000 (2,500,000 cents) needs a second approval by a different staff account. The first approval writes the audit event `bank_transfer.first_approve`, shows the slip as "waiting second approval" and leaves the order `pending_verification`. The same account giving the second approval is refused with `not_allowed`. The second approval completes the payment. (With one Admin, the Super Admin is the second approver.)
-- [ ] AC6: The final approval, in ONE transaction: slip `accepted` with reviewer and time, order `paid` with `paid_at` and `payment_method = 'bank_transfer'`, entitlements created exactly as in the card path (`lib/orders/fulfil.ts`, S-080: one per line, `download_limit` from `default_download_limit`, `purchase_count` up, cart lines removed), audit event `bank_transfer.approve`. A failure rolls everything back and the admin sees an error and presses approve again.
-- [ ] AC7: Approving twice, or two staff approving at once, changes nothing the second time: the second caller gets `validation_failed` with reason `already_done`.
-- [ ] AC8: `rejectBankOrder(orderId, slipId, reason, code)`: reason required (`validation_failed` otherwise); slip becomes `rejected` with reviewer, time and `rejection_reason`; the order stays `pending_verification`; audit event `bank_transfer.reject`; a `bank_rejected` email row is queued for the buyer (sent by S-088). The buyer may upload again while the order has not expired.
-- [ ] AC9: `rejectAndCancelBankOrder(orderId, reason, code)`: order `cancelled` (`cancel_reason` from the reason), coupon use released (no-op in Release 1), audit event `bank_transfer.reject`, buyer informed by the same queued email.
-- [ ] AC10: `reopenBankOrder(orderId, note, code)`: an `expired`-cancelled bank order goes back to `pending_verification` so a late approval is possible; note required; audit event `bank_transfer.reopen`.
-- [ ] AC11: `/api/cron/expire-bank-orders` runs daily (secret header, heartbeat): for `pending_verification` orders it sends a warning (queued `bank_expiring` email row, once, recording `bank_expiry_warned_at`) 1 day before the end of the wait, and cancels the order with reason `expired` when it is `bank_order_expiry_days` old (setting, default 7, counted from creation) without approval, releasing the coupon use. The days come from the settings `bank_order_expiry_days` and `bank_order_warning_days`. Orders with a slip waiting for a second approval are not cancelled while staff are mid-review (flagged in the daily summary instead).
-- [ ] AC12: All actions are limited to 10 per minute per staff person for approvals and rejections and write one audit row each. Nothing is cached.
-- [ ] AC13: The email rows are written to `email_logs` with status `queued` and the right `related_type`/`related_id`; this story sends no email itself (S-088 sends queued rows).
+- [x] AC1: `getBankTransferQueue()` (needs `bank_transfers.review`) lists `pending_verification` orders that have an `uploaded` slip, oldest first, with order number, buyer name, the amount to check and slips waiting for a second approval shown separately. Staff without the permission get `not_allowed`.
+- [x] AC2: `/api/bank-slip/[slipId]` (admin only, `requireStaff('bank_transfers.review')`) returns a short-lived signed link (about 60 seconds) to the private file, with `no-store`; every open writes no personal data to logs.
+- [x] AC3: `approveBankOrder(orderId, slipId, code)` needs `bank_transfers.review` and a fresh authenticator code (step-up helper, S-038; a correct code stays valid 5 minutes for further money actions). Without a fresh code it returns `mfa_required`.
+- [x] AC4: Self-approval is blocked: the call is refused with `not_allowed` if the order's buyer is the staff member's own account, or the buyer's email or phone equals the staff member's own email or phone (S3, M7).
+- [x] AC5: A slip for an order above LKR 25,000 (2,500,000 cents) needs a second approval by a different staff account. The first approval writes the audit event `bank_transfer.first_approve`, shows the slip as "waiting second approval" and leaves the order `pending_verification`. The same account giving the second approval is refused with `not_allowed`. The second approval completes the payment. (With one Admin, the Super Admin is the second approver.)
+- [x] AC6: The final approval, in ONE transaction: slip `accepted` with reviewer and time, order `paid` with `paid_at` and `payment_method = 'bank_transfer'`, entitlements created exactly as in the card path (`lib/orders/fulfil.ts`, S-080: one per line, `download_limit` from `default_download_limit`, `purchase_count` up, cart lines removed), audit event `bank_transfer.approve`. A failure rolls everything back and the admin sees an error and presses approve again.
+- [x] AC7: Approving twice, or two staff approving at once, changes nothing the second time: the second caller gets `validation_failed` with reason `already_done`.
+- [x] AC8: `rejectBankOrder(orderId, slipId, reason, code)`: reason required (`validation_failed` otherwise); slip becomes `rejected` with reviewer, time and `rejection_reason`; the order stays `pending_verification`; audit event `bank_transfer.reject`; a `bank_rejected` email row is queued for the buyer (sent by S-088). The buyer may upload again while the order has not expired.
+- [x] AC9: `rejectAndCancelBankOrder(orderId, reason, code)`: order `cancelled` (`cancel_reason` from the reason), coupon use released (no-op in Release 1), audit event `bank_transfer.reject`, buyer informed by the same queued email.
+- [x] AC10: `reopenBankOrder(orderId, note, code)`: an `expired`-cancelled bank order goes back to `pending_verification` so a late approval is possible; note required; audit event `bank_transfer.reopen`.
+- [x] AC11: `/api/cron/expire-bank-orders` runs daily (secret header, heartbeat): for `pending_verification` orders it sends a warning (queued `bank_expiring` email row, once, recording `bank_expiry_warned_at`) 1 day before the end of the wait, and cancels the order with reason `expired` when it is `bank_order_expiry_days` old (setting, default 7, counted from creation) without approval, releasing the coupon use. The days come from the settings `bank_order_expiry_days` and `bank_order_warning_days`. Orders with a slip waiting for a second approval are not cancelled while staff are mid-review (flagged in the daily summary instead).
+- [x] AC12: All actions are limited to 10 per minute per staff person for approvals and rejections and write one audit row each. Nothing is cached.
+- [x] AC13: The email rows are written to `email_logs` with status `queued` and the right `related_type`/`related_id`; this story sends no email itself (S-088 sends queued rows).
 
 ## Edge cases
 - [ ] EC1: A role is removed while the admin has the screen open: the next call is refused.
