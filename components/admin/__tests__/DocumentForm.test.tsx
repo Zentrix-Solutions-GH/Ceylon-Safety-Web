@@ -14,7 +14,7 @@ const mockSaveDocument = vi.fn();
 const mockPush = vi.fn();
 const mockReplace = vi.fn();
 
-vi.mock("@/lib/admin/actions", () => ({
+vi.mock("@/lib/admin/actions/document-save", () => ({
   saveDocument: (...args: unknown[]) => mockSaveDocument(...args),
 }));
 
