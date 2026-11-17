@@ -3,7 +3,6 @@
 import { useRef, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { DocumentGrid } from "./DocumentGrid";
-import { DocumentModal } from "./DocumentModal";
 import type { PublicDocumentCard } from "@/types/document";
 
 interface DocumentsPageClientProps {
@@ -52,17 +51,7 @@ export function DocumentsPageClient({ docs, mediaBase, allSlugs }: DocumentsPage
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
-  function onClose() {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("document");
-    const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }
-
   return (
-    <>
-      <DocumentGrid docs={docs} mediaBase={mediaBase} onOpen={onOpen} isFiltered={isFiltered} />
-      <DocumentModal slug={modalSlug} onClose={onClose} />
-    </>
+    <DocumentGrid docs={docs} mediaBase={mediaBase} onOpen={onOpen} isFiltered={isFiltered} />
   );
 }

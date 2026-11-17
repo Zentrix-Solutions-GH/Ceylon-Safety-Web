@@ -16,7 +16,6 @@ vi.mock("next/navigation", () => ({
 
 import { DocumentCard } from "@/components/documents/DocumentCard";
 import { DocumentFilters } from "@/components/documents/DocumentFilters";
-import { DocumentModal } from "@/components/documents/DocumentModal";
 import type { PublicDocumentCard } from "@/types/document";
 
 const MEDIA_BASE = "https://cdn.test.example.com";
@@ -194,46 +193,6 @@ describe("DocumentFilters", () => {
   });
 });
 
-// ─── DocumentModal ────────────────────────────────────────────────────────────
-
-describe("DocumentModal", () => {
-  beforeEach(() => {
-    mockReplace.mockReset();
-    mockSearchParams.get.mockReturnValue(null);
-  });
-
-  it("AC4: renders nothing when no document param in URL", () => {
-    mockSearchParams.get.mockReturnValue(null);
-    render(<DocumentModal slug={null} onClose={vi.fn()} />);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
-  it("AC4: renders dialog when slug is provided", () => {
-    render(<DocumentModal slug="fire-safety-checklist" onClose={vi.fn()} />);
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-  });
-
-  it("AC5/EC2: modal shell is null for unknown slug (EC2 enforcement is in DocumentsPageClient)", () => {
-    // DocumentModal receives null when EC2 filtering rejects the slug upstream.
-    // Passing null directly renders nothing.
-    render(<DocumentModal slug={null} onClose={vi.fn()} />);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
-  it("AC4/EC6: close button calls onClose", async () => {
-    const onClose = vi.fn();
-    render(<DocumentModal slug="fire-safety-checklist" onClose={onClose} />);
-    await userEvent.click(screen.getByRole("button", { name: /close/i }));
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it("AC4: modal has human-readable aria-label", () => {
-    render(<DocumentModal slug="fire-safety-checklist" onClose={vi.fn()} />);
-    const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveAttribute("aria-label", "Document preview");
-  });
-});
-
 // ─── Empty state ─────────────────────────────────────────────────────────────
 
 import { DocumentGrid } from "@/components/documents/DocumentGrid";
@@ -268,8 +227,10 @@ describe("DocumentsPageClient", () => {
     mockSearchParams.get.mockReturnValue(null);
   });
 
-  it("EC2: modal opens for a slug in allSlugs even when not in filtered docs", () => {
-    // docs is filtered (only checklist); allSlugs includes a safety_sign slug
+  it("EC2: DocumentsPageClient accepts a slug in allSlugs even when not in filtered docs (modal rendered by DocumentModal, not here)", () => {
+    // docs is filtered (only checklist); allSlugs includes a safety_sign slug.
+    // DocumentsPageClient no longer renders the dialog — DocumentModal (in page.tsx)
+    // does. This test confirms the component renders without error in this state.
     const filteredDocs = [makeDoc({ docKind: "checklist" })];
     mockSearchParams.get.mockImplementation((k: string) =>
       k === "document" ? "fire-safety-sign" : k === "type" ? "checklist" : null
@@ -281,7 +242,7 @@ describe("DocumentsPageClient", () => {
         allSlugs={["fire-safety-checklist", "fire-safety-sign"]}
       />
     );
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); // dialog is in DocumentModal
   });
 
   it("EC2: modal does not open for a slug absent from allSlugs (deleted/unpublished)", () => {
@@ -298,7 +259,9 @@ describe("DocumentsPageClient", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("AC4: ?document=<slug> in URL opens modal via DocumentsPageClient", () => {
+  it("AC4: ?document=<slug> in URL is handled — DocumentModal (in page.tsx) renders the dialog", () => {
+    // DocumentsPageClient no longer owns the dialog; DocumentModal does.
+    // This confirms DocumentsPageClient renders without error when ?document= is set.
     mockSearchParams.get.mockImplementation((k: string) =>
       k === "document" ? "fire-safety-checklist" : null
     );
@@ -309,7 +272,7 @@ describe("DocumentsPageClient", () => {
         allSlugs={["fire-safety-checklist"]}
       />
     );
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); // dialog is in DocumentModal
   });
 
   it("EC6: scroll position captured on modal open and restored on close", () => {
