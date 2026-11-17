@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { DocumentGrid } from "./DocumentGrid";
 import { DocumentModal } from "./DocumentModal";
@@ -17,6 +17,7 @@ export function DocumentsPageClient({ docs, mediaBase, allSlugs }: DocumentsPage
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const scrollRef = useRef<number>(0);
+  const prevModalSlugRef = useRef<string | null>(null);
 
   // EC3: detect whether any filter is active for the empty-state message
   const isFiltered = Boolean(searchParams.get("category") || searchParams.get("type"));
@@ -30,8 +31,21 @@ export function DocumentsPageClient({ docs, mediaBase, allSlugs }: DocumentsPage
   const rawParam = searchParams.get("document");
   const modalSlug = rawParam && knownSlugs.has(rawParam) ? rawParam : null;
 
+  // EC6: capture scroll when modal opens (including direct-URL opens where onOpen
+  // never fires); restore it when modal closes. useEffect runs synchronously in
+  // tests and avoids a setTimeout race in the browser.
+  useEffect(() => {
+    const wasOpen = prevModalSlugRef.current !== null;
+    const isOpen = modalSlug !== null;
+    if (!wasOpen && isOpen) {
+      scrollRef.current = window.scrollY;
+    } else if (wasOpen && !isOpen) {
+      window.scrollTo({ top: scrollRef.current });
+    }
+    prevModalSlugRef.current = modalSlug;
+  }, [modalSlug]);
+
   function onOpen(slug: string) {
-    scrollRef.current = window.scrollY;
     const params = new URLSearchParams(searchParams.toString());
     params.set("document", slug);
     // EC6: use push so browser-back closes the modal
@@ -43,8 +57,6 @@ export function DocumentsPageClient({ docs, mediaBase, allSlugs }: DocumentsPage
     params.delete("document");
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    // EC6: restore scroll position
-    setTimeout(() => window.scrollTo({ top: scrollRef.current }), 0);
   }
 
   return (

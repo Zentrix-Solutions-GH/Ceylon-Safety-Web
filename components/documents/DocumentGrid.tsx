@@ -1,5 +1,3 @@
-"use client";
-
 import { DocumentCard } from "./DocumentCard";
 import { t } from "@/messages/en";
 import type { PublicDocumentCard } from "@/types/document";

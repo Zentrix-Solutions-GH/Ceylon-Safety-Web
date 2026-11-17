@@ -26,11 +26,11 @@ Build the public `/documents` catalogue page: a grid of DocumentCards with a lef
 ## Acceptance criteria
 
 - [ ] AC1: GET `/documents` returns a server-rendered page with a grid of published, non-deleted `DocumentCard` components; each card shows cover image (or placeholder), title, category, price, and available language badges
-- [ ] AC2: Left `DocumentFilters` panel lets the user filter by category (multi-select) and type; selecting a filter appends query params (`?category=X&type=Y`) and re-renders matching cards without full navigation
+- [ ] AC2: `DocumentFilters` panel (top horizontal row on desktop) lets the user filter by category (single-select) and type; selecting a filter appends query params (`?category=X&type=Y`) and re-renders matching cards without full navigation
 - [ ] AC3: A search input above the grid calls `/api/search?scope=documents&q=...` on submit; results replace the card grid; clearing the input restores the unfiltered list
 - [ ] AC4: When `?document=<slug>` is present in the URL, `DocumentModal` opens over the page showing document details; closing it removes the query param and restores the previous scroll position without a full navigation
 - [ ] AC5: Slug that is not found in `?document=<slug>` query silently closes/ignores the modal (no error page)
-- [ ] AC6: Page is cached at most 60 seconds (s-maxage=60, stale-while-revalidate); a cache purge is triggered on document status change (handled by S-069/S-071)
+- [ ] AC6: Page uses ISR with `revalidate = 60` (Next.js background revalidation every 60 s); a cache purge is triggered on document status change (handled by S-069/S-071)
 - [ ] AC7: Page renders correctly on mobile (single-column grid, filter panel collapses to a drawer)
 - [ ] AC8: `<title>` and meta description set for SEO; canonical URL is `/documents` (ignores query params)
 

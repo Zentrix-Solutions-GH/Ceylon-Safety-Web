@@ -728,6 +728,7 @@ const en = {
   "documents.filter.type.toolbox_talk": "Toolbox Talk",
   "documents.filter.clear": "Clear filters",
   "documents.filter.search.placeholder": "Search documents…",
+  "documents.filter.search.label": "Search documents",
   "documents.filter.search.button": "Search",
   "documents.empty.all": "No documents are available yet. Check back soon.",
   "documents.empty.filtered": "No documents match your current filters.",

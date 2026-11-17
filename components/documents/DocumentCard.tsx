@@ -20,7 +20,6 @@ export function DocumentCard({ doc, mediaBase, onOpen }: DocumentCardProps) {
 
   return (
     <article
-      role="article"
       tabIndex={0}
       onClick={() => onOpen(doc.slug)}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpen(doc.slug); }}

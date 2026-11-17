@@ -298,12 +298,7 @@ describe("DocumentsPageClient", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("EC6: onClose restores scroll position captured at modal open", async () => {
-    const scrollTo = vi.fn();
-    Object.defineProperty(window, "scrollTo", { value: scrollTo, writable: true });
-    Object.defineProperty(window, "scrollY", { value: 500, writable: true, configurable: true });
-
-    // Start with modal open
+  it("AC4: ?document=<slug> in URL opens modal via DocumentsPageClient", () => {
     mockSearchParams.get.mockImplementation((k: string) =>
       k === "document" ? "fire-safety-checklist" : null
     );
@@ -314,15 +309,34 @@ describe("DocumentsPageClient", () => {
         allSlugs={["fire-safety-checklist"]}
       />
     );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
 
-    // Simulate opening the modal to capture scrollY
-    const card = screen.getByRole("article");
-    await userEvent.click(card);
-    // scrollY was 500 at open time; now close the modal
-    await userEvent.click(screen.getByRole("button", { name: /close/i }));
-    // scrollTo should be called with the captured scroll position
-    await vi.waitFor(() => {
-      expect(scrollTo).toHaveBeenCalledWith({ top: 500 });
-    });
+  it("EC6: scroll position captured on modal open and restored on close", () => {
+    const scrollTo = vi.fn();
+    Object.defineProperty(window, "scrollTo", { value: scrollTo, writable: true });
+    Object.defineProperty(window, "scrollY", { value: 500, writable: true, configurable: true });
+
+    // Start with modal closed
+    mockSearchParams.get.mockReturnValue(null);
+    const { rerender } = render(
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} />
+    );
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    // Modal opens (URL gains ?document=…) — useEffect captures scrollY=500
+    mockSearchParams.get.mockImplementation((k: string) =>
+      k === "document" ? "fire-safety-checklist" : null
+    );
+    rerender(
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} />
+    );
+
+    // Modal closes (URL loses ?document=) — useEffect calls scrollTo
+    mockSearchParams.get.mockReturnValue(null);
+    rerender(
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} />
+    );
+    expect(scrollTo).toHaveBeenCalledWith({ top: 500 });
   });
 });

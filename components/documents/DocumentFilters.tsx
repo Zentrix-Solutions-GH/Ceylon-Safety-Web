@@ -111,7 +111,7 @@ export function DocumentFilters({ categories }: DocumentFiltersProps) {
           ref={searchRef}
           type="search"
           placeholder={t("documents.filter.search.placeholder")}
-          aria-label={t("documents.filter.search.button")}
+          aria-label={t("documents.filter.search.label")}
           className="rounded border border-gray-300 px-3 py-1.5 text-sm"
         />
         <button
