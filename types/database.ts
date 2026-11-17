@@ -39,14 +39,14 @@ export type Database = {
                   ]
                 },"admin_audit_log": {
                   Row: {
-                    "action": string,"actor_id": string,"after": Json | null,"before": Json | null,"created_at": string,"entity_id": string | null,"entity_type": string | null,"id": number
+                    "action": string,"actor_id": string | null,"after": Json | null,"before": Json | null,"created_at": string,"entity_id": string | null,"entity_type": string | null,"id": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "action": string,"actor_id": string,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: never
+                    "action": string,"actor_id"?: string | null,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: never
                   }
                   Update: {
-                    "action"?: string,"actor_id"?: string,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: never
+                    "action"?: string,"actor_id"?: string | null,"after"?: Json | null,"before"?: Json | null,"created_at"?: string,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: never
                   }
                   Relationships: [
                     {
@@ -727,14 +727,14 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "bank_expiry_warned_at": string | null,"billing_address": Json | null,"billing_company": string | null,"billing_email": string | null,"billing_name": string | null,"billing_phone": string | null,"billing_tax_id": string | null,"cancel_reason": string | null,"coupon_code_snapshot": string | null,"coupon_id": string | null,"coupon_type_snapshot": string | null,"coupon_value_snapshot": number | null,"created_at": string,"currency": string,"discount_cents": number,"expires_at": string | null,"finalized_at": string | null,"id": string,"needs_review": boolean,"order_number": string,"paid_at": string | null,"payment_method": string | null,"payment_provider": string,"refund_policy_revision_id": string,"review_reason": string | null,"status": string,"subtotal_cents": number,"tax_cents": number,"terms_accepted_at": string,"terms_revision_id": string,"total_cents": number,"updated_at": string,"user_id": string
+                    "bank_expiry_warned_at": string | null,"billing_address": Json | null,"billing_company": string | null,"billing_email": string | null,"billing_name": string | null,"billing_phone": string | null,"billing_tax_id": string | null,"cancel_reason": string | null,"claimed_at": string | null,"coupon_code_snapshot": string | null,"coupon_id": string | null,"coupon_type_snapshot": string | null,"coupon_value_snapshot": number | null,"created_at": string,"currency": string,"discount_cents": number,"expires_at": string | null,"finalized_at": string | null,"id": string,"needs_review": boolean,"order_number": string,"paid_at": string | null,"payment_method": string | null,"payment_provider": string,"refund_policy_revision_id": string,"review_reason": string | null,"status": string,"subtotal_cents": number,"tax_cents": number,"terms_accepted_at": string,"terms_revision_id": string,"total_cents": number,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "bank_expiry_warned_at"?: string | null,"billing_address"?: Json | null,"billing_company"?: string | null,"billing_email"?: string | null,"billing_name"?: string | null,"billing_phone"?: string | null,"billing_tax_id"?: string | null,"cancel_reason"?: string | null,"coupon_code_snapshot"?: string | null,"coupon_id"?: string | null,"coupon_type_snapshot"?: string | null,"coupon_value_snapshot"?: number | null,"created_at"?: string,"currency"?: string,"discount_cents"?: number,"expires_at"?: string | null,"finalized_at"?: string | null,"id"?: string,"needs_review"?: boolean,"order_number": string,"paid_at"?: string | null,"payment_method"?: string | null,"payment_provider"?: string,"refund_policy_revision_id": string,"review_reason"?: string | null,"status"?: string,"subtotal_cents": number,"tax_cents"?: number,"terms_accepted_at": string,"terms_revision_id": string,"total_cents": number,"updated_at"?: string,"user_id": string
+                    "bank_expiry_warned_at"?: string | null,"billing_address"?: Json | null,"billing_company"?: string | null,"billing_email"?: string | null,"billing_name"?: string | null,"billing_phone"?: string | null,"billing_tax_id"?: string | null,"cancel_reason"?: string | null,"claimed_at"?: string | null,"coupon_code_snapshot"?: string | null,"coupon_id"?: string | null,"coupon_type_snapshot"?: string | null,"coupon_value_snapshot"?: number | null,"created_at"?: string,"currency"?: string,"discount_cents"?: number,"expires_at"?: string | null,"finalized_at"?: string | null,"id"?: string,"needs_review"?: boolean,"order_number": string,"paid_at"?: string | null,"payment_method"?: string | null,"payment_provider"?: string,"refund_policy_revision_id": string,"review_reason"?: string | null,"status"?: string,"subtotal_cents": number,"tax_cents"?: number,"terms_accepted_at": string,"terms_revision_id": string,"total_cents": number,"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "bank_expiry_warned_at"?: string | null,"billing_address"?: Json | null,"billing_company"?: string | null,"billing_email"?: string | null,"billing_name"?: string | null,"billing_phone"?: string | null,"billing_tax_id"?: string | null,"cancel_reason"?: string | null,"coupon_code_snapshot"?: string | null,"coupon_id"?: string | null,"coupon_type_snapshot"?: string | null,"coupon_value_snapshot"?: number | null,"created_at"?: string,"currency"?: string,"discount_cents"?: number,"expires_at"?: string | null,"finalized_at"?: string | null,"id"?: string,"needs_review"?: boolean,"order_number"?: string,"paid_at"?: string | null,"payment_method"?: string | null,"payment_provider"?: string,"refund_policy_revision_id"?: string,"review_reason"?: string | null,"status"?: string,"subtotal_cents"?: number,"tax_cents"?: number,"terms_accepted_at"?: string,"terms_revision_id"?: string,"total_cents"?: number,"updated_at"?: string,"user_id"?: string
+                    "bank_expiry_warned_at"?: string | null,"billing_address"?: Json | null,"billing_company"?: string | null,"billing_email"?: string | null,"billing_name"?: string | null,"billing_phone"?: string | null,"billing_tax_id"?: string | null,"cancel_reason"?: string | null,"claimed_at"?: string | null,"coupon_code_snapshot"?: string | null,"coupon_id"?: string | null,"coupon_type_snapshot"?: string | null,"coupon_value_snapshot"?: number | null,"created_at"?: string,"currency"?: string,"discount_cents"?: number,"expires_at"?: string | null,"finalized_at"?: string | null,"id"?: string,"needs_review"?: boolean,"order_number"?: string,"paid_at"?: string | null,"payment_method"?: string | null,"payment_provider"?: string,"refund_policy_revision_id"?: string,"review_reason"?: string | null,"status"?: string,"subtotal_cents"?: number,"tax_cents"?: number,"terms_accepted_at"?: string,"terms_revision_id"?: string,"total_cents"?: number,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -1124,6 +1124,11 @@ isOneToOne: false
             "cancel_order_locked":
 { Args: { "p_order_id": string,"p_user_id": string }; Returns: Json
                            },
+"claim_unfinalized_orders":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "id": string
+            }[]
+                           },
 "complete_document_file":
 { Args: { "p_checksum_sha256": string,"p_file_id": string,"p_size_bytes": number }; Returns: undefined
                            },
@@ -1136,6 +1141,15 @@ isOneToOne: false
 "ensure_profile_for_user":
 { Args: { "p_app_meta"?: Json,"p_email": string,"p_user_id": string,"p_user_meta"?: Json }; Returns: undefined
                            },
+"expire_pending_orders":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"flag_mismatch_event":
+{ Args: { "p_event_id": string,"p_order_id": string }; Returns: undefined
+                           },
+"fulfil_payhere_locked":
+{ Args: { "p_download_limit": number,"p_event_id": string,"p_order_id": string,"p_payment_desc": string,"p_status_code": number }; Returns: Json
+                           },
 "has_permission":
 { Args: { "p_action": string }; Returns: boolean
                            },
@@ -1147,6 +1161,9 @@ isOneToOne: false
                            },
 "profile_is_super_admin":
 { Args: { "p_profile_id": string }; Returns: boolean
+                           },
+"release_coupon_use":
+{ Args: { "p_order_id": string }; Returns: undefined
                            },
 "search_all":
 { Args: { "lim"?: number,"query": string,"scope": string }; Returns: {

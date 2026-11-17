@@ -592,7 +592,7 @@ Answered questions stay in place and are marked ANSWERED so the numbers do not c
 | Q67 | ANSWERED: My Purchases has no direct download link, only a Request download button (REQ-053b). Follow-up: Q76 | REQ-053 | |
 | Q68 | ANSWERED: one purchase gives one language file, one price, and checklists also come in three languages (REQ-060c) | REQ-060c | |
 | Q69 | Are Checklists, Safety Signs, and Toolbox Talks the only types at launch? What is the final list of topic categories for articles and documents (the admin cannot add new ones)? | REQ-042b, REQ-031, REQ-058 | |
-| Q70 | For the document preview: should we show images of the first slides, or a PDF sample? | REQ-047 | |
+| Q70 | ANSWERED: up to 3 preview images per language (sort_order 1–3), PNG/JPG/PDF accepted, no English fallback; each language needs at least one preview (slot 1) for publish to be allowed; resolved 2026-11-10 | REQ-047 | |
 | Q71 | Bulk purchases: which phone or WhatsApp number do we show, and where does the text appear (Documents page, document popup, footer)? | REQ-045b | |
 | Q72 | Bank transfer: we plan to let the customer upload the slip at checkout instead of sending it by WhatsApp, with the admin approving it. Is that acceptable? Also: bank account details and where they show, who checks and how fast, how long a pending order waits, what if the amount is wrong | REQ-154, REQ-154b, REQ-154c | |
 | Q73 | Refund policy page: is "all sales are final" the wording? Who handles card disputes with PayHere? | REQ-204 | |
@@ -635,7 +635,7 @@ Rule agreed with the project owner: technical and design questions are not sent 
 | Section 11 scope and delivery plan | Q1 to Q5 follow-through, Q25 (course cards) | Before any build starts |
 | Section 10 infrastructure | Q46 (the hosting test result), Q48 (cookie notice and analytics), Q57 (backups), Q58 (other emails), Q51 (legal pages editing) | Hosting test in the first week |
 | Section 8 admin panel and roles | Q36, Q37, Q38, Q39, Q40, Q41, Q77, Q81 | Before the admin panel and role checks are built |
-| Commerce (revisit section 4) | Q17 (coupon rules), Q60 (failed payments), Q70 (preview method), Q76 (first-download page), Q80 (download count) | Before checkout and downloads are built |
+| Commerce (revisit section 4) | Q17 (coupon rules), Q60 (failed payments), Q76 (first-download page), Q80 (download count) | Before checkout and downloads are built |
 | Accounts (revisit section 3) | Q34 (idle deletion rules), Q35 (saved address) | Before the profile and deletion screens |
 | Section 5 content system | Q10 (fonts), Q11 (links in articles), Q6 (home banner) | Before the article editor and feed |
 | Section 6 advertising | Q31 (banner sizes), Q32 (click tracking), Q55 (pages with side ads), Q56 (ad policy), Q79 (in-article ads) | Before the ad slots are built |

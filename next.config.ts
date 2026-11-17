@@ -24,6 +24,11 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       // R2 public bucket and YouTube thumbnails added during S-001 infra setup
+      // localhost: dev server serves media at localhost:3000. Dev-only — excluded from production
+      // builds to prevent SSRF via the Next.js image optimizer.
+      ...(process.env.NODE_ENV === "development"
+        ? [{ protocol: "http" as const, hostname: "localhost", port: "3000" }]
+        : []),
     ],
   },
   async headers() {

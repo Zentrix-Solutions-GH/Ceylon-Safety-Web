@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { t } from "@/messages/en";
 import { HeroSlideshow } from "./HeroSlideshow";
-import { HeroSearchForm } from "./HeroSearchForm";
+import HomeSearchBar from "./HomeSearchBar";
 
 export function HeroSection() {
   return (
@@ -53,7 +53,7 @@ export function HeroSection() {
       {/* Search bar — positioned at the bottom edge, translated down 50% to straddle the section boundary */}
       <div className="absolute bottom-0 left-0 right-0 z-20 translate-y-1/2 px-4">
         <div className="mx-auto max-w-3xl">
-          <HeroSearchForm />
+          <HomeSearchBar />
         </div>
       </div>
     </section>

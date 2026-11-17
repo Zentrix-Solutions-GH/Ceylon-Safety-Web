@@ -47,6 +47,13 @@ export interface BankOrderResult {
   orderNumber: string;
 }
 
+export interface FinalizeResult {
+  orderId: string;
+  invoiceOk: boolean;
+  emailOk: boolean;
+  finalizedAt: string | null;
+}
+
 export interface MyOrderItem {
   orderItemId: string;
   documentId: string;
@@ -63,4 +70,10 @@ export interface MyOrder {
   totalCents: number;
   createdAt: string;
   items: MyOrderItem[];
+}
+
+export interface ReconcileResult {
+  ok: boolean;
+  alertCount: number;
+  orderNumbers: string[];
 }

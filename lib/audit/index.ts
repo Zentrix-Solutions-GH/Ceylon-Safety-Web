@@ -49,7 +49,7 @@ function maskValue(val: unknown): unknown {
 // ---------------------------------------------------------------------------
 
 export async function writeAuditRow(event: AuditEvent): Promise<void> {
-  const { action, actorId, entityType, entityId, before, after, summary } = event;
+  const { action, actorId = null, entityType, entityId, before, after, summary } = event;
 
   const maskedBefore = before !== undefined
     ? (maskValue(before) as Record<string, unknown>)
@@ -65,7 +65,7 @@ export async function writeAuditRow(event: AuditEvent): Promise<void> {
 
   const supabase = createSupabaseServiceRoleClient();
   const { error } = await supabase.from("admin_audit_log").insert({
-    actor_id: actorId,
+    actor_id: (actorId ?? null) as unknown as string,
     action: action as string,
     entity_type: entityType,
     entity_id: entityId,

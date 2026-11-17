@@ -2,10 +2,8 @@
 
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("@/lib/config", () => ({
-  r2Config: vi.fn(() => ({
-    publicMediaBaseUrl: "https://img.example.com",
-  })),
+vi.mock("@/lib/config.public", () => ({
+  publicConfig: { mediaCdnUrl: "https://img.example.com" },
 }));
 
 import { publicUrl } from "@/lib/media/publicUrl";
