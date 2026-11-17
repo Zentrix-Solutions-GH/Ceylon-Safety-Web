@@ -62,7 +62,7 @@ export function SignUpForm() {
     if (!captchaToken) { setTopError(errorMessage("captcha_failed")); return; }
 
     if (passwordValue !== confirmValue) {
-      setFieldErrors((prev) => ({ ...prev, confirmPassword: "Passwords do not match" }));
+      setFieldErrors((prev) => ({ ...prev, confirmPassword: t("auth.sign_up.confirm_mismatch") }));
       return;
     }
 
@@ -357,7 +357,7 @@ export function SignUpForm() {
                       type="button"
                       onClick={() => setShowConfirm((v) => !v)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      aria-label={showConfirm ? "Hide password" : "Show password"}
+                      aria-label={showConfirm ? t("auth.sign_up.hide_password") : t("auth.sign_up.show_password")}
                     >
                       {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>

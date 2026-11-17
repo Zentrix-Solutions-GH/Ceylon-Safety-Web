@@ -140,6 +140,7 @@ const en = {
   "auth.sign_up.email": "Work or personal email",
   "auth.sign_up.password": "Password",
   "auth.sign_up.confirm_password": "Re-enter password",
+  "auth.sign_up.confirm_mismatch": "Passwords do not match",
   "auth.sign_up.terms": "I agree to the",
   "auth.sign_up.terms_link": "Terms of Service",
   "auth.sign_up.and": "and",
