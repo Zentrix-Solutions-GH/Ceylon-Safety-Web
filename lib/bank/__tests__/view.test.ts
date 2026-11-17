@@ -146,13 +146,11 @@ describe("getBankOrderView — AC6: view shape", () => {
     expect(view.status).toBe("pending_verification");
     expect(view.slips).toHaveLength(1);
     // Verify the query uses buyer_slip_summary (structural file_key exclusion)
-    const slipBuilder = db.from.mock.results.find(
-      (r: { value: { _selectMock?: ReturnType<typeof vi.fn> } }) => r.value?._selectMock
-    )?.value;
-    if (slipBuilder) {
-      const selectArg: string = slipBuilder._selectMock.mock.calls[0]?.[0] ?? "";
-      expect(selectArg).not.toContain("file_key");
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const slipBuilder = (db.from.mock.results as any[]).find((r) => r.value?._selectMock)?.value;
+    expect(slipBuilder).toBeDefined();
+    const selectArg: string = slipBuilder._selectMock.mock.calls[0]?.[0] ?? "";
+    expect(selectArg).not.toContain("file_key");
   });
 
   it("AC6: file_key is never present in any slip summary", async () => {
