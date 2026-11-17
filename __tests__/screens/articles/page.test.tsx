@@ -53,9 +53,8 @@ describe("Articles page — AC1: renders article grid", () => {
     });
     const el = await ArticlesPage({ searchParams: {} });
     render(el);
-    // titles appear in both main grid and popular strip
-    expect(screen.getAllByText("Article 1").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Article 2").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { level: 2, name: "Article 1" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Article 2" })).toBeInTheDocument();
   });
 });
 
@@ -100,8 +99,7 @@ describe("Articles page — EC1: unknown category slug", () => {
     });
     const el = await ArticlesPage({ searchParams: { category: "nonexistent-xyz" } });
     render(el);
-    // Page should render normally (not crash or show error)
-    expect(screen.getAllByText("Article 1").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { level: 2, name: "Article 1" })).toBeInTheDocument();
     // listArticles should have been called with the category passed through
     expect(mockListArticles).toHaveBeenCalledWith(
       expect.objectContaining({ category: "nonexistent-xyz" })

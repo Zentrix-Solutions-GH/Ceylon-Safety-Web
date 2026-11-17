@@ -420,9 +420,9 @@ export function SignUpForm() {
 
         {/* Page footer */}
         <footer className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center text-xs text-gray-400">
-          <span>&copy; {new Date().getFullYear()} {t("auth.sign_up.footer.copyright")}</span>
-          <span>&bull;</span>
-          <span>{t("auth.footer.attribution")} <a href="https://www.zentrixsolution.tech/" target="_blank" rel="noopener noreferrer" className="font-semibold text-gray-500 hover:text-gray-700 hover:underline">{t("auth.footer.attribution_brand")}</a></span>
+          <span suppressHydrationWarning>&copy; {new Date().getFullYear()} {t("auth.sign_up.footer.copyright")}</span>
+          {publicConfig.developerUrl && (<><span>&bull;</span>
+          <span>{t("auth.footer.attribution")} <a href={publicConfig.developerUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-gray-500 hover:text-gray-700 hover:underline">{t("auth.footer.attribution_brand")}</a></span></>)}
         </footer>
       </div>
     </div>

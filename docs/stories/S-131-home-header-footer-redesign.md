@@ -59,6 +59,7 @@ Implement the Figma-specified redesign of the public home page, header, and foot
 - Newsletter API endpoint (future story).
 - Announcement bar cache invalidation from admin CMS (revalidation tag exists but no admin action calls it yet).
 - Env var config bypass in `createSupabaseAnonClient` (P1 carry-forward — anon key is not secret; no security impact).
+- "Clear filters" button removed from `ArticleFilters` — the redesign switches to pill/tab navigation that makes an explicit clear less necessary; the empty-state message still links back to the unfiltered view.
 
 ## Assumptions accepted
 

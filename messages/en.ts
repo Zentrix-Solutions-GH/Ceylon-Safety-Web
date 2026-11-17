@@ -354,7 +354,7 @@ const en = {
   "articles.hub.title": "Safety Knowledge Hub",
   "articles.hub.subtitle": "Accredited guides, toolbox talks and statutory documents for Sri Lanka’s safety professionals.",
   "articles.results.count": "{count} articles",
-  "articles.popular.heading": "Popular This Month",
+  "articles.popular.heading": "Latest This Month",
   // --- home feed (S-066) ---
   "home.page_title": "CeylonSafety — Health & Safety Resources",
   "home.page_description": "Health and safety articles, guides, and checklists for the Sri Lankan workplace.",

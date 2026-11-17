@@ -5,6 +5,7 @@ import { listCategories } from "@/lib/articles/listCategories";
 import { ArticleFilters } from "@/components/articles/ArticleFilters";
 import { ArticleGrid } from "@/components/articles/ArticleGrid";
 import { ArticleCardUI } from "@/components/articles/ArticleCard";
+import { HeroSearchForm } from "@/components/articles/HeroSearchForm";
 import { t } from "@/messages/en";
 import { publicConfig } from "@/lib/config.public";
 import type { ArticleRange } from "@/types/article";
@@ -87,25 +88,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
             </p>
 
             {/* Hero search bar */}
-            <form
-              action="/search"
-              method="get"
-              className="flex overflow-hidden rounded-lg shadow-lg"
-            >
-              <input type="hidden" name="scope" value="articles" />
-              <input
-                type="search"
-                name="q"
-                placeholder={t("articles.filter.search.placeholder")}
-                className="flex-1 bg-white px-5 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="shrink-0 bg-red-600 px-6 py-3.5 text-sm font-bold text-white hover:bg-red-700 transition-colors"
-              >
-                {t("articles.filter.search.button")}
-              </button>
-            </form>
+            <HeroSearchForm />
           </div>
         </div>
       </div>
