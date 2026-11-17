@@ -139,6 +139,12 @@ S-072 own gate: ESLint ✓  TypeScript ✓  New tests: 21/21 ✓
 
 ## Review notes
 
+Round 5 (/full-review 2026-11-17, APPROVE WITH FOLLOW-UPS, score 82/100):
+- **P1** `app/admin/documents/[id]/edit/page.tsx` — `!docResult.ok` unconditionally calls `notFound()` regardless of error code; `not_allowed` should redirect to `/admin` as the list page does.
+- **P1** `components/admin/__tests__/DocumentForm.test.tsx` — no test asserts `mockPush` is called with `/admin/documents/{id}/edit` after a successful create.
+- **P1** `components/admin/__tests__/DocumentForm.test.tsx` — no test asserts the value passed to `saveDocument` has `priceLkr` as a whole integer.
+- **P1** `components/admin/DocumentsPageClient.tsx:11-12` — `DOCUMENTS_PAGE_SIZE = 25` still a local constant; should import from `lib/admin/actions/documents` to avoid silent divergence.
+
 Round 3 (/full-review 2026-11-17, APPROVE WITH FOLLOW-UPS, score 80/100):
 - **P0** `components/admin/__tests__/DocumentForm.test.tsx` — `focusFirstError`: still no `document.activeElement` assertion after failed submit. Must be added before or immediately after merge.
 - **P0** `e2e/admin-documents.spec.ts` — still absent; AC9 axe/keyboard tests not in CI. Must be tracked as follow-up story.

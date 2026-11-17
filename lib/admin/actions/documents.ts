@@ -1,4 +1,5 @@
 import "server-only";
+import { DOCUMENTS_PAGE_SIZE } from "@/lib/admin/constants";
 import { requireStaff } from "@/lib/auth/server";
 import { requireStepUp } from "@/lib/auth/step-up";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
@@ -198,8 +199,6 @@ const DETAIL_COLUMNS = `
   categories!inner(name),
   document_files(kind, language, sort_order, status, is_current)
 `;
-
-const DOCUMENTS_PAGE_SIZE = 25;
 
 // ---------------------------------------------------------------------------
 // listDocuments (AC1)

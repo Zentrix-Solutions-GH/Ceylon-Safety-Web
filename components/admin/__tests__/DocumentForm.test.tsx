@@ -196,6 +196,53 @@ describe("AC5: form validation and accessibility", () => {
     });
   });
 
+  it("redirects to edit page after successful create", async () => {
+    mockSaveDocument.mockResolvedValue({
+      ok: true,
+      documentId: "new-doc-id",
+      slug: "test-doc",
+      updatedAt: "2026-11-17",
+    });
+
+    const user = userEvent.setup();
+    render(<DocumentForm mode="create" categories={CATEGORIES} />);
+
+    await user.type(screen.getByLabelText(/title/i), "Test Doc");
+    await user.selectOptions(screen.getByLabelText(/type/i), "checklist");
+    await user.selectOptions(screen.getByLabelText(/category/i), CAT_ID_1);
+    await user.type(screen.getByLabelText(/price/i), "1500");
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/admin/documents/new-doc-id/edit");
+    });
+  });
+
+  it("sends priceLkr as a whole integer to saveDocument", async () => {
+    mockSaveDocument.mockResolvedValue({
+      ok: true,
+      documentId: "new-doc-id",
+      slug: "test-doc",
+      updatedAt: "2026-11-17",
+    });
+
+    const user = userEvent.setup();
+    render(<DocumentForm mode="create" categories={CATEGORIES} />);
+
+    await user.type(screen.getByLabelText(/title/i), "Test Doc");
+    await user.selectOptions(screen.getByLabelText(/type/i), "checklist");
+    await user.selectOptions(screen.getByLabelText(/category/i), CAT_ID_1);
+    await user.type(screen.getByLabelText(/price/i), "1500");
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      const input = mockSaveDocument.mock.calls[0][0] as { priceLkr?: number };
+      expect(input.priceLkr).toBe(1500);
+    });
+  });
+
   it("focuses first errored field when multiple fields are invalid on submit", async () => {
     const user = userEvent.setup();
 

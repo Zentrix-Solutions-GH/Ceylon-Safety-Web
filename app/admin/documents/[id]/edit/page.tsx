@@ -1,4 +1,4 @@
-﻿import { notFound } from "next/navigation";
+﻿import { notFound, redirect } from "next/navigation";
 import { getDocument } from "@/lib/admin/actions/documents";
 import { listCategories } from "@/lib/articles/listCategories";
 import { DocumentForm } from "@/components/admin/DocumentForm";
@@ -22,6 +22,7 @@ export default async function EditDocumentPage({ params }: PageProps) {
   ]);
 
   if (!docResult.ok) {
+    if (docResult.code === "not_allowed") redirect("/admin");
     notFound();
   }
 

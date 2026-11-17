@@ -7,9 +7,7 @@ import { t } from "@/messages/en";
 import { DocumentsTable } from "@/components/admin/DocumentsTable";
 import type { AdminDocumentRow, DocumentStatus, DocKind } from "@/types/document";
 import type { Category } from "@/types/article";
-
-// Must match DOCUMENTS_PAGE_SIZE in lib/admin/actions/documents.ts
-const DOCUMENTS_PAGE_SIZE = 25;
+import { DOCUMENTS_PAGE_SIZE } from "@/lib/admin/constants";
 
 interface Props {
   initialRows: AdminDocumentRow[];
