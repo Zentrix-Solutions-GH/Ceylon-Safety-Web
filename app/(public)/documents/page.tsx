@@ -32,10 +32,9 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
   const result = await listPublicDocuments({ category, type });
   const docs = result.ok ? result.data.documents : [];
 
-  // Always fetch the full unfiltered list to populate the category dropdown and
-  // the allSlugs set (EC2: guard against deleted/unpublished slugs across all
-  // pages of the catalog, not just the current filtered view).
-  const allResult = await listPublicDocuments({});
+  // Fetch unfiltered list for the category dropdown and allSlugs (EC2 guard).
+  // Reuse the filtered result when no filter is active — same query, no extra round-trip.
+  const allResult = (category || type) ? await listPublicDocuments({}) : result;
   const allDocs = allResult.ok ? allResult.data.documents : [];
   const fullMap = new Map<string, string>();
   for (const doc of allDocs) {

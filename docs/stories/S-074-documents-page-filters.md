@@ -134,6 +134,7 @@ S-074 tests (23 tests): all pass.
 - **P1** `__tests__/documents-page.test.tsx` — EC6 scroll restore untested; `setTimeout(() => window.scrollTo(...), 0)` is silently ignored in JSDOM. Mock `window.scrollTo`/`window.scrollY` and assert `onClose` restores the scroll position. (full-review 2026-11-17)
 - **P2** `__tests__/documents-page.test.tsx` — AC2 param-preservation: no test verifies that changing category while type is active preserves `type` in the URL. Implementation is correct (`buildUrl` passes `currentType`); add a regression guard test. (full-review 2026-11-17)
 - **P2** `docs/stories/S-074-documents-page-filters.md:91-99` — Story file plan lists `DocumentSearch.tsx` (not created) and omits `DocumentGrid.tsx` (created). Update plan table to match actual files. (full-review 2026-11-17)
+- **P2** `app/(public)/documents/page.tsx:35-44` — When no filter is active, `listPublicDocuments({})` is called twice (once for `docs`, once for `allResult`). Fix: `const allResult = (category || type) ? await listPublicDocuments({}) : result;` to reuse the first result when unfiltered. (full-review 2026-11-17 re-review)
 
 ## After this merges
 
