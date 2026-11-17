@@ -143,6 +143,7 @@ export type SetArticleStatusResult =
 // ─── Read types (S-049) ──────────────────────────────────────────────────────
 
 export type ArticleRange = "newest" | "week" | "month";
+export const ARTICLE_RANGES: ArticleRange[] = ["newest", "week", "month"];
 
 export interface Category {
   id: string;

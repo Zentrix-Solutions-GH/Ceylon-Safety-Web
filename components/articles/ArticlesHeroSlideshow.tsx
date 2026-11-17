@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useReducer } from "react";
+import { useEffect, useReducer, useRef, useCallback } from "react";
 import Image from "next/image";
 import { publicConfig } from "@/lib/config.public";
 import { t } from "@/messages/en";
@@ -28,11 +28,18 @@ function reducer(s: State, a: Action): State {
 
 export function ArticlesHeroSlideshow() {
   const [{ current, prev }, dispatch] = useReducer(reducer, { current: 0, prev: null });
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pausedRef = useRef(false);
+
+  const startInterval = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => dispatch({ type: "ADVANCE" }), INTERVAL_MS);
+  }, []);
 
   useEffect(() => {
-    const timer = setInterval(() => dispatch({ type: "ADVANCE" }), INTERVAL_MS);
-    return () => clearInterval(timer);
-  }, []);
+    startInterval();
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [startInterval]);
 
   useEffect(() => {
     if (prev === null) return;
@@ -40,8 +47,26 @@ export function ArticlesHeroSlideshow() {
     return () => clearTimeout(id);
   }, [prev]);
 
+  const handlePause = () => {
+    pausedRef.current = true;
+    if (intervalRef.current) clearInterval(intervalRef.current);
+  };
+
+  const handleResume = () => {
+    if (!pausedRef.current) return;
+    pausedRef.current = false;
+    startInterval();
+  };
+
   return (
-    <div className="absolute inset-0 overflow-hidden">
+    <div
+      className="absolute inset-0 overflow-hidden"
+      aria-live="polite"
+      onMouseEnter={handlePause}
+      onMouseLeave={handleResume}
+      onFocus={handlePause}
+      onBlur={handleResume}
+    >
       {SLIDES.map((slide, i) => (
         <div
           key={i}

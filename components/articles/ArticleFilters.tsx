@@ -2,9 +2,8 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { t } from "@/messages/en";
+import { ARTICLE_RANGES } from "@/types/article";
 import type { Category, ArticleRange } from "@/types/article";
-
-const VALID_RANGES: ArticleRange[] = ["newest", "week", "month"];
 
 interface ArticleFiltersProps {
   categories: Category[];
@@ -16,7 +15,7 @@ export function ArticleFilters({ categories }: ArticleFiltersProps) {
   const searchParams = useSearchParams();
 
   const rawRange = searchParams.get("range") ?? "newest";
-  const currentRange: ArticleRange = (VALID_RANGES as string[]).includes(rawRange)
+  const currentRange: ArticleRange = (ARTICLE_RANGES as string[]).includes(rawRange)
     ? (rawRange as ArticleRange)
     : "newest";
 
@@ -77,7 +76,7 @@ export function ArticleFilters({ categories }: ArticleFiltersProps) {
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
           {t("articles.filter.range.label")}:
         </span>
-        {VALID_RANGES.map((r) => {
+        {ARTICLE_RANGES.map((r) => {
           const labels: Record<ArticleRange, string> = {
             newest: t("articles.filter.range.newest"),
             week: t("articles.filter.range.week"),
