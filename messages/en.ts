@@ -753,6 +753,32 @@ const en = {
   "admin.documents.price.large_change_confirm": "I confirm this large price change",
   "admin.documents.price.mfa_label": "Authenticator code",
   "admin.documents.price.mfa_placeholder": "6-digit code",
+
+  // --- DocumentModal (S-076) ---
+  "document_modal.close": "Close",
+  "document_modal.cover_alt": "{title} cover",
+  "document_modal.preview_placeholder_alt": "Preview not available",
+  "document_modal.price": "LKR {price}",
+  "document_modal.add_to_cart": "Add to Cart",
+  "document_modal.adding": "Adding…",
+  "document_modal.buy_now": "Buy Now",
+  "document_modal.buying": "Processing…",
+  "document_modal.unavailable_label": "Unavailable",
+  "document_modal.unavailable_message": "This document is no longer available.",
+  "document_modal.toast.added": "Added to cart",
+  "document_modal.toast.already_in_cart": "Already in your cart",
+  "document_modal.toast.cart_full": "Your cart is full (50 items max)",
+  "document_modal.toast.unavailable": "This document is no longer available",
+
+  // --- LanguagePicker (S-076) ---
+  "language_picker.label": "Choose language",
+  "language_picker.en": "English",
+  "language_picker.si": "Sinhala",
+  "language_picker.ta": "Tamil",
+
+  // --- LockedPreview (S-076) ---
+  "locked_preview.alt": "Locked preview of {title}",
+  "locked_preview.placeholder_alt": "No preview available",
 } as const;
 
 export type MessageKey = keyof typeof en;

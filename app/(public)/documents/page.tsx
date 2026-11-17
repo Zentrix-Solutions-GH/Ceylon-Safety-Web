@@ -1,8 +1,10 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
+import { Suspense } from "react";
 import { listPublicDocuments } from "@/lib/documents/public";
 import { publicConfig } from "@/lib/config.public";
 import { DocumentFilters } from "@/components/documents/DocumentFilters";
 import { DocumentsPageClient } from "@/components/documents/DocumentsPageClient";
+import DocumentModal from "@/components/documents/DocumentModal";
 import { t } from "@/messages/en";
 import type { DocKind } from "@/types/document";
 
@@ -54,6 +56,10 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
       <DocumentFilters categories={allCategories} />
 
       <DocumentsPageClient docs={docs} mediaBase={mediaBase} allSlugs={allSlugs} />
+
+      <Suspense fallback={null}>
+        <DocumentModal />
+      </Suspense>
     </div>
   );
 }
