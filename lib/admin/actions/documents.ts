@@ -1,4 +1,5 @@
 import "server-only";
+import { DOCUMENTS_PAGE_SIZE } from "@/lib/admin/constants";
 import { requireStaff } from "@/lib/auth/server";
 import { requireStepUp } from "@/lib/auth/step-up";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
@@ -199,8 +200,6 @@ const DETAIL_COLUMNS = `
   document_files(kind, language, sort_order, status, is_current)
 `;
 
-const PAGE_SIZE = 25;
-
 // ---------------------------------------------------------------------------
 // listDocuments (AC1)
 // ---------------------------------------------------------------------------
@@ -213,8 +212,8 @@ export async function listDocuments(
 
   const supabase = createSupabaseServiceRoleClient();
   const page = Math.max(1, filter.page ?? 1);
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
+  const from = (page - 1) * DOCUMENTS_PAGE_SIZE;
+  const to = from + DOCUMENTS_PAGE_SIZE - 1;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = (supabase as any)
@@ -238,7 +237,7 @@ export async function listDocuments(
     rows: rows.map(mapDocumentRow),
     total: count ?? 0,
     page,
-    pageSize: PAGE_SIZE,
+    pageSize: DOCUMENTS_PAGE_SIZE,
   };
 }
 
@@ -593,7 +592,8 @@ export async function changeDocumentPrice(input: {
 }
 
 // S-070 re-exports — upload and publish actions.
-export { startDocumentFileUpload, completeDocumentFileUpload, setDocumentStatus } from "@/lib/documents/index";
+export { startDocumentFileUpload, completeDocumentFileUpload } from "@/lib/documents/upload";
+export { setDocumentStatus } from "@/lib/documents/publish";
 
 // Server action wrapper so client components can call countArticleRefs without
 // importing server-only internals directly.

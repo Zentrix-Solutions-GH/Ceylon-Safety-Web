@@ -229,6 +229,38 @@ describe("AC2: handler error returns 500", () => {
   });
 });
 
+// ── EC4: handler returns ok:false → 500, pingHeartbeat("fail") ───────────────
+
+describe("EC4: handler returns ok:false (e.g. DB error in replay)", () => {
+  beforeEach(() => setEnv());
+  afterEach(() => clearEnv());
+
+  it("returns 500 and pings heartbeat with 'fail' when handler returns ok:false", async () => {
+    vi.resetModules();
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const pingMock = vi.fn().mockResolvedValue(undefined);
+    vi.doMock("../lib/jobs/index", async (importOriginal) => {
+      const original = await importOriginal<typeof import("../lib/jobs/index")>();
+      return {
+        ...original,
+        pingHeartbeat: pingMock,
+        JOB_REGISTRY: {
+          ...original.JOB_REGISTRY,
+          "db-error-job": async () => ({ ok: false }),
+        },
+      };
+    });
+    const { POST } = await import(`../app/api/cron/[job]/route?t=${Date.now()}`);
+    const res: Response = await POST(
+      makeRequest("POST", { "x-cron-secret": VALID_SECRET }),
+      { params: Promise.resolve({ job: "db-error-job" }) }
+    );
+    expect(res.status).toBe(500);
+    expect(pingMock).toHaveBeenCalledWith("db-error-job", "fail");
+    errSpy.mockRestore();
+  });
+});
+
 // ── EC1: secret must not appear in logs or responses ─────────────────────────
 
 describe("EC1: secret not echoed", () => {
