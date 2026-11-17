@@ -106,8 +106,8 @@ export function SignUpForm() {
       {/* Full-page background image with dark overlay */}
       <div className="absolute inset-0 overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/auth/auth-outer-bg.jpg" alt="" className="h-full w-full object-cover object-center opacity-20" />
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-deepest/60 via-surface-dark/80 to-surface-dark" />
+        <img src="/auth/auth-outer-bg.jpg" alt="" className="h-full w-full object-cover object-center opacity-30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary-darker/25 via-surface-dark/60 to-primary-deepest" />
       </div>
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-6xl flex-col">
         {/* Top bar */}
