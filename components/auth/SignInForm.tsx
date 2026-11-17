@@ -101,13 +101,7 @@ export function SignInForm() {
   }
 
   return (
-    <div className="relative min-h-screen bg-surface-dark px-4 py-5 sm:px-8 lg:px-12">
-      {/* Full-page background image with dark overlay */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/auth/auth-outer-bg.jpg" alt="" className="h-full w-full object-cover object-center opacity-30" />
-        <div className="absolute inset-0 bg-gradient-to-b from-primary-darker/25 via-surface-dark/60 to-primary-deepest" />
-      </div>
+    <div className="relative min-h-screen bg-white px-4 py-5 sm:px-8 lg:px-12">
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-6xl flex-col">
         {/* Top bar */}
         <header className="mb-4 flex items-center">
@@ -116,8 +110,8 @@ export function SignInForm() {
               <Image src="/logo.jpg" alt="Ceylon Safety" width={36} height={36} className="object-contain" />
             </div>
             <span className="leading-tight">
-              <span className="block text-sm font-bold text-white">Ceylon Safety</span>
-              <span className="block text-[10px] font-semibold uppercase tracking-widest text-white/50">
+              <span className="block text-sm font-bold text-gray-900">Ceylon Safety</span>
+              <span className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
                 {t("auth.sign_in.portal_label")}
               </span>
             </span>
@@ -125,7 +119,7 @@ export function SignInForm() {
         </header>
 
         {/* Card */}
-        <div className="flex flex-1 overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
+        <div className="flex flex-1 overflow-hidden rounded-3xl border border-gray-200 shadow-xl">
           {/* Left panel - branding */}
           <div className="relative m-3 hidden flex-col justify-between overflow-hidden rounded-2xl bg-primary-darker lg:flex lg:w-[45%]">
             {/* Background construction image */}
@@ -138,7 +132,7 @@ export function SignInForm() {
                 className="object-cover object-center opacity-80"
                 priority
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-primary-darker/45 via-primary-darker/30 to-primary-deepest/85" />
+              <div className="absolute inset-0 bg-gradient-to-t from-primary-deepest via-primary-darker/70 to-primary-darker/35" />
             </div>
 
             <div className="relative z-10 p-7">
@@ -351,10 +345,10 @@ export function SignInForm() {
         </div>
 
         {/* Page footer */}
-        <footer className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center text-xs text-white/40">
+        <footer className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center text-xs text-gray-400">
           <span>&copy; {new Date().getFullYear()} {t("auth.sign_in.footer.copyright")}</span>
           <span>&bull;</span>
-          <span>{t("auth.footer.attribution")} <span className="font-semibold text-white/60">{t("auth.footer.attribution_brand")}</span></span>
+          <span>{t("auth.footer.attribution")} <span className="font-semibold text-gray-500">{t("auth.footer.attribution_brand")}</span></span>
         </footer>
       </div>
     </div>
