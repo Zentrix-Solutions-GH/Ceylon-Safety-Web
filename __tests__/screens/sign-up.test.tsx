@@ -36,13 +36,13 @@ describe("SignUpForm — AC1: renders all required fields", () => {
     expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
   });
 
   it("renders terms and privacy links", () => {
     render(<SignUpForm />);
-    expect(screen.getByRole("link", { name: /terms/i })).toHaveAttribute("href", "/terms");
-    expect(screen.getByRole("link", { name: /privacy/i })).toHaveAttribute("href", "/privacy");
+    expect(screen.getAllByRole("link", { name: /terms/i })[0]).toHaveAttribute("href", "/terms");
+    expect(screen.getAllByRole("link", { name: /privacy/i })[0]).toHaveAttribute("href", "/privacy");
   });
 
   it("renders terms checkbox", () => {
@@ -63,7 +63,8 @@ describe("SignUpForm — AC1: renders all required fields", () => {
     await user.type(screen.getByLabelText(/first name/i), "Aysha");
     await user.type(screen.getByLabelText(/last name/i), "Perera");
     await user.type(screen.getByLabelText(/email/i), "aysha@example.com");
-    await user.type(screen.getByLabelText(/password/i), "StrongPass123!");
+    await user.type(screen.getByLabelText("Password"), "StrongPass123!");
+    await user.type(screen.getByLabelText("Re-enter password"), "StrongPass123!");
     await user.click(screen.getByRole("checkbox", { name: /agree/i }));
     await user.click(screen.getByRole("button", { name: /create account/i }));
 
@@ -97,7 +98,8 @@ describe("SignUpForm — AC2: error codes", () => {
     await user.type(screen.getByLabelText(/first name/i), "A");
     await user.type(screen.getByLabelText(/last name/i), "B");
     await user.type(screen.getByLabelText(/email/i), "a@b.com");
-    await user.type(screen.getByLabelText(/password/i), "short");
+    await user.type(screen.getByLabelText("Password"), "short");
+    await user.type(screen.getByLabelText("Re-enter password"), "short");
     await user.click(screen.getByRole("checkbox", { name: /agree/i }));
     await user.click(screen.getByRole("button", { name: /create account/i }));
 
@@ -116,7 +118,8 @@ describe("SignUpForm — AC2: error codes", () => {
     await user.type(screen.getByLabelText(/first name/i), "A");
     await user.type(screen.getByLabelText(/last name/i), "B");
     await user.type(screen.getByLabelText(/email/i), "existing@example.com");
-    await user.type(screen.getByLabelText(/password/i), "StrongPass123!");
+    await user.type(screen.getByLabelText("Password"), "StrongPass123!");
+    await user.type(screen.getByLabelText("Re-enter password"), "StrongPass123!");
     await user.click(screen.getByRole("checkbox", { name: /agree/i }));
     await user.click(screen.getByRole("button", { name: /create account/i }));
 
@@ -132,7 +135,8 @@ describe("SignUpForm — AC2: error codes", () => {
     await user.type(screen.getByLabelText(/first name/i), "A");
     await user.type(screen.getByLabelText(/last name/i), "B");
     await user.type(screen.getByLabelText(/email/i), "not-an-email");
-    await user.type(screen.getByLabelText(/password/i), "StrongPass123!");
+    await user.type(screen.getByLabelText("Password"), "StrongPass123!");
+    await user.type(screen.getByLabelText("Re-enter password"), "StrongPass123!");
     await user.click(screen.getByRole("checkbox", { name: /agree/i }));
     await user.click(screen.getByRole("button", { name: /create account/i }));
 
@@ -150,7 +154,8 @@ describe("SignUpForm — AC2: error codes", () => {
     await user.type(screen.getByLabelText(/first name/i), "A");
     await user.type(screen.getByLabelText(/last name/i), "B");
     await user.type(screen.getByLabelText(/email/i), "a@b.com");
-    await user.type(screen.getByLabelText(/password/i), "StrongPass123!");
+    await user.type(screen.getByLabelText("Password"), "StrongPass123!");
+    await user.type(screen.getByLabelText("Re-enter password"), "StrongPass123!");
     await user.click(screen.getByRole("checkbox", { name: /agree/i }));
     await user.click(screen.getByRole("button", { name: /create account/i }));
 
