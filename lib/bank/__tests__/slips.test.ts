@@ -275,6 +275,51 @@ describe("uploadBankSlip — AC4: multiple slips per order", () => {
   });
 });
 
+// ─── EC4: concurrent uploads ──────────────────────────────────────────────────
+
+describe("uploadBankSlip — EC4: concurrent uploads", () => {
+  it("two simultaneous uploads produce two separate rows with distinct keys", async () => {
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+
+    const insertedKeys: string[] = [];
+    const db = {
+      from: vi.fn((table: string) => {
+        if (table === "orders") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { id: fakeOrderId, user_id: fakeUser.id, status: "pending_verification", payment_provider: "bank_transfer" },
+              error: null,
+            }),
+          };
+        }
+        if (table === "bank_transfer_slips") {
+          return {
+            insert: vi.fn().mockImplementation((payload: { file_key: string }) => {
+              insertedKeys.push(payload.file_key);
+              return Promise.resolve({ error: null });
+            }),
+          };
+        }
+        return {};
+      }),
+    };
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const [r1, r2] = await Promise.all([
+      uploadBankSlip(fakeOrderId, makeFormData()),
+      uploadBankSlip(fakeOrderId, makeFormData()),
+    ]);
+
+    expect(r1).toMatchObject({ ok: true });
+    expect(r2).toMatchObject({ ok: true });
+    // Each upload generates a unique server-side key — no collision
+    expect(insertedKeys).toHaveLength(2);
+    expect(insertedKeys[0]).not.toBe(insertedKeys[1]);
+  });
+});
+
 // ─── AC7: cancel refused after slip ──────────────────────────────────────────
 // Covered in lib/orders/__tests__/cancel.test.ts:90-92 (slip_uploaded → not_allowed, EC8).
 // No duplicate test here — the cancel logic lives in cancelPendingOrder, not uploadBankSlip.
