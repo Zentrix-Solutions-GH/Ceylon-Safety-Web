@@ -63,6 +63,7 @@ function makeSupabase(options: {
     }),
     _ordersUpdateSpy: ordersUpdateSpy,
     _ordersEqSpy: ordersChain.eq,
+    _ordersLtSpy: ordersChain.lt,
     _eventsEqSpy: eventsChain.eq,
   };
   return sb;
@@ -162,7 +163,26 @@ describe("getPendingCardOrdersOlderThan", () => {
   it("AC4: payment_method=card filter is applied — bank-transfer orders excluded", async () => {
     const sb = makeSupabase({ pendingOrders: [] });
     await getPendingCardOrdersOlderThan(120, sb as never);
-    // The orders chain .eq must be called with "payment_method", "card"
     expect(sb._ordersEqSpy).toHaveBeenCalledWith("payment_method", "card");
+  });
+
+  it("AC4: status=pending filter is applied", async () => {
+    const sb = makeSupabase({ pendingOrders: [] });
+    await getPendingCardOrdersOlderThan(15, sb as never);
+    expect(sb._ordersEqSpy).toHaveBeenCalledWith("status", "pending");
+  });
+
+  it("AC3/AC4: created_at cutoff is passed to .lt() within 5s of now minus minutes", async () => {
+    const before = Date.now();
+    const sb = makeSupabase({ pendingOrders: [] });
+    await getPendingCardOrdersOlderThan(15, sb as never);
+    const after = Date.now();
+    const [[, cutoffStr]] = sb._ordersLtSpy.mock.calls;
+    expect(cutoffStr).toEqual(expect.any(String));
+    const cutoff = new Date(cutoffStr as string).getTime();
+    const expectedMin = before - 15 * 60 * 1000;
+    const expectedMax = after  - 15 * 60 * 1000;
+    expect(cutoff).toBeGreaterThanOrEqual(expectedMin - 5000);
+    expect(cutoff).toBeLessThanOrEqual(expectedMax + 5000);
   });
 });
