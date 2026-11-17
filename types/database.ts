@@ -1141,6 +1141,9 @@ isOneToOne: false
 "ensure_profile_for_user":
 { Args: { "p_app_meta"?: Json,"p_email": string,"p_user_id": string,"p_user_meta"?: Json }; Returns: undefined
                            },
+"expire_pending_orders":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
 "flag_mismatch_event":
 { Args: { "p_event_id": string,"p_order_id": string }; Returns: undefined
                            },
@@ -1158,6 +1161,9 @@ isOneToOne: false
                            },
 "profile_is_super_admin":
 { Args: { "p_profile_id": string }; Returns: boolean
+                           },
+"release_coupon_use":
+{ Args: { "p_order_id": string }; Returns: undefined
                            },
 "search_all":
 { Args: { "lim"?: number,"query": string,"scope": string }; Returns: {

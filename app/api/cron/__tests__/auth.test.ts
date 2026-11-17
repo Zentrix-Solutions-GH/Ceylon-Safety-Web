@@ -9,7 +9,11 @@ vi.mock("@/lib/jobs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/jobs")>();
   return {
     ...actual,
-    JOB_REGISTRY: { test: vi.fn().mockResolvedValue({ ok: true }) },
+    JOB_REGISTRY: {
+      test: vi.fn().mockResolvedValue({ ok: true }),
+      "expire-pending-orders": vi.fn().mockResolvedValue({ ok: true }),
+      "reconcile-payments": vi.fn().mockResolvedValue({ ok: true }),
+    },
     pingHeartbeat: vi.fn().mockResolvedValue(undefined),
   };
 });
@@ -76,5 +80,21 @@ describe("cron route auth", () => {
       { params: Promise.resolve({ job: "test" }) },
     );
     expect(vi.mocked(pingHeartbeat)).toHaveBeenCalledWith("test", "success");
+  });
+
+  it("AC6: pingHeartbeat called with 'expire-pending-orders' and 'success' (S-082)", async () => {
+    await POST(
+      makeRequest("correct-secret-32-chars-xxxxxxxxx"),
+      { params: Promise.resolve({ job: "expire-pending-orders" }) },
+    );
+    expect(vi.mocked(pingHeartbeat)).toHaveBeenCalledWith("expire-pending-orders", "success");
+  });
+
+  it("AC6: pingHeartbeat called with 'reconcile-payments' and 'success' (S-082)", async () => {
+    await POST(
+      makeRequest("correct-secret-32-chars-xxxxxxxxx"),
+      { params: Promise.resolve({ job: "reconcile-payments" }) },
+    );
+    expect(vi.mocked(pingHeartbeat)).toHaveBeenCalledWith("reconcile-payments", "success");
   });
 });
