@@ -32,25 +32,31 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
   const result = await listPublicDocuments({ category, type });
   const docs = result.ok ? result.data.documents : [];
 
-  // Derive unique categories from returned docs for the filter panel
+  // Derive unique categories from returned docs for the filter panel.
+  // When filters are active, also fetch unfiltered docs once to get the full
+  // category list AND the full slug set (EC2 guard in DocumentsPageClient).
   const categoryMap = new Map<string, string>();
   for (const doc of docs) {
     if (doc.categoryId && doc.categoryName) {
       categoryMap.set(doc.categoryId, doc.categoryName);
     }
   }
-  // If filtered, also fetch unfiltered to get full category list
   let allCategories = Array.from(categoryMap.entries()).map(([id, name]) => ({ id, name }));
+  // EC2: slugs of ALL published docs (not just the filtered page) so the modal
+  // guard doesn't reject a valid document outside the active filter.
+  let allSlugs: string[] = docs.map((d) => d.slug);
   if (category || type) {
     const allResult = await listPublicDocuments({});
     if (allResult.ok) {
+      const allDocs = allResult.data.documents;
       const fullMap = new Map<string, string>();
-      for (const doc of allResult.data.documents) {
+      for (const doc of allDocs) {
         if (doc.categoryId && doc.categoryName) {
           fullMap.set(doc.categoryId, doc.categoryName);
         }
       }
       allCategories = Array.from(fullMap.entries()).map(([id, name]) => ({ id, name }));
+      allSlugs = allDocs.map((d) => d.slug);
     }
   }
 
@@ -62,7 +68,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
 
       <DocumentFilters categories={allCategories} />
 
-      <DocumentsPageClient docs={docs} mediaBase={mediaBase} />
+      <DocumentsPageClient docs={docs} mediaBase={mediaBase} allSlugs={allSlugs} />
     </div>
   );
 }

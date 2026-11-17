@@ -9,9 +9,10 @@ import type { PublicDocumentCard } from "@/types/document";
 interface DocumentsPageClientProps {
   docs: PublicDocumentCard[];
   mediaBase: string;
+  allSlugs: string[];
 }
 
-export function DocumentsPageClient({ docs, mediaBase }: DocumentsPageClientProps) {
+export function DocumentsPageClient({ docs, mediaBase, allSlugs }: DocumentsPageClientProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -20,8 +21,10 @@ export function DocumentsPageClient({ docs, mediaBase }: DocumentsPageClientProp
   // EC3: detect whether any filter is active for the empty-state message
   const isFiltered = Boolean(searchParams.get("category") || searchParams.get("type"));
 
-  // EC2: only open modal for slugs that exist in the current docs list
-  const knownSlugs = new Set(docs.map((d) => d.slug));
+  // EC2: guard against slugs that are not published/deleted.
+  // Use allSlugs (from the server's unfiltered fetch) so a valid document
+  // outside the current filter still opens the modal.
+  const knownSlugs = new Set(allSlugs);
 
   // AC4: sync modal state with ?document= param; guard against unknown slugs (EC2)
   const rawParam = searchParams.get("document");

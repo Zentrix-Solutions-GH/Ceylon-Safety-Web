@@ -232,3 +232,45 @@ describe("DocumentGrid", () => {
     expect(screen.getByText("Chemical Safety Sign")).toBeInTheDocument();
   });
 });
+
+// ─── DocumentsPageClient ──────────────────────────────────────────────────────
+
+import { DocumentsPageClient } from "@/components/documents/DocumentsPageClient";
+
+describe("DocumentsPageClient", () => {
+  beforeEach(() => {
+    mockPush.mockReset();
+    mockReplace.mockReset();
+    mockSearchParams.get.mockReturnValue(null);
+  });
+
+  it("EC2: modal opens for a slug in allSlugs even when not in filtered docs", () => {
+    // docs is filtered (only checklist); allSlugs includes a safety_sign slug
+    const filteredDocs = [makeDoc({ docKind: "checklist" })];
+    mockSearchParams.get.mockImplementation((k: string) =>
+      k === "document" ? "fire-safety-sign" : k === "type" ? "checklist" : null
+    );
+    render(
+      <DocumentsPageClient
+        docs={filteredDocs}
+        mediaBase={MEDIA_BASE}
+        allSlugs={["fire-safety-checklist", "fire-safety-sign"]}
+      />
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("EC2: modal does not open for a slug absent from allSlugs (deleted/unpublished)", () => {
+    mockSearchParams.get.mockImplementation((k: string) =>
+      k === "document" ? "deleted-doc" : null
+    );
+    render(
+      <DocumentsPageClient
+        docs={[makeDoc()]}
+        mediaBase={MEDIA_BASE}
+        allSlugs={["fire-safety-checklist"]}
+      />
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
