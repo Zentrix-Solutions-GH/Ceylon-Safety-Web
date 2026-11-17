@@ -168,6 +168,7 @@ describe("AC5: form validation and accessibility", () => {
       const errorEl = document.getElementById(errorId!);
       expect(errorEl).not.toBeNull();
       expect(titleInput).toHaveAttribute("aria-invalid", "true");
+      expect(document.activeElement).toBe(titleInput);
     });
   });
 

@@ -40,7 +40,7 @@ export default async function AdminDocumentsPage({
       status,
       docKind,
       categoryId: params.category && UUID_RE.test(params.category) ? params.category : undefined,
-      search: params.search,
+      search: params.search?.slice(0, 200),
       page,
     }),
     listCategories(),

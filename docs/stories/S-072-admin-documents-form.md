@@ -139,6 +139,14 @@ S-072 own gate: ESLint ✓  TypeScript ✓  New tests: 21/21 ✓
 
 ## Review notes
 
+Round 3 (/full-review 2026-11-17, APPROVE WITH FOLLOW-UPS, score 80/100):
+- **P0** `components/admin/__tests__/DocumentForm.test.tsx` — `focusFirstError`: still no `document.activeElement` assertion after failed submit. Must be added before or immediately after merge.
+- **P0** `e2e/admin-documents.spec.ts` — still absent; AC9 axe/keyboard tests not in CI. Must be tracked as follow-up story.
+- **P1** `app/admin/documents/[id]/edit/page.tsx:21` — `id` URL param passed to `getDocument` with no UUID format validation. Add `if (!UUID_RE.test(id)) notFound();` before the call.
+- **P2** `components/admin/DocumentsPageClient.tsx:14` — `DOCUMENTS_PAGE_SIZE` still declared locally; Round 1 fix landed in lib but this file was not updated.
+- **P2** `app/admin/documents/page.tsx` — `params.search` has no length cap; add `slice(0, 200)` guard.
+- **Structural note** `lib/admin/actions/document-save.ts` — wrapper barrel is a workaround for `'use server'` → `'use server'` chain issue; fix structurally (remove `"use server"` from individual action files) in a follow-up.
+
 Round 2 (/full-review 2026-11-16, APPROVE WITH FOLLOW-UPS, score 78/100):
 - **P0** `components/admin/__tests__/DocumentForm.test.tsx` — `focusFirstError` moves `document.activeElement` but no test asserts it. Add assertion on `document.activeElement` after failed submit. (follow-up)
 - **P0** `e2e/admin-documents.spec.ts` — entirely absent; story test plan requires axe/keyboard test (AC9) and create-then-edit e2e. (follow-up)

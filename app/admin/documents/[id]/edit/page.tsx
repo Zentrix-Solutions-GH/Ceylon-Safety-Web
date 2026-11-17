@@ -5,12 +5,16 @@ import { DocumentForm } from "@/components/admin/DocumentForm";
 
 export const metadata = { robots: "noindex,nostore" };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export default async function EditDocumentPage({ params }: PageProps) {
   const { id } = await params;
+
+  if (!UUID_RE.test(id)) notFound();
 
   const [docResult, categories] = await Promise.all([
     getDocument(id),

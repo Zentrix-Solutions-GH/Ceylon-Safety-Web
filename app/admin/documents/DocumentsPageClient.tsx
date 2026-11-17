@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { t } from "@/messages/en";
 import { DocumentsTable } from "@/components/admin/DocumentsTable";
-const DOCUMENTS_PAGE_SIZE = 25;
 import type { AdminDocumentRow, DocumentStatus, DocKind } from "@/types/document";
 import type { Category } from "@/types/article";
+
+// Must match DOCUMENTS_PAGE_SIZE in lib/admin/actions/documents.ts
+const DOCUMENTS_PAGE_SIZE = 25;
 
 interface Props {
   initialRows: AdminDocumentRow[];
