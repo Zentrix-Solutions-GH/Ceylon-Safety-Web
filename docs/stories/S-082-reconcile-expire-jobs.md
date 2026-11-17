@@ -1,11 +1,11 @@
 ---
 id: S-082
 title: Jobs — reconcile_payments, pending-card check, expire_pending_orders
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-082-reconcile-expire-jobs
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/98
 depends_on: [S-081]
 reqs: [REQ-153, REQ-197b]
 ---
@@ -19,12 +19,12 @@ Unpaid card orders do not stay open forever, and a payment whose notification ne
 - Related, OPEN: REQ-052b (rules for failed and cancelled orders, Q60): the design's 2-hour and 48-hour expiry rules are coded as assumptions (see below).
 
 ## Acceptance criteria
-- [ ] AC1: `/api/cron/expire-pending-orders` (every 15 minutes, secret header, heartbeat) calls `expire_pending_orders()`: pending CARD orders past `expires_at` become `cancelled` with `cancel_reason = 'expired'` and `release_coupon_use` is called (no-op in Release 1). It never touches `pending_verification` orders (their `expires_at` is empty).
-- [ ] AC2: An order whose `expires_at` was pushed to 48 hours by a pending notification (S-080) is not cancelled before that time. An order the buyer is paying right now (expiry extended by reuse in S-078) is not cancelled.
-- [ ] AC3: `/api/cron/reconcile-payments` runs daily and also as a check every 15 minutes: it finds pending CARD orders older than 15 minutes with no processed payment event and, if PayHere's status look-up interface is available to the project, asks PayHere for their status. A payment that PayHere reports as paid for an order we show as pending is raised as an alert and left for an admin (this job never marks an order paid; only a verified notification or an admin action does). Bank-transfer orders are not part of this job.
-- [ ] AC4: Pending card orders older than 2 hours are visible to admins through the order list filter "card payment pending longer than 2 hours" (S-103); this story provides the query used by that filter and by the daily summary (S-100).
-- [ ] AC5: All three routes are idempotent: running twice in a row changes nothing the second time.
-- [ ] AC6: Logs contain counts and order numbers only, no billing data. Each run pings its heartbeat.
+- [x] AC1: `/api/cron/expire-pending-orders` (every 15 minutes, secret header, heartbeat) calls `expire_pending_orders()`: pending CARD orders past `expires_at` become `cancelled` with `cancel_reason = 'expired'` and `release_coupon_use` is called (no-op in Release 1). It never touches `pending_verification` orders (their `expires_at` is empty).
+- [x] AC2: An order whose `expires_at` was pushed to 48 hours by a pending notification (S-080) is not cancelled before that time. An order the buyer is paying right now (expiry extended by reuse in S-078) is not cancelled.
+- [x] AC3: `/api/cron/reconcile-payments` runs daily and also as a check every 15 minutes: it finds pending CARD orders older than 15 minutes with no processed payment event and, if PayHere's status look-up interface is available to the project, asks PayHere for their status. A payment that PayHere reports as paid for an order we show as pending is raised as an alert and left for an admin (this job never marks an order paid; only a verified notification or an admin action does). Bank-transfer orders are not part of this job.
+- [x] AC4: Pending card orders older than 2 hours are visible to admins through the order list filter "card payment pending longer than 2 hours" (S-103); this story provides the query used by that filter and by the daily summary (S-100).
+- [x] AC5: All three routes are idempotent: running twice in a row changes nothing the second time.
+- [x] AC6: Logs contain counts and order numbers only, no billing data. Each run pings its heartbeat.
 
 ## Edge cases
 - [ ] EC1: A payment completes at the very moment the expiry job runs: the order lock makes one of them win; a late success after cancellation is handled by S-080 (granted and flagged `needs_review`).
