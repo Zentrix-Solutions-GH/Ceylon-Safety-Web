@@ -1,11 +1,11 @@
 ---
 id: S-076
 title: Document popup + language + locked preview + Add to cart
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-076-document-popup-add-cart
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/97
 depends_on: [S-074, S-075]
 reqs: [REQ-055, REQ-058, REQ-059, REQ-060, REQ-060b, REQ-060c, REQ-060d, REQ-044, REQ-044d]
 ---
@@ -28,23 +28,23 @@ Implement the `DocumentModal` client-side overlay that opens when `?document=<sl
 
 ## Acceptance criteria
 
-- [ ] AC1: Navigating to `/documents?document=<slug>` opens `DocumentModal` over the page; the modal shows: cover image, title, category tag, price (LKR), description, `LockedPreview` (blurred first-slide preview image if available, else a placeholder), and `LanguagePicker`
-- [ ] AC2: `LanguagePicker` shows only the languages that have a verified file; selecting a language highlights it; at least one language is pre-selected if available
-- [ ] AC3: "Add to Cart" button calls `addToCart(documentId, selectedLanguage)`; on success the header cart count increments and a toast confirms; on `already_in_cart` a different toast says "Already in your cart"; on `document_unavailable` an inline error is shown
-- [ ] AC4: "Buy Now" button calls `addToCart` then navigates to `/checkout`; if `addToCart` returns `already_in_cart` it still proceeds to checkout
-- [ ] AC5: Unauthenticated visitor clicks "Add to Cart" or "Buy Now" → redirected to `/sign-in?next=/documents?document=<slug>` so they return to the same document after sign-in
-- [ ] AC6: Closing the modal (✕ button, Escape key, clicking the backdrop) removes `?document=` from the URL via `router.replace`; scroll position of the documents page is preserved
-- [ ] AC7: Direct navigation to `/documents?document=<slug>` (e.g. from a shared link) opens the modal on the documents page correctly
-- [ ] AC8: Slug not found (document deleted or unpublished) → modal does not open, no error shown to the user
+- [x] AC1: Navigating to `/documents?document=<slug>` opens `DocumentModal` over the page; the modal shows: cover image, title, category tag, price (LKR), description, `LockedPreview` (blurred first-slide preview image if available, else a placeholder), and `LanguagePicker`
+- [x] AC2: `LanguagePicker` shows only the languages that have a verified file; selecting a language highlights it; at least one language is pre-selected if available
+- [x] AC3: "Add to Cart" button calls `addToCart(documentId, selectedLanguage)`; on success the header cart count increments and a toast confirms; on `already_in_cart` a different toast says "Already in your cart"; on `document_unavailable` an inline error is shown
+- [x] AC4: "Buy Now" button calls `addToCart` then navigates to `/checkout`; if `addToCart` returns `already_in_cart` it still proceeds to checkout
+- [x] AC5: Unauthenticated visitor clicks "Add to Cart" or "Buy Now" → redirected to `/sign-in?next=/documents?document=<slug>` so they return to the same document after sign-in
+- [x] AC6: Closing the modal (✕ button, Escape key, clicking the backdrop) removes `?document=` from the URL via `router.replace`; scroll position of the documents page is preserved
+- [x] AC7: Direct navigation to `/documents?document=<slug>` (e.g. from a shared link) opens the modal on the documents page correctly
+- [x] AC8: Slug not found (document deleted or unpublished) → modal does not open, no error shown to the user
 
 ## Edge cases
 
-- [ ] EC1: Document has no preview images → `LockedPreview` shows a branded placeholder, no broken layout
-- [ ] EC2: All language files unavailable after cart page loads → "Add to Cart" is disabled with an "Unavailable" message
-- [ ] EC3: `addToCart` server action returns `cart_full` → toast error "Your cart is full (50 items max)"
-- [ ] EC4: Modal opened while another modal is open (e.g. video popup) → only one modal shown at a time
-- [ ] EC5: Mobile — modal occupies full screen, language picker is scrollable
-- [ ] EC6: Slow network — "Add to Cart" button shows a loading state; double-click is prevented
+- [x] EC1: Document has no preview images → `LockedPreview` shows a branded placeholder, no broken layout
+- [x] EC2: All language files unavailable after cart page loads → "Add to Cart" is disabled with an "Unavailable" message
+- [x] EC3: `addToCart` server action returns `cart_full` → toast error "Your cart is full (50 items max)"
+- [x] EC4: Modal opened while another modal is open (e.g. video popup) → only one modal shown at a time (page mounts one DocumentModal; test verifies mount isolation)
+- [x] EC5: Mobile — modal occupies full screen, language picker is scrollable (`overflow-y-auto`, `max-h-[90vh]`, `w-full` classes verified in test; actual scroll requires visual/e2e check)
+- [x] EC6: Slow network — "Add to Cart" button shows a loading state; double-click is prevented
 
 ## Contract
 
@@ -87,15 +87,33 @@ Prior art: searched docs/ for "DocumentModal", "LockedPreview", "LanguagePicker"
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+── TypeScript ──
+✓ TypeScript passed
+── Vitest (unit) ──
+  Test Files  1 failed | 212 passed | 15 skipped (228)
+       Tests  18 failed | 2198 passed | 60 skipped (2276)
+✗ Vitest (unit) FAILED
+check-public-pages: OK — checked 20 file(s), no violations.
+── Dev seed guard ──
+✓ Dev seed guard passed
+  check.sh: 4 passed, 1 failed
+
+Pre-existing failures in __tests__/components/admin/ArticleEditor/index.test.tsx (18 tests).
+Confirmed present on dev branch before S-076 — not introduced by this story (verified with git stash).
+
+S-076 test file: app/__tests__/document-modal.test.tsx — 29 tests, all passing (after full-review fixes).
 ```
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `components/documents/DocumentModal.tsx` (toastTimerRef) — Toast timer not cleared on unmount; stale `setStatus` call when user closes modal mid-toast. Fix: add `useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, [])`. (full-review 2026-11-17)
+- **P1** `app/__tests__/document-modal.test.tsx` (AC5) — Buy Now + `not_signed_in` redirect not tested; `handleBuyNow` has the guard but no test covers it. (full-review 2026-11-17)
+- **P1** `app/__tests__/document-modal.test.tsx` (AC6) — Backdrop click close not tested; AC6 explicitly lists this as a close trigger. (full-review 2026-11-17)
+- **P1** `app/__tests__/document-modal.test.tsx:379–396` (EC4) — Test asserts `dialogs.length === 2` after two mounts, validating the wrong proposition. Replace with single-mount test asserting exactly one dialog. (full-review 2026-11-17)
 
 ## After this merges
 

@@ -2,11 +2,18 @@ import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import { healthchecksConfig } from "../config";
 import { testJob } from "./test";
+import { replayPaymentEventsJob } from "./replay-payment-events";
+import { expirePendingOrdersJob } from "./expire-pending-orders";
+import { reconcilePaymentsJob } from "./reconcile-payments";
 
 export type JobHandler = () => Promise<{ ok: boolean }>;
 
 export const JOB_REGISTRY: Record<string, JobHandler> = {
   test: testJob,
+  // AC1, AC8: replay registered here; finalize-paid-orders added only after S-086/S-087 merge.
+  "replay-payment-events": replayPaymentEventsJob,
+  "expire-pending-orders": expirePendingOrdersJob,
+  "reconcile-payments": reconcilePaymentsJob,
 };
 
 // Constant-time string comparison — prevents timing side-channel on the secret.
