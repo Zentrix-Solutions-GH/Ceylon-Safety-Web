@@ -3,7 +3,6 @@
 import { useRef, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { DocumentGrid } from "./DocumentGrid";
-import { DocumentModal } from "./DocumentModal";
 import type { PublicDocumentCard } from "@/types/document";
 
 interface DocumentsPageClientProps {
@@ -60,9 +59,6 @@ export function DocumentsPageClient({ docs, mediaBase, allSlugs }: DocumentsPage
   }
 
   return (
-    <>
-      <DocumentGrid docs={docs} mediaBase={mediaBase} onOpen={onOpen} isFiltered={isFiltered} />
-      <DocumentModal slug={modalSlug} onClose={onClose} />
-    </>
+    <DocumentGrid docs={docs} mediaBase={mediaBase} onOpen={onOpen} isFiltered={isFiltered} />
   );
 }
