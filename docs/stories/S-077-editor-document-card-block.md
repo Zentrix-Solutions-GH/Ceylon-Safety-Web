@@ -31,10 +31,10 @@ Add the document-card special block to the article editor. When an admin inserts
 
 ## Edge cases
 
-- [ ] EC1: Admin searches for a document that has no preview image → placeholder shown in picker and in the inserted block
-- [ ] EC2: `ItemPickerModal` returns empty results (no published documents) → "No documents found" state in the picker
-- [ ] EC3: Document is deleted after being inserted into an article → the card still renders from the saved JSON data; `DocumentSpot` links to the slug (standalone page handles the 404)
-- [ ] EC4: Price changes after insertion → the editor shows stale price from the JSON; the rendered article re-fetches or re-renders from the JSON (price is not re-fetched on render — it is a snapshot in the editor)
+- [x] EC1: Admin searches for a document that has no preview image → placeholder shown in picker and in the inserted block
+- [x] EC2: `ItemPickerModal` returns empty results (no published documents) → "No documents found" state in the picker
+- [x] EC3: Document is deleted after being inserted into an article → the card still renders from the saved JSON data; `DocumentSpot` links to the slug (standalone page handles the 404)
+- [x] EC4: Price changes after insertion → the editor shows stale price from the JSON; the rendered article re-fetches or re-renders from the JSON (price is not re-fetched on render — it is a snapshot in the editor)
 
 ## Contract
 
