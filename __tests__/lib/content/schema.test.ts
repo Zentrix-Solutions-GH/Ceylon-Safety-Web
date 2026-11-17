@@ -1,7 +1,7 @@
 // S-054: lib/content/schema — AC5/AC7 blockquote + link scheme validation
 
 import { describe, it, expect } from "vitest";
-import { validateBody, SCHEMA_VERSION } from "@/lib/content/schema";
+import { validateBody, extractRefs, SCHEMA_VERSION } from "@/lib/content/schema";
 
 function makeBody(overrides: Record<string, unknown> = {}) {
   return {
@@ -121,5 +121,36 @@ describe("validateBody — AC7: document_card block type", () => {
     }));
     expect(result.ok).toBe(false);
     expect((result as { ok: false; reason: string }).reason).toMatch(/missing required attrs/i);
+  });
+});
+
+// ─── S-077: extractRefs tracks document_card nodes ───────────────────────────
+
+describe("extractRefs — S-077: document_card produces a document ref", () => {
+  it("extracts a document ref from a document_card node", () => {
+    const nodes = [
+      {
+        type: "document_card",
+        attrs: {
+          node_id: "node-1",
+          document_id: "doc-abc",
+          slug: "safety-checklist",
+          title: "Safety Checklist",
+          price: 150000,
+        },
+      },
+    ];
+    const refs = extractRefs(nodes);
+    expect(refs).toEqual([
+      { node_id: "node-1", ref_type: "document", ref_id: "doc-abc" },
+    ]);
+  });
+
+  it("does not extract a ref when node_id or document_id is missing", () => {
+    const nodes = [
+      { type: "document_card", attrs: { slug: "safety-checklist", title: "Safety Checklist", price: 0 } },
+    ];
+    const refs = extractRefs(nodes);
+    expect(refs).toHaveLength(0);
   });
 });

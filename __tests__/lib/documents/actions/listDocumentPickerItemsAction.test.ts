@@ -82,6 +82,30 @@ describe("listDocumentPickerItemsAction — S17: suspended user", () => {
   });
 });
 
+// ─── S3: malformed input ─────────────────────────────────────────────────────
+
+describe("listDocumentPickerItemsAction — S3: malformed input", () => {
+  it("still calls requireStaff and returns ok:false when auth fails, regardless of input shape", async () => {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" });
+
+    // Pass a deliberately wrong kind value at runtime
+    const result = await listDocumentPickerItemsAction({ kind: "document", search: undefined, page: undefined });
+
+    expect(result).toEqual({ ok: false, code: "not_allowed" });
+    expect(listDocumentPickerItems).not.toHaveBeenCalled();
+  });
+
+  it("forwards undefined search and page without crashing", async () => {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: true, user: STAFF_USER });
+    vi.mocked(listDocumentPickerItems).mockResolvedValue(PICKER_RESULT);
+
+    const result = await listDocumentPickerItemsAction({ kind: "document" });
+
+    expect(result.ok).toBe(true);
+    expect(listDocumentPickerItems).toHaveBeenCalledWith({ search: undefined, page: undefined });
+  });
+});
+
 // ─── Happy path ───────────────────────────────────────────────────────────────
 
 describe("listDocumentPickerItemsAction — happy path", () => {
