@@ -34,6 +34,13 @@ export default function DocumentModal() {
   const backdropRef = useRef<HTMLDivElement>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Clear any pending toast timer on unmount to prevent stale setStatus calls
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
   const closeModal = useCallback(() => {
     router.replace(pathname);
   }, [router, pathname]);
@@ -69,12 +76,13 @@ export default function DocumentModal() {
     return () => document.removeEventListener("keydown", onKey);
   }, [doc, closeModal]);
 
-  // Scroll lock while open
+  // Scroll lock while open — uses a CSS class so concurrent overlays don't
+  // prematurely restore scroll when one unmounts while another is still open
   useEffect(() => {
     if (!doc) return;
-    document.body.style.overflow = "hidden";
+    document.body.classList.add("overflow-hidden");
     return () => {
-      document.body.style.overflow = "";
+      document.body.classList.remove("overflow-hidden");
     };
   }, [doc]);
 

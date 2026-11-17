@@ -294,6 +294,19 @@ describe("AC5: unauthenticated redirect", () => {
       ),
     );
   });
+
+  it("Buy Now: redirects to sign-in when addToCart returns not_signed_in", async () => {
+    mockAddToCart.mockResolvedValueOnce({ ok: false, code: "not_signed_in" });
+    const user = userEvent.setup();
+    render(<DocumentModal />);
+    await screen.findByText("Safety Checklist");
+    await user.click(screen.getByRole("button", { name: /buy now/i }));
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(
+        "/sign-in?next=%2Fdocuments%3Fdocument%3Dsafety-checklist",
+      ),
+    );
+  });
 });
 
 // --- AC6: Close modal ---
@@ -316,6 +329,19 @@ describe("AC6: closing modal", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/documents"));
   });
+
+  it("closes modal on backdrop click", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({ ok: true, document: DOC });
+    const user = userEvent.setup();
+    render(<DocumentModal />);
+    await screen.findByRole("dialog");
+    // The backdrop is the aria-hidden sibling div inside the dialog wrapper
+    const backdrop = document.querySelector("[aria-hidden='true'].absolute.inset-0");
+    expect(backdrop).not.toBeNull();
+    await user.click(backdrop!);
+    expect(mockReplace).toHaveBeenCalledWith("/documents");
+  });
 });
 
 // --- EC1: No preview images ---
@@ -336,25 +362,15 @@ describe("EC1: no preview images", () => {
 
 // --- EC4: Only one modal at a time ---
 describe("EC4: only one modal shown at a time", () => {
-  it("renders at most one dialog even when DocumentModal is mounted twice", async () => {
+  it("a single DocumentModal mount renders exactly one dialog", async () => {
     withSlug("safety-checklist");
     mockGetPublicDocument.mockResolvedValue({ ok: true, document: DOC });
-    // Mounting two instances simulates duplicate renders; URL drives visibility,
-    // so only one dialog should be present in the DOM.
-    render(
-      <>
-        <DocumentModal />
-        <DocumentModal />
-      </>,
-    );
-    await waitFor(() => screen.getAllByRole("dialog"));
-    // Both instances receive the same slug and render; but in production only one
-    // DocumentModal is ever mounted on the page (documents/page.tsx mounts one).
-    // The test confirms each instance independently guards on the slug — both dialogs
-    // will be present if two are mounted, which is the expected behaviour since the
-    // page only mounts one. The page-level guard is the enforcement mechanism.
+    // The page (documents/page.tsx) mounts exactly one DocumentModal instance.
+    // This test mirrors that: one mount → one dialog in the DOM.
+    render(<DocumentModal />);
+    await waitFor(() => screen.getByRole("dialog"));
     const dialogs = screen.getAllByRole("dialog");
-    expect(dialogs.length).toBe(2); // two mounts → two dialogs (page renders only one)
+    expect(dialogs.length).toBe(1);
   });
 });
 
@@ -391,5 +407,23 @@ describe("EC6: loading state", () => {
     expect(btn).toBeDisabled();
     resolve({ ok: true });
     await waitFor(() => expect(btn).not.toBeDisabled());
+  });
+
+  it("disables Buy Now button while request is in flight", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({ ok: true, document: DOC });
+    let resolve!: (v: { ok: true }) => void;
+    mockAddToCart.mockReturnValueOnce(new Promise((res) => (resolve = res)));
+    const user = userEvent.setup();
+    render(<DocumentModal />);
+    await screen.findByText("Safety Checklist");
+    const btn = screen.getByRole("button", { name: /buy now/i });
+    await user.click(btn);
+    // Button is disabled while the addToCart call is in-flight
+    expect(btn).toBeDisabled();
+    // Resolve — Buy Now navigates away on success, so we just verify the
+    // in-flight guard fired (button was disabled during the request)
+    resolve({ ok: true });
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/checkout"));
   });
 });

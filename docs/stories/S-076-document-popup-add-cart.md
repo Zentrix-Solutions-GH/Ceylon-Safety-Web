@@ -105,12 +105,15 @@ check-public-pages: OK — checked 20 file(s), no violations.
 Pre-existing failures in __tests__/components/admin/ArticleEditor/index.test.tsx (18 tests).
 Confirmed present on dev branch before S-076 — not introduced by this story (verified with git stash).
 
-S-076 test file: app/__tests__/document-modal.test.tsx — 25 tests, all passing.
+S-076 test file: app/__tests__/document-modal.test.tsx — 29 tests, all passing (after full-review fixes).
 ```
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `components/documents/DocumentModal.tsx` (toastTimerRef) — Toast timer not cleared on unmount; stale `setStatus` call when user closes modal mid-toast. Fix: add `useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, [])`. (full-review 2026-11-17)
+- **P1** `app/__tests__/document-modal.test.tsx` (AC5) — Buy Now + `not_signed_in` redirect not tested; `handleBuyNow` has the guard but no test covers it. (full-review 2026-11-17)
+- **P1** `app/__tests__/document-modal.test.tsx` (AC6) — Backdrop click close not tested; AC6 explicitly lists this as a close trigger. (full-review 2026-11-17)
+- **P1** `app/__tests__/document-modal.test.tsx:379–396` (EC4) — Test asserts `dialogs.length === 2` after two mounts, validating the wrong proposition. Replace with single-mount test asserting exactly one dialog. (full-review 2026-11-17)
 
 ## After this merges
 
