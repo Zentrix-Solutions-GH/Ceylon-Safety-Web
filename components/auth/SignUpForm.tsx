@@ -169,8 +169,8 @@ export function SignUpForm() {
                   t("auth.sign_up.panel.feature_1"),
                   t("auth.sign_up.panel.feature_2"),
                   t("auth.sign_up.panel.feature_3"),
-                ].map((item) => (
-                  <div key={item} className="flex items-start gap-2.5">
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-2.5">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
                     <span className="text-xs leading-relaxed text-white/80">{item}</span>
                   </div>

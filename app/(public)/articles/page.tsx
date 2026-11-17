@@ -6,14 +6,14 @@ import { ArticleFilters } from "@/components/articles/ArticleFilters";
 import { ArticleGrid } from "@/components/articles/ArticleGrid";
 import { ArticleCardUI } from "@/components/articles/ArticleCard";
 import { t } from "@/messages/en";
+import { publicConfig } from "@/lib/config.public";
 import type { ArticleRange } from "@/types/article";
 
 const VALID_RANGES: ArticleRange[] = ["newest", "week", "month"];
-const MEDIA_BASE = process.env.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL ?? "";
 
 function coverUrl(key: string | null): string | undefined {
   if (!key) return undefined;
-  return `${MEDIA_BASE}/${key}`;
+  return `${publicConfig.mediaCdnUrl}/${key}`;
 }
 
 interface ArticlesPageProps {
@@ -43,17 +43,19 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   const category = params.category || undefined;
   const isFiltered = range !== "newest" || Boolean(category);
 
+  const popularIsSameQuery = range === "month" && !category;
+
   const [listResult, categories, popularResult] = await Promise.all([
     listArticles({ range, category }),
     listCategories(),
-    listArticles({ range: "month" }),
+    popularIsSameQuery ? Promise.resolve(null) : listArticles({ range: "month" }),
   ]);
 
   const items = listResult.ok ? listResult.data.items : [];
   const next = listResult.ok ? listResult.data.next : null;
-  const popularItems = popularResult.ok
-    ? popularResult.data.items.slice(0, 5)
-    : [];
+  const popularItems = popularIsSameQuery
+    ? (listResult.ok ? listResult.data.items.slice(0, 5) : [])
+    : (popularResult?.ok ? popularResult.data.items.slice(0, 5) : []);
 
   const isEmpty = items.length === 0;
   const emptyMessage = isFiltered
@@ -75,7 +77,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
         <div className="relative mx-auto max-w-6xl px-4 py-14 text-white">
           <div className="max-w-2xl">
             <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-red-300">
-              Ceylon Safety
+              {t("auth.brand.wordmark")}
             </p>
             <h1 className="mb-3 text-4xl font-extrabold tracking-tight sm:text-5xl">
               {t("articles.hub.title")}
