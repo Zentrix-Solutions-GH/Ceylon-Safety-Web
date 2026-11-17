@@ -63,11 +63,13 @@ function makeDb(overrides: {
           }),
         };
       }
-      if (table === "bank_transfer_slips") {
+      if (table === "buyer_slip_summary") {
+        const selectMock = vi.fn().mockReturnThis();
         return {
-          select: vi.fn().mockReturnThis(),
+          select: selectMock,
           eq: vi.fn().mockReturnThis(),
           order: vi.fn().mockResolvedValue({ data: slipRows, error: null }),
+          _selectMock: selectMock,
         };
       }
       if (table === "site_settings") {
@@ -131,7 +133,7 @@ describe("getBankOrderView — ownership", () => {
 // ─── AC6: happy path — file key never returned ───────────────────────────────
 
 describe("getBankOrderView — AC6: view shape", () => {
-  it("returns order_number, bank_details, status, slips", async () => {
+  it("returns order_number, bank_details, status, slips; select never includes file_key", async () => {
     mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const db = makeDb();
     mockCreateClient.mockResolvedValue(db as never);
@@ -143,6 +145,14 @@ describe("getBankOrderView — AC6: view shape", () => {
     expect(view.bankDetails).toBe("Account: 1234567890, Bank: BOC");
     expect(view.status).toBe("pending_verification");
     expect(view.slips).toHaveLength(1);
+    // Verify the query uses buyer_slip_summary (structural file_key exclusion)
+    const slipBuilder = db.from.mock.results.find(
+      (r: { value: { _selectMock?: ReturnType<typeof vi.fn> } }) => r.value?._selectMock
+    )?.value;
+    if (slipBuilder) {
+      const selectArg: string = slipBuilder._selectMock.mock.calls[0]?.[0] ?? "";
+      expect(selectArg).not.toContain("file_key");
+    }
   });
 
   it("AC6: file_key is never present in any slip summary", async () => {

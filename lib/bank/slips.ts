@@ -76,7 +76,6 @@ export async function uploadBankSlip(
   }
 
   // Insert DB row (AC3). On failure, clean up the R2 object (AC8).
-  const now = new Date().toISOString();
   const { error: insertError } = await supabase.from("bank_transfer_slips").insert({
     id: slipId,
     order_id: orderId,
@@ -85,7 +84,6 @@ export async function uploadBankSlip(
     mime_type: mimeType,
     size_bytes: sizeBytes,
     status: "uploaded",
-    uploaded_at: now,
   });
 
   if (insertError) {
@@ -129,9 +127,9 @@ export async function getBankOrderView(orderId: string): Promise<ActionResult<Ba
 
   const bankDetails = settingRow?.value ? String(settingRow.value) : "";
 
-  // Slip rows — file_key is excluded from the SELECT so it never reaches the caller (AC6).
+  // Slip rows via buyer_slip_summary view — file_key is structurally absent (AC6).
   const { data: slipRows } = await supabase
-    .from("bank_transfer_slips")
+    .from("buyer_slip_summary")
     .select("status, uploaded_at, rejection_reason")
     .eq("order_id", orderId)
     .order("uploaded_at", { ascending: false });

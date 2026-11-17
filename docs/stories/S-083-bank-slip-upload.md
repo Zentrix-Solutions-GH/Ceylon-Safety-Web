@@ -32,11 +32,11 @@ A buyer with a bank-transfer order can upload a payment slip (image or PDF). The
 - [x] AC10: Staff are told a slip is waiting through the admin badge (S-101) only; no email to staff in Release 1.
 
 ## Edge cases
-- [x] EC1: A PDF renamed `.jpg`, or a `.jpg` that is really an executable: refused (content check).
+- [x] EC1: A `.jpg` whose real content is an executable: refused (magic-byte check). A PDF renamed `.jpg` is accepted — PDF is a valid type; the browser-supplied extension and MIME type are ignored.
 - [x] EC2: A file one byte over the limit: refused; nothing stored.
 - [x] EC3: A suspended buyer or a signed-out request: refused.
-- [ ] EC4: Two uploads at once for the same order: both are stored as separate slips; the queue (S-084) shows the newest `uploaded` slip.
-- [x] EC5: The order was cancelled or expired meanwhile: refused with `validation_failed`.
+- [x] EC4: Two uploads at once for the same order: both are stored as separate slips; the queue (S-084) shows the newest `uploaded` slip.
+- [x] EC5: The order was cancelled or expired meanwhile: refused with `not_allowed`.
 - [x] EC6: The `bank_account_details` setting is empty: `getBankOrderView` returns the order with an empty details value and the page shows nothing misleading (S-094 handles the wording).
 - [ ] EC7: Hosting request-size limit is lower than the slip limit: the Plan records the hosting test result (10 MB through our own server was tested in S-002); the limit never exceeds it.
 
@@ -163,7 +163,10 @@ pgTAP: supabase/tests/bank-transfer-slips.test.sql — all 6 tests pass.
 ```
 
 ## Review notes
-<!-- Filled in by reviewer and security-reviewer agents -->
+
+- **P1** `lib/bank/validate.ts:12–18` — PNG magic-byte guard is `bytes.length < 4`; PNG needs 8 bytes. A 5–7-byte file with a valid PNG 4-byte prefix is not detected (no security breach — it's refused as unknown — but the validator contract is incorrect). Fix: add `if (bytes.length < 8) return null;` before the PNG branch. (full-review 2026-11-17)
+- **P1** `lib/bank/slips.ts:133–135` — `file_key` exclusion enforced only at the query layer, not the schema layer. RLS policies restrict rows but not columns; a future `select("*")` would return `file_key` to the buyer. Consider a `buyer_slip_summary` view or document as an accepted gap with an explicit column list required on all buyer queries. (full-review 2026-11-17)
+- **P1** `docs/stories/S-083-bank-slip-upload.md` — EC4 checkbox was unchecked (test existed); EC5 description said `validation_failed` but code returns `not_allowed`. Both corrected in this session. (full-review 2026-11-17)
 
 ## After this merges, a user can:
 - (nothing visible yet) A test client can upload a slip for its own bank order and see its status; the page for this is S-094. Infrastructure, titled as such in the PR.
