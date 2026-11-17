@@ -71,3 +71,9 @@ export interface MyOrder {
   createdAt: string;
   items: MyOrderItem[];
 }
+
+export interface ReconcileResult {
+  ok: boolean;
+  alertCount: number;
+  orderNumbers: string[];
+}

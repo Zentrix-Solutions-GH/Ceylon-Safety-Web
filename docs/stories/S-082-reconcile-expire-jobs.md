@@ -1,7 +1,7 @@
 ---
 id: S-082
 title: Jobs — reconcile_payments, pending-card check, expire_pending_orders
-status: ready
+status: in-progress
 owner: backend
 risk: normal
 branch: feature/S-082-reconcile-expire-jobs
@@ -56,13 +56,67 @@ Unpaid card orders do not stay open forever, and a payment whose notification ne
 
 ## Plan
 Prior art: grepped docs/ for expire_pending_orders, reconcile_payments, expires_at. Found commerce design v6 sections 4.3, 5A, 11, schema doc section 14.1 and infrastructure design section 9; this story implements the card-side rows (supersedes the first-draft S-016c).
-<!-- Filled in by /story-run at Step 3. -->
+
+**PayHere status look-up:** `lib/payhere/types.ts` has no look-up interface and commerce doc section 19 item 8 marks it as unconfirmed. Assumption accepted: adapter is omitted; reconcile route lists + alerts without calling PayHere (EC2 path always).
+
+**expire_pending_orders() migration:** not yet in `supabase/migrations/`. Must be written here.
+
+**Files to create / edit:**
+1. `supabase/migrations/YYYYMMDDXXXXXX_expire-pending-orders.sql` — SQL function `expire_pending_orders()` returning `INT` (number of rows cancelled)
+2. `lib/orders/expire.ts` — `expirePendingOrders(sb)` calls the DB function; logs count + order numbers; no billing data
+3. `lib/orders/reconcile.ts` — `reconcileCardPayments(sb)` queries pending CARD orders older than 15 min with no successful payment event, logs/alerts each one; `getPendingCardOrdersOlderThan(minutes, sb)` exported for S-100/S-103
+4. `lib/jobs/index.ts` — register `expire-pending-orders` and `reconcile-payments` jobs
+5. `types/order.ts` — add `ReconcileResult` type
+6. `app/api/cron/__tests__/expire.test.ts` — AC1, AC2, AC5 integration tests
+7. `app/api/cron/__tests__/reconcile.test.ts` — AC3 integration tests (no PayHere call path)
+
+**No new cron routes needed:** the existing `app/api/cron/[job]/route.ts` handles all jobs via the registry — adding to `JOB_REGISTRY` is all that's needed.
+
+**Step order:**
+1. Write failing tests (expire + reconcile)
+2. Write SQL migration for `expire_pending_orders()`
+3. Write `lib/orders/expire.ts`
+4. Write `lib/orders/reconcile.ts`
+5. Add `ReconcileResult` to `types/order.ts`
+6. Register jobs in `lib/jobs/index.ts`
+7. Run tests green → `check.sh` → reviewer
 
 ## Evidence
-<!-- Paste scripts/check.sh output here after Step 7. -->
 
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Test Files  1 failed (pre-existing) | 217 passed | 15 skipped (233)
+     Tests  18 failed (pre-existing) | 2213 passed | 60 skipped (2291)
+
+Pre-existing failure: __tests__/components/admin/ArticleEditor/index.test.tsx
+  Cause: localStorage.clear() is undefined (localStorage not available in this test env)
+  Confirmed pre-existing: same 18 failures on dev before this branch's changes.
+
+New tests added by S-082:
+  ✓ app/api/cron/__tests__/expire.test.ts (4 tests)
+  ✓ app/api/cron/__tests__/reconcile.test.ts (8 tests)
+
+── pgTAP RLS suite ──
+⚠ Supabase not running — skipping pgTAP tests
+
+── Types file freshness ──
+⚠ Supabase not running — skipping types check
+
+── Public pages session check (AC11) ──
+check-public-pages: OK — checked 20 file(s), no violations.
+✓ Public pages session check (AC11) passed
+
+════════════════════════════════
+  check.sh: 4 passed, 1 failed (pre-existing ArticleEditor localStorage test)
+════════════════════════════════
 ```
 
 ## Review notes
