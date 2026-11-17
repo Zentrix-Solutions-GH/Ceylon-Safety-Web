@@ -7,6 +7,9 @@ import { publicConfig } from "@/lib/config.public";
  * Uses config.public so this helper is safe in both server and client components.
  */
 export function publicUrl(key: string): string {
+  if (!publicConfig.mediaCdnUrl) {
+    throw new Error("NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL is not configured");
+  }
   const base = publicConfig.mediaCdnUrl.replace(/\/$/, "");
   return `${base}/${key}`;
 }

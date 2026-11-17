@@ -1,5 +1,5 @@
 // S-072: AC3–AC8, EC1–EC5 — DocumentForm component
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as React from "react";
@@ -191,7 +191,24 @@ describe("AC5: form validation and accessibility", () => {
       expect(screen.getByRole("button", { name: /saving/i })).toBeDisabled();
     });
 
-    resolveAction({ ok: true, documentId: "doc-new", slug: "test-doc", updatedAt: "2026-11-01" });
+    await act(async () => {
+      resolveAction({ ok: true, documentId: "doc-new", slug: "test-doc", updatedAt: "2026-11-01" });
+    });
+  });
+
+  it("focuses first errored field when multiple fields are invalid on submit", async () => {
+    const user = userEvent.setup();
+
+    render(<DocumentForm mode="create" categories={CATEGORIES} />);
+
+    // submit with both title and type missing
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      const titleInput = screen.getByLabelText(/title/i);
+      expect(titleInput).toHaveAttribute("aria-invalid", "true");
+      expect(document.activeElement).toBe(titleInput);
+    });
   });
 });
 

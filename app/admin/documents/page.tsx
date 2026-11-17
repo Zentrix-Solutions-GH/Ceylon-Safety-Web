@@ -34,12 +34,13 @@ export default async function AdminDocumentsPage({
   const docKind = VALID_KINDS.includes(params.kind as DocKind)
     ? (params.kind as DocKind)
     : undefined;
+  const categoryId = params.category && UUID_RE.test(params.category) ? params.category : undefined;
 
   const [listResult, categories] = await Promise.all([
     listDocuments({
       status,
       docKind,
-      categoryId: params.category && UUID_RE.test(params.category) ? params.category : undefined,
+      categoryId,
       search: params.search?.slice(0, 200),
       page,
     }),
@@ -59,7 +60,7 @@ export default async function AdminDocumentsPage({
       categories={categories}
       initialStatus={status ?? ""}
       initialKind={docKind ?? ""}
-      initialCategory={params.category ?? ""}
+      initialCategory={categoryId ?? ""}
       initialTitle={params.search ?? ""}
     />
   );
