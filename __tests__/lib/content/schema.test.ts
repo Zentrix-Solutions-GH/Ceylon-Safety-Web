@@ -153,6 +153,22 @@ describe("validateBody — AC7: document_card block type", () => {
     }));
     expect(result.ok).toBe(true);
   });
+
+  it("rejects a document_card block with a protocol-relative previewUrl", () => {
+    const result = validateBody(makeBody({
+      content: [{ type: "document_card", attrs: { node_id: "n1", document_id: "d1", slug: "s", title: "T", price: 100, previewUrl: "//evil.com/track.gif" } }],
+    }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; reason: string }).reason).toMatch(/relative path/i);
+  });
+
+  it("rejects a document_card block with a path-traversal previewUrl", () => {
+    const result = validateBody(makeBody({
+      content: [{ type: "document_card", attrs: { node_id: "n1", document_id: "d1", slug: "s", title: "T", price: 100, previewUrl: "../../etc/passwd" } }],
+    }));
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; reason: string }).reason).toMatch(/relative path/i);
+  });
 });
 
 // ─── S-077: extractRefs tracks document_card nodes ───────────────────────────

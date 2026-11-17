@@ -70,6 +70,7 @@ export default function DocumentPickerModal({ onPick, onClose }: DocumentPickerM
         onChange={(e) => setSearch(e.target.value)}
         placeholder={t("editor.doc_picker.search_placeholder")}
         aria-label={t("editor.doc_picker.search_placeholder")}
+        maxLength={200}
       />
       <button type="button" onClick={onClose} aria-label={t("editor.doc_picker.close")}>
         {t("editor.doc_picker.close")}

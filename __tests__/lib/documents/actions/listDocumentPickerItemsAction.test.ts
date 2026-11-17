@@ -66,23 +66,22 @@ describe.each([
 // ─── S3: malformed input ─────────────────────────────────────────────────────
 
 describe("listDocumentPickerItemsAction — S3: malformed input", () => {
-  it("returns not_allowed when auth fails regardless of input shape", async () => {
-    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" });
+  it("returns unknown when input fails Zod validation (page < 1) without calling requireStaff", async () => {
+    const result = await listDocumentPickerItemsAction({ page: 0 });
 
-    const result = await listDocumentPickerItemsAction({ search: undefined, page: undefined });
-
-    expect(result).toEqual({ ok: false, code: "not_allowed" });
+    expect(result).toEqual({ ok: false, code: "unknown" });
+    expect(requireStaff).not.toHaveBeenCalled();
     expect(listDocumentPickerItems).not.toHaveBeenCalled();
   });
 
-  it("forwards undefined search and page without crashing", async () => {
+  it("coerces undefined page to default 1 and forwards to listDocumentPickerItems", async () => {
     vi.mocked(requireStaff).mockResolvedValue({ ok: true, user: STAFF_USER });
     vi.mocked(listDocumentPickerItems).mockResolvedValue(PICKER_RESULT);
 
     const result = await listDocumentPickerItemsAction({});
 
     expect(result.ok).toBe(true);
-    expect(listDocumentPickerItems).toHaveBeenCalledWith({ search: undefined, page: undefined });
+    expect(listDocumentPickerItems).toHaveBeenCalledWith({ search: undefined, page: 1 });
   });
 });
 
@@ -97,7 +96,7 @@ describe("listDocumentPickerItemsAction — happy path", () => {
 
     expect(result).toEqual(PICKER_RESULT);
     expect(requireStaff).toHaveBeenCalledWith("articles.*");
-    expect(listDocumentPickerItems).toHaveBeenCalledWith({ search: undefined, page: undefined });
+    expect(listDocumentPickerItems).toHaveBeenCalledWith({ search: undefined, page: 1 });
   });
 
   it("forwards search and page to listDocumentPickerItems", async () => {

@@ -241,4 +241,36 @@ describe("renderArticleBody — AC5: document_card renders as DocumentSpot link"
     const link = container.querySelector("a[data-block='document']");
     expect(link?.getAttribute("href")).toBe("/documents/old-doc");
   });
+
+  // P1: CDN prefix applied to previewUrl in public renderer
+  it("renders preview image with CDN prefix", () => {
+    const body = makeDocCardBody({
+      node_id: "node-1",
+      document_id: "doc-1",
+      slug: "safety-checklist",
+      title: "Safety Checklist",
+      price: 150000,
+      previewUrl: "docs/doc-1/preview.jpg",
+    });
+    const { container } = render(renderArticleBody(body));
+    const img = container.querySelector("img");
+    expect(img?.getAttribute("src")).toBe("https://cdn.test/docs/doc-1/preview.jpg");
+  });
+
+  // EC4: snapshot price — DocumentCardBlock does not re-fetch on mount
+  it("renders price from props without triggering a fetch", () => {
+    vi.clearAllMocks();
+    render(
+      <DocumentCardBlock
+        documentId="doc-1"
+        slug="safety-checklist"
+        title="Safety Checklist"
+        price={150000}
+        onRemove={() => {}}
+      />,
+    );
+    // No server action called — price comes from props only
+    expect(vi.mocked(listDocumentPickerItemsAction)).not.toHaveBeenCalled();
+    expect(screen.getByText(/LKR/)).toBeTruthy();
+  });
 });

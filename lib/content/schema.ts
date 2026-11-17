@@ -122,7 +122,12 @@ function validateNode(
     if (typeof attrs.price !== "number" || attrs.price < 0) {
       return { ok: false, reason: `document_card block has invalid price (must be a non-negative number)` };
     }
-    if (attrs.previewUrl !== undefined && (typeof attrs.previewUrl !== "string" || attrs.previewUrl.includes("://"))) {
+    if (attrs.previewUrl !== undefined && (
+      typeof attrs.previewUrl !== "string" ||
+      attrs.previewUrl.includes("://") ||
+      attrs.previewUrl.startsWith("//") ||
+      attrs.previewUrl.startsWith(".")
+    )) {
       return { ok: false, reason: `document_card previewUrl must be a relative path, not an absolute URL` };
     }
   }
