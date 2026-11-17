@@ -327,7 +327,10 @@ describe("uploadBankSlip — EC4: concurrent uploads", () => {
 // ─── AC7: cancel refused after slip ──────────────────────────────────────────
 
 describe("uploadBankSlip + cancelPendingOrder — AC7: cancel refused with slip", () => {
-  it("cancelPendingOrder returns not_allowed after a slip has been uploaded for the order", async () => {
+  it("cancelPendingOrder returns not_allowed when RPC reports slip_uploaded", async () => {
+    // This test verifies that cancelPendingOrder propagates not_allowed when the
+    // DB cancel function reports a slip is present. The RPC mock simulates what
+    // the Postgres function returns when has_slip = true (exercised by pgTAP).
     mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const db = {
       from: vi.fn((table: string) => {
@@ -356,18 +359,74 @@ describe("uploadBankSlip + cancelPendingOrder — AC7: cancel refused with slip"
     const cancelResult = await cancelPendingOrder(fakeOrderId);
     expect(cancelResult).toMatchObject({ ok: false, code: "not_allowed" });
   });
+
+  it("cancelPendingOrder returns ok when RPC reports cancelled (no slip present)", async () => {
+    // Baseline: cancel succeeds when the DB function reports no slip. Confirms
+    // that not_allowed is specifically caused by slip_uploaded, not a blanket failure.
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    const db = {
+      from: vi.fn((table: string) => {
+        if (table === "orders") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { id: fakeOrderId, user_id: fakeUser.id, status: "pending_verification", payment_provider: "bank_transfer" },
+              error: null,
+            }),
+          };
+        }
+        return {};
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: { action: "cancelled" }, error: null }),
+    };
+    mockCreateClient.mockResolvedValue(db as never);
+
+    const cancelResult = await cancelPendingOrder(fakeOrderId);
+    expect(cancelResult).toMatchObject({ ok: true });
+  });
 });
 
 // ─── AC9: no logging of slip data ────────────────────────────────────────────
 
 describe("uploadBankSlip — AC9: no logging of slip data", () => {
   it("does not log file key, mime type, or order id on success", async () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
     const db = makeDb();
     mockCreateClient.mockResolvedValue(db as never);
     await uploadBankSlip(fakeOrderId, makeFormData());
-    expect(consoleSpy).not.toHaveBeenCalled();
-    consoleSpy.mockRestore();
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("does not log file key, mime type, or order id on DB insert failure", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    const db = makeDb({ insertSlip: { data: null, error: { message: "db error" } } });
+    mockCreateClient.mockResolvedValue(db as never);
+    await uploadBankSlip(fakeOrderId, makeFormData());
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("does not log file key, mime type, or order id on R2 upload failure", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockRequireActiveAccount.mockResolvedValue({ ok: true, user: fakeUser } as never);
+    mockPutObject.mockRejectedValue(new Error("r2 error"));
+    const db = makeDb();
+    mockCreateClient.mockResolvedValue(db as never);
+    await uploadBankSlip(fakeOrderId, makeFormData());
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 });

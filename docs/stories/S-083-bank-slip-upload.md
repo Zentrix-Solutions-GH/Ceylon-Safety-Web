@@ -167,6 +167,10 @@ pgTAP: supabase/tests/bank-transfer-slips.test.sql — all 6 tests pass.
 - **P1** `lib/bank/validate.ts:12–18` — PNG magic-byte guard is `bytes.length < 4`; PNG needs 8 bytes. A 5–7-byte file with a valid PNG 4-byte prefix is not detected (no security breach — it's refused as unknown — but the validator contract is incorrect). Fix: add `if (bytes.length < 8) return null;` before the PNG branch. (full-review 2026-11-17)
 - **P1** `lib/bank/slips.ts:133–135` — `file_key` exclusion enforced only at the query layer, not the schema layer. RLS policies restrict rows but not columns; a future `select("*")` would return `file_key` to the buyer. Consider a `buyer_slip_summary` view or document as an accepted gap with an explicit column list required on all buyer queries. (full-review 2026-11-17)
 - **P1** `docs/stories/S-083-bank-slip-upload.md` — EC4 checkbox was unchecked (test existed); EC5 description said `validation_failed` but code returns `not_allowed`. Both corrected in this session. (full-review 2026-11-17)
+- **P0** `supabase/migrations/20261117000004_bank-transfer-slips.sql:52–55` — `slips_select_own` grants full SELECT on the base table; a buyer can retrieve `file_key` via `GET /rest/v1/bank_transfer_slips?select=file_key`. Fix: add `REVOKE SELECT (file_key) ON public.bank_transfer_slips FROM authenticated;` in a new migration. (full-review 2026-11-18)
+- **P1** `lib/bank/__tests__/slips.test.ts:330–358` — AC7 test is hollow; mock pre-programmes the RPC result so the test never exercises the real guard. (full-review 2026-11-18)
+- **P1** `lib/bank/__tests__/slips.test.ts:363–373` — AC9 spy only watches `console.log`; `console.error` paths not checked. (full-review 2026-11-18)
+- **P1** `lib/bank/validate.ts:12` — PNG magic-byte guard is `< 4` not `< 8`; 5–7-byte PNG-prefix buffer accepted as valid. Bug noted in round 2 but neither the guard nor a regression test was added. (full-review 2026-11-18)
 
 ## After this merges, a user can:
 - (nothing visible yet) A test client can upload a slip for its own bank order and see its status; the page for this is S-094. Infrastructure, titled as such in the PR.
