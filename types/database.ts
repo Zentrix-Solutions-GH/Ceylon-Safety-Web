@@ -201,14 +201,14 @@ isOneToOne: false
                   ]
                 },"bank_transfer_slips": {
                   Row: {
-                    "file_key": string,"id": string,"mime_type": string | null,"order_id": string,"rejection_reason": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"size_bytes": number | null,"status": string,"uploaded_at": string,"uploaded_by": string
+                    "file_key": string,"id": string,"mime_type": string,"order_id": string,"rejection_reason": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"size_bytes": number,"status": string,"uploaded_at": string,"uploaded_by": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "file_key": string,"id"?: string,"mime_type"?: string | null,"order_id": string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes"?: number | null,"status"?: string,"uploaded_at"?: string,"uploaded_by": string
+                    "file_key": string,"id"?: string,"mime_type": string,"order_id": string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes": number,"status"?: string,"uploaded_at"?: string,"uploaded_by": string
                   }
                   Update: {
-                    "file_key"?: string,"id"?: string,"mime_type"?: string | null,"order_id"?: string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes"?: number | null,"status"?: string,"uploaded_at"?: string,"uploaded_by"?: string
+                    "file_key"?: string,"id"?: string,"mime_type"?: string,"order_id"?: string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes"?: number,"status"?: string,"uploaded_at"?: string,"uploaded_by"?: string
                   }
                   Relationships: [
                     {

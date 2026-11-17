@@ -16,6 +16,7 @@ export const COMMON_ERROR_CODES = [
   "purge_failed",
   "reauth_required",
   "mfa_required",
+  "slip_invalid",
   "unknown",
 ] as const;
 

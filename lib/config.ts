@@ -177,6 +177,9 @@ export function r2Config(): {
 export const PPTX_MAX_BYTES = 100 * 1024 * 1024; // 100 MB
 export const PREVIEW_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
+// Bank slip upload size limit (S-083). Must not exceed the hosting-server limit tested in S-002 (10 MB).
+export const SLIP_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+
 // Fail fast when R2 is not configured (CLAUDE.md: missing config → startup error).
 // Skip during `next build` — Next.js sets NODE_ENV=production at build time but
 // R2 vars are only available at runtime, so NEXT_PHASE guards the build phase.
