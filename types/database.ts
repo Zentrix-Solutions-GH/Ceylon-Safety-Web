@@ -1162,6 +1162,9 @@ isOneToOne: false
 "profile_is_super_admin":
 { Args: { "p_profile_id": string }; Returns: boolean
                            },
+"release_coupon_use":
+{ Args: { "p_order_id": string }; Returns: undefined
+                           },
 "search_all":
 { Args: { "lim"?: number,"query": string,"scope": string }; Returns: {
               "category_name": string,"cover_image_key": string,"id": string,"kind": string,"short_text": string,"slug": string,"title": string
