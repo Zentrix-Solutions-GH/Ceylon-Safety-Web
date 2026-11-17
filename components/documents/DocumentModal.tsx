@@ -137,7 +137,6 @@ export default function DocumentModal() {
       }
       if (result.code === "cart_full") {
         showToast(t("document_modal.toast.cart_full"));
-        setStatus({ type: "idle" });
         return;
       }
       // already_in_cart → still proceed to checkout
