@@ -135,10 +135,10 @@ export function SignUpForm() {
                 alt=""
                 fill
                 sizes="(min-width: 1024px) 45vw, 0px"
-                className="object-cover object-center opacity-30"
+                className="object-cover object-center opacity-75"
                 priority
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-primary-darker/80 via-primary-darker/70 to-primary-deepest/90" />
+              <div className="absolute inset-0 bg-gradient-to-b from-primary-darker/45 via-primary-darker/30 to-primary-deepest/85" />
             </div>
 
             {/* Top section */}

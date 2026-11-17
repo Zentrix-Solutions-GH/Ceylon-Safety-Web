@@ -135,10 +135,10 @@ export function SignInForm() {
                 alt=""
                 fill
                 sizes="(min-width: 1024px) 45vw, 0px"
-                className="object-cover object-center opacity-50"
+                className="object-cover object-center opacity-80"
                 priority
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-primary-darker/75 via-primary-darker/65 to-primary-deepest/95" />
+              <div className="absolute inset-0 bg-gradient-to-b from-primary-darker/45 via-primary-darker/30 to-primary-deepest/85" />
             </div>
 
             <div className="relative z-10 p-7">
