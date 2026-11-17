@@ -29,6 +29,7 @@ export default function DocumentModal() {
   const slug = searchParams.get("document");
 
   const [doc, setDoc] = useState<PublicDocument | null>(null);
+  const [loading, setLoading] = useState(false);
   const [selectedLang, setSelectedLang] = useState<DocumentLanguage | null>(null);
   const [status, setStatus] = useState<CartStatus>({ type: "idle" });
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -42,18 +43,24 @@ export default function DocumentModal() {
   }, []);
 
   const closeModal = useCallback(() => {
-    router.replace(pathname);
-  }, [router, pathname]);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("document");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [router, pathname, searchParams]);
 
   // Fetch document when slug changes
   useEffect(() => {
     if (!slug) {
       setDoc(null);
+      setLoading(false);
       return;
     }
     let cancelled = false;
+    setLoading(true);
     getPublicDocument(slug).then((result) => {
       if (cancelled) return;
+      setLoading(false);
       if (result.ok) {
         setDoc(result.document);
         setSelectedLang(result.document.languages[0] ?? null);
@@ -153,7 +160,31 @@ export default function DocumentModal() {
     router.push("/checkout");
   }
 
-  if (!slug || !doc) return null;
+  if (!slug) return null;
+
+  // Loading skeleton while fetching — prevents blank modal on direct-link / slow network (AC7)
+  if (loading && !doc) {
+    return (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("document_modal.loading")}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      >
+        <div
+          className="absolute inset-0 bg-black/60"
+          onClick={closeModal}
+          aria-hidden="true"
+          data-testid="modal-backdrop"
+        />
+        <div className="relative z-10 w-full max-w-lg rounded-2xl bg-background shadow-2xl p-6 flex items-center justify-center min-h-[200px]">
+          <span className="text-sm text-muted-foreground">{t("document_modal.loading")}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!doc) return null;
 
   const isLoading = status.type === "loading";
   const hasNoLanguages = doc.languages.length === 0 || doc.unavailable;
@@ -162,7 +193,7 @@ export default function DocumentModal() {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={doc.title}
+      aria-label={t("document_modal.aria_label", { title: doc.title })}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
       {/* Backdrop */}
@@ -171,6 +202,7 @@ export default function DocumentModal() {
         className="absolute inset-0 bg-black/60"
         onClick={closeModal}
         aria-hidden="true"
+        data-testid="modal-backdrop"
       />
 
       {/* Panel */}

@@ -756,6 +756,8 @@ const en = {
 
   // --- DocumentModal (S-076) ---
   "document_modal.close": "Close",
+  "document_modal.loading": "Loading document…",
+  "document_modal.aria_label": "{title}",
   "document_modal.cover_alt": "{title} cover",
   "document_modal.preview_placeholder_alt": "Preview not available",
   "document_modal.price": "LKR {price}",
