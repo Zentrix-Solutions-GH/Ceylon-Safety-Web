@@ -24,6 +24,7 @@ const ALLOWED_BLOCK_TYPES = new Set([
   "image",
   "video",
   "document_spot",
+  "document_card",
   "course_spot",
   "ad_slot",
 ]);
@@ -110,6 +111,25 @@ function validateNode(
 
   if (!ALLOWED_BLOCK_TYPES.has(type) && !ALLOWED_INLINE_TYPES.has(type)) {
     return { ok: false, reason: `unknown block type: "${type}"` };
+  }
+
+  // Validate document_card required attrs
+  if (type === "document_card") {
+    const attrs = (node.attrs ?? {}) as Record<string, unknown>;
+    if (!attrs.node_id || !attrs.document_id || !attrs.slug || !attrs.title) {
+      return { ok: false, reason: `document_card block is missing required attrs (node_id, document_id, slug, title)` };
+    }
+    if (typeof attrs.price !== "number" || attrs.price < 0) {
+      return { ok: false, reason: `document_card block has invalid price (must be a non-negative number)` };
+    }
+    if (attrs.previewUrl !== undefined && (
+      typeof attrs.previewUrl !== "string" ||
+      attrs.previewUrl.includes("://") ||
+      attrs.previewUrl.startsWith("/") ||
+      attrs.previewUrl.startsWith(".")
+    )) {
+      return { ok: false, reason: `document_card previewUrl must be a relative path, not an absolute URL` };
+    }
   }
 
   // Validate marks on text nodes
@@ -230,6 +250,8 @@ export function extractRefs(nodes: unknown[]): BodyRef[] {
     if (type === "video" && attrs.node_id && attrs.video_id) {
       refs.push({ node_id: attrs.node_id as string, ref_type: "video", ref_id: attrs.video_id as string });
     } else if (type === "document_spot" && attrs.node_id && attrs.document_id) {
+      refs.push({ node_id: attrs.node_id as string, ref_type: "document", ref_id: attrs.document_id as string });
+    } else if (type === "document_card" && attrs.node_id && attrs.document_id) {
       refs.push({ node_id: attrs.node_id as string, ref_type: "document", ref_id: attrs.document_id as string });
     } else if (type === "course_spot" && attrs.node_id && attrs.course_id) {
       refs.push({ node_id: attrs.node_id as string, ref_type: "course", ref_id: attrs.course_id as string });
