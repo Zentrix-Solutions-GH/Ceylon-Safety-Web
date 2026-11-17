@@ -33,6 +33,18 @@ describe("detectMimeType", () => {
   it("returns null for an empty buffer", () => {
     expect(detectMimeType(new Uint8Array(0))).toBeNull();
   });
+
+  it("returns null for a 5-byte buffer with the first 4 PNG magic bytes (guard requires 8 bytes)", () => {
+    // A truncated PNG header must not be accepted as image/png.
+    // The guard is `bytes.length >= 8` before checking bytes[4–7].
+    const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x00]);
+    expect(detectMimeType(bytes)).toBeNull();
+  });
+
+  it("returns null for a 7-byte buffer with the first 4 PNG magic bytes", () => {
+    const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a]);
+    expect(detectMimeType(bytes)).toBeNull();
+  });
 });
 
 // ─── validateSlipFile ────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@
 --   Slip B1:          e9400000-0000-0000-0000-000000000002  (belongs to Buyer B)
 
 BEGIN;
-SELECT plan(11);
+SELECT plan(12);
 
 -- ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -180,6 +180,23 @@ SELECT is(
     WHERE id = 'e9400000-0000-0000-0000-000000000002'),
   0,
   'buyer A cannot read buyer B slip via buyer_slip_summary'
+);
+
+RESET ROLE;
+
+-- ── 11. cancel_order_locked returns slip_uploaded when a slip row exists (AC7) ─
+
+-- Run as buyer A (the order owner) with their JWT.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims = '{"sub": "e9100000-0000-0000-0000-000000000001", "role": "authenticated"}';
+
+SELECT is(
+  (SELECT public.cancel_order_locked(
+    'e9100000-0000-0000-0000-000000000001'::uuid,
+    'e9300000-0000-0000-0000-000000000001'::uuid
+  ) ->> 'action'),
+  'slip_uploaded',
+  'cancel_order_locked returns slip_uploaded when bank_transfer_slips row exists for the order'
 );
 
 RESET ROLE;

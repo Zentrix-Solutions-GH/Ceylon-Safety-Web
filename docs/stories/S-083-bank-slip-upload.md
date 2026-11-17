@@ -43,6 +43,7 @@ A buyer with a bank-transfer order can upload a payment slip (image or PDF). The
 ## Contract
 - Server action `uploadBankSlip` and read `getBankOrderView` in `lib/bank/slips.ts`; types `types/bank-slip.ts` (BankSlipStatus, BankOrderView); error code `slip_invalid` added to `types/api.ts`.
 - Consumed by: S-084 (admin queue), S-094 (bank transfer screen), S-096 (My Purchases status).
+- **S-084 constraint**: migration `20261118000001` revokes `SELECT (file_key)` from the `authenticated` role. Any S-084 server code that reads `file_key` from `bank_transfer_slips` **must** use `createSupabaseServiceRoleClient` (service-role key), not `createSupabaseServerClient`. Using the server client will silently return `null` for `file_key`.
 
 ## Out of scope
 - Approve, reject, expiry (S-084). Emails (S-088). Slip retention and purge (`purge_old_logs`, later; legal advice Q34).
