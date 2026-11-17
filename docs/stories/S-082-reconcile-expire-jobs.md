@@ -100,7 +100,7 @@ Prior art: grepped docs/ for expire_pending_orders, reconcile_payments, expires_
 ## Evidence
 
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh   # run with supabase start (Docker)
 
 ── ESLint ──
 ✓ ESLint passed
@@ -110,28 +110,44 @@ $ bash scripts/check.sh
 
 ── Vitest (unit) ──
 Test Files  1 failed (pre-existing) | 217 passed | 15 skipped (233)
-     Tests  18 failed (pre-existing) | 2213 passed | 60 skipped (2291)
+     Tests  18 failed (pre-existing) | 2219 passed | 60 skipped (2297)
 
 Pre-existing failure: __tests__/components/admin/ArticleEditor/index.test.tsx
   Cause: localStorage.clear() is undefined (localStorage not available in this test env)
   Confirmed pre-existing: same 18 failures on dev before this branch's changes.
 
-New tests added by S-082 (after fix commit ae05a5a):
-  ✓ app/api/cron/__tests__/expire.test.ts (7 tests)
-  ✓ app/api/cron/__tests__/reconcile.test.ts (10 tests — includes events-failure, AC6 log spy)
+New tests added by S-082 (commit db921a1):
+  ✓ app/api/cron/__tests__/expire.test.ts    (6 tests — AC1, AC2/EC3, AC5, bank guard)
+  ✓ app/api/cron/__tests__/reconcile.test.ts (10 tests — AC3, AC5, AC6 log spy, events-failure)
+  ✓ app/api/cron/__tests__/auth.test.ts      (8 tests — includes AC6 heartbeat for both new jobs)
 
 ── pgTAP RLS suite ──
-⚠ Supabase not running — skipping pgTAP tests
+✓ pgTAP RLS suite passed (zz-schema-verification: 112 tests)
+
+── pgTAP seed suite ──
+✓ pgTAP seed suite passed (seed.test.sql: 68 tests)
+
+── pgTAP dev seed suite ──
+✓ pgTAP dev seed suite passed (seed.dev.test.sql: 38 tests)
+
+── pgTAP S-082 specific ──
+$ supabase test db supabase/tests/expire-pending-orders.test.sql
+  expire-pending-orders.test.sql .. ok
+  Files=1, Tests=4   Result: PASS
+  ✓ expire_pending_orders() exists in public schema
+  ✓ anon cannot call expire_pending_orders()
+  ✓ authenticated cannot call expire_pending_orders()
+  ✓ service_role can call expire_pending_orders() and receives an integer
 
 ── Types file freshness ──
-⚠ Supabase not running — skipping types check
+✓ Types file freshness passed
 
 ── Public pages session check (AC11) ──
 check-public-pages: OK — checked 20 file(s), no violations.
 ✓ Public pages session check (AC11) passed
 
 ════════════════════════════════
-  check.sh: 4 passed, 1 failed (pre-existing ArticleEditor localStorage test)
+  check.sh: 9 passed, 1 failed (pre-existing ArticleEditor localStorage test)
 ════════════════════════════════
 ```
 
