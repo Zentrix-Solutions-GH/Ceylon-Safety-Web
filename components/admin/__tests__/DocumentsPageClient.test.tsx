@@ -1,5 +1,5 @@
 // S-072: DocumentsPageClient — filter state, debounce, URL param updates, pagination
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as React from "react";
