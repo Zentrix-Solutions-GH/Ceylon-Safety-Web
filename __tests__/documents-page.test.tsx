@@ -168,6 +168,30 @@ describe("DocumentFilters", () => {
     await userEvent.click(screen.getByRole("button", { name: /search/i }));
     expect(mockReplace).not.toHaveBeenCalled();
   });
+
+  it("AC2: selecting a category preserves an existing type param", async () => {
+    mockSearchParams.get.mockImplementation((k: string) =>
+      k === "type" ? "checklist" : null
+    );
+    render(<DocumentFilters categories={CATEGORIES} />);
+    const catSelect = screen.getByRole("combobox", { name: /category/i });
+    await userEvent.selectOptions(catSelect, "cat-1");
+    const url = mockReplace.mock.calls[0][0] as string;
+    expect(url).toContain("category=cat-1");
+    expect(url).toContain("type=checklist");
+  });
+
+  it("AC2: selecting a type preserves an existing category param", async () => {
+    mockSearchParams.get.mockImplementation((k: string) =>
+      k === "category" ? "cat-2" : null
+    );
+    render(<DocumentFilters categories={CATEGORIES} />);
+    const typeSelect = screen.getByRole("combobox", { name: /type/i });
+    await userEvent.selectOptions(typeSelect, "safety_sign");
+    const url = mockReplace.mock.calls[0][0] as string;
+    expect(url).toContain("type=safety_sign");
+    expect(url).toContain("category=cat-2");
+  });
 });
 
 // ─── DocumentModal ────────────────────────────────────────────────────────────
@@ -272,5 +296,33 @@ describe("DocumentsPageClient", () => {
       />
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("EC6: onClose restores scroll position captured at modal open", async () => {
+    const scrollTo = vi.fn();
+    Object.defineProperty(window, "scrollTo", { value: scrollTo, writable: true });
+    Object.defineProperty(window, "scrollY", { value: 500, writable: true, configurable: true });
+
+    // Start with modal open
+    mockSearchParams.get.mockImplementation((k: string) =>
+      k === "document" ? "fire-safety-checklist" : null
+    );
+    render(
+      <DocumentsPageClient
+        docs={[makeDoc()]}
+        mediaBase={MEDIA_BASE}
+        allSlugs={["fire-safety-checklist"]}
+      />
+    );
+
+    // Simulate opening the modal to capture scrollY
+    const card = screen.getByRole("article");
+    await userEvent.click(card);
+    // scrollY was 500 at open time; now close the modal
+    await userEvent.click(screen.getByRole("button", { name: /close/i }));
+    // scrollTo should be called with the captured scroll position
+    await vi.waitFor(() => {
+      expect(scrollTo).toHaveBeenCalledWith({ top: 500 });
+    });
   });
 });

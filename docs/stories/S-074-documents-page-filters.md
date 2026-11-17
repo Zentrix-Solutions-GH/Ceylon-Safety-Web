@@ -92,9 +92,10 @@ Prior art: searched docs/ for "documents page", "DocumentFilters", "catalogue". 
 |---|---|
 | `app/(public)/documents/page.tsx` | Create — server component, fetches documents + passes to client |
 | `components/documents/DocumentCard.tsx` | Create — card UI |
-| `components/documents/DocumentFilters.tsx` | Create — client filter panel |
+| `components/documents/DocumentFilters.tsx` | Create — client filter panel (search bar merged in here, not a separate file) |
+| `components/documents/DocumentGrid.tsx` | Create — grid + empty-state wrapper |
 | `components/documents/DocumentModal.tsx` | Create — client modal shell (content deferred to S-076) |
-| `components/documents/DocumentSearch.tsx` | Create — search bar client component |
+| `components/documents/DocumentsPageClient.tsx` | Create — client wrapper wiring grid + modal to URL params |
 | `messages/en.ts` | Edit — add UI strings |
 | `__tests__/documents-page.test.tsx` | Create — all unit tests |
 
@@ -129,7 +130,10 @@ S-074 tests (23 tests): all pass.
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `app/(public)/documents/page.tsx:40` — `allSlugs` is built from `docs` (first-page result) when no filter is active. A paginated catalog will silently fail to open the modal for documents on page 2+. Fix: always fetch the unfiltered slug set unconditionally. (full-review 2026-11-17)
+- **P1** `__tests__/documents-page.test.tsx` — EC6 scroll restore untested; `setTimeout(() => window.scrollTo(...), 0)` is silently ignored in JSDOM. Mock `window.scrollTo`/`window.scrollY` and assert `onClose` restores the scroll position. (full-review 2026-11-17)
+- **P2** `__tests__/documents-page.test.tsx` — AC2 param-preservation: no test verifies that changing category while type is active preserves `type` in the URL. Implementation is correct (`buildUrl` passes `currentType`); add a regression guard test. (full-review 2026-11-17)
+- **P2** `docs/stories/S-074-documents-page-filters.md:91-99` — Story file plan lists `DocumentSearch.tsx` (not created) and omits `DocumentGrid.tsx` (created). Update plan table to match actual files. (full-review 2026-11-17)
 
 ## After this merges
 
