@@ -66,7 +66,9 @@ Unpaid card orders do not stay open forever, and a payment whose notification ne
 | AC5 reconcile idempotent | unit | `app/api/cron/__tests__/reconcile.test.ts` |
 | AC6 log contains order numbers, no billing data | unit | `app/api/cron/__tests__/reconcile.test.ts` |
 | EC2 / EC4 wrong cron secret rejected | unit | `app/api/cron/__tests__/auth.test.ts` |
-| pgTAP: expire_pending_orders() compiles; anon/authenticated blocked; service_role passes | db | `supabase/tests/` (**requires `supabase start`**) |
+| AC6: pingHeartbeat called with expire-pending-orders and 'success' | unit | `app/api/cron/__tests__/auth.test.ts` |
+| AC6: pingHeartbeat called with reconcile-payments and 'success' | unit | `app/api/cron/__tests__/auth.test.ts` |
+| pgTAP: expire_pending_orders() compiles; anon/authenticated blocked; service_role passes | db | `supabase/tests/expire-pending-orders.test.sql` (**requires `supabase start`**) |
 
 ## Plan
 Prior art: grepped docs/ for expire_pending_orders, reconcile_payments, expires_at. Found commerce design v6 sections 4.3, 5A, 11, schema doc section 14.1 and infrastructure design section 9; this story implements the card-side rows (supersedes the first-draft S-016c).
