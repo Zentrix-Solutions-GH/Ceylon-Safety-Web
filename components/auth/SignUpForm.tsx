@@ -59,12 +59,11 @@ export function SignUpForm() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!captchaToken) { setTopError(errorMessage("captcha_failed")); return; }
-
     if (passwordValue !== confirmValue) {
       setFieldErrors((prev) => ({ ...prev, confirmPassword: t("auth.sign_up.confirm_mismatch") }));
       return;
     }
+    if (!captchaToken) { setTopError(errorMessage("captcha_failed")); return; }
 
     const form = e.currentTarget;
     const data = new FormData(form);
@@ -111,7 +110,7 @@ export function SignUpForm() {
               <Image src="/logo.jpg" alt="Ceylon Safety" width={36} height={36} className="object-contain" />
             </div>
             <span className="leading-tight">
-              <span className="block text-sm font-bold text-gray-900">Ceylon Safety</span>
+              <span className="block text-sm font-bold text-gray-900">{t("auth.brand.wordmark")}</span>
               <span className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
                 {t("auth.sign_up.portal_label")}
               </span>
@@ -149,8 +148,8 @@ export function SignUpForm() {
                   <Image src="/logo.jpg" alt="Ceylon Safety" width={48} height={48} className="object-contain" />
                 </div>
                 <div className="text-white">
-                  <div className="text-xl font-black leading-tight tracking-wide">CEYLON</div>
-                  <div className="text-xl font-black leading-tight tracking-wide">SAFETY</div>
+                  <div className="text-xl font-black leading-tight tracking-wide">{t("auth.brand.panel_ceylon")}</div>
+                  <div className="text-xl font-black leading-tight tracking-wide">{t("auth.brand.panel_safety")}</div>
                 </div>
               </div>
             </div>
@@ -202,6 +201,11 @@ export function SignUpForm() {
 
           {/* Right panel — form */}
           <div className="flex flex-1 flex-col justify-between bg-white px-6 py-8 sm:px-10 lg:px-16">
+            <div className="mb-4 flex justify-end lg:hidden">
+              <Link href="/" className="text-sm font-semibold text-primary hover:underline">
+                {t("auth.sign_up.panel.return_link")}
+              </Link>
+            </div>
             <div className="my-auto w-full max-w-md mx-auto">
               <div className="flex items-center gap-2 mb-6">
                 <span className="h-2 w-2 rounded-full bg-primary" />
@@ -235,7 +239,7 @@ export function SignUpForm() {
                         type="text"
                         autoComplete="given-name"
                         required
-                        placeholder="e.g. Kasun"
+                        placeholder={t("auth.sign_up.first_name_placeholder")}
                         className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                       />
                     </div>
@@ -254,7 +258,7 @@ export function SignUpForm() {
                         type="text"
                         autoComplete="family-name"
                         required
-                        placeholder="e.g. Perera"
+                        placeholder={t("auth.sign_up.last_name_placeholder")}
                         className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                       />
                     </div>
@@ -275,7 +279,7 @@ export function SignUpForm() {
                       autoComplete="email"
                       required
                       aria-invalid={fieldErrors.email ? "true" : undefined}
-                      placeholder="name@workplace.lk"
+                      placeholder={t("auth.sign_up.email_placeholder")}
                       className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                     />
                   </div>
@@ -339,6 +343,7 @@ export function SignUpForm() {
                       type={showConfirm ? "text" : "password"}
                       autoComplete="new-password"
                       required
+                      aria-invalid={fieldErrors.confirmPassword ? "true" : undefined}
                       placeholder="••••••••••"
                       value={confirmValue}
                       onChange={(e) => {
@@ -351,7 +356,7 @@ export function SignUpForm() {
                       type="button"
                       onClick={() => setShowConfirm((v) => !v)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      aria-label={showConfirm ? t("auth.sign_up.hide_password") : t("auth.sign_up.show_password")}
+                      aria-label={showConfirm ? t("auth.sign_up.hide_confirm") : t("auth.sign_up.show_confirm")}
                     >
                       {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>

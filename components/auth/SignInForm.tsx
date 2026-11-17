@@ -110,7 +110,7 @@ export function SignInForm() {
               <Image src="/logo.jpg" alt="Ceylon Safety" width={36} height={36} className="object-contain" />
             </div>
             <span className="leading-tight">
-              <span className="block text-sm font-bold text-gray-900">Ceylon Safety</span>
+              <span className="block text-sm font-bold text-gray-900">{t("auth.brand.wordmark")}</span>
               <span className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
                 {t("auth.sign_in.portal_label")}
               </span>
@@ -155,8 +155,8 @@ export function SignInForm() {
                   <Image src="/logo.jpg" alt="Ceylon Safety" width={48} height={48} className="object-contain" />
                 </div>
                 <div className="text-white">
-                  <div className="text-xl font-black leading-tight tracking-wide">CEYLON</div>
-                  <div className="text-xl font-black leading-tight tracking-wide">SAFETY</div>
+                  <div className="text-xl font-black leading-tight tracking-wide">{t("auth.brand.panel_ceylon")}</div>
+                  <div className="text-xl font-black leading-tight tracking-wide">{t("auth.brand.panel_safety")}</div>
                 </div>
               </div>
             </div>
@@ -187,12 +187,17 @@ export function SignInForm() {
 
             <div className="relative z-10 flex items-center gap-2 px-7 pb-6 text-xs text-white/60">
               <Shield className="h-3.5 w-3.5 shrink-0" />
-              <span>Sri Lanka National Safety Grid &bull; Accredited Training &amp; Statutory Documentation Authority</span>
+              <span>{t("auth.brand.panel_tagline")}</span>
             </div>
           </div>
 
           {/* Right panel - form */}
           <div className="flex flex-1 flex-col justify-between bg-white px-6 py-8 sm:px-10 lg:px-14">
+            <div className="mb-4 flex justify-end lg:hidden">
+              <Link href="/" className="text-sm font-semibold text-primary hover:underline">
+                {t("auth.sign_in.panel.return_link")}
+              </Link>
+            </div>
             <div className="mx-auto my-auto w-full max-w-md">
               <div className="mb-6 flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-primary" />
@@ -259,7 +264,7 @@ export function SignInForm() {
                       type="email"
                       autoComplete="email"
                       required
-                      placeholder="name@workplace.lk"
+                      placeholder={t("auth.sign_in.email_placeholder")}
                       className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 transition-colors focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </div>

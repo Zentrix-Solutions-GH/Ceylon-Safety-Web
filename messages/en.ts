@@ -595,6 +595,18 @@ const en = {
   "auth.sign_in.or_email": "Or, Sign in with Email",
   "auth.sign_in.enterprise_tag": "Enterprise Commerce for Businesses",
 
+  // --- auth shared brand text ---
+  "auth.brand.wordmark": "Ceylon Safety",
+  "auth.brand.panel_ceylon": "CEYLON",
+  "auth.brand.panel_safety": "SAFETY",
+  "auth.brand.panel_tagline": "Sri Lanka National Safety Grid • Accredited Training & Statutory Documentation Authority",
+  "auth.sign_in.email_placeholder": "name@workplace.lk",
+  "auth.sign_up.email_placeholder": "name@workplace.lk",
+  "auth.sign_up.first_name_placeholder": "e.g. Kasun",
+  "auth.sign_up.last_name_placeholder": "e.g. Perera",
+  "auth.sign_up.show_confirm": "Show re-entered password",
+  "auth.sign_up.hide_confirm": "Hide re-entered password",
+
   // --- sign-up form left panel ---
   "auth.sign_up.panel.tagline": "Join Sri Lanka’s safety community.",
   "auth.sign_up.panel.description": "Access accredited safety documents, certified training courses, and connect with verified safety professionals across Sri Lanka.",
