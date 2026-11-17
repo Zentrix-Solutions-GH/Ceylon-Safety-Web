@@ -45,10 +45,21 @@ describe("expirePendingOrders", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("AC2: DB function returns 0 when all pending orders have future expires_at (48h slow-pay, extended)", async () => {
-    // The SQL predicate `expires_at < now()` means the DB function itself returns 0
-    // for any order whose expires_at is in the future. We model this by returning 0
-    // from the rpc — matching what the DB would return for a 48h or reuse-extended order.
+  it("AC2 / EC3: DB function returns 0 for orders with future expires_at (48h slow-pay, 47h, reuse-extended)", async () => {
+    // The SQL WHERE uses `expires_at < now()`. Any order with expires_at in the future
+    // — whether it is a 48h slow-payment push, a 47h-old order, or a reuse-extended order —
+    // is left untouched. The DB function returns 0 in that case.
+    // We model this by returning rpcData: 0, matching what the DB returns when every
+    // candidate row has a future expires_at.
+    const sb = makeSupabase({ rpcData: 0 });
+    const result = await expirePendingOrders(sb as never);
+    expect(result.ok).toBe(true);
+    expect(result.cancelled).toBe(0);
+  });
+
+  it("AC1: pending_verification orders (bank) are never cancelled — rpc returns 0 when only bank orders exist", async () => {
+    // Bank orders have expires_at = NULL; the SQL WHERE `expires_at IS NOT NULL` means
+    // the DB function returns 0 when only pending_verification orders are present.
     const sb = makeSupabase({ rpcData: 0 });
     const result = await expirePendingOrders(sb as never);
     expect(result.ok).toBe(true);

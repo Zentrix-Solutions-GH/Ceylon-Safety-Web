@@ -32,8 +32,9 @@ function makeOrder(overrides: Partial<{
 function makeSupabase(options: {
   pendingOrders?: ReturnType<typeof makeOrder>[];
   queryError?: { message: string } | null;
+  eventsError?: { message: string } | null;
 } = {}) {
-  const { pendingOrders = [], queryError = null } = options;
+  const { pendingOrders = [], queryError = null, eventsError = null } = options;
 
   const ordersUpdateSpy = vi.fn();
   const ordersChain = {
@@ -46,7 +47,7 @@ function makeSupabase(options: {
 
   const eventsChain = {
     eq: vi.fn(),
-    in: vi.fn().mockResolvedValue({ data: [], error: null }),
+    in: vi.fn().mockResolvedValue({ data: [], error: eventsError }),
   };
   eventsChain.eq.mockReturnThis();
 
@@ -105,6 +106,31 @@ describe("reconcileCardPayments", () => {
     const r1 = await reconcileCardPayments(sb as never);
     const r2 = await reconcileCardPayments(sb as never);
     expect(r1.alertCount).toBe(r2.alertCount);
+  });
+
+  it("P2: returns ok:false when the payment_events query fails", async () => {
+    // getPendingCardOrdersOlderThan throws if the events query errors;
+    // reconcileCardPayments must catch and return ok:false.
+    const order = makeOrder();
+    const sb = makeSupabase({
+      pendingOrders: [order],
+      eventsError: { message: "events query failed" },
+    });
+    const result = await reconcileCardPayments(sb as never);
+    expect(result.ok).toBe(false);
+  });
+
+  it("AC6: log contains order numbers but not billing data", async () => {
+    const order = makeOrder({ order_number: "CS-9999" });
+    const sb = makeSupabase({ pendingOrders: [order] });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await reconcileCardPayments(sb as never);
+    expect(warnSpy).toHaveBeenCalledOnce();
+    const logMsg: string = warnSpy.mock.calls[0][0];
+    expect(logMsg).toContain("CS-9999");
+    // Billing-data fields must not appear in log output
+    expect(logMsg).not.toMatch(/amount|email|name|phone|address/i);
+    warnSpy.mockRestore();
   });
 });
 
