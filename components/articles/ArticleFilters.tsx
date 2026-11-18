@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useRef, type FormEvent } from "react";
 import { t } from "@/messages/en";
 import type { Category, ArticleRange } from "@/types/article";
 
@@ -15,7 +14,6 @@ export function ArticleFilters({ categories }: ArticleFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const searchRef = useRef<HTMLInputElement>(null);
 
   const rawRange = searchParams.get("range") ?? "newest";
   const currentRange: ArticleRange = (VALID_RANGES as string[]).includes(rawRange)
@@ -35,90 +33,71 @@ export function ArticleFilters({ categories }: ArticleFiltersProps) {
     return qs ? `${pathname}?${qs}` : pathname;
   }
 
-  function onRangeChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    router.replace(buildUrl(e.target.value, currentCategory));
+  function setCategory(slug: string) {
+    router.replace(buildUrl(currentRange, slug));
   }
 
-  function onCategoryChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    router.replace(buildUrl(currentRange, e.target.value));
+  function setRange(range: string) {
+    router.replace(buildUrl(range, currentCategory));
   }
 
-  function onClearFilters() {
-    router.replace(pathname);
-  }
-
-  function onSearchSubmit(e: FormEvent) {
-    e.preventDefault();
-    const q = searchRef.current?.value.trim() ?? "";
-    if (!q) return;
-    router.replace(`/search?scope=articles&q=${encodeURIComponent(q).replace(/%20/g, "+")}`);
-  }
-
-  const hasFilters = currentRange !== "newest" || currentCategory !== "";
+  const rangeLabels: Record<ArticleRange, string> = {
+    newest: t("articles.filter.range.newest"),
+    week: t("articles.filter.range.week"),
+    month: t("articles.filter.range.month"),
+  };
 
   return (
-    <div className="flex flex-wrap items-end gap-3 pb-4">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="filter-range" className="text-xs font-medium text-gray-600">
-          {t("articles.filter.range.label")}
-        </label>
-        <select
-          id="filter-range"
-          aria-label={t("articles.filter.range.label")}
-          value={currentRange}
-          onChange={onRangeChange}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm"
-        >
-          <option value="newest">{t("articles.filter.range.newest")}</option>
-          <option value="week">{t("articles.filter.range.week")}</option>
-          <option value="month">{t("articles.filter.range.month")}</option>
-        </select>
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <label htmlFor="filter-category" className="text-xs font-medium text-gray-600">
-          {t("articles.filter.category.label")}
-        </label>
-        <select
-          id="filter-category"
-          aria-label={t("articles.filter.category.label")}
-          value={currentCategory}
-          onChange={onCategoryChange}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm"
-        >
-          <option value="">{t("articles.filter.category.all")}</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.slug}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {hasFilters && (
+    <div className="mb-6 space-y-3">
+      {/* Category pills */}
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={onClearFilters}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+          onClick={() => setCategory("")}
+          className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+            currentCategory === ""
+              ? "border-red-600 bg-red-600 text-white"
+              : "border-gray-300 bg-white text-gray-700 hover:border-red-400 hover:text-red-600"
+          }`}
         >
-          {t("articles.filter.clear")}
+          {t("articles.filter.category.all")}
         </button>
-      )}
+        {categories.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => setCategory(c.slug)}
+            className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+              currentCategory === c.slug
+                ? "border-red-600 bg-red-600 text-white"
+                : "border-gray-300 bg-white text-gray-700 hover:border-red-400 hover:text-red-600"
+            }`}
+          >
+            {c.name}
+          </button>
+        ))}
+      </div>
 
-      <form onSubmit={onSearchSubmit} className="ml-auto flex gap-2">
-        <input
-          ref={searchRef}
-          type="search"
-          placeholder={t("articles.filter.search.placeholder")}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm"
-        />
-        <button
-          type="submit"
-          className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
-        >
-          {t("articles.filter.search.button")}
-        </button>
-      </form>
+      {/* Range tabs + count row */}
+      <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 pt-3">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          {t("articles.filter.range.label")}:
+        </span>
+        {VALID_RANGES.map((r) => (
+          <button
+            key={r}
+            type="button"
+            onClick={() => setRange(r)}
+            className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+              currentRange === r
+                ? "bg-gray-900 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            {rangeLabels[r]}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

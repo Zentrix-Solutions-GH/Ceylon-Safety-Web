@@ -123,7 +123,14 @@ $ bash scripts/check.sh
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+**full-review 2026-11-18 (PR #100 — full review, HEAD 2e44efa)**
+
+- **P0** `components/articles/HeroSearchForm.tsx` — AC5 has no test file. Old inline search form tests were deleted when form was extracted into `HeroSearchForm`. Need `__tests__/components/articles/HeroSearchForm.test.tsx` with: form action="/search", hidden scope=articles field, and query navigation tests.
+- **P1** `__tests__/components/articles/ArticleFilters.test.tsx` — No test covers AC3 combined clear (both `range` and `category` removed simultaneously).
+- **P1** `components/articles/ArticleCard.tsx` — No test verifies `<a href="/articles/<slug>">` on the card.
+- **P1** `__tests__/components/articles/ArticleFilters.test.tsx:70,79` — Active-state assertions use `className.toContain("bg-red-600")` which is fragile; replace with `aria-pressed="true"`.
+- **P2** `components/articles/ArticleCard.tsx` — Compact variant uses bare `<img>` instead of `next/image`.
+- **P2** `messages/en.ts` — ~50 orphan keys from reverted auth redesign (e.g. `auth.sign_up.confirm_password`); clean up in follow-up.
 
 ## After this merges
 

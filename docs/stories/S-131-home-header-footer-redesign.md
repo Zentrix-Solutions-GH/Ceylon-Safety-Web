@@ -59,6 +59,7 @@ Implement the Figma-specified redesign of the public home page, header, and foot
 - Newsletter API endpoint (future story).
 - Announcement bar cache invalidation from admin CMS (revalidation tag exists but no admin action calls it yet).
 - Env var config bypass in `createSupabaseAnonClient` (P1 carry-forward — anon key is not secret; no security impact).
+- "Clear filters" button removed from `ArticleFilters` — the redesign switches to pill/tab navigation that makes an explicit clear less necessary; the empty-state message still links back to the unfiltered view.
 
 ## Assumptions accepted
 
@@ -81,3 +82,8 @@ Prior art: S-025 (header), S-026 (footer), S-022 (design tokens), S-034/035 (aut
 - **P1** `components/home/HeroSection.tsx:1067` — search form navigated to 404; `onSubmit={e => e.preventDefault()}` added. (full-review 2026-11-12)
 - **P1** `components/layout/__tests__/Header.test.tsx:57` — `eslint-disable-next-line` comment was one line above the `any` cast; moved inside function. (full-review 2026-11-12)
 - **P2** `lib/settings/announcement.ts:14` — `isSafeHref` did not block `//example.com`; fixed. (full-review 2026-11-12)
+- **P1** `components/auth/SignInForm.tsx` — hardcoded external URL `https://www.zentrixsolution.tech/` in footer anchor `href`. CLAUDE.md: "No URLs… in code." Fix: add `NEXT_PUBLIC_ZENTRIX_URL` to `lib/config.public.ts` and reference `publicConfig.zentrixUrl`. (full-review 2026-11-18)
+- **P1** `components/auth/SignUpForm.tsx` — same hardcoded `https://www.zentrixsolution.tech/` URL. Same CLAUDE.md violation, same fix. (full-review 2026-11-18)
+- **P1** `app/(public)/articles/page.tsx` — "Popular This Month" strip backed by `listArticles({ range: "month" })` which sorts `published_at DESC` (see `lib/articles/listArticles.ts:90`), not by like/view count. Heading is semantically wrong. Either sort by popularity or rename heading to "Recent This Month". (full-review 2026-11-18)
+- **P1** `app/(public)/articles/page.tsx` hero search form — empty-query regression; old `ArticleFilters` had `q.trim()` guard before submit; new hero `<form action="/search">` has none. Add `onSubmit` guard. (full-review 2026-11-18)
+- **P1** `__tests__/screens/articles/page.test.tsx:57-58,104` — weakened assertions (`getAllByText(title).length > 0`) can't detect main-grid regression; popular strip and grid both render same titles so test passes even if grid is empty. Use `getByRole("heading", { level: 2, name: "Article 1" })` or render without popular strip. (full-review 2026-11-18)
