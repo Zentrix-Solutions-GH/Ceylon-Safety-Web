@@ -45,6 +45,7 @@ jobs:
           UPSTASH_REDIS_REST_URL: https://dummy-ci-upstash.upstash.io
           UPSTASH_REDIS_REST_TOKEN: dummy_upstash_token_for_ci_build_only
           RATELIMIT_HASH_SECRET: "0000000000000000000000000000000000000000000000000000000000000000"
+          IP_HASH_SECRET: dummy-ip-hash-secret-for-ci-build-only
 
       - name: No mocks in production code
         run: bash scripts/check-no-mocks.sh
@@ -70,6 +71,7 @@ jobs:
           UPSTASH_REDIS_REST_URL: https://dummy-ci-upstash.upstash.io
           UPSTASH_REDIS_REST_TOKEN: dummy_upstash_token_for_ci_build_only
           RATELIMIT_HASH_SECRET: "0000000000000000000000000000000000000000000000000000000000000000"
+          IP_HASH_SECRET: dummy-ip-hash-secret-for-ci-build-only
 
   secret-scan:
     name: secret-scan

@@ -258,6 +258,7 @@ export type Database = {
       };
       articles: {
         Row: {
+          article_type: string;
           author_id: string | null;
           body: NonNullable<Json>;
           body_text: string;
@@ -285,6 +286,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          article_type?: string;
           author_id?: string | null;
           body?: NonNullable<Json>;
           body_text?: string;
@@ -311,6 +313,7 @@ export type Database = {
           view_count?: number;
         };
         Update: {
+          article_type?: string;
           author_id?: string | null;
           body?: NonNullable<Json>;
           body_text?: string;
