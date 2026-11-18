@@ -162,50 +162,16 @@ export async function rejectDownloadRequest(
     return { ok: false, code: "validation_failed", reason: "already_done" };
   }
 
-  // Fetch buyer profile for email
+  // DB function atomically: marks rejected, writes admin_audit_log + email_logs
+  // (AC11: all in one transaction — private schema, cast to any).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: buyer } = await (sbService as any)
-    .from("profiles")
-    .select("id, email")
-    .eq("id", (req as { user_id: string }).user_id)
-    .single();
-
-  // Mark rejected
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateErr } = await (sbService as any)
-    .from("download_requests")
-    .update({
-      status:       "rejected",
-      decided_by:   actor.id,
-      decided_at:   new Date().toISOString(),
-      decision_note: note.trim(),
-    })
-    .eq("id", requestId)
-    .eq("status", "open");
-
-  if (updateErr) return { ok: false, code: "unknown" };
-
-  // Write audit row (best-effort)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (sbService as any).from("admin_audit_log").insert({
-    actor_id:    actor.id,
-    action:      "download_request.reject",
-    entity_type: "download_request",
-    entity_id:   requestId,
+  const { error: rpcErr } = await (sbService as any).rpc("reject_download_request", {
+    p_request_id: requestId,
+    p_admin_id:   actor.id,
+    p_note:       note.trim(),
   });
 
-  // Queue rejection email
-  const buyerEmail = (buyer as { email?: string | null } | null)?.email;
-  if (buyerEmail) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (sbService as any).from("email_logs").insert({
-      to_email:     buyerEmail,
-      template:     "download_request_rejected",
-      related_type: "download_request",
-      related_id:   requestId,
-      status:       "queued",
-    });
-  }
+  if (rpcErr) return { ok: false, code: "unknown" };
 
   return { ok: true };
 }

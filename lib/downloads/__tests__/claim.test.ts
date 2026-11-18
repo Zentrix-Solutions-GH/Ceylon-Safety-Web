@@ -205,12 +205,12 @@ describe("claimDownload — parallel calls (AC3)", () => {
     vi.mocked(presignedGet).mockResolvedValue("https://r2.example.com/signed");
 
     const results = await Promise.all(
-      Array.from({ length: 5 }, () => claimDownload({ entitlementId: ENT_ID, userId: USER_ID, ipHash: "h1" }))
+      Array.from({ length: 10 }, () => claimDownload({ entitlementId: ENT_ID, userId: USER_ID, ipHash: "h1" }))
     );
     const successes = results.filter((r) => r.ok);
     const failures  = results.filter((r) => !r.ok && (r as { code?: string }).code === "download_limit_reached");
     expect(successes.length).toBe(1);
-    expect(failures.length).toBe(4);
+    expect(failures.length).toBe(9);
   });
 });
 

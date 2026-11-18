@@ -185,3 +185,61 @@ COMMENT ON VIEW public.download_request_queue IS
 REVOKE ALL  ON public.download_request_queue FROM PUBLIC;
 REVOKE ALL  ON public.download_request_queue FROM authenticated;
 GRANT SELECT ON public.download_request_queue TO service_role;
+
+-- ─── 4. reject_download_request (AC11: atomic update + audit + email) ─────────
+
+CREATE OR REPLACE FUNCTION private.reject_download_request(
+  p_request_id uuid,
+  p_admin_id   uuid,
+  p_note       text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = private, public
+AS $$
+DECLARE
+  v_req        public.download_requests%ROWTYPE;
+  v_buyer_email text;
+BEGIN
+  SELECT * INTO v_req
+  FROM public.download_requests
+  WHERE id = p_request_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'ceylonsafety: download_request not found: %', p_request_id
+      USING ERRCODE = 'no_data_found';
+  END IF;
+
+  -- AC12: idempotent — already decided → do nothing
+  IF v_req.status <> 'open' THEN
+    RETURN;
+  END IF;
+
+  -- Mark rejected
+  UPDATE public.download_requests
+  SET status        = 'rejected',
+      decided_by    = p_admin_id,
+      decided_at    = now(),
+      decision_note = p_note
+  WHERE id = p_request_id;
+
+  -- Write audit event (AC11: same transaction)
+  INSERT INTO public.admin_audit_log (actor_id, action, entity_type, entity_id)
+  VALUES (p_admin_id, 'download_request.reject', 'download_request', p_request_id);
+
+  -- Queue rejection email (AC11: same transaction)
+  SELECT p.email INTO v_buyer_email
+  FROM public.profiles p
+  WHERE p.id = v_req.user_id;
+
+  IF v_buyer_email IS NOT NULL THEN
+    INSERT INTO public.email_logs (to_email, template, related_type, related_id, status)
+    VALUES (v_buyer_email, 'download_request_rejected', 'download_request', p_request_id, 'queued');
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION private.reject_download_request(uuid, uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION private.reject_download_request(uuid, uuid, text) TO service_role, supabase_admin;
