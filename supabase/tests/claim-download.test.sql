@@ -44,7 +44,7 @@ VALUES (
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.entitlements (
-  id, user_id, item_type, document_id, language,
+  id, user_id, item_type, source, document_id, language,
   download_limit, downloads_used
 )
 VALUES
@@ -52,7 +52,7 @@ VALUES
   (
     'e9500000-0000-0000-0000-000000000001',
     'e9100000-0000-0000-0000-000000000001',
-    'document',
+    'document', 'purchase',
     'e9200000-0000-0000-0000-000000000001',
     'en', 1, 0
   ),
@@ -60,7 +60,7 @@ VALUES
   (
     'e9500000-0000-0000-0000-000000000002',
     'e9100000-0000-0000-0000-000000000001',
-    'document',
+    'document', 'purchase',
     'e9200000-0000-0000-0000-000000000001',
     'en', 3, 1
   )

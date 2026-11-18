@@ -26,18 +26,18 @@ BEGIN
     (v_buyer_b, 'buyer_b_d8@test.invalid', 'x', 'authenticated')
   ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.documents (id, title, slug, doc_kind, price_cents, status)
-  VALUES (v_doc, 'D8 Test Doc', 'd8-test-doc', 'checklist', 1000, 'published')
+  INSERT INTO public.documents (id, title, slug, doc_kind, price_cents, status, published_at)
+  VALUES (v_doc, 'D8 Test Doc', 'd8-test-doc', 'checklist', 1000, 'published', now())
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.document_files (id, document_id, kind, language, format, file_key, size_bytes, is_current, status)
   VALUES (v_file, v_doc, 'full', 'en', 'pptx', 'docs/en/d8-test.pptx', 1024, true, 'ready')
   ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.entitlements (id, user_id, item_type, document_id, language, download_limit, downloads_used)
+  INSERT INTO public.entitlements (id, user_id, item_type, source, document_id, language, download_limit, downloads_used)
   VALUES
-    (v_ent_a, v_buyer_a, 'document', v_doc, 'en', 1, 0),
-    (v_ent_b, v_buyer_b, 'document', v_doc, 'en', 1, 0)
+    (v_ent_a, v_buyer_a, 'document', 'purchase', v_doc, 'en', 1, 0),
+    (v_ent_b, v_buyer_b, 'document', 'purchase', v_doc, 'en', 1, 0)
   ON CONFLICT (id) DO NOTHING;
 
   -- Insert a download_log and download_request for buyer A
