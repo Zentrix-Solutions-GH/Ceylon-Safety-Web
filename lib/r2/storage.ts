@@ -95,6 +95,25 @@ export async function getObjectBytes(
   }
 }
 
+/** Upload bytes directly from the server (bank slips go through the server, not presigned URLs). */
+export async function putObject(
+  bucket: string,
+  key: string,
+  body: Uint8Array,
+  mimeType: string,
+): Promise<void> {
+  const client = getClient();
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: mimeType,
+      ContentLength: body.byteLength,
+    }),
+  );
+}
+
 export async function deleteObject(bucket: string, key: string): Promise<void> {
   const client = getClient();
   await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));

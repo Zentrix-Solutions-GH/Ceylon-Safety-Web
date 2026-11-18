@@ -201,14 +201,14 @@ isOneToOne: false
                   ]
                 },"bank_transfer_slips": {
                   Row: {
-                    "file_key": string,"id": string,"mime_type": string | null,"order_id": string,"rejection_reason": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"size_bytes": number | null,"status": string,"uploaded_at": string,"uploaded_by": string
+                    "file_key": string,"id": string,"mime_type": string,"order_id": string,"rejection_reason": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"size_bytes": number,"status": string,"uploaded_at": string,"uploaded_by": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "file_key": string,"id"?: string,"mime_type"?: string | null,"order_id": string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes"?: number | null,"status"?: string,"uploaded_at"?: string,"uploaded_by": string
+                    "file_key": string,"id"?: string,"mime_type": string,"order_id": string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes": number,"status"?: string,"uploaded_at"?: string,"uploaded_by": string
                   }
                   Update: {
-                    "file_key"?: string,"id"?: string,"mime_type"?: string | null,"order_id"?: string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes"?: number | null,"status"?: string,"uploaded_at"?: string,"uploaded_by"?: string
+                    "file_key"?: string,"id"?: string,"mime_type"?: string,"order_id"?: string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes"?: number,"status"?: string,"uploaded_at"?: string,"uploaded_by"?: string
                   }
                   Relationships: [
                     {
@@ -1072,7 +1072,27 @@ isOneToOne: false
                 }
           }
           Views: {
-            "feed_items": {
+            "buyer_slip_summary": {
+                  Row: {
+                    "id": string,"order_id": string,"rejection_reason": string | null,"status": string,"uploaded_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                           "id"?: string | null,"order_id"?: string | null,"rejection_reason"?: string | null,"status"?: string | null,"uploaded_at"?: string | null
+                         }
+                        Update: {
+                           "id"?: string | null,"order_id"?: string | null,"rejection_reason"?: string | null,"status"?: string | null,"uploaded_at"?: string | null
+                         }
+                        Relationships: [
+                    {
+      foreignKeyName: "bank_transfer_slips_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"feed_items": {
                   Row: {
                     "category_id": string | null,"comment_count": number | null,"deleted_at": string | null,"id": string | null,"image": string | null,"kind": string | null,"like_count": number | null,"locale": string | null,"published_at": string | null,"status": string | null,"summary": string | null,"title": string | null
                   }
