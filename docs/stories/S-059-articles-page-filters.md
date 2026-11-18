@@ -176,6 +176,13 @@ $ bash scripts/check.sh
 - **P2** `types/database.ts:164` — Manual patch typed as `string`, no regeneration comment.
 - **P2** `app/(public)/articles/page.tsx:83` — `"Ceylon Safety"` hardcoded, must use `t("key")`.
 
+**full-review 2026-11-18 — round 8 (Mode A fixes-only, HEAD e5d0acc) — APPROVE WITH FOLLOW-UPS**
+
+- **P0 ✅ RESOLVED** `ArticleFilters.test.tsx:30,71,81` — "All categories" query fixed to `^all$` in e5d0acc.
+- **P0 ✅ RESOLVED** `ArticleFilters.test.tsx:35,37,53,90` — Range button queries replaced with combobox/option queries in e5d0acc.
+- **P1 ✅ RESOLVED** `ArticleGrid` missing `articleType` — prop added, load-more fetch appends `?type=`, route.ts reads and validates param in e5d0acc.
+- 7 new type-filter tests added (pills, clearAll, chip ×, unknown EC). 27/27 passing.
+
 ## After this merges
 
 - S-060 (article full page) and S-061 (likes/comments UI) can be built
