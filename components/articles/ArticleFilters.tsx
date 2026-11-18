@@ -84,6 +84,7 @@ export function ArticleFilters({ categories }: ArticleFiltersProps) {
             <select
               value={currentRange}
               onChange={(e) => setRange(e.target.value)}
+              aria-label={t("articles.filter.sort_by")}
               className="appearance-none rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-8 text-sm font-medium text-gray-700 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
             >
               {ARTICLE_RANGES.map((r) => (

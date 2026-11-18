@@ -78,7 +78,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
         <div className="relative mx-auto max-w-6xl px-4 py-14 text-white">
           <div className="max-w-2xl">
             <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-red-300">
-              Ceylon Safety
+              {t("auth.brand.wordmark")}
             </p>
             <h1 className="mb-3 text-4xl font-extrabold tracking-tight sm:text-5xl">
               {t("articles.hub.title")}
