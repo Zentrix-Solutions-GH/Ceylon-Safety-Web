@@ -19,12 +19,11 @@ interface Category {
 
 interface DocumentSidebarProps {
   categories: Category[];
-  /** Current sort value so the sidebar can reflect the Most Downloaded toggle */
-  currentSort?: string;
+  /** Passed through for the mobile drawer's onSortChange callback only */
   onSortChange?: (sort: "newest" | "popular") => void;
 }
 
-export function DocumentSidebar({ categories, currentSort, onSortChange }: DocumentSidebarProps) {
+export function DocumentSidebar({ categories, onSortChange }: DocumentSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -33,7 +32,8 @@ export function DocumentSidebar({ categories, currentSort, onSortChange }: Docum
 
   const currentCategory = searchParams.get("category") ?? "";
   const currentType = (searchParams.get("type") ?? "") as DocKind | "";
-  const isMostDownloaded = currentSort === "popular";
+  // Read sort directly from the URL so both desktop and mobile sidebars stay in sync
+  const isMostDownloaded = searchParams.get("sort") === "popular";
 
   function buildUrl(category: string, type: string): string {
     const params = new URLSearchParams(searchParams.toString());
@@ -60,9 +60,12 @@ export function DocumentSidebar({ categories, currentSort, onSortChange }: Docum
   }
 
   function toggleMostDownloaded() {
-    if (onSortChange) {
-      onSortChange(isMostDownloaded ? "newest" : "popular");
-    }
+    const params = new URLSearchParams(searchParams.toString());
+    const next = isMostDownloaded ? "newest" : "popular";
+    params.set("sort", next);
+    params.delete("page");
+    router.replace(`${pathname}?${params.toString()}`);
+    if (onSortChange) onSortChange(next);
   }
 
   return (

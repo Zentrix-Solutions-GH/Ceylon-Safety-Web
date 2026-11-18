@@ -241,6 +241,7 @@ export function DocumentsPageClient({
                     src={doc.coverImageKey ? `${mediaBase}/${doc.coverImageKey}` : "/images/document-placeholder.jpg"}
                     alt={doc.title}
                     className="h-full w-full object-cover"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/images/document-placeholder.jpg"; }}
                   />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -337,7 +338,6 @@ export function DocumentsPageClient({
             </div>
             <DocumentSidebar
               categories={allCategories}
-              currentSort={sort}
               onSortChange={(s) => { setSort(s); setMobileFiltersOpen(false); }}
             />
           </div>

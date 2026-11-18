@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { listPublicDocuments } from "@/lib/documents/public";
+import { listPublicDocuments, listAllDocumentSlugsAndCategories } from "@/lib/documents/public";
 import { publicConfig } from "@/lib/config.public";
 import { DocumentSidebar } from "@/components/documents/DocumentSidebar";
 import { DocumentsPageClient } from "@/components/documents/DocumentsPageClient";
@@ -49,17 +49,17 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
   const total = result.ok ? result.data.total : 0;
   const pageSize = result.ok ? result.data.pageSize : 12;
 
-  // Unfiltered list for category sidebar and allSlugs guard
-  const allResult = (category || type) ? await listPublicDocuments({}) : result;
-  const allDocs = allResult.ok ? allResult.data.documents : [];
+  // Fetch all slugs + categories without pagination for the EC2 modal guard and sidebar.
+  // Uses a lightweight query (slug, category_id, name only) with no page limit.
+  const allItems = await listAllDocumentSlugsAndCategories();
+  const allSlugs = allItems.map((d) => d.slug);
   const fullMap = new Map<string, string>();
-  for (const doc of allDocs) {
-    if (doc.categoryId && doc.categoryName) {
-      fullMap.set(doc.categoryId, doc.categoryName);
+  for (const item of allItems) {
+    if (item.categoryId && item.categoryName) {
+      fullMap.set(item.categoryId, item.categoryName);
     }
   }
   const allCategories = Array.from(fullMap.entries()).map(([id, name]) => ({ id, name }));
-  const allSlugs = allDocs.map((d) => d.slug);
 
   const mediaBase = publicConfig.mediaCdnUrl;
 
@@ -89,7 +89,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
         <div className="flex gap-6">
           {/* Sidebar */}
           <aside className="hidden w-64 shrink-0 lg:block">
-            <DocumentSidebar categories={allCategories} currentSort={sort} />
+            <DocumentSidebar categories={allCategories} />
           </aside>
 
           {/* Main content */}
