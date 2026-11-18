@@ -14,7 +14,7 @@ export async function fetchApprovalDownloadLimit(sb: SB): Promise<number> {
     .select("value")
     .eq("key", DEFAULT_DOWNLOAD_LIMIT_KEY)
     .single();
-  if (data?.value && typeof data.value === "number") return data.value;
+  if (data !== null && typeof data?.value === "number") return data.value;
   return DEFAULT_DOWNLOAD_LIMIT_FALLBACK;
 }
 
