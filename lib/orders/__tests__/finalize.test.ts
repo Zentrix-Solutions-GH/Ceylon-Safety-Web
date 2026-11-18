@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/lib/orders/receipt", () => ({ ensureReceiptEmail: vi.fn().mockResolvedValue({ ok: false }) }));
 
 type SB = SupabaseClient<Database>;
 

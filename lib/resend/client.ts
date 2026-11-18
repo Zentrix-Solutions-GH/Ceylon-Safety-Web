@@ -14,6 +14,7 @@ export interface SendEmailOptions {
   relatedId?: string;
   subject: string;
   html: string;
+  text?: string;
 }
 
 /**
@@ -73,6 +74,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
       to: opts.to,
       subject: opts.subject,
       html: opts.html,
+      ...(opts.text ? { text: opts.text } : {}),
     });
 
     if (sendError || !data) {
