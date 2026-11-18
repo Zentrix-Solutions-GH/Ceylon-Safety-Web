@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { t } from "@/messages/en";
+import { formatPrice } from "@/lib/utils/price";
 import type { PublicDocumentCard } from "@/types/document";
 
 const PLACEHOLDER = "/images/document-placeholder.jpg";
 
 const KIND_CONFIG: Record<string, { label: string; color: string }> = {
-  checklist: { label: "PDF Documents", color: "bg-amber-500" },
-  safety_sign: { label: "Safety Sign", color: "bg-green-600" },
-  toolbox_talk: { label: "Toolbox Talk", color: "bg-blue-600" },
+  checklist: { label: t("documents.filter.format.checklist"), color: "bg-amber-500" },
+  safety_sign: { label: t("documents.filter.format.safety_sign"), color: "bg-green-600" },
+  toolbox_talk: { label: t("documents.filter.format.toolbox_talk"), color: "bg-blue-600" },
 };
 
 function deriveStars(downloads: number): number {
@@ -51,10 +52,7 @@ export function DocumentCard({ doc, mediaBase, onOpen }: DocumentCardProps) {
   );
 
   const isFree = doc.priceCents === 0;
-  const price = (doc.priceCents / 100).toLocaleString("en-LK", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  const price = formatPrice(doc.priceCents);
   const stars = deriveStars(doc.downloadCount);
   const kindConfig = KIND_CONFIG[doc.docKind] ?? { label: doc.docKind, color: "bg-gray-600" };
 

@@ -812,6 +812,7 @@ const en = {
   "documents.filter.format.checklist": "PDF Documents",
   "documents.filter.format.toolbox_talk": "Know How & Slide Decks",
   "documents.filter.format.safety_sign": "Fillable Templates",
+  "documents.filter.header": "Filter Documents",
   "documents.filter.most_downloaded": "Most Downloaded",
   "documents.filter.price_tier.label": "Price Tier (LKR)",
   "documents.filter.price_tier.free": "Free",

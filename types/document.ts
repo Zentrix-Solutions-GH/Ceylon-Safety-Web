@@ -2,6 +2,12 @@
 // Backend defines; frontend consumes. document_files.file_key never appears in any response.
 // coverImageKey on AdminDocument is the cover R2 key — admin screen needs it; public types never expose it.
 
+export interface DocumentCategory {
+  id: string;
+  name: string;
+  count?: number;
+}
+
 export type DocumentStatus = "draft" | "published" | "hidden";
 export type DocKind = "checklist" | "safety_sign" | "toolbox_talk";
 export type DocumentLanguage = "en" | "si" | "ta";

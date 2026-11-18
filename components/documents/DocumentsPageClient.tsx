@@ -5,19 +5,14 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { DocumentGrid } from "./DocumentGrid";
 import { DocumentSidebar } from "./DocumentSidebar";
 import { t } from "@/messages/en";
-import type { PublicDocumentCard } from "@/types/document";
-
-interface Category {
-  id: string;
-  name: string;
-  count?: number;
-}
+import { formatPrice } from "@/lib/utils/price";
+import type { PublicDocumentCard, DocumentCategory } from "@/types/document";
 
 interface DocumentsPageClientProps {
   docs: PublicDocumentCard[];
   mediaBase: string;
   allSlugs: string[];
-  allCategories: Category[];
+  allCategories: DocumentCategory[];
   total?: number;
   pageSize?: number;
   currentPage?: number;
@@ -226,7 +221,7 @@ export function DocumentsPageClient({
         <div className="space-y-3">
           {docs.map((doc) => {
             const isFree = doc.priceCents === 0;
-            const price = (doc.priceCents / 100).toLocaleString("en-LK", { minimumFractionDigits: 2 });
+            const price = formatPrice(doc.priceCents);
             return (
               <div
                 key={doc.slug}

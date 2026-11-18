@@ -8,7 +8,7 @@ import DocumentModal from "@/components/documents/DocumentModal";
 import { ArticlesHeroSlideshow } from "@/components/articles/ArticlesHeroSlideshow";
 import { HeroSearchForm } from "@/components/articles/HeroSearchForm";
 import { t } from "@/messages/en";
-import type { DocKind } from "@/types/document";
+import type { DocKind, DocumentCategory } from "@/types/document";
 
 interface DocumentsPageProps {
   searchParams: Promise<Record<string, string>>;
@@ -44,14 +44,13 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
   const sort = resolveSort(params.sort);
   const page = resolvePage(params.page);
 
-  const result = await listPublicDocuments({ category, type, sort, page });
+  const [result, allItems] = await Promise.all([
+    listPublicDocuments({ category, type, sort, page }),
+    listAllDocumentSlugsAndCategories(),
+  ]);
   const docs = result.ok ? result.data.documents : [];
   const total = result.ok ? result.data.total : 0;
   const pageSize = result.ok ? result.data.pageSize : 12;
-
-  // Fetch all slugs + categories without pagination for the EC2 modal guard and sidebar.
-  // Uses a lightweight query (slug, category_id, name only) with no page limit.
-  const allItems = await listAllDocumentSlugsAndCategories();
   const allSlugs = allItems.map((d) => d.slug);
   const fullMap = new Map<string, string>();
   for (const item of allItems) {
@@ -59,7 +58,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
       fullMap.set(item.categoryId, item.categoryName);
     }
   }
-  const allCategories = Array.from(fullMap.entries()).map(([id, name]) => ({ id, name }));
+  const allCategories: DocumentCategory[] = Array.from(fullMap.entries()).map(([id, name]) => ({ id, name }));
 
   const mediaBase = publicConfig.mediaCdnUrl;
 

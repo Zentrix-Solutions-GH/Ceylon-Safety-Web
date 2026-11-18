@@ -3,17 +3,12 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useRef, type FormEvent } from "react";
 import { t } from "@/messages/en";
-import type { DocKind } from "@/types/document";
+import type { DocKind, DocumentCategory } from "@/types/document";
 
 const DOC_KINDS: DocKind[] = ["checklist", "safety_sign", "toolbox_talk"];
 
-interface Category {
-  id: string;
-  name: string;
-}
-
 interface DocumentFiltersProps {
-  categories: Category[];
+  categories: DocumentCategory[];
 }
 
 export function DocumentFilters({ categories }: DocumentFiltersProps) {
@@ -26,9 +21,10 @@ export function DocumentFilters({ categories }: DocumentFiltersProps) {
   const currentType = (searchParams.get("type") ?? "") as DocKind | "";
 
   function buildUrl(category: string, type: string): string {
-    const params = new URLSearchParams();
-    if (category) params.set("category", category);
-    if (type) params.set("type", type);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("page");
+    if (category) params.set("category", category); else params.delete("category");
+    if (type) params.set("type", type); else params.delete("type");
     const qs = params.toString();
     return qs ? `${pathname}?${qs}` : pathname;
   }
