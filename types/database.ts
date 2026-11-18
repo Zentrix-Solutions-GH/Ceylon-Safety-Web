@@ -161,7 +161,6 @@ isOneToOne: false
                   ]
                 },"articles": {
                   Row: {
-                    /* article_type: hand-patched for migration 20261118000002; re-run `npx supabase gen types` after migration applies */
                     "article_type": string,"author_id": string | null,"body": NonNullable<Json>,"body_text": string,"body_version": number,"category_id": string | null,"comment_count": number,"cover_image_alt": string | null,"cover_image_key": string | null,"created_at": string,"deleted_at": string | null,"excerpt": string | null,"id": string,"like_count": number,"locale": string,"published_at": string | null,"search_vector": unknown,"seo_description": string | null,"seo_title": string | null,"slug": string,"status": string,"title": string,"translation_group_id": string | null,"updated_at": string,"view_count": number
                   }
                   ComputedFields: never
