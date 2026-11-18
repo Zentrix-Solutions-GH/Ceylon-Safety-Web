@@ -140,6 +140,15 @@ $ bash scripts/check.sh
 - **P2** Compact card uses bare `<img>` instead of `next/image`.
 - **P2** `messages/en.ts` — ~50 orphan keys from reverted auth redesign; clean up in follow-up.
 
+**full-review 2026-11-18 — round 3 (fixes, HEAD e5d4638)**
+
+- **P0 ✅ RESOLVED** `HeroSearchForm.tsx` — `__tests__/components/articles/HeroSearchForm.test.tsx` created (6 tests: form action, scope=articles, empty-query prevention, non-empty passthrough).
+- **P1 ✅ RESOLVED** AC3 combined clear — `page.test.tsx` AC3 describe block added; href=/articles when both range+category set.
+- **P1 ✅ RESOLVED** `aria-pressed` on all filter buttons — `ArticleFilters.tsx:52,64,79`; EC1/EC2 tests use `toHaveAttribute("aria-pressed","true")`.
+- **P2 ✅ RESOLVED** `<img>` → `next/image` — both card variants; `"use client"` + useState onError; EC3 uses `fireEvent.error`.
+- **P2 ✅ RESOLVED** `messages/en.ts` orphan keys — dev merge resolved contamination at source.
+- **P2 carry-forward** Silent `popularResult` error state — no error UI when listArticles fails for popular strip; address in S-060.
+
 ## After this merges
 
 - S-060 (article full page) and S-061 (likes/comments UI) can be built
