@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/config", () => ({
-  serverConfig: { supabaseServiceRoleKey: "srk" },
+  serverConfig: { supabaseServiceRoleKey: "srk", ipHashSecret: "test-ip-hash-secret" },
   r2Config: vi.fn(() => ({
     bucketPrivate: "test-private",
     accountId: "acct",
