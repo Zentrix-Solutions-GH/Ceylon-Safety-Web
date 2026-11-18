@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listArticles } from "@/lib/articles/listArticles";
-import type { ArticleRange, ArticleCursor } from "@/types/article";
+import type { ArticleRange, ArticleCursor, ArticleType } from "@/types/article";
+import { ARTICLE_TYPES } from "@/types/article";
 
 const VALID_RANGES: ArticleRange[] = ["newest", "week", "month"];
 
@@ -13,6 +14,11 @@ export async function GET(req: NextRequest) {
     : "newest";
 
   const category = searchParams.get("category") ?? undefined;
+
+  const rawType = searchParams.get("type") ?? "";
+  const articleType: ArticleType | undefined = (ARTICLE_TYPES as string[]).includes(rawType)
+    ? (rawType as ArticleType)
+    : undefined;
 
   let cursor: ArticleCursor | undefined;
   const rawCursor = searchParams.get("cursor");
@@ -32,7 +38,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const result = await listArticles({ range, category, cursor });
+  const result = await listArticles({ range, category, articleType, cursor });
 
   if (!result.ok) {
     if (result.code === "validation_failed") {

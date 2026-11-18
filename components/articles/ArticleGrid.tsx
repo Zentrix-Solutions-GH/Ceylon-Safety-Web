@@ -17,6 +17,7 @@ interface ArticleGridProps {
   initialNext: ArticleCursor | null;
   range?: string;
   category?: string;
+  articleType?: string;
 }
 
 export function ArticleGrid({
@@ -24,6 +25,7 @@ export function ArticleGrid({
   initialNext,
   range,
   category,
+  articleType,
 }: ArticleGridProps) {
   const [items, setItems] = useState<ArticleCard[]>(initialItems);
   const [next, setNext] = useState<ArticleCursor | null>(initialNext);
@@ -38,6 +40,7 @@ export function ArticleGrid({
         const params = new URLSearchParams();
         if (range && range !== "newest") params.set("range", range);
         if (category) params.set("category", category);
+        if (articleType) params.set("type", articleType);
         params.set("cursor", JSON.stringify(next));
         const res = await fetch(`/api/articles?${params.toString()}`);
         if (!res.ok) throw new Error("fetch failed");

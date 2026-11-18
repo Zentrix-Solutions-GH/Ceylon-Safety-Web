@@ -133,6 +133,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
             initialNext={next}
             range={range}
             category={category}
+            articleType={articleType}
           />
         )}
       </div>
