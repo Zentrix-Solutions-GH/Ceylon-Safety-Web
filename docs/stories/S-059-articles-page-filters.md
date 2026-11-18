@@ -123,17 +123,22 @@ $ bash scripts/check.sh
 
 ## Review notes
 
-**full-review 2026-11-18 (PR #100 — P0 fixes, commit 75944f9)**
+**full-review 2026-11-18 — round 1 (P0 fixes, commit 75944f9)**
 
-- **P0** `components/auth/SignInForm.tsx`, `components/auth/SignUpForm.tsx` — Auth form redesign from stash conflict contaminated this PR. ✅ RESOLVED: Both files reverted to dev baseline in commit 75944f9.
-- **P0** `__tests__/components/articles/ArticleFilters.test.tsx` — Tests used `getByRole("combobox")` but component renders pill buttons. ✅ RESOLVED: Tests rewritten for pill-button UI in commit 75944f9.
-- **P0** `__tests__/screens/articles/page.test.tsx` — Page test file missing. ✅ RESOLVED: File exists at correct path; fixed `getByText` → `getAllByText` for duplicate titles (main grid + popular strip).
-- **P1** `components/articles/ArticlesHeroSlideshow.tsx` — Component not rendered in `page.tsx`; dead code. ✅ RESOLVED commit 0dc666a.
-- **P1** WCAG 2.1 SC 2.2.2 — Slideshow had no pause-on-hover/focus. ✅ RESOLVED: `useRef` interval + mouse/focus handlers + `aria-live="polite"` added in commit 0dc666a.
-- **P1** `VALID_RANGES` duplicated in `page.tsx` and `ArticleFilters.tsx`. ✅ RESOLVED: `ARTICLE_RANGES` exported from `types/article.ts`; both files import from there in commit 0dc666a.
-- **P1** AC3 "Clear filters" only shown in empty-results state. ✅ RESOLVED: Link shown above grid when `isFiltered && !isEmpty` in commit 0dc666a.
-- **P2** `<img>` vs Next.js `<Image>` in compact card — carry forward.
-- **P2** Silent server error on `popularResult` failure — carry forward.
+- **P0** `components/auth/SignInForm.tsx`, `components/auth/SignUpForm.tsx` — Auth form redesign contaminated this PR. ✅ RESOLVED: Both reverted to dev baseline in 75944f9.
+- **P0** `__tests__/components/articles/ArticleFilters.test.tsx` — Tests used `getByRole("combobox")`. ✅ RESOLVED: Rewritten for pill-button UI in 75944f9.
+- **P0** `__tests__/screens/articles/page.test.tsx` — Page test file missing. ✅ RESOLVED: Exists at `__tests__/screens/`; fixed `getByText` → `getAllByText` in 75944f9.
+- **P1** `ArticlesHeroSlideshow.tsx` not rendered; `VALID_RANGES` duplicated; WCAG pause missing; AC3 Clear filters only in empty state. ✅ RESOLVED: All fixed in 2e44efa.
+- **P2** Silent `popularResult` failure — carry forward.
+
+**full-review 2026-11-18 — round 2 (full review, HEAD 2e44efa)**
+
+- **P0** `components/articles/HeroSearchForm.tsx` — AC5 no test file. Need `__tests__/components/articles/HeroSearchForm.test.tsx` covering form action, hidden scope field, and query navigation.
+- **P1** `__tests__/components/articles/ArticleFilters.test.tsx` — No test for AC3 combined clear (both `range=` and `category=` removed simultaneously).
+- **P1** `components/articles/ArticleCard.tsx` — No test for card `<a href="/articles/<slug>">`.
+- **P1** `__tests__/components/articles/ArticleFilters.test.tsx:70,79` — Active-state assertions use `className.toContain("bg-red-600")`; replace with `aria-pressed="true"`.
+- **P2** Compact card uses bare `<img>` instead of `next/image`.
+- **P2** `messages/en.ts` — ~50 orphan keys from reverted auth redesign; clean up in follow-up.
 
 ## After this merges
 
