@@ -1,7 +1,7 @@
 ---
 id: S-085
 title: Download backend — claim, one-time link, requests, approval
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-085-download-backend
@@ -83,7 +83,51 @@ A buyer gets exactly one download per purchase, through a link that works once f
 
 ## Plan
 Prior art: grepped docs/ for claim_download, release_download, download_requests, one-time link, download_limit. Found commerce design v6 sections 6.1, 7.1 to 7.4, schema doc group H and sections 5, 7 and 18.3, auth design route table; implements them (supersedes the first-draft S-018a and S-018c which used `used_at`, which does not exist).
-<!-- Filled in by /story-run at Step 3. Sensitive (downloads, personal data): the owner approves the plan before coding. -->
+
+### Key findings from code and design docs
+
+- DB functions already exist in migration 7: `private.claim_download(user, entitlement, ip_hash) → text` (returns `file_key`), `private.release_download(entitlement, log_id)`, `private.approve_download_request(request, admin)` — no new migration needed.
+- `claim_download` raises Postgres exceptions for each failure: `no_data_found` = not found or no ready file; `insufficient_privilege` = wrong user; `restrict_violation` = revoked or limit reached (message contains the code). Server layer catches and maps.
+- `approve_download_request` is idempotent (silent on already-decided). Server layer reads the request status first to return `validation_failed` / `already_done` for a second call (AC12).
+- RLS is already enabled on `entitlements`, `download_logs`, `download_requests` with own/staff policies in migration 7. No new migration needed.
+- Self-approval (AC10, M7 pending): compare `user_id` only (simplest and safest; email/phone cross-check deferred until M7 is decided; noted in story).
+- Rate limit for the download route (AC1): 30 per hour per user, using `checkRateLimit` from `@/lib/ratelimit` (same pattern as sign-in and password-reset). `mode: "closed"` (refusing bursts).
+- `release_download` signature is `(entitlement_id uuid, log_id bigint)` — log_id is bigint, not uuid.
+- Admin alert on missing file (AC4/EC2): write an `email_logs` row with `template = 'admin_file_missing'` after `release_download`; actual send is S-088.
+- `email_logs` rows for download request approve/reject (AC10/AC11): written inside the same transaction (service-role client) as the status update; S-088 sends them. The DB function `approve_download_request` does NOT write the email_logs row — the server layer does it after the function call, still inside the same service-role transaction block.
+
+### Files to create / edit
+
+| File | Action | Notes |
+|---|---|---|
+| `types/entitlement.ts` | Create | `Entitlement`, `EntitlementWithMeta`, `DownloadPageData` types |
+| `types/download-request.ts` | Create | `DownloadRequest`, `DownloadQueueItem`, `DownloadQueueResult` types |
+| `types/api.ts` | Edit | Add `download_limit_reached`, `file_unavailable`, `request_already_open` to `COMMON_ERROR_CODES` |
+| `lib/downloads/claim.ts` | Create | `claimDownload(entitlementId, userId, ipHash)` + `getDownloadPageData(orderItemId, userId)` |
+| `lib/downloads/requests.ts` | Create (replace stub) | `requestDownload(entitlementId, userId, note?)` |
+| `lib/admin/actions/download-requests.ts` | Create | `getDownloadRequestQueue()`, `getDownloadRequestBadgeCount()`, `approveDownloadRequest(requestId)`, `rejectDownloadRequest(requestId, note)` |
+| `lib/admin/actions/index.ts` | Edit | Re-export `download-requests.ts` |
+| `app/api/download/[entitlementId]/route.ts` | Edit (replace stub) | POST only; GET returns 405; `requireActiveAccount`, rate limit, call `claimDownload`, presign R2 link |
+
+### No DB migration needed (all functions and RLS already in migration 7).
+
+### Step order
+
+1. Types (entitlement.ts, download-request.ts, api.ts additions) — no deps
+2. `lib/downloads/claim.ts` (claimDownload + getDownloadPageData)
+3. `lib/downloads/requests.ts` (requestDownload)
+4. `lib/admin/actions/download-requests.ts`
+5. `app/api/download/[entitlementId]/route.ts`
+6. Test files (integration + pgTAP)
+
+### Assumptions confirmed in this plan
+
+- Q76: download page at `/download/[orderItemId]`; `getDownloadPageData(orderItemId)` takes the order item id, resolves entitlement via `entitlements.order_item_id`.
+- Q77: approval adds exactly 1 to `download_limit`; no request count limit in Release 1.
+- Self-approval (M7): `user_id` match only until M7 is settled.
+- `email_logs` insert for approve/reject: inside the server-layer transaction (service role), not inside the DB function.
+
+**Sensitive story — owner must approve this plan before coding begins.**
 
 ## Evidence
 <!-- Paste scripts/check.sh output here after Step 7. -->
