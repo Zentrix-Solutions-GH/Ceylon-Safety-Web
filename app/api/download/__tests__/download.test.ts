@@ -51,9 +51,7 @@ beforeEach(() => {
 
 describe("GET /api/download/[entitlementId]", () => {
   it("returns 405 — a GET can never use up a download", async () => {
-    const req = makeRequest("GET");
-    const params = Promise.resolve({ entitlementId: ENT_ID });
-    const res = await GET(req, { params });
+    const res = await GET();
     expect(res.status).toBe(405);
   });
 });

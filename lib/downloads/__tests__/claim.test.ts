@@ -188,7 +188,8 @@ describe("claimDownload — file missing in store", () => {
 describe("claimDownload — parallel calls (AC3)", () => {
   it("only the first of N concurrent calls with download_limit=1 gets a success", async () => {
     let callCount = 0;
-    vi.mocked(createSupabaseServiceRoleClient).mockImplementation(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (createSupabaseServiceRoleClient as any).mockImplementation(async () => {
       callCount++;
       const isFirst = callCount === 1;
       return {
@@ -226,8 +227,7 @@ describe("claimDownload — AC7 language and document-status independence", () =
 
     const result = await claimDownload({ entitlementId: ENT_ID, userId: USER_ID, ipHash: "h1" });
     expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.data.signedUrl).toMatch(/^https:\/\//);
+    expect((result as { data?: { signedUrl: string } }).data?.signedUrl).toMatch(/^https:\/\//);
   });
 
   it("returns file_unavailable when no ready file exists for the purchased language (AC7)", async () => {

@@ -42,8 +42,10 @@ export async function claimDownload(
   const sbService = await createSupabaseServiceRoleClient();
 
   // Step 1: atomic claim (locks row, checks ownership/limit, writes log, returns file key + log id)
+  // claim_download is in the private schema so it is not in the generated public types — cast to any.
   // claim_download returns TABLE(file_key text, log_id bigint) — Supabase wraps it as an array.
-  const { data: claimRows, error: claimErr } = await sbService.rpc("claim_download", {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: claimRows, error: claimErr } = await (sbService as any).rpc("claim_download", {
     p_user_id: userId,
     p_entitlement_id: entitlementId,
     p_ip_hash: ipHash,
@@ -64,13 +66,15 @@ export async function claimDownload(
 
   const exists = await headObject(cfg.bucketPrivate, fileKey);
   if (!exists) {
-    // Undo the claim — file is missing in store
-    await sbService.rpc("release_download", {
+    // Undo the claim — file is missing in store (private schema, cast to any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (sbService as any).rpc("release_download", {
       p_entitlement_id: entitlementId,
       p_log_id: logId,
     });
-    // Alert admin (best-effort: insert queued email_logs row)
-    await sbService.from("email_logs").insert({
+    // Alert admin (best-effort: insert queued email_logs row; to_email null = admin queue)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (sbService as any).from("email_logs").insert({
       to_email:     null,
       template:     "admin_file_missing",
       related_type: "entitlement",
