@@ -230,6 +230,26 @@ describe("rejectAndCancelBankOrder — AC9", () => {
   });
 });
 
+// ─── AC12: rate_limited — rejectBankOrder ────────────────────────────────────
+
+describe("rejectBankOrder — AC12 rate limit", () => {
+  it("returns rate_limited when limit exceeded", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ ok: false, code: "rate_limited" } as never);
+    const result = await rejectBankOrder(ORDER_ID, SLIP_ID, "Bad slip", "123456");
+    expect(result).toMatchObject({ ok: false, code: "rate_limited" });
+  });
+});
+
+// ─── AC12: rate_limited — rejectAndCancelBankOrder ───────────────────────────
+
+describe("rejectAndCancelBankOrder — AC12 rate limit", () => {
+  it("returns rate_limited when limit exceeded", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ ok: false, code: "rate_limited" } as never);
+    const result = await rejectAndCancelBankOrder(ORDER_ID, "Bad slip", "123456");
+    expect(result).toMatchObject({ ok: false, code: "rate_limited" });
+  });
+});
+
 // ─── AC10: reopenBankOrder ────────────────────────────────────────────────────
 
 describe("reopenBankOrder — AC10", () => {
@@ -264,5 +284,25 @@ describe("reopenBankOrder — AC10", () => {
     vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" } as never);
     const result = await reopenBankOrder(ORDER_ID, "note", "123456");
     expect(result).toMatchObject({ ok: false, code: "not_allowed" });
+  });
+
+  it("returns already_done when concurrent reopen wins (count=0)", async () => {
+    // orderCancelCount=0: the status-guard update touches 0 rows (order already reopened)
+    const db = makeDb({ orderStatus: "cancelled", cancelReason: "expired", orderCancelCount: 0 });
+    vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
+    vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
+
+    const result = await reopenBankOrder(ORDER_ID, "Late payment approved by manager", "123456");
+    expect(result).toMatchObject({ ok: false, code: "already_done" });
+  });
+});
+
+// ─── AC12: rate_limited — reopenBankOrder ────────────────────────────────────
+
+describe("reopenBankOrder — AC12 rate limit", () => {
+  it("returns rate_limited when limit exceeded", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ ok: false, code: "rate_limited" } as never);
+    const result = await reopenBankOrder(ORDER_ID, "Late payment approved", "123456");
+    expect(result).toMatchObject({ ok: false, code: "rate_limited" });
   });
 });

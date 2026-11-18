@@ -131,6 +131,10 @@ describe("expireBankOrdersJob — AC11", () => {
     expect(updateFn).toHaveBeenCalledWith(
       expect.objectContaining({ status: "cancelled", cancel_reason: "expired" })
     );
+    // AC11: cancellation queues a bank_rejected email to the buyer
+    expect(emailInsertFn).toHaveBeenCalledWith(
+      expect.objectContaining({ template: "bank_rejected" })
+    );
   });
 
   it("sends warning email (bank_expiring) once for an order inside the warning window", async () => {

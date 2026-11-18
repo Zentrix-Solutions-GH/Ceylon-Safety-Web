@@ -375,12 +375,14 @@ export async function reopenBankOrder(
   if (order.status !== "cancelled")        return { ok: false, code: "validation_failed" };
   if (order.cancel_reason !== "expired")   return { ok: false, code: "validation_failed" };
 
-  const { error: orderErr } = await sbService
+  const { error: orderErr, count } = await sbService
     .from("orders")
     .update({ status: "pending_verification", cancel_reason: null })
-    .eq("id", orderId);
+    .eq("id", orderId)
+    .eq("status", "cancelled");
 
   if (orderErr) return { ok: false, code: "unknown" };
+  if (count === 0) return { ok: false, code: "already_done" };
 
   await sbService.from("admin_audit_log").insert({
     actor_id:    actor.id,

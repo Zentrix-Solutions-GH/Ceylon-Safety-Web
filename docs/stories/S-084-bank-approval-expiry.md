@@ -170,7 +170,12 @@ Pre-existing failures not in S-084 scope: 24
 ```
 
 ## Review notes
-<!-- Filled in by reviewer and security-reviewer agents -->
+
+- **P0** `supabase/migrations/20261118000002_bank-transfer-approval.sql` (`approve_bank_transfer_locked` function) — Zero pgTAP tests for the approval SQL function. The entire AC6 transaction (entitlement rows, `order.status = 'paid'`, `paid_at`, cart removal, `purchase_count`) lives in PL/pgSQL and is exercised in production but untested. Add pgTAP tests covering: `applied` path sets `order.status = 'paid'` and creates entitlement rows; `first_approved` path leaves order `pending_verification`; `already_done` is idempotent. (full-review 2026-11-18)
+- **P1** `lib/admin/actions/bank-transfers.ts:440` — `reopenBankOrder` UPDATE has no `.eq("status", "cancelled")` guard. Concurrent calls both return `ok: true` with a spurious second audit row. Add `.eq("status", "cancelled")` to match the TOCTOU pattern used everywhere else in this file. (full-review 2026-11-18)
+- **P1** `supabase/migrations/20261118000002_bank-transfer-approval.sql:84` — `GRANT SELECT ON public.bank_transfer_queue TO authenticated` grants the staff-only view to all logged-in buyers. RLS limits results to their own rows today but the grant is wider than the intent and creates a future footgun. Revoke from `authenticated`; grant via `service_role` or document the decision explicitly. (full-review 2026-11-18)
+- **P1** `lib/admin/actions/bank-transfers.ts` / `app/api/cron/__tests__/expire-bank.test.ts` — AC12: `checkBankActionLimit` is wired into all four write actions but `rate_limited` is only tested for `approveBankOrder`. Add one `rate_limited` test per remaining action. (full-review 2026-11-18)
+- **P1** `app/api/cron/__tests__/expire-bank.test.ts` — AC11: expiry cancellation queues a `bank_rejected` email but no test asserts the email_logs insert on the cancellation path. (full-review 2026-11-18)
 
 ## After this merges, a user can:
 - (admin test client) Approve or reject a bank slip through the server actions with the right permission and a fresh code, and see an unverified bank order cancelled after the wait. The visible screen is S-097.
