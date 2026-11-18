@@ -165,6 +165,23 @@ describe("approveDownloadRequest — already decided (AC12)", () => {
   });
 });
 
+// ─── approveDownloadRequest — AC12: DB raises already_done on concurrent double-approval ──
+
+describe("approveDownloadRequest — concurrent already_done from DB (AC12)", () => {
+  it("returns validation_failed/already_done when DB function raises already_done", async () => {
+    // Simulates: server-layer status check passes (request shows open), but
+    // the DB function raises restrict_violation/already_done because a concurrent
+    // approval already committed (the FOR UPDATE lock was released by the first caller).
+    mockStaffOk();
+    const rpcErr = { message: "ceylonsafety: already_done", code: "restrict_violation" };
+    const db = makeServiceDb(OPEN_REQUEST, rpcErr);
+    vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
+    vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
+    const result = await approveDownloadRequest(REQUEST_ID);
+    expect(result).toMatchObject({ ok: false, code: "validation_failed", reason: "already_done" });
+  });
+});
+
 // ─── approveDownloadRequest — AC10: self-approval refused ────────────────────
 
 describe("approveDownloadRequest — self-approval (AC10)", () => {
@@ -219,6 +236,18 @@ describe("rejectDownloadRequest — requires note (AC11)", () => {
   });
 });
 
+describe("rejectDownloadRequest — concurrent already_done from DB (AC12)", () => {
+  it("returns validation_failed/already_done when DB function raises already_done", async () => {
+    mockStaffOk();
+    const rpcErr = { message: "ceylonsafety: already_done", code: "restrict_violation" };
+    const db = makeServiceDb(OPEN_REQUEST, rpcErr);
+    vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
+    vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
+    const result = await rejectDownloadRequest(REQUEST_ID, "buyer already refunded");
+    expect(result).toMatchObject({ ok: false, code: "validation_failed", reason: "already_done" });
+  });
+});
+
 describe("rejectDownloadRequest — success (AC11)", () => {
   it("marks request rejected and queues email", async () => {
     mockStaffOk();
@@ -250,12 +279,10 @@ describe("getDownloadRequestQueue — success (AC13)", () => {
         order: vi.fn().mockResolvedValue({
           data: [
             {
-              id: REQUEST_ID,
+              request_id: REQUEST_ID,
               entitlement_id: ENT_ID,
-              user_id: BUYER_ID,
               note: "failed",
               requested_at: "2026-11-01T00:00:00Z",
-              status: "open",
               buyer_name: "Test Buyer",
               buyer_email: "buyer@example.com",
               document_title: "Safety Plan",

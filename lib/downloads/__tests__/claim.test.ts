@@ -168,6 +168,12 @@ describe("claimDownload — file missing in store", () => {
     const releaseCalls = db.rpc.mock.calls.filter((c: unknown[]) => c[0] === "release_download");
     expect(releaseCalls.length).toBe(1);
     expect(releaseCalls[0]?.[1]).toMatchObject({ p_entitlement_id: ENT_ID, p_log_id: LOG_ID });
+    // Admin alert must be queued (AC4/EC2)
+    const insertMock = db.from.mock.results[0]?.value?.insert as ReturnType<typeof vi.fn>;
+    expect(db.from).toHaveBeenCalledWith("email_logs");
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ template: "admin_file_missing" })
+    );
   });
 
   it("does NOT call release_download when no_ready_file_for_language (before R2 check) (AC4)", async () => {

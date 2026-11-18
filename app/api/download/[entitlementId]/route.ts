@@ -62,8 +62,12 @@ export async function POST(
   }
 
   // AC5: return only the signed URL — no file key, no bucket path
+  const signedUrl = result.data?.signedUrl;
+  if (!signedUrl) {
+    return NextResponse.json({ code: "unknown" }, { status: 500 });
+  }
   return NextResponse.json(
-    { url: result.data?.signedUrl },
+    { url: signedUrl },
     { headers: { "Cache-Control": "no-store" } }
   );
 }

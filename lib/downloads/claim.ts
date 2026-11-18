@@ -94,8 +94,9 @@ export async function claimDownload(
 }
 
 function buildFileName(title?: string, language?: string, format?: string): string {
-  const parts = [title ?? "document", language, format].filter(Boolean);
-  return parts.join("-").replace(/[^a-zA-Z0-9._-]/g, "_") + (format ? "" : ".pptx");
+  const parts = [title ?? "document", language].filter(Boolean);
+  const ext = format ?? "pptx";
+  return parts.join("-").replace(/[^a-zA-Z0-9._-]/g, "_") + "." + ext;
 }
 
 // ─── getDownloadPageData ──────────────────────────────────────────────────────

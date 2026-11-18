@@ -32,16 +32,15 @@ export async function getDownloadRequestQueue(): Promise<ActionResult<DownloadQu
   const { data: rows, error } = await (sbService as any)
     .from("download_request_queue")
     .select(
-      "id, entitlement_id, user_id, note, requested_at, " +
+      "request_id, entitlement_id, note, requested_at, " +
       "buyer_name, buyer_email, document_title, language, last_download_at"
     )
-    .eq("status", "open")
     .order("requested_at", { ascending: true });
 
   if (error) return { ok: false, code: "unknown" };
 
   const items: DownloadQueueItem[] = ((rows as Array<Record<string, unknown>>) ?? []).map((r) => ({
-    requestId:      String(r["id"] ?? ""),
+    requestId:      String(r["request_id"] ?? ""),
     entitlementId:  String(r["entitlement_id"] ?? ""),
     buyerName:      String(r["buyer_name"] ?? ""),
     buyerEmail:     String(r["buyer_email"] ?? ""),
@@ -120,7 +119,12 @@ export async function approveDownloadRequest(
     p_admin_id:   actor.id,
   });
 
-  if (rpcErr) return { ok: false, code: "unknown" };
+  if (rpcErr) {
+    if ((rpcErr as { message?: string }).message?.includes("already_done")) {
+      return { ok: false, code: "validation_failed", reason: "already_done" };
+    }
+    return { ok: false, code: "unknown" };
+  }
 
   return { ok: true };
 }
@@ -171,7 +175,12 @@ export async function rejectDownloadRequest(
     p_note:       note.trim(),
   });
 
-  if (rpcErr) return { ok: false, code: "unknown" };
+  if (rpcErr) {
+    if ((rpcErr as { message?: string }).message?.includes("already_done")) {
+      return { ok: false, code: "validation_failed", reason: "already_done" };
+    }
+    return { ok: false, code: "unknown" };
+  }
 
   return { ok: true };
 }

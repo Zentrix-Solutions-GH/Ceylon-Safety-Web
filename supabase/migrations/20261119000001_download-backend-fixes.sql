@@ -116,9 +116,11 @@ BEGIN
       USING ERRCODE = 'no_data_found';
   END IF;
 
-  -- Idempotent: already decided → do nothing (lock held prevents double-approval race)
+  -- Already decided: raise so the server layer can return validation_failed/already_done.
+  -- The FOR UPDATE lock prevents a concurrent double-approval from silently no-oping.
   IF v_req.status <> 'open' THEN
-    RETURN;
+    RAISE EXCEPTION 'ceylonsafety: already_done'
+      USING ERRCODE = 'restrict_violation';
   END IF;
 
   -- Add 1 to entitlement's download_limit
@@ -212,9 +214,10 @@ BEGIN
       USING ERRCODE = 'no_data_found';
   END IF;
 
-  -- AC12: idempotent — already decided → do nothing
+  -- AC12: already decided → raise so the server can return validation_failed/already_done.
   IF v_req.status <> 'open' THEN
-    RETURN;
+    RAISE EXCEPTION 'ceylonsafety: already_done'
+      USING ERRCODE = 'restrict_violation';
   END IF;
 
   -- Mark rejected
