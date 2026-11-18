@@ -56,7 +56,6 @@ export function DocumentSidebar({ categories, onSortChange }: DocumentSidebarPro
 
   function clearFilters() {
     router.replace(pathname);
-    if (onSortChange) onSortChange("newest");
   }
 
   function toggleMostDownloaded() {

@@ -210,7 +210,8 @@ async function queryAllDocumentSlugsAndCategories(): Promise<SlugAndCategory[]> 
     .eq("status", "published")
     .lte("published_at", now)
     .is("deleted_at", null)
-    .order("published_at", { ascending: false });
+    .order("published_at", { ascending: false })
+    .limit(10000);
 
   if (error || !data) return [];
 
