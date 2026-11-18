@@ -5,16 +5,16 @@ import { listCategories } from "@/lib/articles/listCategories";
 import { ArticleFilters } from "@/components/articles/ArticleFilters";
 import { ArticleGrid } from "@/components/articles/ArticleGrid";
 import { ArticleCardUI } from "@/components/articles/ArticleCard";
+import { ArticlesHeroSlideshow } from "@/components/articles/ArticlesHeroSlideshow";
 import { HeroSearchForm } from "@/components/articles/HeroSearchForm";
 import { t } from "@/messages/en";
+import { publicConfig } from "@/lib/config.public";
+import { ARTICLE_RANGES } from "@/types/article";
 import type { ArticleRange } from "@/types/article";
-
-const VALID_RANGES: ArticleRange[] = ["newest", "week", "month"];
-const MEDIA_BASE = process.env.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL ?? "";
 
 function coverUrl(key: string | null): string | undefined {
   if (!key) return undefined;
-  return `${MEDIA_BASE}/${key}`;
+  return `${publicConfig.mediaCdnUrl}/${key}`;
 }
 
 interface ArticlesPageProps {
@@ -23,7 +23,7 @@ interface ArticlesPageProps {
 
 function resolveRange(raw: string | undefined): ArticleRange {
   if (!raw) return "newest";
-  return (VALID_RANGES as string[]).includes(raw) ? (raw as ArticleRange) : "newest";
+  return (ARTICLE_RANGES as string[]).includes(raw) ? (raw as ArticleRange) : "newest";
 }
 
 export async function generateMetadata({
@@ -65,13 +65,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
     <div>
       {/* Knowledge Hub Hero Banner */}
       <div className="relative overflow-hidden bg-gray-900">
-        {/* Background overlay pattern */}
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-30"
-          style={{ backgroundImage: "url('/images/safety-hero-bg.jpg')" }}
-          aria-hidden="true"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-red-900/80 to-gray-900/60" aria-hidden="true" />
+        <ArticlesHeroSlideshow />
 
         <div className="relative mx-auto max-w-6xl px-4 py-14 text-white">
           <div className="max-w-2xl">
@@ -100,6 +94,17 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
           <p className="mb-4 text-sm text-gray-500">
             {t("articles.results.count", { count: String(items.length + (next ? "+": "")) })}
           </p>
+        )}
+
+        {isFiltered && !isEmpty && (
+          <div className="mb-4 flex justify-end">
+            <Link
+              href="/articles"
+              className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
+            >
+              {t("articles.filter.clear")}
+            </Link>
+          </div>
         )}
 
         {isEmpty ? (
