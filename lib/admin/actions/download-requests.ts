@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireStaff } from "@/lib/auth/server";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/ratelimit";
+import { isSelfApproval } from "@/lib/bank/review";
 import type { ActionResult } from "@/types/api";
 import type { DownloadQueueItem, DownloadQueueResult } from "@/types/download-request";
 
@@ -52,7 +53,10 @@ export async function getDownloadRequestQueue(): Promise<ActionResult<DownloadQu
     requestedAt:    String(r["requested_at"] ?? ""),
   }));
 
-  return { ok: true, data: { items, totalOpen: items.length } };
+  const badgeResult = await getDownloadRequestBadgeCount();
+  const totalOpen = badgeResult.ok && badgeResult.data ? badgeResult.data.count : items.length;
+
+  return { ok: true, data: { items, totalOpen } };
 }
 
 // ─── getDownloadRequestBadgeCount (AC13, S-101) ───────────────────────────────
@@ -92,11 +96,11 @@ export async function approveDownloadRequest(
 
   const sbService = await createSupabaseServiceRoleClient();
 
-  // Fetch the request (service-role client bypasses RLS; staff permission enforced above)
+  // Fetch the request with buyer profile for self-approval check (AC10).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: req, error: reqErr } = await (sbService as any)
     .from("download_requests")
-    .select("id, entitlement_id, user_id, status")
+    .select("id, entitlement_id, user_id, status, profiles(email, phone)")
     .eq("id", requestId)
     .single();
 
@@ -107,8 +111,17 @@ export async function approveDownloadRequest(
     return { ok: false, code: "validation_failed", reason: "already_done" };
   }
 
-  // AC10: self-approval refused — compare user_id only (M7 pending)
-  if ((req as { user_id: string }).user_id === actor.id) {
+  // AC10: self-approval refused — user_id, email, and phone checks.
+  const buyer = Array.isArray((req as { profiles: unknown }).profiles)
+    ? ((req as { profiles: unknown[] }).profiles[0] as { email: string | null; phone: string | null } | null)
+    : ((req as { profiles: unknown }).profiles as { email: string | null; phone: string | null } | null);
+  if (
+    isSelfApproval(
+      { user_id: (req as { user_id: string }).user_id },
+      buyer,
+      { id: actor.id, email: actor.email, phone: (actor as { phone?: string | null }).phone ?? null }
+    )
+  ) {
     return { ok: false, code: "not_allowed" };
   }
 

@@ -2,10 +2,11 @@ import "server-only";
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createHash } from "crypto";
+import { createHmac } from "crypto";
 import { requireActiveAccount } from "@/lib/auth/server";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { getClientIp } from "@/lib/ratelimit/client-ip";
+import { serverConfig } from "@/lib/config";
 import { claimDownload } from "@/lib/downloads/claim";
 
 // AC1: 30 POST requests per hour per authenticated user.
@@ -66,7 +67,7 @@ export async function POST(
 
   // Hash the client IP for the download log (AC2); never log the raw IP.
   const rawIp = getClientIp(req.headers, undefined) ?? "unknown";
-  const ipHash = createHash("sha256").update(rawIp).digest("hex");
+  const ipHash = createHmac("sha256", serverConfig.ipHashSecret).update(rawIp).digest("hex");
 
   const result = await claimDownload({ entitlementId, userId: user.id, ipHash, documentTitle, language, format });
 
