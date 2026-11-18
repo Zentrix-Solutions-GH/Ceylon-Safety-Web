@@ -156,6 +156,10 @@ export type SetArticleStatusResult =
 // ─── Read types (S-049) ──────────────────────────────────────────────────────
 
 export type ArticleRange = "newest" | "week" | "month";
+export const ARTICLE_RANGES: ArticleRange[] = ["newest", "week", "month"];
+
+export type ArticleType = "article" | "guide" | "news" | "tip";
+export const ARTICLE_TYPES: ArticleType[] = ["article", "guide", "news", "tip"];
 
 export interface Category {
   id: string;
@@ -178,6 +182,7 @@ export interface ArticleCard {
   coverImageKey: string | null;
   coverImageAlt: string | null;
   category: Category;
+  articleType: ArticleType;
   authorName: string;
   publishedAt: string;
   likeCount: number;
@@ -193,6 +198,7 @@ export interface ArticleListResult {
 export type ArticleListInput = {
   range?: ArticleRange;
   category?: string; // category slug
+  articleType?: ArticleType;
   cursor?: ArticleCursor;
 };
 

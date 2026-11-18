@@ -5,12 +5,12 @@ import { listCategories } from "@/lib/articles/listCategories";
 import { ArticleFilters } from "@/components/articles/ArticleFilters";
 import { ArticleGrid } from "@/components/articles/ArticleGrid";
 import { ArticleCardUI } from "@/components/articles/ArticleCard";
+import { ArticlesHeroSlideshow } from "@/components/articles/ArticlesHeroSlideshow";
 import { HeroSearchForm } from "@/components/articles/HeroSearchForm";
 import { t } from "@/messages/en";
 import { publicConfig } from "@/lib/config.public";
-import type { ArticleRange } from "@/types/article";
-
-const VALID_RANGES: ArticleRange[] = ["newest", "week", "month"];
+import { ARTICLE_RANGES, ARTICLE_TYPES } from "@/types/article";
+import type { ArticleRange, ArticleType } from "@/types/article";
 
 function coverUrl(key: string | null): string | undefined {
   if (!key) return undefined;
@@ -23,14 +23,19 @@ interface ArticlesPageProps {
 
 function resolveRange(raw: string | undefined): ArticleRange {
   if (!raw) return "newest";
-  return (VALID_RANGES as string[]).includes(raw) ? (raw as ArticleRange) : "newest";
+  return (ARTICLE_RANGES as string[]).includes(raw) ? (raw as ArticleRange) : "newest";
+}
+
+function resolveType(raw: string | undefined): ArticleType | undefined {
+  if (!raw) return undefined;
+  return (ARTICLE_TYPES as string[]).includes(raw) ? (raw as ArticleType) : undefined;
 }
 
 export async function generateMetadata({
   searchParams,
 }: ArticlesPageProps): Promise<Metadata> {
   const params = await searchParams;
-  const isFiltered = Boolean(params.range || params.category);
+  const isFiltered = Boolean(params.range || params.category || params.type);
   return {
     title: t("articles.page.title"),
     description: t("articles.page.description"),
@@ -42,12 +47,13 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   const params = await searchParams;
   const range = resolveRange(params.range);
   const category = params.category || undefined;
-  const isFiltered = range !== "newest" || Boolean(category);
+  const articleType = resolveType(params.type);
+  const isFiltered = range !== "newest" || Boolean(category) || Boolean(articleType);
 
-  const popularIsSameQuery = range === "month" && !category;
+  const popularIsSameQuery = range === "month" && !category && !articleType;
 
   const [listResult, categories, popularResult] = await Promise.all([
-    listArticles({ range, category }),
+    listArticles({ range, category, articleType }),
     listCategories(),
     popularIsSameQuery ? Promise.resolve(null) : listArticles({ range: "month" }),
   ]);
@@ -67,13 +73,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
     <div>
       {/* Knowledge Hub Hero Banner */}
       <div className="relative overflow-hidden bg-gray-900">
-        {/* Background overlay pattern */}
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-30"
-          style={{ backgroundImage: "url('/images/safety-hero-bg.jpg')" }}
-          aria-hidden="true"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-red-900/80 to-gray-900/60" aria-hidden="true" />
+        <ArticlesHeroSlideshow />
 
         <div className="relative mx-auto max-w-6xl px-4 py-14 text-white">
           <div className="max-w-2xl">
@@ -104,6 +104,17 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
           </p>
         )}
 
+        {isFiltered && !isEmpty && (
+          <div className="mb-4 flex justify-end">
+            <Link
+              href="/articles"
+              className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
+            >
+              {t("articles.filter.clear")}
+            </Link>
+          </div>
+        )}
+
         {isEmpty ? (
           <div className="mt-10 flex flex-col items-center gap-4 text-center text-gray-500">
             <p>{emptyMessage}</p>
@@ -122,6 +133,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
             initialNext={next}
             range={range}
             category={category}
+            articleType={articleType}
           />
         )}
       </div>

@@ -7,7 +7,9 @@ import type {
   ArticleListResponse,
   ArticleListResult,
   ArticleCursor,
+  ArticleType,
 } from "@/types/article";
+import { ARTICLE_TYPES } from "@/types/article";
 
 const PAGE_SIZE = 12;
 
@@ -42,7 +44,7 @@ const CursorSchema = z.object({
 });
 
 export async function listArticles(input: ArticleListInput): Promise<ArticleListResponse> {
-  const { range = "newest", category, cursor } = input;
+  const { range = "newest", category, articleType, cursor } = input;
 
   // Validate cursor if provided
   if (cursor !== undefined) {
@@ -61,6 +63,7 @@ export async function listArticles(input: ArticleListInput): Promise<ArticleList
     .select(
       `id, slug, title, excerpt,
        cover_image_key, cover_image_alt, published_at, like_count, comment_count,
+       article_type,
        categories!inner(id, name, slug),
        authors(name)`,
       { count: undefined }
@@ -77,6 +80,10 @@ export async function listArticles(input: ArticleListInput): Promise<ArticleList
 
   if (category) {
     query = query.eq("categories.slug", category);
+  }
+
+  if (articleType && (ARTICLE_TYPES as string[]).includes(articleType)) {
+    query = query.eq("article_type", articleType);
   }
 
   if (cursor) {
@@ -107,6 +114,9 @@ export async function listArticles(input: ArticleListInput): Promise<ArticleList
     coverImageKey: (r.cover_image_key as string | null) ?? null,
     coverImageAlt: (r.cover_image_alt as string | null) ?? null,
     category: r.categories as unknown as { id: string; name: string; slug: string },
+    articleType: ((ARTICLE_TYPES as string[]).includes(r.article_type as string)
+      ? r.article_type
+      : "article") as ArticleType,
     authorName: (r.authors as unknown as { name: string } | null)?.name ?? "",
     publishedAt: r.published_at as string,
     likeCount: (r.like_count as number) ?? 0,

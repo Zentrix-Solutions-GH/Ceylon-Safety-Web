@@ -26,6 +26,7 @@ function makeCard(n: number): ArticleCard {
     coverImageKey: `covers/article-${n}.jpg`,
     coverImageAlt: `Cover ${n}`,
     category: { id: "cat-1", name: "Safety", slug: "safety" },
+    articleType: "article" as const,
     authorName: "Author",
     publishedAt: "2026-01-01T00:00:00Z",
     likeCount: n,
@@ -55,6 +56,19 @@ describe("Articles page — AC1: renders article grid", () => {
     render(el);
     expect(screen.getByRole("heading", { level: 2, name: "Article 1" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Article 2" })).toBeInTheDocument();
+  });
+});
+
+describe("Articles page — AC3: clear filters removes all params", () => {
+  it("shows Clear filters link pointing to /articles when both range and category are set", async () => {
+    mockListArticles.mockResolvedValue({
+      ok: true,
+      data: { items: [makeCard(1)], next: null },
+    });
+    const el = await ArticlesPage({ searchParams: { range: "week", category: "safety" } });
+    render(el);
+    const clearLink = screen.getByRole("link", { name: /clear filters/i });
+    expect(clearLink).toHaveAttribute("href", "/articles");
   });
 });
 
