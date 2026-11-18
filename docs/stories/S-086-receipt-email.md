@@ -1,11 +1,11 @@
 ---
 id: S-086
 title: Receipt and approval emails via the finalize step
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-086-receipt-email
-pr: ~
+pr: "105 https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/105"
 depends_on: [S-040, S-081]
 reqs: [REQ-054, REQ-049d, REQ-198]
 ---
@@ -20,24 +20,24 @@ When an order is paid, the buyer gets a receipt email (card) or an approval emai
 - Related, OPEN: REQ-156 (what receipts show, Q44): the content below is the design's list (commerce 6.3), accepted as an assumption.
 
 ## Acceptance criteria
-- [ ] AC1: `ensureReceiptEmail(order)` in `lib/orders/finalize.ts` (step 2 of the finalize loop, S-081) sends the `receipt` template for card orders and the `bank_approved` template for bank-transfer orders, only if no such email is logged for the order.
-- [ ] AC2: Exactly once: the `email_logs` row (`template`, `related_type = 'order'`, `related_id`) is written BEFORE sending; the unique index on (template, related_type, related_id) for `receipt` makes a second concurrent run fail safely. A failed send sets status `failed` and is retried by the next finalize run.
-- [ ] AC3: Receipt content: order number, date (Asia/Colombo), each item with its language, total in LKR (thousands separator, two decimals), a button to the download page `/download/[orderItemId]` for each item (never a direct file link), the invoice PDF attached only if it was created in the same finalize run (otherwise a link to the order page, where it appears when ready), the support contact, and a link to the refund policy. No card data. The approval email has the same content plus a note that the link works once.
-- [ ] AC4: The email never waits for the invoice. With the invoice step forced to fail, the email is still sent once.
-- [ ] AC5: `resendMyReceipt(orderId)` (owner only, `requireActiveAccount()`) sends the same email under the template name `receipt_resend` (not blocked by the unique index), limited to 3 per day per order (`rate_limited`).
-- [ ] AC6: Admin "Resend email" (S-089) re-runs the finalize work with `receipt_resend`; this story provides the function it calls.
-- [ ] AC7: The sender is the project's custom sender through Resend (S-031); the sender address comes from configuration. Emails are plain, accessible HTML plus a text part.
-- [ ] AC8: Each send increments the daily email count used by the email budget check (all emails share the free limit, REQ-198); sending stops with an alert when the account nears the cap (limit value from configuration).
-- [ ] AC9: Email bodies and recipient addresses are never logged; the log row stores template, related id, status and error text without personal data.
+- [x] AC1: `ensureReceiptEmail(order)` in `lib/orders/finalize.ts` (step 2 of the finalize loop, S-081) sends the `receipt` template for card orders and the `bank_approved` template for bank-transfer orders, only if no such email is logged for the order.
+- [x] AC2: Exactly once: the `email_logs` row (`template`, `related_type = 'order'`, `related_id`) is written BEFORE sending; the unique index on (template, related_type, related_id) for `receipt` makes a second concurrent run fail safely. A failed send sets status `failed` and is retried by the next finalize run.
+- [x] AC3: Receipt content: order number, date (Asia/Colombo), each item with its language, total in LKR (thousands separator, two decimals), a button to the download page `/download/[orderItemId]` for each item (never a direct file link), the invoice PDF attached only if it was created in the same finalize run (otherwise a link to the order page, where it appears when ready), the support contact, and a link to the refund policy. No card data. The approval email has the same content plus a note that the link works once.
+- [x] AC4: The email never waits for the invoice. With the invoice step forced to fail, the email is still sent once.
+- [x] AC5: `resendMyReceipt(orderId)` (owner only, `requireActiveAccount()`) sends the same email under the template name `receipt_resend` (not blocked by the unique index), limited to 3 per day per order (`rate_limited`).
+- [x] AC6: Admin "Resend email" (S-089) re-runs the finalize work with `receipt_resend`; this story provides the function it calls.
+- [x] AC7: The sender is the project's custom sender through Resend (S-031); the sender address comes from configuration. Emails are plain, accessible HTML plus a text part.
+- [x] AC8: Each send increments the daily email count used by the email budget check (all emails share the free limit, REQ-198); sending stops with an alert when the account nears the cap (limit value from configuration).
+- [x] AC9: Email bodies and recipient addresses are never logged; the log row stores template, related id, status and error text without personal data.
 - [ ] AC10: The finalize cron entry (S-081 AC8) is turned on in this story's PR together with S-087's invoice step, or, if S-087 is not merged yet, the loop runs with the invoice step returning "not ready" and `finalized_at` stays empty (the 30-minute alert is suppressed for orders with a receipt but no invoice step registered). Whichever order the PRs merge in, staging must not alert falsely.
 
 ## Edge cases
-- [ ] EC1: Two finalize runs at once: one send.
+- [x] EC1: Two finalize runs at once: one send.
 - [ ] EC2: The buyer's email address bounces: status `bounced` (reported by the provider); the order page and My Purchases remain the way to the download.
-- [ ] EC3: Names in Sinhala or Tamil render correctly in the subject and body.
-- [ ] EC4: The invoice is created in the same run: the PDF is attached; created later: the link is used.
-- [ ] EC5: Resend asked 4 times in a day: the fourth is refused.
-- [ ] EC6: A bank order approved by a second approver: the approval email is sent once, after the final approval only.
+- [x] EC3: Names in Sinhala or Tamil render correctly in the subject and body.
+- [x] EC4: The invoice is created in the same run: the PDF is attached; created later: the link is used.
+- [x] EC5: Resend asked 4 times in a day: the fourth is refused.
+- [x] EC6: A bank order approved by a second approver: the approval email is sent once, after the final approval only.
 
 ## Contract
 - `lib/orders/finalize.ts` (`ensureReceiptEmail`), `lib/email/templates/receipt.ts`, `lib/email/templates/bank-approved.ts`, server action `resendMyReceipt`; uses the email helper and `email_logs` from S-040.
