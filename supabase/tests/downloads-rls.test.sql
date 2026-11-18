@@ -120,13 +120,15 @@ SELECT is(
 
 SELECT throws_ok(
   $$SELECT 1 FROM public.download_request_queue LIMIT 1$$,
+  '42501',
+  NULL,
   'buyer cannot read download_request_queue view (permission denied)'
 );
 
 -- ─── Unauthenticated: no access to download tables ───────────────────────────
 
 SET LOCAL role TO anon;
-PERFORM set_config('request.jwt.claims', '{}', true);
+SELECT set_config('request.jwt.claims', '{}', true);
 
 SELECT is(
   (SELECT count(*)::int FROM public.download_logs),

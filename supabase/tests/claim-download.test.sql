@@ -86,8 +86,8 @@ SELECT ok(
     SELECT (log_id > 0)
     FROM   private.claim_download(
              'e9100000-0000-0000-0000-000000000001'::uuid,
-             'e9500000-0000-0000-0000-000000000001'::uuid,
-             'testhash1'
+             'e9500000-0000-0000-0000-000000000002'::uuid,
+             'testhash1b'
            )
     LIMIT 1
   ),
@@ -98,7 +98,7 @@ SELECT ok(
 SELECT is(
   (SELECT downloads_used FROM public.entitlements
    WHERE id = 'e9500000-0000-0000-0000-000000000001'),
-  2,  -- called twice above
+  1,  -- called once above
   'downloads_used incremented on each successful claim'
 );
 
@@ -117,17 +117,8 @@ SELECT ok(
 );
 
 -- AC14: limit=3, used=3 → download_limit_reached
--- (entitlement e9500000-...002 now has used=2 after the claim above;
---  we exhaust it with one more claim then expect the next to raise)
-DO $$
-BEGIN
-  PERFORM private.claim_download(
-    'e9100000-0000-0000-0000-000000000001'::uuid,
-    'e9500000-0000-0000-0000-000000000002'::uuid,
-    'testhash3'
-  );
-END;
-$$;
+-- entitlement ...002: started used=1, log_id test used it (used=2),
+-- AC14 success test used it (used=3 = limit). Next call must raise.
 
 SELECT throws_ok(
   $$
