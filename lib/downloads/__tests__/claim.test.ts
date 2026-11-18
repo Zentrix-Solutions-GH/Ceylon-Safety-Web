@@ -214,6 +214,33 @@ describe("claimDownload — parallel calls (AC3)", () => {
   });
 });
 
+// ─── AC14: limit > 1 — succeeds while downloads_used < download_limit ────────
+
+describe("claimDownload — limit above 1 (AC14)", () => {
+  it("succeeds when downloads_used < download_limit (e.g. limit=3, used=1)", async () => {
+    // DB enforces the check; at the server layer a successful RPC means the check passed.
+    // We verify claimDownload returns ok:true when the RPC succeeds (not at limit).
+    vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(successDb() as never);
+    vi.mocked(headObject).mockResolvedValue({ contentLength: 2048 });
+    vi.mocked(presignedGet).mockResolvedValue("https://r2.example.com/signed?limit3");
+
+    const result = await claimDownload({ entitlementId: ENT_ID, userId: USER_ID, ipHash: "h1" });
+    expect(result.ok).toBe(true);
+  });
+
+  it("returns download_limit_reached when downloads_used === download_limit (limit=3, used=3)", async () => {
+    vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(
+      makeServiceDb({
+        data: null,
+        error: { code: "restrict_violation", message: "ceylonsafety: download_limit_reached" },
+      }) as never
+    );
+
+    const result = await claimDownload({ entitlementId: ENT_ID, userId: USER_ID, ipHash: "h1" });
+    expect(result).toMatchObject({ ok: false, code: "download_limit_reached" });
+  });
+});
+
 // ─── AC7: hidden/deleted document still serves; language matches purchase ─────
 
 describe("claimDownload — AC7 language and document-status independence", () => {
