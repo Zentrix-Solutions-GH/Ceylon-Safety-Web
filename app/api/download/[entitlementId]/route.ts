@@ -43,11 +43,32 @@ export async function POST(
     return NextResponse.json({ code: "validation_failed" }, { status: 400 });
   }
 
+  // Optional metadata for a human-readable Content-Disposition filename.
+  // S-095 (download page) passes these; they are display-only and do not
+  // affect the security or correctness of the claim.
+  let documentTitle: string | undefined;
+  let language: string | undefined;
+  let format: string | undefined;
+  try {
+    const body = await req.json();
+    const BodySchema = z.object({
+      documentTitle: z.string().max(200).optional(),
+      language:      z.string().max(10).optional(),
+      format:        z.string().max(20).optional(),
+    });
+    const parsed = BodySchema.safeParse(body);
+    if (parsed.success) {
+      ({ documentTitle, language, format } = parsed.data);
+    }
+  } catch {
+    // No body or invalid JSON — proceed without metadata (filename falls back to document.pptx)
+  }
+
   // Hash the client IP for the download log (AC2); never log the raw IP.
   const rawIp = getClientIp(req.headers, undefined) ?? "unknown";
   const ipHash = createHash("sha256").update(rawIp).digest("hex");
 
-  const result = await claimDownload({ entitlementId, userId: user.id, ipHash });
+  const result = await claimDownload({ entitlementId, userId: user.id, ipHash, documentTitle, language, format });
 
   if (!result.ok) {
     const statusMap: Record<string, number> = {

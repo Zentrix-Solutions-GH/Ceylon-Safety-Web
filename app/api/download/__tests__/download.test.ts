@@ -160,3 +160,22 @@ describe("POST /api/download/[entitlementId] — success", () => {
     expect(body["code"]).toBe("file_unavailable");
   });
 });
+
+// ─── EC6: approve for suspended buyer → download still refused ───────────────
+// Staff can approve a request even if the buyer's account is suspended (the
+// approval is recorded). When the buyer then tries to download, requireActiveAccount
+// returns not_allowed → 403. The download route never reaches claimDownload.
+
+describe("POST /api/download/[entitlementId] — EC6: suspended buyer after approval", () => {
+  it("returns 403 for a suspended buyer even when download is newly approved", async () => {
+    // requireActiveAccount sees the suspended flag and refuses before the
+    // download logic runs. The staff approval of the request is unaffected.
+    vi.mocked(requireActiveAccount).mockResolvedValue({ ok: false, code: "not_allowed" } as never);
+    const req = makeRequest("POST");
+    const params = Promise.resolve({ entitlementId: ENT_ID });
+    const res = await POST(req, { params });
+    expect(res.status).toBe(403);
+    // claimDownload must NOT have been called
+    expect(vi.mocked(claimDownload)).not.toHaveBeenCalled();
+  });
+});

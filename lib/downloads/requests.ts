@@ -47,6 +47,9 @@ export async function requestDownload(
   const safeNote = note ? z.string().max(500).safeParse(note).success ? note.slice(0, 500) : null : null;
 
   // Insert new open request
+  // Unique index (entitlement_id WHERE status='open') is the final guard against
+  // the TOCTOU race: if two callers pass the SELECT check concurrently, the
+  // second INSERT hits a unique_violation (23505) → request_already_open.
   const { data: req, error: insertErr } = await sb
     .from("download_requests")
     .insert({
@@ -58,7 +61,13 @@ export async function requestDownload(
     .select("id")
     .single();
 
-  if (insertErr || !req) return { ok: false, code: "unknown" };
+  if (insertErr) {
+    if ((insertErr as { code?: string }).code === "23505") {
+      return { ok: false, code: "request_already_open" };
+    }
+    return { ok: false, code: "unknown" };
+  }
+  if (!req) return { ok: false, code: "unknown" };
 
   return { ok: true, data: { requestId: req.id } };
 }

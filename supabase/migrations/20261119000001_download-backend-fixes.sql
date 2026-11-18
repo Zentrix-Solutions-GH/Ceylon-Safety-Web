@@ -9,6 +9,9 @@
 -- 3. download_request_queue view: lists open requests for the admin queue (AC13).
 
 -- ─── 1. claim_download (fix return type) ─────────────────────────────────────
+-- PostgreSQL requires DROP + CREATE when the return type changes (can't use
+-- CREATE OR REPLACE to change RETURNS text → RETURNS TABLE).
+DROP FUNCTION IF EXISTS private.claim_download(uuid, uuid, text);
 
 CREATE OR REPLACE FUNCTION private.claim_download(
   p_user_id        uuid,
@@ -246,3 +249,11 @@ $$;
 
 REVOKE ALL ON FUNCTION private.reject_download_request(uuid, uuid, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION private.reject_download_request(uuid, uuid, text) TO service_role, supabase_admin;
+
+-- ─── 4. Unique partial index: one open request per entitlement (AC9/EC5) ──────
+-- Prevents the TOCTOU race in requestDownload: even if two calls pass the
+-- SELECT check concurrently, only one INSERT will succeed; the second gets a
+-- unique_violation (23505) which the server maps to request_already_open.
+CREATE UNIQUE INDEX IF NOT EXISTS download_requests_one_open_per_entitlement
+  ON public.download_requests (entitlement_id)
+  WHERE status = 'open';
