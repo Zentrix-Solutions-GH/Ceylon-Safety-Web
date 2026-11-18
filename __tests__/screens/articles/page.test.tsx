@@ -53,8 +53,21 @@ describe("Articles page — AC1: renders article grid", () => {
     });
     const el = await ArticlesPage({ searchParams: {} });
     render(el);
-    expect(screen.getAllByText("Article 1").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Article 2").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { level: 2, name: "Article 1" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Article 2" })).toBeInTheDocument();
+  });
+});
+
+describe("Articles page — AC3: clear filters removes all params", () => {
+  it("shows Clear filters link pointing to /articles when both range and category are set", async () => {
+    mockListArticles.mockResolvedValue({
+      ok: true,
+      data: { items: [makeCard(1)], next: null },
+    });
+    const el = await ArticlesPage({ searchParams: { range: "week", category: "safety" } });
+    render(el);
+    const clearLink = screen.getByRole("link", { name: /clear filters/i });
+    expect(clearLink).toHaveAttribute("href", "/articles");
   });
 });
 
@@ -99,8 +112,7 @@ describe("Articles page — EC1: unknown category slug", () => {
     });
     const el = await ArticlesPage({ searchParams: { category: "nonexistent-xyz" } });
     render(el);
-    // Page should render normally (not crash or show error)
-    expect(screen.getAllByText("Article 1").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { level: 2, name: "Article 1" })).toBeInTheDocument();
     // listArticles should have been called with the category passed through
     expect(mockListArticles).toHaveBeenCalledWith(
       expect.objectContaining({ category: "nonexistent-xyz" })

@@ -23,6 +23,7 @@ const en = {
   "errors.version_conflict":
     "Someone else changed this while you were editing. Reload to see their changes. Your text is kept.",
   "errors.upload_failed": "The file could not be uploaded. Please try again.",
+  "errors.slip_invalid": "The file could not be accepted. Please upload a JPEG, PNG or PDF under 10 MB.",
   "errors.purge_failed":
     "Saved, but the cache could not be cleared. It will expire on its own.",
   "errors.reauth_required": "Please sign in again to continue.",
@@ -86,7 +87,6 @@ const en = {
   "auth.sign_in.submitting": "Signing in…",
   "auth.sign_in.no_account": "Don't have an account?",
   "auth.sign_in.sign_up_link": "Create one",
-  "auth.sign_in.or": "or",
   "auth.sign_in.google_button": "Continue with Google",
   "auth.sign_in.social_app_hint": "For Google sign-in, open this page in your phone's normal browser",
   "auth.sign_in.copy_link": "Copy link",
@@ -212,6 +212,16 @@ const en = {
   "editor.picker.error": "Could not load videos. Please try again.",
   "editor.picker.title": "Insert video",
   "editor.picker.close": "Close",
+  "editor.doc_picker.title": "Insert document card",
+  "editor.doc_picker.search_placeholder": "Search documents…",
+  "editor.doc_picker.loading": "Loading…",
+  "editor.doc_picker.no_documents": "No published documents yet.",
+  "editor.doc_picker.no_documents_link": "Go to Documents",
+  "editor.doc_picker.error": "Could not load documents. Please try again.",
+  "editor.doc_picker.close": "Close",
+  "editor.toolbar.insert_document": "Insert document card",
+  "editor.document_card.remove": "Remove document card",
+  "editor.document_card.view_label": "View document",
   "editor.image.alt_label": "Alt text",
   "editor.image.alt_placeholder": "Describe the image",
   "editor.image.decorative_label": "This image is decorative",
@@ -325,14 +335,12 @@ const en = {
   // --- articles page (S-059) ---
   "articles.page.title": "Articles",
   "articles.page.description": "Health and safety articles, guides, and checklists for the Sri Lankan workplace.",
-  "articles.hub.title": "KNOWLEDGE HUB",
-  "articles.hub.subtitle": "Sri Lanka's leading health & safety knowledge base — free articles, guides and expert insights.",
-  "articles.filter.range.label": "Sort by",
+  "articles.filter.range.label": "Date",
   "articles.filter.range.newest": "Newest",
   "articles.filter.range.week": "Last week",
   "articles.filter.range.month": "Last month",
   "articles.filter.category.label": "Category",
-  "articles.filter.category.all": "All",
+  "articles.filter.category.all": "All categories",
   "articles.filter.clear": "Clear filters",
   "articles.filter.search.placeholder": "Search articles…",
   "articles.filter.search.button": "Search",
@@ -344,8 +352,10 @@ const en = {
   "articles.load_more.retry": "Try again",
   "articles.card.likes": "{count} likes",
   "articles.card.comments": "{count} comments",
-  "articles.popular.heading": "Popular Last Month",
-  "articles.results.count": "{count} Articles Found",
+  "articles.hub.title": "Safety Knowledge Hub",
+  "articles.hub.subtitle": "Accredited guides, toolbox talks and statutory documents for Sri Lanka’s safety professionals.",
+  "articles.results.count": "{count} articles",
+  "articles.popular.heading": "Latest This Month",
   // --- home feed (S-066) ---
   "home.page_title": "CeylonSafety — Health & Safety Resources",
   "home.page_description": "Health and safety articles, guides, and checklists for the Sri Lankan workplace.",
@@ -599,6 +609,18 @@ const en = {
   "auth.sign_in.or_email": "Or, Sign in with Email",
   "auth.sign_in.enterprise_tag": "Enterprise Commerce for Businesses",
 
+  // --- auth shared brand text ---
+  "auth.brand.wordmark": "Ceylon Safety",
+  "auth.brand.panel_ceylon": "CEYLON",
+  "auth.brand.panel_safety": "SAFETY",
+  "auth.brand.panel_tagline": "Sri Lanka National Safety Grid • Accredited Training & Statutory Documentation Authority",
+  "auth.sign_in.email_placeholder": "name@workplace.lk",
+  "auth.sign_up.email_placeholder": "name@workplace.lk",
+  "auth.sign_up.first_name_placeholder": "e.g. Kasun",
+  "auth.sign_up.last_name_placeholder": "e.g. Perera",
+  "auth.sign_up.show_confirm": "Show re-entered password",
+  "auth.sign_up.hide_confirm": "Hide re-entered password",
+
   // --- sign-up form left panel ---
   "auth.sign_up.panel.tagline": "Join Sri Lanka’s safety community.",
   "auth.sign_up.panel.description": "Access accredited safety documents, certified training courses, and connect with verified safety professionals across Sri Lanka.",
@@ -617,18 +639,6 @@ const en = {
   "auth.sign_up.strength.weak": "Weak password",
   "auth.sign_up.strength.fair": "Fair password",
   "auth.sign_up.strength.strong": "Strong password",
-
-  // --- auth shared brand text ---
-  "auth.brand.wordmark": "Ceylon Safety",
-  "auth.brand.panel_ceylon": "CEYLON",
-  "auth.brand.panel_safety": "SAFETY",
-  "auth.brand.panel_tagline": "Sri Lanka National Safety Grid • Accredited Training & Statutory Documentation Authority",
-  "auth.sign_in.email_placeholder": "name@workplace.lk",
-  "auth.sign_up.email_placeholder": "name@workplace.lk",
-  "auth.sign_up.first_name_placeholder": "e.g. Kasun",
-  "auth.sign_up.last_name_placeholder": "e.g. Perera",
-  "auth.sign_up.show_confirm": "Show re-entered password",
-  "auth.sign_up.hide_confirm": "Hide re-entered password",
 
   // --- auth top-bar + chrome ---
   "auth.sign_in.portal_label": "National Compliance Portal",
@@ -763,6 +773,30 @@ const en = {
   "admin.documents.hide.cancel": "Cancel",
   "admin.documents.already_done": "This was already done.",
 
+  // Public — documents catalogue page (S-074)
+  "documents.page.title": "Safety Documents",
+  "documents.page.description": "Browse and download health & safety documents including checklists, safety signs, and toolbox talks.",
+  "documents.filter.category.label": "Category",
+  "documents.filter.category.all": "All categories",
+  "documents.filter.type.label": "Type",
+  "documents.filter.type.all": "All types",
+  "documents.filter.type.checklist": "Checklist",
+  "documents.filter.type.safety_sign": "Safety Sign",
+  "documents.filter.type.toolbox_talk": "Toolbox Talk",
+  "documents.filter.clear": "Clear filters",
+  "documents.filter.search.placeholder": "Search documents…",
+  "documents.filter.search.label": "Search documents",
+  "documents.filter.search.button": "Search",
+  "documents.empty.all": "No documents are available yet. Check back soon.",
+  "documents.empty.filtered": "No documents match your current filters.",
+  "documents.card.price": "LKR {price}",
+  "documents.card.pages": "{n} pages",
+  "documents.card.downloads": "{n} downloads",
+  "documents.card.unavailable": "Currently unavailable",
+  "documents.modal.close": "Close document preview",
+  "documents.modal.loading": "Loading document…",
+  "documents.modal.label": "Document preview",
+
   // Admin — price change dialog (S-073)
   "admin.documents.price.change_button": "Change price",
   "admin.documents.price.dialog_title": "Change price",
@@ -776,6 +810,34 @@ const en = {
   "admin.documents.price.large_change_confirm": "I confirm this large price change",
   "admin.documents.price.mfa_label": "Authenticator code",
   "admin.documents.price.mfa_placeholder": "6-digit code",
+
+  // --- DocumentModal (S-076) ---
+  "document_modal.close": "Close",
+  "document_modal.loading": "Loading document…",
+  "document_modal.aria_label": "{title}",
+  "document_modal.cover_alt": "{title} cover",
+  "document_modal.preview_placeholder_alt": "Preview not available",
+  "document_modal.price": "LKR {price}",
+  "document_modal.add_to_cart": "Add to Cart",
+  "document_modal.adding": "Adding…",
+  "document_modal.buy_now": "Buy Now",
+  "document_modal.buying": "Processing…",
+  "document_modal.unavailable_label": "Unavailable",
+  "document_modal.unavailable_message": "This document is no longer available.",
+  "document_modal.toast.added": "Added to cart",
+  "document_modal.toast.already_in_cart": "Already in your cart",
+  "document_modal.toast.cart_full": "Your cart is full (50 items max)",
+  "document_modal.toast.unavailable": "This document is no longer available",
+
+  // --- LanguagePicker (S-076) ---
+  "language_picker.label": "Choose language",
+  "language_picker.en": "English",
+  "language_picker.si": "Sinhala",
+  "language_picker.ta": "Tamil",
+
+  // --- LockedPreview (S-076) ---
+  "locked_preview.alt": "Locked preview of {title}",
+  "locked_preview.placeholder_alt": "No preview available",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -1,22 +1,35 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
-import { FormField } from "@/components/shared/FormField";
-import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
+import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Mail, Lock, User, Shield, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { signUp } from "@/lib/auth/actions/sign-up";
 import { errorMessage, t } from "@/messages/en";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
+import { publicConfig } from "@/lib/config.public";
 
 interface FieldErrors {
   firstName?: string;
   lastName?: string;
   email?: string;
   password?: string;
+  confirmPassword?: string;
   terms?: string;
+}
+
+function getPasswordStrength(pw: string): { score: number; color: string } {
+  if (!pw) return { score: 0, color: "" };
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (score <= 1) return { score, color: "bg-red-500" };
+  if (score <= 3) return { score, color: "bg-yellow-500" };
+  return { score, color: "bg-green-500" };
 }
 
 export function SignUpForm() {
@@ -29,31 +42,31 @@ export function SignUpForm() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [topError, setTopError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [passwordValue, setPasswordValue] = useState("");
+  const [confirmValue, setConfirmValue] = useState("");
   const resetTurnstileRef = useRef<(() => void) | null>(null);
 
-  const handleToken = useCallback((token: string) => {
-    setCaptchaToken(token);
-  }, []);
-
+  const handleToken = useCallback((token: string) => { setCaptchaToken(token); }, []);
   const handleTurnstileError = useCallback(() => {
     setCaptchaToken(null);
     setTopError(errorMessage("captcha_failed"));
   }, []);
-
   const handleTurnstileRef = useCallback((reset: () => void) => {
     resetTurnstileRef.current = reset;
   }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!captchaToken) {
-      setTopError(errorMessage("captcha_failed"));
+    if (passwordValue !== confirmValue) {
+      setFieldErrors((prev) => ({ ...prev, confirmPassword: t("auth.sign_up.confirm_mismatch") }));
       return;
     }
+    if (!captchaToken) { setTopError(errorMessage("captcha_failed")); return; }
 
     const form = e.currentTarget;
     const data = new FormData(form);
-
     setFieldErrors({});
     setTopError(null);
     setPending(true);
@@ -69,17 +82,13 @@ export function SignUpForm() {
         next,
       });
 
-      // Always reset the widget after a submission (tokens are single-use)
       resetTurnstileRef.current?.();
       setCaptchaToken(null);
 
       if (!result.ok) {
         const msg = errorMessage(result.code);
-        if (result.field) {
-          setFieldErrors({ [result.field]: msg });
-        } else {
-          setTopError(msg);
-        }
+        if (result.field) { setFieldErrors({ [result.field]: msg }); }
+        else { setTopError(msg); }
         return;
       }
 
@@ -89,71 +98,333 @@ export function SignUpForm() {
     }
   }
 
+  const strength = getPasswordStrength(passwordValue);
+
   return (
-    <form onSubmit={handleSubmit} noValidate>
-      <h1 className="text-xl font-semibold mb-6">{t("auth.sign_up.heading")}</h1>
-
-      {topError && (
-        <p role="alert" className="mb-4 text-sm text-destructive">
-          {topError}
-        </p>
-      )}
-
-      <div className="space-y-4">
-        <FormField id="firstName" label={t("auth.sign_up.first_name")} required error={fieldErrors.firstName}>
-          <Input name="firstName" autoComplete="given-name" />
-        </FormField>
-
-        <FormField id="lastName" label={t("auth.sign_up.last_name")} required error={fieldErrors.lastName}>
-          <Input name="lastName" autoComplete="family-name" />
-        </FormField>
-
-        <FormField id="email" label={t("auth.sign_up.email")} required error={fieldErrors.email}>
-          <Input name="email" type="email" autoComplete="email" />
-        </FormField>
-
-        <FormField id="password" label={t("auth.sign_up.password")} required error={fieldErrors.password}>
-          <Input name="password" type="password" autoComplete="new-password" />
-        </FormField>
-
-        <div className="flex items-start gap-2">
-          <Checkbox id="terms" name="terms" className="mt-0.5" onCheckedChange={(v) => setTermsAccepted(v === true)} />
-          <Label htmlFor="terms" className="text-sm font-normal leading-snug cursor-pointer">
-            {t("auth.sign_up.terms")}{" "}
-            <Link href="/terms" className="underline hover:no-underline">
-              {t("auth.sign_up.terms_link")}
-            </Link>{" "}
-            {t("auth.sign_up.and")}{" "}
-            <Link href="/privacy" className="underline hover:no-underline">
-              {t("auth.sign_up.privacy_link")}
-            </Link>
-          </Label>
-        </div>
-        {fieldErrors.terms && (
-          <p className="text-sm text-destructive" role="alert">{fieldErrors.terms}</p>
-        )}
-
-        <TurnstileWidget
-          onToken={handleToken}
-          onError={handleTurnstileError}
-          onRef={handleTurnstileRef}
-        />
-
-        <button
-          type="submit"
-          disabled={pending || !captchaToken || !termsAccepted}
-          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
-          {pending ? t("auth.sign_up.submitting") : t("auth.sign_up.submit")}
-        </button>
-
-        <p className="text-sm text-center text-muted-foreground">
-          {t("auth.sign_up.have_account")}{" "}
-          <Link href="/sign-in" className="underline hover:no-underline">
-            {t("auth.sign_up.sign_in_link")}
+    <div className="relative min-h-screen bg-white px-4 py-5 sm:px-8 lg:px-12">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-6xl flex-col">
+        {/* Top bar */}
+        <header className="mb-4 flex items-center">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white shadow-sm">
+              <Image src="/logo.jpg" alt="Ceylon Safety" width={36} height={36} className="object-contain" />
+            </div>
+            <span className="leading-tight">
+              <span className="block text-sm font-bold text-gray-900">{t("auth.brand.wordmark")}</span>
+              <span className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                {t("auth.sign_up.portal_label")}
+              </span>
+            </span>
           </Link>
-        </p>
+        </header>
+
+        {/* Card */}
+        <div className="flex flex-1 overflow-hidden rounded-3xl border border-gray-200 shadow-xl">
+          {/* Left panel — branding */}
+          <div className="relative m-3 hidden flex-col justify-between overflow-hidden rounded-2xl bg-primary-darker lg:flex lg:w-[45%]">
+            <div className="absolute inset-0">
+              <Image
+                src={`${publicConfig.mediaCdnUrl}/auth/sign-up-bg.jpg`}
+                alt=""
+                fill
+                sizes="(min-width: 1024px) 45vw, 0px"
+                className="object-cover object-center opacity-75"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-primary-deepest via-primary-darker/70 to-primary-darker/35" />
+            </div>
+
+            {/* Top section */}
+            <div className="relative z-10 p-7">
+              <div className="mb-6">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
+                  {t("auth.sign_up.panel.badge")}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-white shadow-lg">
+                  <Image src="/logo.jpg" alt="Ceylon Safety" width={48} height={48} className="object-contain" />
+                </div>
+                <div className="text-white">
+                  <div className="text-xl font-black leading-tight tracking-wide">{t("auth.brand.panel_ceylon")}</div>
+                  <div className="text-xl font-black leading-tight tracking-wide">{t("auth.brand.panel_safety")}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Middle section */}
+            <div className="relative z-10 px-7 pb-3">
+              <h2 className="mb-3 text-3xl font-bold leading-tight text-white">
+                {t("auth.sign_up.panel.tagline")}
+              </h2>
+              <p className="mb-6 text-sm leading-relaxed text-white/80">
+                {t("auth.sign_up.panel.description")}
+              </p>
+
+              {/* Feature list */}
+              <div className="mb-6 space-y-3">
+                {[
+                  t("auth.sign_up.panel.feature_1"),
+                  t("auth.sign_up.panel.feature_2"),
+                  t("auth.sign_up.panel.feature_3"),
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-2.5">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
+                    <span className="text-xs leading-relaxed text-white/80">{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mb-6 grid grid-cols-2 gap-4">
+                <div className="rounded-lg border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+                  <div className="text-2xl font-black text-white">1,240+</div>
+                  <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/70">
+                    {t("auth.sign_up.panel.stat_trainers")}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+                  <div className="text-2xl font-black text-white">10,000+</div>
+                  <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/70">
+                    {t("auth.sign_up.panel.stat_specialists")}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative z-10 flex items-center gap-2 px-7 pb-6 text-xs text-white/60">
+              <Shield className="h-3.5 w-3.5 shrink-0" />
+              <span>{t("auth.sign_up.panel.accreditation")}</span>
+            </div>
+          </div>
+
+          {/* Right panel — form */}
+          <div className="flex flex-1 flex-col justify-between bg-white px-6 py-8 sm:px-10 lg:px-16">
+            <div className="mb-4 flex justify-end lg:hidden">
+              <Link href="/" className="text-sm font-semibold text-primary hover:underline">
+                {t("auth.sign_up.panel.return_link")}
+              </Link>
+            </div>
+            <div className="my-auto w-full max-w-md mx-auto">
+              <div className="flex items-center gap-2 mb-6">
+                <span className="h-2 w-2 rounded-full bg-primary" />
+                <span className="text-xs font-semibold uppercase tracking-widest text-gray-500">
+                  {t("auth.sign_up.panel.portal_label")}
+                </span>
+              </div>
+
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">{t("auth.sign_up.heading")}</h1>
+              <p className="text-sm text-gray-500 mb-7">
+                {t("auth.sign_up.subtitle")}
+              </p>
+
+              {topError && (
+                <p role="alert" className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                  {topError}
+                </p>
+              )}
+
+              <form onSubmit={handleSubmit} noValidate className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1.5">
+                      {t("auth.sign_up.first_name")}
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        id="firstName"
+                        name="firstName"
+                        type="text"
+                        autoComplete="given-name"
+                        required
+                        placeholder={t("auth.sign_up.first_name_placeholder")}
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                      />
+                    </div>
+                    {fieldErrors.firstName && <p className="mt-1 text-xs text-red-600">{fieldErrors.firstName}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1.5">
+                      {t("auth.sign_up.last_name")}
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        id="lastName"
+                        name="lastName"
+                        type="text"
+                        autoComplete="family-name"
+                        required
+                        placeholder={t("auth.sign_up.last_name_placeholder")}
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                      />
+                    </div>
+                    {fieldErrors.lastName && <p className="mt-1 text-xs text-red-600">{fieldErrors.lastName}</p>}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    {t("auth.sign_up.email")}
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      aria-invalid={fieldErrors.email ? "true" : undefined}
+                      placeholder={t("auth.sign_up.email_placeholder")}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                    />
+                  </div>
+                  {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
+                </div>
+
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    {t("auth.sign_up.password")}
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      required
+                      placeholder="••••••••••"
+                      value={passwordValue}
+                      onChange={(e) => setPasswordValue(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-11 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      aria-label={showPassword ? t("auth.sign_up.hide_password") : t("auth.sign_up.show_password")}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {/* Password strength indicator */}
+                  {passwordValue && (
+                    <div className="mt-2">
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <div
+                            key={i}
+                            className={`h-1 flex-1 rounded-full transition-colors ${i <= strength.score ? strength.color : "bg-gray-200"}`}
+                          />
+                        ))}
+                      </div>
+                      <p className={`mt-1 text-xs font-medium ${strength.score <= 1 ? "text-red-500" : strength.score <= 3 ? "text-yellow-600" : "text-green-600"}`}>
+                        {t(strength.score <= 1 ? "auth.sign_up.strength.weak" : strength.score <= 3 ? "auth.sign_up.strength.fair" : "auth.sign_up.strength.strong")}
+                      </p>
+                    </div>
+                  )}
+                  {fieldErrors.password && <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>}
+                </div>
+
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    {t("auth.sign_up.confirm_password")}
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirm ? "text" : "password"}
+                      autoComplete="new-password"
+                      required
+                      aria-invalid={fieldErrors.confirmPassword ? "true" : undefined}
+                      placeholder="••••••••••"
+                      value={confirmValue}
+                      onChange={(e) => {
+                        setConfirmValue(e.target.value);
+                        if (fieldErrors.confirmPassword) setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+                      }}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-11 text-sm placeholder-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm((v) => !v)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      aria-label={showConfirm ? t("auth.sign_up.hide_confirm") : t("auth.sign_up.show_confirm")}
+                    >
+                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {fieldErrors.confirmPassword && (
+                    <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.confirmPassword}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="terms"
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary"
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
+                    />
+                    <span className="text-sm text-gray-600 leading-snug">
+                      {t("auth.sign_up.terms")}{" "}
+                      <Link href="/terms" className="font-medium text-primary hover:underline">{t("auth.sign_up.terms_link")}</Link>
+                      {" "}{t("auth.sign_up.and")}{" "}
+                      <Link href="/privacy" className="font-medium text-primary hover:underline">{t("auth.sign_up.privacy_link")}</Link>
+                      {" "}{t("auth.sign_up.compliance_suffix")}
+                    </span>
+                  </label>
+                  {fieldErrors.terms && <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.terms}</p>}
+                </div>
+
+                <TurnstileWidget
+                  onToken={handleToken}
+                  onError={handleTurnstileError}
+                  onRef={handleTurnstileRef}
+                />
+
+                <button
+                  type="submit"
+                  disabled={pending || !captchaToken || !termsAccepted}
+                  className="w-full rounded-full bg-primary px-4 py-3.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50 transition-colors shadow-lg shadow-red-900/20"
+                >
+                  {pending ? t("auth.sign_up.submitting") : `${t("auth.sign_up.submit")} →`}
+                </button>
+              </form>
+
+              <p className="mt-5 text-center text-sm text-gray-500">
+                {t("auth.sign_up.have_account")}{" "}
+                <Link href="/sign-in" className="font-semibold text-primary hover:underline">
+                  {t("auth.sign_up.sign_in_link")}
+                </Link>
+              </p>
+            </div>
+
+            <div className="mt-8 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-gray-400">
+              <Link href="/terms" className="hover:text-gray-600">{t("auth.footer.terms")}</Link>
+              <span>•</span>
+              <Link href="/privacy" className="hover:text-gray-600">{t("auth.footer.privacy")}</Link>
+              <span>•</span>
+              <Link href="/disclaimer" className="hover:text-gray-600">{t("auth.sign_up.footer.disclaimer")}</Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Page footer */}
+        <footer className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center text-xs text-gray-400">
+          <span suppressHydrationWarning>&copy; {new Date().getFullYear()} {t("auth.sign_up.footer.copyright")}</span>
+          {publicConfig.developerUrl && (<><span>&bull;</span>
+          <span>{t("auth.footer.attribution")} <a href={publicConfig.developerUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-gray-500 hover:text-gray-700 hover:underline">{t("auth.footer.attribution_brand")}</a></span></>)}
+        </footer>
       </div>
-    </form>
+    </div>
   );
 }

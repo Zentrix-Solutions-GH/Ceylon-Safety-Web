@@ -26,8 +26,8 @@ describe("ArticleFilters", () => {
 
   it("AC2: renders category pill buttons and range tab buttons", () => {
     render(<ArticleFilters categories={categories} />);
-    // "All" pill is always present
-    expect(screen.getByRole("button", { name: /^all$/i })).toBeInTheDocument();
+    // "All categories" pill is always present
+    expect(screen.getByRole("button", { name: /all categories/i })).toBeInTheDocument();
     // Category pills
     expect(screen.getByRole("button", { name: /safety/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /fire/i })).toBeInTheDocument();
@@ -68,19 +68,18 @@ describe("ArticleFilters", () => {
       k === "category" ? "safety" : null
     );
     render(<ArticleFilters categories={categories} />);
-    await userEvent.click(screen.getByRole("button", { name: /^all$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /all categories/i }));
     const call = mockReplace.mock.calls[0][0] as string;
     expect(call).not.toContain("category=");
   });
 
-  it("EC1: unknown category slug — All pill is active (no category= in URL on mount)", () => {
+  it("EC1: unknown category slug — All pill is active", () => {
     mockSearchParams.get.mockImplementation((k: string) =>
       k === "category" ? "unknown-slug-xyz" : null
     );
     render(<ArticleFilters categories={categories} />);
-    // All pill should be rendered as active (bg-red-600 class is on it)
-    const allBtn = screen.getByRole("button", { name: /^all$/i });
-    expect(allBtn.className).toContain("bg-red-600");
+    const allBtn = screen.getByRole("button", { name: /all categories/i });
+    expect(allBtn).toHaveAttribute("aria-pressed", "true");
   });
 
   it("EC2: unknown range value — Newest tab is active", () => {
@@ -88,8 +87,7 @@ describe("ArticleFilters", () => {
       k === "range" ? "quarterly" : null
     );
     render(<ArticleFilters categories={categories} />);
-    // Newest button should be rendered as active (bg-gray-900 class is on it)
     const newestBtn = screen.getByRole("button", { name: /newest/i });
-    expect(newestBtn.className).toContain("bg-gray-900");
+    expect(newestBtn).toHaveAttribute("aria-pressed", "true");
   });
 });
