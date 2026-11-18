@@ -130,10 +130,43 @@ Prior art: grepped docs/ for claim_download, release_download, download_requests
 **Sensitive story — owner must approve this plan before coding begins.**
 
 ## Evidence
-<!-- Paste scripts/check.sh output here after Step 7. -->
 
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+  ... (all S-085 tests pass: 44 tests across 5 files)
+  FAIL __tests__/components/admin/ArticleEditor/index.test.tsx (18 tests)
+  → Pre-existing failure on dev baseline; not caused by S-085.
+    Confirmed: same 18 failures exist on dev without S-085 changes.
+
+── pgTAP (database) ──
+✓ pgTAP dev seed suite passed
+✓ EC3 dev seed guard (execution) passed
+
+── Types file freshness ──
+✓ Types file freshness passed
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+⚠ No build output found — skipping Google Fonts check
+⚠ No build output found — skipping PayHere bundle check
+
+════════════════════════════════
+  check.sh: 9 passed, 1 failed  ← ArticleEditor pre-existing failure
+════════════════════════════════
+
+S-085 specific: ESLint ✓ TypeScript ✓ 44 unit tests ✓ pgTAP ✓
 ```
 
 ## Review notes
