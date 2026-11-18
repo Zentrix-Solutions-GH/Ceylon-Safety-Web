@@ -156,6 +156,10 @@ $ bash scripts/check.sh
 - **P2** `ArticlesHeroSlideshow.tsx` — `aria-live="polite"` on container fires screen-reader announcement every 4.5 s (auto-advance). Move live region to a hidden `<p>` or suppress auto-advance announcements.
 - **P2** `ArticlesHeroSlideshow.tsx:567–578` — Dot buttons inside live region; some AT re-reads all labels on slide change. Move dot row outside the live region.
 
+**full-review 2026-11-18 — round 5 (Mode A, HEAD 6f8eab5) — no new findings; all P0/P1 resolved; APPROVE WITH FOLLOW-UPS**
+
+- **P1 ✅ RESOLVED** `page.tsx:47–57` — `popularIsSameQuery` dedup guard restored in commit 6f8eab5.
+
 ## After this merges
 
 - S-060 (article full page) and S-061 (likes/comments UI) can be built
