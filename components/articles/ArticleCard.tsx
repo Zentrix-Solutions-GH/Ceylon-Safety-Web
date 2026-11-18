@@ -1,4 +1,8 @@
-﻿import Link from "next/link";
+﻿"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useState } from "react";
 import { t } from "@/messages/en";
 
 const PLACEHOLDER = "/images/article-placeholder.jpg";
@@ -39,7 +43,7 @@ export function ArticleCardUI({
   commentCount,
   compact = false,
 }: ArticleCardUIProps) {
-  const imgSrc = coverUrl ?? PLACEHOLDER;
+  const [imgSrc, setImgSrc] = useState(coverUrl ?? PLACEHOLDER);
   const imgAlt = coverAlt ?? title;
 
   if (compact) {
@@ -49,13 +53,13 @@ export function ArticleCardUI({
         className="group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md"
       >
         <div className="relative aspect-video overflow-hidden bg-gray-100">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={imgSrc}
             alt={imgAlt}
-            loading="lazy"
-            className="h-full w-full object-cover transition group-hover:scale-105"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).src = PLACEHOLDER; }}
+            fill
+            unoptimized
+            className="object-cover transition group-hover:scale-105"
+            onError={() => setImgSrc(PLACEHOLDER)}
           />
         </div>
         <div className="flex flex-1 flex-col gap-1 p-3">
@@ -77,14 +81,14 @@ export function ArticleCardUI({
       className="group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md"
     >
       <div className="relative aspect-video overflow-hidden bg-gray-100">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={imgSrc}
           alt={imgAlt}
-          loading="lazy"
+          fill
+          unoptimized
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 480px"
-          className="h-full w-full object-cover transition group-hover:scale-105"
-          onError={(e) => { (e.currentTarget as HTMLImageElement).src = PLACEHOLDER; }}
+          className="object-cover transition group-hover:scale-105"
+          onError={() => setImgSrc(PLACEHOLDER)}
         />
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import * as React from "react";
 import { ArticleCardUI } from "@/components/articles/ArticleCard";
@@ -42,10 +42,9 @@ describe("ArticleCardUI", () => {
 
   it("EC3: broken image src triggers onError fallback to placeholder", () => {
     render(<ArticleCardUI {...baseProps} />);
-    const img = screen.getByRole("img") as HTMLImageElement;
-    // Simulate a failed image load
-    img.dispatchEvent(new Event("error", { bubbles: true }));
-    expect(img.src).toContain("placeholder");
+    const img = screen.getByRole("img");
+    fireEvent.error(img);
+    expect(screen.getByRole("img")).toHaveAttribute("src", expect.stringContaining("placeholder"));
   });
 
   it("AC1: like and comment counts have accessible aria-labels", () => {

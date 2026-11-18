@@ -123,14 +123,72 @@ $ bash scripts/check.sh
 
 ## Review notes
 
-**full-review 2026-11-18 (PR #100 — full review, HEAD 2e44efa)**
+**full-review 2026-11-18 — round 1 (P0 fixes, commit 75944f9)**
 
-- **P0** `components/articles/HeroSearchForm.tsx` — AC5 has no test file. Old inline search form tests were deleted when form was extracted into `HeroSearchForm`. Need `__tests__/components/articles/HeroSearchForm.test.tsx` with: form action="/search", hidden scope=articles field, and query navigation tests.
-- **P1** `__tests__/components/articles/ArticleFilters.test.tsx` — No test covers AC3 combined clear (both `range` and `category` removed simultaneously).
-- **P1** `components/articles/ArticleCard.tsx` — No test verifies `<a href="/articles/<slug>">` on the card.
-- **P1** `__tests__/components/articles/ArticleFilters.test.tsx:70,79` — Active-state assertions use `className.toContain("bg-red-600")` which is fragile; replace with `aria-pressed="true"`.
-- **P2** `components/articles/ArticleCard.tsx` — Compact variant uses bare `<img>` instead of `next/image`.
-- **P2** `messages/en.ts` — ~50 orphan keys from reverted auth redesign (e.g. `auth.sign_up.confirm_password`); clean up in follow-up.
+- **P0** `components/auth/SignInForm.tsx`, `components/auth/SignUpForm.tsx` — Auth form redesign contaminated this PR. ✅ RESOLVED: Both reverted to dev baseline in 75944f9.
+- **P0** `__tests__/components/articles/ArticleFilters.test.tsx` — Tests used `getByRole("combobox")`. ✅ RESOLVED: Rewritten for pill-button UI in 75944f9.
+- **P0** `__tests__/screens/articles/page.test.tsx` — Page test file missing. ✅ RESOLVED: Exists at `__tests__/screens/`; fixed `getByText` → `getAllByText` in 75944f9.
+- **P1** `ArticlesHeroSlideshow.tsx` not rendered; `VALID_RANGES` duplicated; WCAG pause missing; AC3 Clear filters only in empty state. ✅ RESOLVED: All fixed in 2e44efa.
+- **P2** Silent `popularResult` failure — carry forward.
+
+**full-review 2026-11-18 — round 2 (full review, HEAD 2e44efa)**
+
+- **P0** `components/articles/HeroSearchForm.tsx` — AC5 no test file. Need `__tests__/components/articles/HeroSearchForm.test.tsx` covering form action, hidden scope field, and query navigation.
+- **P1** `__tests__/components/articles/ArticleFilters.test.tsx` — No test for AC3 combined clear (both `range=` and `category=` removed simultaneously).
+- **P1** `components/articles/ArticleCard.tsx` — No test for card `<a href="/articles/<slug>">`.
+- **P1** `__tests__/components/articles/ArticleFilters.test.tsx:70,79` — Active-state assertions use `className.toContain("bg-red-600")`; replace with `aria-pressed="true"`.
+- **P2** Compact card uses bare `<img>` instead of `next/image`.
+- **P2** `messages/en.ts` — ~50 orphan keys from reverted auth redesign; clean up in follow-up.
+
+**full-review 2026-11-18 — round 3 (fixes, HEAD e5d4638)**
+
+- **P0 ✅ RESOLVED** `HeroSearchForm.tsx` — `__tests__/components/articles/HeroSearchForm.test.tsx` created (6 tests: form action, scope=articles, empty-query prevention, non-empty passthrough).
+- **P1 ✅ RESOLVED** AC3 combined clear — `page.test.tsx` AC3 describe block added; href=/articles when both range+category set.
+- **P1 ✅ RESOLVED** `aria-pressed` on all filter buttons — `ArticleFilters.tsx:52,64,79`; EC1/EC2 tests use `toHaveAttribute("aria-pressed","true")`.
+- **P2 ✅ RESOLVED** `<img>` → `next/image` — both card variants; `"use client"` + useState onError; EC3 uses `fireEvent.error`.
+- **P2 ✅ RESOLVED** `messages/en.ts` orphan keys — dev merge resolved contamination at source.
+- **P2 carry-forward** Silent `popularResult` error state — no error UI when listArticles fails for popular strip; address in S-060.
+
+**full-review 2026-11-18 — round 4 (Mode B, HEAD 951ca379)**
+
+- **P1** `app/(public)/articles/page.tsx:47–57` — `popularIsSameQuery` dedup guard dropped during merge conflict resolution (`git checkout --ours`). `listArticles({ range: "month" })` now fires twice when `range === "month" && !category`. Restore the guard from dev branch before merge.
+- **P2** `components/articles/ArticleCard.tsx:46` — `useState(coverUrl ?? PLACEHOLDER)` does not resync on prop change. Mitigated by `key={item.id}` at all render sites. Add `useEffect(() => setImgSrc(coverUrl ?? PLACEHOLDER), [coverUrl])` for robustness.
+- **P2** `ArticlesHeroSlideshow.tsx` — `aria-live="polite"` on container fires screen-reader announcement every 4.5 s (auto-advance). Move live region to a hidden `<p>` or suppress auto-advance announcements.
+- **P2** `ArticlesHeroSlideshow.tsx:567–578` — Dot buttons inside live region; some AT re-reads all labels on slide change. Move dot row outside the live region.
+
+**full-review 2026-11-18 — round 5 (Mode A, HEAD 6f8eab5) — no new findings; all P0/P1 resolved; APPROVE WITH FOLLOW-UPS**
+
+- **P1 ✅ RESOLVED** `page.tsx:47–57` — `popularIsSameQuery` dedup guard restored in commit 6f8eab5.
+
+**full-review 2026-11-18 — round 6 (Mode A, HEAD 08d68614) — article_type filter + card-box UI**
+
+- **P1** `components/articles/ArticleFilters.tsx:84-99` — Custom `<select>` chevron SVG; verify cross-browser (Safari/Firefox) the chevron renders correctly when `appearance-none` strips native arrow.
+- **P1** `app/(public)/articles/page.tsx:131-136` — `<ArticleGrid>` does not receive `articleType` prop; load-more will not apply the type filter. Add `articleType={articleType}` and thread through to the load-more API call.
+
+**full-review 2026-11-18 — round 7 (Mode B, HEAD 352c8430) — REQUEST CHANGES**
+
+- **P0** `__tests__/components/articles/ArticleFilters.test.tsx:30,71,81` — `getByRole("button", { name: /all categories/i })` throws: label renamed to "All" in messages/en.ts. Fix query to `/^all$/i`.
+- **P0** `__tests__/components/articles/ArticleFilters.test.tsx:35,37,53,90` — Range button queries (`/newest/i`, `/last week/i`, `/last month/i`) throw: range moved to `<select>` element, not buttons. Replace with `getByRole("combobox")` / `getByDisplayValue`.
+- **P1** `app/(public)/articles/page.tsx:131-136` + `components/articles/ArticleGrid.tsx` — `articleType` still not passed to `ArticleGrid`; load-more drops type filter silently. *(carry-forward from round 6)*
+- **P1** `__tests__/components/articles/ArticleFilters.test.tsx` — Zero tests for type pills (setType, All types, chip ×, clearAll with type).
+- **P1** `__tests__/screens/articles/page.test.tsx` — No test for `?type=guide` param → `listArticles({ articleType: "guide" })`.
+- **P2** `ArticleFilters.tsx:84` — Sort-by `<select>` missing `aria-label`.
+- **P2** `types/database.ts:164` — Manual patch typed as `string`, no regeneration comment.
+- **P2** `app/(public)/articles/page.tsx:83` — `"Ceylon Safety"` hardcoded, must use `t("key")`.
+
+**full-review 2026-11-18 — round 8 (Mode A fixes-only, HEAD e5d0acc) — APPROVE WITH FOLLOW-UPS**
+
+- **P0 ✅ RESOLVED** `ArticleFilters.test.tsx:30,71,81` — "All categories" query fixed to `^all$` in e5d0acc.
+- **P0 ✅ RESOLVED** `ArticleFilters.test.tsx:35,37,53,90` — Range button queries replaced with combobox/option queries in e5d0acc.
+- **P1 ✅ RESOLVED** `ArticleGrid` missing `articleType` — prop added, load-more fetch appends `?type=`, route.ts reads and validates param in e5d0acc.
+- 7 new type-filter tests added (pills, clearAll, chip ×, unknown EC). 27/27 passing.
+
+**full-review 2026-11-18 — round 9 (Mode A P2 fixes, HEAD 27304207) — APPROVE WITH FOLLOW-UPS**
+
+- **P2 ✅ RESOLVED** `page.tsx:81` — `"Ceylon Safety"` replaced with `t("auth.brand.wordmark")` in 2730420.
+- **P2 ✅ RESOLVED** `ArticleFilters.tsx:84` — `aria-label={t("articles.filter.sort_by")}` added to `<select>` in 2730420.
+- **P2 ✅ RESOLVED** `types/database.ts:164` — regeneration comment added in 2730420.
+- No remaining findings. 27/27 tests pass. TypeScript clean.
 
 ## After this merges
 
