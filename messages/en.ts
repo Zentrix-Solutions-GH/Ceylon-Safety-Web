@@ -24,6 +24,9 @@ const en = {
     "Someone else changed this while you were editing. Reload to see their changes. Your text is kept.",
   "errors.upload_failed": "The file could not be uploaded. Please try again.",
   "errors.slip_invalid": "The file could not be accepted. Please upload a JPEG, PNG or PDF under 10 MB.",
+  "errors.download_limit_reached": "You have used your download. Use the Request Download button to ask for another.",
+  "errors.file_unavailable": "The file is temporarily unavailable. Our team has been notified.",
+  "errors.request_already_open": "A download request is already open for this purchase.",
   "errors.purge_failed":
     "Saved, but the cache could not be cleared. It will expire on its own.",
   "errors.reauth_required": "Please sign in again to continue.",

@@ -1148,6 +1148,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"download_request_queue": {
+                  Row: {
+                    "buyer_email": string,"buyer_name": string,"document_title": string | null,"entitlement_id": string,"language": string | null,"last_download_at": string | null,"note": string | null,"request_id": string,"requested_at": string
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "download_requests_entitlement_id_fkey"
+      columns: ["entitlement_id"]
+isOneToOne: false
+      referencedRelation: "entitlements"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"feed_items": {
                   Row: {
                     "category_id": string | null,"comment_count": number | null,"deleted_at": string | null,"id": string | null,"image": string | null,"kind": string | null,"like_count": number | null,"locale": string | null,"published_at": string | null,"status": string | null,"summary": string | null,"title": string | null

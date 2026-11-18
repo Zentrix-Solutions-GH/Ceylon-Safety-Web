@@ -49,9 +49,16 @@ export async function presignedGet(
   bucket: string,
   key: string,
   ttlSeconds = 60,
+  overrides?: { responseContentDisposition?: string },
 ): Promise<string> {
   const client = getClient();
-  const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
+  const cmd = new GetObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    ...(overrides?.responseContentDisposition
+      ? { ResponseContentDisposition: overrides.responseContentDisposition }
+      : {}),
+  });
   return getSignedUrl(client, cmd, { expiresIn: ttlSeconds });
 }
 

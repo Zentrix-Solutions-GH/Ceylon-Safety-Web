@@ -45,6 +45,7 @@ jobs:
           UPSTASH_REDIS_REST_URL: https://dummy-ci-upstash.upstash.io
           UPSTASH_REDIS_REST_TOKEN: dummy_upstash_token_for_ci_build_only
           RATELIMIT_HASH_SECRET: "0000000000000000000000000000000000000000000000000000000000000000"
+          IP_HASH_SECRET: dummy-ip-hash-secret-for-ci-build-only
 
       - name: No mocks in production code
         run: bash scripts/check-no-mocks.sh
@@ -70,6 +71,7 @@ jobs:
           UPSTASH_REDIS_REST_URL: https://dummy-ci-upstash.upstash.io
           UPSTASH_REDIS_REST_TOKEN: dummy_upstash_token_for_ci_build_only
           RATELIMIT_HASH_SECRET: "0000000000000000000000000000000000000000000000000000000000000000"
+          IP_HASH_SECRET: dummy-ip-hash-secret-for-ci-build-only
 
   secret-scan:
     name: secret-scan
@@ -118,15 +120,12 @@ jobs:
         with:
           version: 2.122.0
 
-      - name: Free port 54322 (stop any lingering Supabase containers)
-        run: |
-          supabase stop --no-backup 2>/dev/null || true
-          docker rm -f $(docker ps -aq --filter "name=supabase") 2>/dev/null || true
-
       - name: Start Supabase
         run: |
           for attempt in 1 2 3; do
             echo "Attempt $attempt/3"
+            supabase stop --no-backup 2>/dev/null || true
+            docker ps -aq --filter "name=supabase" | xargs -r docker rm -f 2>/dev/null || true
             supabase start && break
             [ $attempt -lt 3 ] && echo "Retrying in 30s..." && sleep 30
           done || { echo "supabase start failed after 3 attempts"; exit 1; }

@@ -842,11 +842,16 @@ BEGIN
     'f1100000-0000-0000-0000-000000000099'
   );
 
-  -- Second call: idempotent
-  PERFORM private.approve_download_request(
-    '15000002-0000-0000-0000-000000000001',
-    'f1100000-0000-0000-0000-000000000099'
-  );
+  -- Second call: now raises already_done (S-085 changed silent return → RAISE).
+  -- Catch and discard so the idempotency assertion below still runs.
+  BEGIN
+    PERFORM private.approve_download_request(
+      '15000002-0000-0000-0000-000000000001',
+      'f1100000-0000-0000-0000-000000000099'
+    );
+  EXCEPTION WHEN restrict_violation THEN
+    NULL; -- expected: already_done
+  END;
 
   SELECT download_limit INTO v_limit_after
   FROM public.entitlements WHERE id = '14000002-0000-0000-0000-000000000001';
