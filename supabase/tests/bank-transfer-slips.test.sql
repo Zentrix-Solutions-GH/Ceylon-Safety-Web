@@ -10,7 +10,7 @@
 --   Slip B1:          e9400000-0000-0000-0000-000000000002  (belongs to Buyer B)
 
 BEGIN;
-SELECT plan(12);
+SELECT plan(14);
 
 -- ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -197,6 +197,36 @@ SELECT is(
   ) ->> 'action'),
   'slip_uploaded',
   'cancel_order_locked returns slip_uploaded when bank_transfer_slips row exists for the order'
+);
+
+RESET ROLE;
+
+-- ── 12–13. bank_transfer_queue view: anon blocked; buyer sees no cross-buyer rows ─
+-- S-084: REVOKE ALL ON bank_transfer_queue FROM anon; GRANT SELECT TO authenticated.
+-- Even though authenticated can query the view, the underlying RLS on orders and
+-- bank_transfer_slips restricts what each buyer actually sees.
+
+-- 12. anon cannot read the queue view.
+SET LOCAL ROLE anon;
+
+SELECT is(
+  (SELECT count(*)::int FROM public.bank_transfer_queue),
+  0,
+  'anon user sees no rows in bank_transfer_queue (REVOKE ALL from anon)'
+);
+
+RESET ROLE;
+
+-- 13. Buyer B (authenticated, non-staff) cannot see Buyer A order in bank_transfer_queue.
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims = '{"sub": "e9100000-0000-0000-0000-000000000002", "role": "authenticated"}';
+
+SELECT is(
+  (SELECT count(*)::int FROM public.bank_transfer_queue
+    WHERE order_id = 'e9300000-0000-0000-0000-000000000001'),
+  0,
+  'buyer B cannot read buyer A order in bank_transfer_queue (cross-buyer isolation)'
 );
 
 RESET ROLE;
