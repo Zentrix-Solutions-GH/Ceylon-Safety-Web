@@ -160,6 +160,11 @@ $ bash scripts/check.sh
 
 - **P1 ✅ RESOLVED** `page.tsx:47–57` — `popularIsSameQuery` dedup guard restored in commit 6f8eab5.
 
+**full-review 2026-11-18 — round 6 (Mode A, HEAD 08d68614) — article_type filter + card-box UI**
+
+- **P1** `components/articles/ArticleFilters.tsx:84-99` — Custom `<select>` chevron SVG; verify cross-browser (Safari/Firefox) the chevron renders correctly when `appearance-none` strips native arrow.
+- **P1** `app/(public)/articles/page.tsx:131-136` — `<ArticleGrid>` does not receive `articleType` prop; load-more will not apply the type filter. Add `articleType={articleType}` and thread through to the load-more API call.
+
 ## After this merges
 
 - S-060 (article full page) and S-061 (likes/comments UI) can be built
