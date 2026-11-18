@@ -14,7 +14,10 @@
 --   Entitlement (3): e9500000-0000-0000-0000-000000000002  limit=3, used=1
 
 BEGIN;
-SELECT plan(7);
+SELECT plan(9);
+
+-- UUID legend (additional for AC3 serial-exhaustion simulation):
+--   Entitlement (AC3): e9500000-0000-0000-0000-000000000003  limit=1, used=0
 
 -- ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -63,6 +66,14 @@ VALUES
     'document', 'purchase',
     'e9200000-0000-0000-0000-000000000001',
     'en', 3, 1
+  ),
+  -- Entitlement for AC3 serial-exhaustion test (limit=1, used=0)
+  (
+    'e9500000-0000-0000-0000-000000000003',
+    'e9100000-0000-0000-0000-000000000001',
+    'document', 'purchase',
+    'e9200000-0000-0000-0000-000000000001',
+    'en', 1, 0
   )
 ON CONFLICT DO NOTHING;
 
@@ -163,6 +174,37 @@ SELECT throws_ok(
   '23001',
   'ceylonsafety: entitlement is revoked',
   'AC6: claim_download raises restrict_violation for revoked entitlement'
+);
+
+-- AC3: serial exhaustion on limit=1 entitlement — first call succeeds, second raises.
+-- True concurrent DB-level serialisation is enforced by FOR UPDATE; this test
+-- validates that the row lock prevents a double-claim in the same session by
+-- exhausting the entitlement and asserting the second call raises.
+
+SELECT ok(
+  (
+    SELECT count(*)::int > 0
+    FROM   private.claim_download(
+             'e9100000-0000-0000-0000-000000000001'::uuid,
+             'e9500000-0000-0000-0000-000000000003'::uuid,
+             'testhash_ac3_first'
+           )
+    WHERE  file_key = 'docs/en/e9-test-doc.pptx'
+  ),
+  'AC3: first claim on limit=1 entitlement succeeds'
+);
+
+SELECT throws_ok(
+  $$
+    SELECT private.claim_download(
+      'e9100000-0000-0000-0000-000000000001'::uuid,
+      'e9500000-0000-0000-0000-000000000003'::uuid,
+      'testhash_ac3_second'
+    )
+  $$,
+  '23001',
+  'ceylonsafety: download_limit_reached',
+  'AC3: second claim on limit=1 entitlement raises download_limit_reached (FOR UPDATE serialises)'
 );
 
 SELECT * FROM finish();

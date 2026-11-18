@@ -102,6 +102,8 @@ export async function claimDownload(
 function buildFileName(title?: string, language?: string, format?: string): string {
   const parts = [title ?? "document", language].filter(Boolean);
   const ext = format ?? "pptx";
+  // Replace every character that is not safe in a quoted Content-Disposition filename,
+  // including double-quotes and backslashes which could break the header value.
   return parts.join("-").replace(/[^a-zA-Z0-9._-]/g, "_") + "." + ext;
 }
 

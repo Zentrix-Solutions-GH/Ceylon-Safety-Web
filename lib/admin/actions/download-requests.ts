@@ -79,13 +79,13 @@ export async function getDownloadRequestBadgeCount(): Promise<ActionResult<{ cou
 export async function approveDownloadRequest(
   requestId: string
 ): Promise<ActionResult> {
-  if (!z.string().uuid().safeParse(requestId).success) {
-    return { ok: false, code: "validation_failed" };
-  }
-
   const auth = await requireStaff(PERMISSION);
   if (!auth.ok) return { ok: false, code: "not_allowed" };
   const actor = auth.user;
+
+  if (!z.string().uuid().safeParse(requestId).success) {
+    return { ok: false, code: "validation_failed" };
+  }
 
   const rl = await checkActionLimit(actor.id);
   if (!rl.ok) return { ok: false, code: "rate_limited" };
@@ -136,16 +136,16 @@ export async function rejectDownloadRequest(
   requestId: string,
   note: string
 ): Promise<ActionResult> {
+  const auth = await requireStaff(PERMISSION);
+  if (!auth.ok) return { ok: false, code: "not_allowed" };
+  const actor = auth.user;
+
   if (!z.string().uuid().safeParse(requestId).success) {
     return { ok: false, code: "validation_failed" };
   }
   if (!z.string().min(1).max(500).safeParse(note?.trim()).success) {
     return { ok: false, code: "validation_failed", field: "note" };
   }
-
-  const auth = await requireStaff(PERMISSION);
-  if (!auth.ok) return { ok: false, code: "not_allowed" };
-  const actor = auth.user;
 
   const rl = await checkActionLimit(actor.id);
   if (!rl.ok) return { ok: false, code: "rate_limited" };
