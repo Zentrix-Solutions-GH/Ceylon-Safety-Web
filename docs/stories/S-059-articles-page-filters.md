@@ -149,6 +149,13 @@ $ bash scripts/check.sh
 - **P2 ✅ RESOLVED** `messages/en.ts` orphan keys — dev merge resolved contamination at source.
 - **P2 carry-forward** Silent `popularResult` error state — no error UI when listArticles fails for popular strip; address in S-060.
 
+**full-review 2026-11-18 — round 4 (Mode B, HEAD 951ca379)**
+
+- **P1** `app/(public)/articles/page.tsx:47–57` — `popularIsSameQuery` dedup guard dropped during merge conflict resolution (`git checkout --ours`). `listArticles({ range: "month" })` now fires twice when `range === "month" && !category`. Restore the guard from dev branch before merge.
+- **P2** `components/articles/ArticleCard.tsx:46` — `useState(coverUrl ?? PLACEHOLDER)` does not resync on prop change. Mitigated by `key={item.id}` at all render sites. Add `useEffect(() => setImgSrc(coverUrl ?? PLACEHOLDER), [coverUrl])` for robustness.
+- **P2** `ArticlesHeroSlideshow.tsx` — `aria-live="polite"` on container fires screen-reader announcement every 4.5 s (auto-advance). Move live region to a hidden `<p>` or suppress auto-advance announcements.
+- **P2** `ArticlesHeroSlideshow.tsx:567–578` — Dot buttons inside live region; some AT re-reads all labels on slide change. Move dot row outside the live region.
+
 ## After this merges
 
 - S-060 (article full page) and S-061 (likes/comments UI) can be built

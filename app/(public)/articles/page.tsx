@@ -44,17 +44,19 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   const category = params.category || undefined;
   const isFiltered = range !== "newest" || Boolean(category);
 
+  const popularIsSameQuery = range === "month" && !category;
+
   const [listResult, categories, popularResult] = await Promise.all([
     listArticles({ range, category }),
     listCategories(),
-    listArticles({ range: "month" }),
+    popularIsSameQuery ? Promise.resolve(null) : listArticles({ range: "month" }),
   ]);
 
   const items = listResult.ok ? listResult.data.items : [];
   const next = listResult.ok ? listResult.data.next : null;
-  const popularItems = popularResult.ok
-    ? popularResult.data.items.slice(0, 5)
-    : [];
+  const popularItems = popularIsSameQuery
+    ? (listResult.ok ? listResult.data.items.slice(0, 5) : [])
+    : (popularResult?.ok ? popularResult.data.items.slice(0, 5) : []);
 
   const isEmpty = items.length === 0;
   const emptyMessage = isFiltered
