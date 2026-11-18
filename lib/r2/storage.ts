@@ -44,6 +44,17 @@ export function _setClientForTest(client: S3Client | null): void {
 
 const PRESIGN_TTL_SECONDS = 300; // 5 minutes
 
+/** Generate a short-lived signed URL for a private GET (bank slip view, AC2 of S-084). */
+export async function presignedGet(
+  bucket: string,
+  key: string,
+  ttlSeconds = 60,
+): Promise<string> {
+  const client = getClient();
+  const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
+  return getSignedUrl(client, cmd, { expiresIn: ttlSeconds });
+}
+
 export async function presignedPut(
   bucket: string,
   key: string,

@@ -10,7 +10,7 @@
 --   Slip B1:          e9400000-0000-0000-0000-000000000002  (belongs to Buyer B)
 
 BEGIN;
-SELECT plan(12);
+SELECT plan(14);
 
 -- ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -200,6 +200,33 @@ SELECT is(
 );
 
 RESET ROLE;
+
+-- ── 12–13. bank_transfer_queue view: privilege checks ────────────────────────
+-- S-084: migration 002 REVOKE ALL FROM anon; migration 003 REVOKE SELECT FROM authenticated.
+-- The view is staff-only; application code uses the service-role client.
+-- After S-084 migrations the view has no SELECT grant to anon or authenticated.
+
+-- 12. anon has no SELECT privilege on bank_transfer_queue.
+SELECT is(
+  (SELECT count(*)::int FROM information_schema.role_table_grants
+   WHERE grantee = 'anon'
+     AND table_schema = 'public'
+     AND table_name = 'bank_transfer_queue'
+     AND privilege_type = 'SELECT'),
+  0,
+  'anon role has no SELECT privilege on bank_transfer_queue'
+);
+
+-- 13. authenticated role has no SELECT privilege on bank_transfer_queue (migration 003).
+SELECT is(
+  (SELECT count(*)::int FROM information_schema.role_table_grants
+   WHERE grantee = 'authenticated'
+     AND table_schema = 'public'
+     AND table_name = 'bank_transfer_queue'
+     AND privilege_type = 'SELECT'),
+  0,
+  'authenticated role has no SELECT privilege on bank_transfer_queue (revoked in migration 003)'
+);
 
 -- ── Cleanup ───────────────────────────────────────────────────────────────────
 -- All fixtures are cleaned up by the ROLLBACK below.
