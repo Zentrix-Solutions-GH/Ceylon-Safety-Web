@@ -131,9 +131,14 @@ describe("expireBankOrdersJob — AC11", () => {
     expect(updateFn).toHaveBeenCalledWith(
       expect.objectContaining({ status: "cancelled", cancel_reason: "expired" })
     );
-    // AC11: cancellation queues a bank_rejected email to the buyer
+    // AC11 / AC13: cancellation queues a bank_rejected email with full payload
     expect(emailInsertFn).toHaveBeenCalledWith(
-      expect.objectContaining({ template: "bank_rejected" })
+      expect.objectContaining({
+        template:     "bank_rejected",
+        status:       "queued",
+        related_type: "order",
+        related_id:   expiredOrder.id,
+      })
     );
   });
 
@@ -159,7 +164,12 @@ describe("expireBankOrdersJob — AC11", () => {
     const result = await expireBankOrdersJob();
     expect(result.ok).toBe(true);
     expect(emailInsertFn).toHaveBeenCalledWith(
-      expect.objectContaining({ template: "bank_expiring" })
+      expect.objectContaining({
+        template:     "bank_expiring",
+        status:       "queued",
+        related_type: "order",
+        related_id:   warningOrder.id,
+      })
     );
   });
 
@@ -216,6 +226,38 @@ describe("expireBankOrdersJob — AC11", () => {
     for (const call of updateFn.mock.calls) {
       expect(call[0]).not.toMatchObject({ status: "cancelled" });
     }
+  });
+
+  // EC5: concurrent approval wins the cancellation race (cancelCount=0 → email must NOT be sent).
+  it("does NOT queue expiry email when concurrent approval wins (cancelCount=0)", async () => {
+    const expiredOrder2: Order = {
+      id: "order-expired-2",
+      user_id: "buyer-6",
+      created_at: daysAgo(8),
+      bank_expiry_warned_at: daysAgo(2),
+      profiles: { email: "buyer6@example.com" },
+    };
+    const updateFn = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null, count: 0 }), // 0 rows = concurrent approval won
+      }),
+    });
+    const emailInsertFn = vi.fn().mockResolvedValue({ error: null });
+    const sb = {
+      from: vi.fn((t: string) => makeChainFor(t, {
+        settings: DEFAULT_SETTINGS,
+        orders: [expiredOrder2],
+        slips: [],
+        updateFn,
+        emailInsertFn,
+      })),
+    };
+    vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(sb as never);
+
+    const result = await expireBankOrdersJob();
+    expect(result.ok).toBe(true);
+    // No email should be sent — the order was already paid by the concurrent approval.
+    expect(emailInsertFn).not.toHaveBeenCalled();
   });
 
   it("uses bank_order_expiry_days setting (not hardcoded 7)", async () => {

@@ -30,13 +30,12 @@ export async function getBankTransferQueue(): Promise<ActionResult<BankQueueResu
   const auth = await requireStaff(PERMISSION);
   if (!auth.ok) return { ok: false, code: "not_allowed" };
 
-  const sb = await createSupabaseServerClient();
+  // The view is staff-only (SELECT revoked from authenticated in migration 002).
+  // Must use the service-role client; the user-scoped client returns zero rows.
+  const sbService = await createSupabaseServiceRoleClient();
 
-  // Join orders → profiles → latest slip per order.
-  // We query a view or do a manual join here.
-  // The queue shows pending_verification orders with an uploaded slip, oldest first.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rows, error } = await (sb as any)
+  const { data: rows, error } = await (sbService as any)
     .from("bank_transfer_queue")
     .select(
       "order_id, order_number, created_at, total_cents, buyer_name, " +
@@ -300,11 +299,13 @@ export async function rejectAndCancelBankOrder(
   if (order.status !== "pending_verification")               return { ok: false, code: "validation_failed" };
 
   // Cancel the order — guard against a concurrent payment completing.
+  // payment_provider guard ensures we only cancel bank-transfer orders.
   const { error: orderErr, count: orderCount } = await sbService
     .from("orders")
     .update({ status: "cancelled", cancel_reason: reason.trim() })
     .eq("id", orderId)
-    .eq("status", "pending_verification");
+    .eq("status", "pending_verification")
+    .eq("payment_provider", "bank_transfer");
 
   if (orderErr) return { ok: false, code: "unknown" };
   if (orderCount === 0) return { ok: false, code: "validation_failed", reason: "already_done" };
@@ -375,11 +376,13 @@ export async function reopenBankOrder(
   if (order.status !== "cancelled")        return { ok: false, code: "validation_failed" };
   if (order.cancel_reason !== "expired")   return { ok: false, code: "validation_failed" };
 
+  // cancel_reason guard prevents reopening a manually-cancelled order.
   const { error: orderErr, count } = await sbService
     .from("orders")
     .update({ status: "pending_verification", cancel_reason: null })
     .eq("id", orderId)
-    .eq("status", "cancelled");
+    .eq("status", "cancelled")
+    .eq("cancel_reason", "expired");
 
   if (orderErr) return { ok: false, code: "unknown" };
   if (count === 0) return { ok: false, code: "already_done" };

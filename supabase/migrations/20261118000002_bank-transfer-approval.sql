@@ -81,11 +81,10 @@ JOIN LATERAL (
 WHERE o.status          = 'pending_verification'
   AND o.payment_provider = 'bank_transfer';
 
--- RLS: view is read-only; staff with the permission can read it.
--- Views inherit the security of their underlying tables. Access is enforced by
--- the existing slips_staff_read and orders RLS policies.
-REVOKE ALL ON public.bank_transfer_queue FROM anon;
-GRANT SELECT ON public.bank_transfer_queue TO authenticated;
+-- RLS: view is staff-only; application code uses the service-role client.
+-- Never grant SELECT to authenticated: buyers must not see the approval queue.
+-- Revoke from both public roles to ensure no implicit grant applies.
+REVOKE ALL ON public.bank_transfer_queue FROM anon, authenticated;
 
 -- ── 5. approve_bank_transfer_locked ──────────────────────────────────────────
 --

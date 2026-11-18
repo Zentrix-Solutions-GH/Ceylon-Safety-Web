@@ -20,7 +20,7 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/auth/server", () => ({ requireStaff: vi.fn() }));
 vi.mock("@/lib/r2/storage", () => ({ presignedGet: vi.fn() }));
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { requireStaff } from "@/lib/auth/server";
 import { getBankTransferQueue } from "@/lib/admin/actions/bank-transfers";
 
@@ -91,7 +91,7 @@ describe("getBankTransferQueue — queue shape", () => {
         return {};
       }),
     };
-    vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
+    vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
     const result = await getBankTransferQueue();
     expect(result.ok).toBe(true);
@@ -120,7 +120,7 @@ describe("getBankTransferQueue — queue shape", () => {
         then: vi.fn().mockResolvedValue({ data: rows, error: null }),
       })),
     };
-    vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
+    vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
     const result = await getBankTransferQueue();
     expect(result.ok).toBe(true);

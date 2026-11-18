@@ -13,15 +13,15 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ slipId: string }> }
 ) {
+  // AC2: auth check first to avoid leaking UUID existence to unauthenticated callers.
+  const auth = await requireStaff("bank_transfers.review");
+  if (!auth.ok) return new NextResponse(null, { status: 403 });
+
   const { slipId } = await params;
 
   if (!z.string().uuid().safeParse(slipId).success) {
     return new NextResponse(null, { status: 400 });
   }
-
-  // AC2: admin only, bank_transfers.review permission.
-  const auth = await requireStaff("bank_transfers.review");
-  if (!auth.ok) return new NextResponse(null, { status: 403 });
 
   const sb = await createSupabaseServerClient();
 

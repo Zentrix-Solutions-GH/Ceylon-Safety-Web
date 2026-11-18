@@ -41,18 +41,31 @@ const STAFF = {
 type DbOpts = {
   orderStatus?: string;
   cancelReason?: string | null;
-  emailInsert?: unknown;
   buyerEmail?: string;
   slipStatus?: string;
   orderCancelCount?: number;
   slipUpdateCount?: number;
 };
 
+// Builds a chainable update mock that supports arbitrary .eq() chaining and .in().
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeUpdateChain(result: { error: unknown; count: number | null }): any {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chain: any = {};
+  chain.eq = vi.fn(() => chain);
+  chain.in = vi.fn().mockResolvedValue(result);
+  // Thenable: `await update().eq()...` resolves to result.
+  chain.then = (
+    resolve: (v: unknown) => unknown,
+    reject: (e: unknown) => unknown,
+  ) => Promise.resolve(result).then(resolve, reject);
+  return chain;
+}
+
 function makeDb(opts: DbOpts = {}) {
   const {
     orderStatus = "pending_verification",
     cancelReason = null,
-    emailInsert = { error: null },
     buyerEmail = "buyer@example.com",
     slipStatus = "uploaded",
     orderCancelCount = 1,
@@ -74,19 +87,17 @@ function makeDb(opts: DbOpts = {}) {
     file_key: "slips/test.jpg",
   };
 
-  return {
+  const auditInsertFn = vi.fn().mockResolvedValue({ error: null });
+  const emailInsertFn = vi.fn().mockResolvedValue({ error: null });
+
+  const db = {
     from: vi.fn((table: string) => {
       if (table === "orders") {
         return {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({ data: order, error: null }),
-          // rejectAndCancelBankOrder: .update().eq().eq() → { error, count }
-          update: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({ error: null, count: orderCancelCount }),
-            }),
-          }),
+          update: vi.fn(() => makeUpdateChain({ error: null, count: orderCancelCount })),
         };
       }
       if (table === "bank_transfer_slips") {
@@ -94,25 +105,20 @@ function makeDb(opts: DbOpts = {}) {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({ data: slip, error: null }),
-          // rejectBankOrder: .update().eq().in() → { error, count }
-          update: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              in: vi.fn().mockResolvedValue({ error: null, count: slipUpdateCount }),
-            }),
-          }),
+          update: vi.fn(() => makeUpdateChain({ error: null, count: slipUpdateCount })),
         };
       }
       if (table === "email_logs") {
-        return {
-          insert: vi.fn().mockResolvedValue(emailInsert),
-        };
+        return { insert: emailInsertFn };
       }
       if (table === "admin_audit_log") {
-        return { insert: vi.fn().mockResolvedValue({ error: null }) };
+        return { insert: auditInsertFn };
       }
       return {};
     }),
   };
+
+  return { db, auditInsertFn, emailInsertFn };
 }
 
 beforeEach(() => {
@@ -127,7 +133,7 @@ beforeEach(() => {
 
 describe("rejectBankOrder — AC8", () => {
   it("requires a reason (validation_failed without one)", async () => {
-    const db = makeDb();
+    const { db } = makeDb();
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
@@ -136,12 +142,20 @@ describe("rejectBankOrder — AC8", () => {
   });
 
   it("sets slip to rejected with reviewer and queues bank_rejected email", async () => {
-    const db = makeDb();
+    const { db, auditInsertFn, emailInsertFn } = makeDb();
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
     const result = await rejectBankOrder(ORDER_ID, SLIP_ID, "Wrong bank account", "123456");
     expect(result.ok).toBe(true);
+    // AC12: audit row written
+    expect(auditInsertFn).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "bank_transfer.reject", entity_type: "bank_transfer_slip" })
+    );
+    // AC13: email queued with correct payload
+    expect(emailInsertFn).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "queued", related_type: "bank_transfer_slip", template: "bank_rejected" })
+    );
   });
 
   it("requires permission bank_transfers.review", async () => {
@@ -155,7 +169,7 @@ describe("rejectBankOrder — AC8", () => {
     vi.mocked(requireStepUp).mockRejectedValue(
       Object.assign(new Error("mfa_required"), { code: "mfa_required" })
     );
-    const db = makeDb();
+    const { db } = makeDb();
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
@@ -164,7 +178,7 @@ describe("rejectBankOrder — AC8", () => {
   });
 
   it("returns already_done when slip is already rejected (double-reject guard)", async () => {
-    const db = makeDb({ slipStatus: "rejected" });
+    const { db } = makeDb({ slipStatus: "rejected" });
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
@@ -173,7 +187,7 @@ describe("rejectBankOrder — AC8", () => {
   });
 
   it("returns already_done when slip is already accepted (double-reject guard)", async () => {
-    const db = makeDb({ slipStatus: "accepted" });
+    const { db } = makeDb({ slipStatus: "accepted" });
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
@@ -183,7 +197,7 @@ describe("rejectBankOrder — AC8", () => {
 
   it("returns already_done when concurrent approval wins the atomic slip update (count=0)", async () => {
     // slipUpdateCount=0 simulates the slip being accepted concurrently between the guard read and the write
-    const db = makeDb({ slipUpdateCount: 0 });
+    const { db } = makeDb({ slipUpdateCount: 0 });
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
@@ -196,7 +210,7 @@ describe("rejectBankOrder — AC8", () => {
 
 describe("rejectAndCancelBankOrder — AC9", () => {
   it("requires a reason", async () => {
-    const db = makeDb();
+    const { db } = makeDb();
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
@@ -205,12 +219,20 @@ describe("rejectAndCancelBankOrder — AC9", () => {
   });
 
   it("cancels the order and queues a bank_rejected email", async () => {
-    const db = makeDb();
+    const { db, auditInsertFn, emailInsertFn } = makeDb();
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
     const result = await rejectAndCancelBankOrder(ORDER_ID, "Fraudulent slip", "123456");
     expect(result.ok).toBe(true);
+    // AC12: audit row written
+    expect(auditInsertFn).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "bank_transfer.reject", entity_type: "order" })
+    );
+    // AC13: email queued with correct payload
+    expect(emailInsertFn).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "queued", related_type: "order", template: "bank_rejected" })
+    );
   });
 
   it("requires bank_transfers.review permission", async () => {
@@ -221,7 +243,7 @@ describe("rejectAndCancelBankOrder — AC9", () => {
 
   it("returns already_done when concurrent payment wins the cancel update (count=0)", async () => {
     // orderCancelCount=0 simulates order being paid concurrently between fetch and cancel
-    const db = makeDb({ orderCancelCount: 0 });
+    const { db } = makeDb({ orderCancelCount: 0 });
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
@@ -254,7 +276,7 @@ describe("rejectAndCancelBankOrder — AC12 rate limit", () => {
 
 describe("reopenBankOrder — AC10", () => {
   it("requires a note (validation_failed without one)", async () => {
-    const db = makeDb({ orderStatus: "cancelled", cancelReason: "expired" });
+    const { db } = makeDb({ orderStatus: "cancelled", cancelReason: "expired" });
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
@@ -262,17 +284,21 @@ describe("reopenBankOrder — AC10", () => {
     expect(result).toMatchObject({ ok: false, code: "validation_failed" });
   });
 
-  it("reopens an expired-cancelled order", async () => {
-    const db = makeDb({ orderStatus: "cancelled", cancelReason: "expired" });
+  it("reopens an expired-cancelled order and writes audit row", async () => {
+    const { db, auditInsertFn } = makeDb({ orderStatus: "cancelled", cancelReason: "expired" });
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
     const result = await reopenBankOrder(ORDER_ID, "Late payment approved by manager", "123456");
     expect(result.ok).toBe(true);
+    // AC12: audit row written
+    expect(auditInsertFn).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "bank_transfer.reopen", entity_type: "order" })
+    );
   });
 
   it("refuses to reopen a non-expired cancellation", async () => {
-    const db = makeDb({ orderStatus: "cancelled", cancelReason: "buyer_requested" });
+    const { db } = makeDb({ orderStatus: "cancelled", cancelReason: "buyer_requested" });
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
@@ -288,7 +314,7 @@ describe("reopenBankOrder — AC10", () => {
 
   it("returns already_done when concurrent reopen wins (count=0)", async () => {
     // orderCancelCount=0: the status-guard update touches 0 rows (order already reopened)
-    const db = makeDb({ orderStatus: "cancelled", cancelReason: "expired", orderCancelCount: 0 });
+    const { db } = makeDb({ orderStatus: "cancelled", cancelReason: "expired", orderCancelCount: 0 });
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
 
