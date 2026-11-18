@@ -88,8 +88,8 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
       <div className="mx-auto max-w-6xl px-4 py-8">
         <div className="flex gap-6">
           {/* Sidebar */}
-          <aside className="hidden w-56 shrink-0 lg:block">
-            <DocumentSidebar categories={allCategories} />
+          <aside className="hidden w-64 shrink-0 lg:block">
+            <DocumentSidebar categories={allCategories} currentSort={sort} />
           </aside>
 
           {/* Main content */}
@@ -98,6 +98,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
               docs={docs}
               mediaBase={mediaBase}
               allSlugs={allSlugs}
+              allCategories={allCategories}
               total={total}
               pageSize={pageSize}
               currentPage={page}

@@ -240,6 +240,7 @@ describe("DocumentsPageClient", () => {
         docs={filteredDocs}
         mediaBase={MEDIA_BASE}
         allSlugs={["fire-safety-checklist", "fire-safety-sign"]}
+        allCategories={[]}
       />
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); // dialog is in DocumentModal
@@ -254,6 +255,7 @@ describe("DocumentsPageClient", () => {
         docs={[makeDoc()]}
         mediaBase={MEDIA_BASE}
         allSlugs={["fire-safety-checklist"]}
+        allCategories={[]}
       />
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -270,6 +272,7 @@ describe("DocumentsPageClient", () => {
         docs={[makeDoc()]}
         mediaBase={MEDIA_BASE}
         allSlugs={["fire-safety-checklist"]}
+        allCategories={[]}
       />
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); // dialog is in DocumentModal
@@ -283,7 +286,7 @@ describe("DocumentsPageClient", () => {
     // Start with modal closed
     mockSearchParams.get.mockReturnValue(null);
     const { rerender } = render(
-      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} />
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} allCategories={[]} />
     );
     expect(scrollTo).not.toHaveBeenCalled();
 
@@ -292,13 +295,13 @@ describe("DocumentsPageClient", () => {
       k === "document" ? "fire-safety-checklist" : null
     );
     rerender(
-      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} />
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} allCategories={[]} />
     );
 
     // Modal closes (URL loses ?document=) — useEffect calls scrollTo
     mockSearchParams.get.mockReturnValue(null);
     rerender(
-      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} />
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} allCategories={[]} />
     );
     expect(scrollTo).toHaveBeenCalledWith({ top: 500 });
   });
