@@ -276,21 +276,23 @@ describe("getDownloadRequestQueue — success (AC13)", () => {
       from: vi.fn(() => ({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({
-          data: [
-            {
-              request_id: REQUEST_ID,
-              entitlement_id: ENT_ID,
-              note: "failed",
-              requested_at: "2026-11-01T00:00:00Z",
-              buyer_name: "Test Buyer",
-              buyer_email: "buyer@example.com",
-              document_title: "Safety Plan",
-              language: "en",
-              last_download_at: null,
-            },
-          ],
-          error: null,
+        order: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue({
+            data: [
+              {
+                request_id: REQUEST_ID,
+                entitlement_id: ENT_ID,
+                note: "failed",
+                requested_at: "2026-11-01T00:00:00Z",
+                buyer_name: "Test Buyer",
+                buyer_email: "buyer@example.com",
+                document_title: "Safety Plan",
+                language: "en",
+                last_download_at: null,
+              },
+            ],
+            error: null,
+          }),
         }),
         count: vi.fn().mockResolvedValue({ count: 1, error: null }),
       })),

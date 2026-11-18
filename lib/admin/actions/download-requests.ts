@@ -35,7 +35,8 @@ export async function getDownloadRequestQueue(): Promise<ActionResult<DownloadQu
       "request_id, entitlement_id, note, requested_at, " +
       "buyer_name, buyer_email, document_title, language, last_download_at"
     )
-    .order("requested_at", { ascending: true });
+    .order("requested_at", { ascending: true })
+    .limit(200);
 
   if (error) return { ok: false, code: "unknown" };
 
@@ -91,7 +92,7 @@ export async function approveDownloadRequest(
 
   const sbService = await createSupabaseServiceRoleClient();
 
-  // Fetch the request (user-scoped client respects RLS; staff sees all via staff policy)
+  // Fetch the request (service-role client bypasses RLS; staff permission enforced above)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: req, error: reqErr } = await (sbService as any)
     .from("download_requests")

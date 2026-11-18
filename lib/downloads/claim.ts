@@ -24,7 +24,13 @@ export interface ClaimDownloadData {
   signedUrl: string;
 }
 
+// ceylonsafety DB functions raise with ERRCODE restrict_violation or no_data_found.
+// Guard on those codes before parsing the message so an unrelated Postgres error
+// (e.g. a network or schema error) never accidentally matches a ceylonsafety keyword.
+const CLAIM_ERROR_CODES = new Set(["restrict_violation", "no_data_found", "insufficient_privilege"]);
+
 function mapClaimError(err: { code?: string; message?: string }): string {
+  if (!CLAIM_ERROR_CODES.has(err.code ?? "")) return "unknown";
   const msg = err.message ?? "";
   if (msg.includes("download_limit_reached")) return "download_limit_reached";
   if (msg.includes("no_ready_file_for_language")) return "file_unavailable";

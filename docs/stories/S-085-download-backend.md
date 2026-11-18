@@ -170,7 +170,11 @@ S-085 specific: ESLint ✓ TypeScript ✓ 44 unit tests ✓ pgTAP ✓
 ```
 
 ## Review notes
-<!-- Filled in by reviewer and security-reviewer agents -->
+
+- **P0** `lib/admin/actions/download-requests.ts:34–44` — `getDownloadRequestQueue` selects `"id"` from view `download_request_queue` which only exposes `"request_id"` (alias). Every queued item gets `requestId: ""` at runtime; staff cannot approve/reject from the queue. Fix: change select to `"request_id, entitlement_id, ..."` and map `r["request_id"]` → `requestId`. (full-review 2026-11-18)
+- **P1** `lib/admin/actions/download-requests.ts:97–125` + `supabase/migrations/20261119000001_download-backend-fixes.sql:119–122` — Concurrent double-approval returns `ok: true` to the second caller. DB function silently returns on `status <> 'open'`; server-layer status check passes for both concurrent callers. Fix: raise `restrict_violation` with message `ceylonsafety: already_done` inside the DB function so the server can return `validation_failed/already_done`. (full-review 2026-11-18)
+- **P1** `app/api/download/[entitlementId]/route.ts:65–67` — `result.data?.signedUrl` optional chain: if `data` is undefined when `ok: true`, response is `{ url: undefined }` serialised as `{}` with status 200. Add guard: if `!result.data?.signedUrl` return 500. (full-review 2026-11-18)
+- **All P0/P1/P2 findings fixed** in commit 6ee236c. Re-review posted 2026-11-18: APPROVE WITH FOLLOW-UPS (92/100). Ready to merge.
 
 ## After this merges, a user can:
 - (test client) Claim the one download of a paid purchase through a POST and get a one-time link; request another and have staff approve it. The pages come with S-095, S-096, S-098.
