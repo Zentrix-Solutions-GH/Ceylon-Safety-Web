@@ -1,11 +1,11 @@
 ---
 id: S-085
 title: Download backend — claim, one-time link, requests, approval
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-085-download-backend
-pr: ~
+pr: "103 https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/103"
 depends_on: [S-081]
 reqs: [REQ-049, REQ-049b, REQ-049d, REQ-050, REQ-053b, REQ-055, REQ-146b]
 ---
@@ -24,29 +24,29 @@ A buyer gets exactly one download per purchase, through a link that works once f
 - REQ-049c (STRETCH) is only prepared for: the limit is a setting, not a rule.
 
 ## Acceptance criteria
-- [ ] AC1: `POST /api/download/[entitlementId]` (a POST only; a GET does nothing and returns 405) calls `requireActiveAccount()`, is limited to 30 requests per hour per user (to confirm), and returns the signed link or a typed error. A browser prefetch or a link on another website cannot use up a download.
-- [ ] AC2: It calls `claim_download(user, entitlement, ip_hash)` (database function, S-017): one atomic step that locks the entitlement row, checks it belongs to the caller and is not revoked, checks `downloads_used < download_limit`, adds 1 to `downloads_used`, writes the `download_logs` row (hashed address) and returns the key of the current ready `full` file for the entitlement's LANGUAGE. At the limit the result is `download_limit_reached`.
-- [ ] AC3: Parallel requests cannot exceed the limit: 10 simultaneous calls on an entitlement with `download_limit = 1` give one success and nine `download_limit_reached`.
-- [ ] AC4: The server then checks that the file exists in the private store. If missing it calls `release_download` (undoes the count and the log row), returns `file_unavailable`, and alerts the admin. Otherwise it asks the private store for a one-time signed link of about 60 seconds, with a clean download name (title, language and format) and "download as attachment".
-- [ ] AC5: The file key and store address are never returned in any response or log; only the short-lived signed link is.
-- [ ] AC6: An entitlement owned by another user returns `not_found`; a revoked entitlement is refused; a suspended account is refused (`requireActiveAccount()`).
-- [ ] AC7: The download works even if the document was hidden or deleted after purchase, and serves the current ready file of the purchased language (a re-uploaded corrected version is served to later downloads).
-- [ ] AC8: `getDownloadPageData(orderItemId)` (owner only) resolves the entitlement for the order item (via `entitlements.order_item_id`) and returns title snapshot, language, and whether a download is left, for the page `/download/[orderItemId]` (S-095). A non-owner or unknown id returns `not_found` without revealing that the order exists.
-- [ ] AC9: `requestDownload(entitlementId, note?)` (owner only): creates a `download_requests` row (`open`, requested time, optional note); a second open request for the same purchase returns `request_already_open`; every request is logged with its time; no limit on the number of requests in Release 1. It is allowed when the download is used up or when the buyer says the first one failed.
-- [ ] AC10: `approveDownloadRequest(requestId)` needs `download_requests.review`; a staff member cannot approve a request of their own customer account (`not_allowed`; same account/email/phone comparison as bank approval); in ONE transaction it adds 1 to the entitlement's `download_limit`, marks the request `approved` with reviewer and time, writes the audit event `download_request.approve`, and queues a `download_request_approved` email row (sent by S-088). Exactly one new one-time download exists per approval.
-- [ ] AC11: `rejectDownloadRequest(requestId, note)` needs `download_requests.review`; a note is required; marks the request `rejected`, writes `download_request.reject`, queues a `download_request_rejected` row. Approved and rejected requests are final; a new ask is a new request.
-- [ ] AC12: Approving or rejecting twice changes nothing the second time (`validation_failed`, reason `already_done`).
-- [ ] AC13: `getDownloadRequestQueue()` lists open requests (buyer, document, language, last download time, note) for staff with the permission; a count call for the badge is provided for S-101.
-- [ ] AC14: Changing `default_download_limit` affects only new entitlements (existing `download_limit` values are untouched); the logic works for limits above 1.
+- [x] AC1: `POST /api/download/[entitlementId]` (a POST only; a GET does nothing and returns 405) calls `requireActiveAccount()`, is limited to 30 requests per hour per user (to confirm), and returns the signed link or a typed error. A browser prefetch or a link on another website cannot use up a download.
+- [x] AC2: It calls `claim_download(user, entitlement, ip_hash)` (database function, S-017): one atomic step that locks the entitlement row, checks it belongs to the caller and is not revoked, checks `downloads_used < download_limit`, adds 1 to `downloads_used`, writes the `download_logs` row (hashed address) and returns the key of the current ready `full` file for the entitlement's LANGUAGE. At the limit the result is `download_limit_reached`.
+- [x] AC3: Parallel requests cannot exceed the limit: 10 simultaneous calls on an entitlement with `download_limit = 1` give one success and nine `download_limit_reached`.
+- [x] AC4: The server then checks that the file exists in the private store. If missing it calls `release_download` (undoes the count and the log row), returns `file_unavailable`, and alerts the admin. Otherwise it asks the private store for a one-time signed link of about 60 seconds, with a clean download name (title, language and format) and "download as attachment".
+- [x] AC5: The file key and store address are never returned in any response or log; only the short-lived signed link is.
+- [x] AC6: An entitlement owned by another user returns `not_found`; a revoked entitlement is refused; a suspended account is refused (`requireActiveAccount()`).
+- [x] AC7: The download works even if the document was hidden or deleted after purchase, and serves the current ready file of the purchased language (a re-uploaded corrected version is served to later downloads).
+- [x] AC8: `getDownloadPageData(orderItemId)` (owner only) resolves the entitlement for the order item (via `entitlements.order_item_id`) and returns title snapshot, language, and whether a download is left, for the page `/download/[orderItemId]` (S-095). A non-owner or unknown id returns `not_found` without revealing that the order exists.
+- [x] AC9: `requestDownload(entitlementId, note?)` (owner only): creates a `download_requests` row (`open`, requested time, optional note); a second open request for the same purchase returns `request_already_open`; every request is logged with its time; no limit on the number of requests in Release 1. It is allowed when the download is used up or when the buyer says the first one failed.
+- [x] AC10: `approveDownloadRequest(requestId)` needs `download_requests.review`; a staff member cannot approve a request of their own customer account (`not_allowed`; same account/email/phone comparison as bank approval); in ONE transaction it adds 1 to the entitlement's `download_limit`, marks the request `approved` with reviewer and time, writes the audit event `download_request.approve`, and queues a `download_request_approved` email row (sent by S-088). Exactly one new one-time download exists per approval.
+- [x] AC11: `rejectDownloadRequest(requestId, note)` needs `download_requests.review`; a note is required; marks the request `rejected`, writes `download_request.reject`, queues a `download_request_rejected` row. Approved and rejected requests are final; a new ask is a new request.
+- [x] AC12: Approving or rejecting twice changes nothing the second time (`validation_failed`, reason `already_done`).
+- [x] AC13: `getDownloadRequestQueue()` lists open requests (buyer, document, language, last download time, note) for staff with the permission; a count call for the badge is provided for S-101.
+- [x] AC14: Changing `default_download_limit` affects only new entitlements (existing `download_limit` values are untouched); the logic works for limits above 1.
 
 ## Edge cases
-- [ ] EC1: The connection drops after the link is handed out: the download is counted; the buyer uses "Request download" (known limit).
-- [ ] EC2: The file is missing in the store: friendly error, count undone, admin alerted.
-- [ ] EC3: A signed link is shared during its minute of life: accepted (no per-buyer watermarking in Release 1, REQ-048 NOT IN V1).
-- [ ] EC4: A bank-transfer buyer opens the approval-email link weeks later: still works while the download is unused (REQ-050).
-- [ ] EC5: The buyer asks for a new link while one is open: `request_already_open`.
-- [ ] EC6: Staff approve a request after the account was suspended: recorded; downloading is still refused until reinstated.
-- [ ] EC7: The store cannot make links single-use (commerce 19 item 23): `claim_download` is the only guard and the link life stays minimal.
+- [x] EC1: The connection drops after the link is handed out: the download is counted; the buyer uses "Request download" (known limit).
+- [x] EC2: The file is missing in the store: friendly error, count undone, admin alerted.
+- [x] EC3: A signed link is shared during its minute of life: accepted (no per-buyer watermarking in Release 1, REQ-048 NOT IN V1).
+- [x] EC4: A bank-transfer buyer opens the approval-email link weeks later: still works while the download is unused (REQ-050).
+- [x] EC5: The buyer asks for a new link while one is open: `request_already_open`.
+- [x] EC6: Staff approve a request after the account was suspended: recorded; downloading is still refused until reinstated.
+- [x] EC7: The store cannot make links single-use (commerce 19 item 23): `claim_download` is the only guard and the link life stays minimal.
 
 ## Contract
 - `app/api/download/[entitlementId]/route.ts` (POST), `lib/downloads/claim.ts`, `lib/downloads/requests.ts`, `lib/admin/actions/download-requests.ts`.
