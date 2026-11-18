@@ -21,6 +21,10 @@ ALTER TABLE public.bank_transfer_slips
   ADD COLUMN IF NOT EXISTS first_reviewed_by uuid REFERENCES public.profiles (id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS first_reviewed_at  timestamptz;
 
+CREATE INDEX IF NOT EXISTS idx_bank_transfer_slips_first_reviewed_by
+  ON public.bank_transfer_slips (first_reviewed_by)
+  WHERE first_reviewed_by IS NOT NULL;
+
 -- ── 3. Extend admin_audit_log action CHECK ────────────────────────────────────
 
 ALTER TABLE public.admin_audit_log

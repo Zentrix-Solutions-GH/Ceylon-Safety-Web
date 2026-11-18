@@ -17,7 +17,7 @@
 --   Cart item:        e8600000-0000-0000-0000-000000000001
 
 BEGIN;
-SELECT plan(9);
+SELECT plan(10);
 
 -- ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -40,10 +40,10 @@ VALUES
   ('e8200000-0000-0000-0000-000000000020', 'e8200000-0000-0000-0000-000000000002', 1, now())
 ON CONFLICT DO NOTHING;
 
-INSERT INTO public.documents (id, title, slug, language, type, price_cents, status)
+INSERT INTO public.documents (id, title, slug, doc_kind, price_cents, status, published_at)
 VALUES (
   'e8200000-0000-0000-0000-000000000001',
-  'E8 Test Doc', 'e8-test-doc', 'en', 'checklist', 50000, 'published'
+  'E8 Test Doc', 'e8-test-doc', 'checklist', 50000, 'published', now()
 )
 ON CONFLICT DO NOTHING;
 
@@ -76,11 +76,11 @@ VALUES
   ('e8500000-0000-0000-0000-000000000001',
    'e8300000-0000-0000-0000-000000000001',
    'document', 'e8200000-0000-0000-0000-000000000001', 'en',
-   'E8 Test Doc', 50000, 100000),
+   'E8 Test Doc', 100000, 100000),
   ('e8500000-0000-0000-0000-000000000002',
    'e8300000-0000-0000-0000-000000000002',
    'document', 'e8200000-0000-0000-0000-000000000001', 'en',
-   'E8 Test Doc', 50000, 3000000)
+   'E8 Test Doc', 3000000, 3000000)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.bank_transfer_slips (id, order_id, uploaded_by, file_key, mime_type, size_bytes)
@@ -95,8 +95,12 @@ VALUES
    'slips/e8300000-002/slip.jpg', 'image/jpeg', 50000)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO public.cart_items (user_id, document_id)
-VALUES ('e8100000-0000-0000-0000-000000000003', 'e8200000-0000-0000-0000-000000000001')
+INSERT INTO public.carts (user_id)
+VALUES ('e8100000-0000-0000-0000-000000000003')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.cart_items (user_id, document_id, language)
+VALUES ('e8100000-0000-0000-0000-000000000003', 'e8200000-0000-0000-0000-000000000001', 'en')
 ON CONFLICT DO NOTHING;
 
 -- ── 1. Single approval (small order) → outcome = 'applied' ───────────────────
@@ -106,8 +110,8 @@ SELECT is(
     'e8300000-0000-0000-0000-000000000001'::uuid,
     'e8400000-0000-0000-0000-000000000001'::uuid,
     'e8100000-0000-0000-0000-000000000001'::uuid,
-    3,       -- download_limit
-    2500000  -- threshold_cents
+    3,                  -- download_limit (int)
+    2500000::bigint     -- threshold_cents (bigint)
   ) ->> 'outcome'),
   'applied',
   'single approval on small order returns applied'
@@ -157,33 +161,41 @@ SELECT is(
   'slip status = accepted after approval'
 );
 
--- ── 7. already_done is idempotent (order already paid) ───────────────────────
+-- ── 7. purchase_count incremented on the document ────────────────────────────
+
+SELECT is(
+  (SELECT purchase_count FROM public.documents WHERE id = 'e8200000-0000-0000-0000-000000000001'),
+  1,
+  'purchase_count incremented by 1 after final approval'
+);
+
+-- ── 9. already_done is idempotent (order already paid) ───────────────────────
 
 SELECT is(
   (SELECT public.approve_bank_transfer_locked(
     'e8300000-0000-0000-0000-000000000001'::uuid,
     'e8400000-0000-0000-0000-000000000001'::uuid,
     'e8100000-0000-0000-0000-000000000001'::uuid,
-    3, 2500000
+    3, 2500000::bigint
   ) ->> 'outcome'),
   'already_done',
   'second call on paid order returns already_done (idempotent)'
 );
 
--- ── 8. First approval on large order → outcome = 'first_approved' ────────────
+-- ── 10. First approval on large order → outcome = 'first_approved' ───────────
 
 SELECT is(
   (SELECT public.approve_bank_transfer_locked(
     'e8300000-0000-0000-0000-000000000002'::uuid,
     'e8400000-0000-0000-0000-000000000002'::uuid,
     'e8100000-0000-0000-0000-000000000001'::uuid,
-    3, 2500000
+    3, 2500000::bigint
   ) ->> 'outcome'),
   'first_approved',
   'first approval on large order returns first_approved'
 );
 
--- ── 9. Large order status still pending_verification after first approval ─────
+-- ── (continued) Large order status still pending_verification ────────────────
 
 SELECT is(
   (SELECT status FROM public.orders WHERE id = 'e8300000-0000-0000-0000-000000000002'),

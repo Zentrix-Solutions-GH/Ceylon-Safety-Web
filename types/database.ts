@@ -201,17 +201,35 @@ isOneToOne: false
                   ]
                 },"bank_transfer_slips": {
                   Row: {
-                    "file_key": string,"id": string,"mime_type": string,"order_id": string,"rejection_reason": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"size_bytes": number,"status": string,"uploaded_at": string,"uploaded_by": string
+                    "file_key": string,"first_reviewed_at": string | null,"first_reviewed_by": string | null,"id": string,"mime_type": string,"order_id": string,"rejection_reason": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"size_bytes": number,"status": string,"uploaded_at": string,"uploaded_by": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "file_key": string,"id"?: string,"mime_type": string,"order_id": string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes": number,"status"?: string,"uploaded_at"?: string,"uploaded_by": string
+                    "file_key": string,"first_reviewed_at"?: string | null,"first_reviewed_by"?: string | null,"id"?: string,"mime_type": string,"order_id": string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes": number,"status"?: string,"uploaded_at"?: string,"uploaded_by": string
                   }
                   Update: {
-                    "file_key"?: string,"id"?: string,"mime_type"?: string,"order_id"?: string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes"?: number,"status"?: string,"uploaded_at"?: string,"uploaded_by"?: string
+                    "file_key"?: string,"first_reviewed_at"?: string | null,"first_reviewed_by"?: string | null,"id"?: string,"mime_type"?: string,"order_id"?: string,"rejection_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes"?: number,"status"?: string,"uploaded_at"?: string,"uploaded_by"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "bank_transfer_slips_first_reviewed_by_fkey"
+      columns: ["first_reviewed_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bank_transfer_slips_first_reviewed_by_fkey"
+      columns: ["first_reviewed_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bank_transfer_slips_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "bank_transfer_queue"
+      referencedColumns: ["order_id"]
+    },{
       foreignKeyName: "bank_transfer_slips_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: false
@@ -347,6 +365,12 @@ isOneToOne: true
 isOneToOne: false
       referencedRelation: "coupons"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "coupon_uses_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: true
+      referencedRelation: "bank_transfer_queue"
+      referencedColumns: ["order_id"]
     },{
       foreignKeyName: "coupon_uses_order_id_fkey"
       columns: ["order_id"]
@@ -657,6 +681,12 @@ isOneToOne: false
       foreignKeyName: "invoices_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: true
+      referencedRelation: "bank_transfer_queue"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: true
       referencedRelation: "orders"
       referencedColumns: ["id"]
     }
@@ -717,6 +747,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "report_top_documents"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_items_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "bank_transfer_queue"
+      referencedColumns: ["order_id"]
     },{
       foreignKeyName: "order_items_order_id_fkey"
       columns: ["order_id"]
@@ -840,6 +876,12 @@ isOneToOne: false
                   }
                   Relationships: [
                     {
+      foreignKeyName: "payment_events_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "bank_transfer_queue"
+      referencedColumns: ["order_id"]
+    },{
       foreignKeyName: "payment_events_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: false
@@ -1072,7 +1114,15 @@ isOneToOne: false
                 }
           }
           Views: {
-            "buyer_slip_summary": {
+            "bank_transfer_queue": {
+                  Row: {
+                    "awaiting_second_approval": boolean | null,"buyer_name": string | null,"created_at": string,"latest_slip_id": string,"latest_slip_uploaded_at": string,"order_id": string,"order_number": string,"total_cents": number
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"buyer_slip_summary": {
                   Row: {
                     "id": string,"order_id": string,"rejection_reason": string | null,"status": string,"uploaded_at": string
                   }
@@ -1085,6 +1135,12 @@ isOneToOne: false
                          }
                         Relationships: [
                     {
+      foreignKeyName: "bank_transfer_slips_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "bank_transfer_queue"
+      referencedColumns: ["order_id"]
+    },{
       foreignKeyName: "bank_transfer_slips_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: false
@@ -1141,7 +1197,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "cancel_order_locked":
+            "approve_bank_transfer_locked":
+{ Args: { "p_actor_id": string,"p_download_limit": number,"p_order_id": string,"p_slip_id": string,"p_threshold_cents": number }; Returns: Json
+                           },
+"cancel_order_locked":
 { Args: { "p_order_id": string,"p_user_id": string }; Returns: Json
                            },
 "claim_unfinalized_orders":

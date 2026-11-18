@@ -201,35 +201,32 @@ SELECT is(
 
 RESET ROLE;
 
--- ── 12–13. bank_transfer_queue view: anon blocked; buyer sees no cross-buyer rows ─
--- S-084: REVOKE ALL ON bank_transfer_queue FROM anon; GRANT SELECT TO authenticated.
--- Even though authenticated can query the view, the underlying RLS on orders and
--- bank_transfer_slips restricts what each buyer actually sees.
+-- ── 12–13. bank_transfer_queue view: privilege checks ────────────────────────
+-- S-084: migration 002 REVOKE ALL FROM anon; migration 003 REVOKE SELECT FROM authenticated.
+-- The view is staff-only; application code uses the service-role client.
+-- After S-084 migrations the view has no SELECT grant to anon or authenticated.
 
--- 12. anon cannot read the queue view.
-SET LOCAL ROLE anon;
-
+-- 12. anon has no SELECT privilege on bank_transfer_queue.
 SELECT is(
-  (SELECT count(*)::int FROM public.bank_transfer_queue),
+  (SELECT count(*)::int FROM information_schema.role_table_grants
+   WHERE grantee = 'anon'
+     AND table_schema = 'public'
+     AND table_name = 'bank_transfer_queue'
+     AND privilege_type = 'SELECT'),
   0,
-  'anon user sees no rows in bank_transfer_queue (REVOKE ALL from anon)'
+  'anon role has no SELECT privilege on bank_transfer_queue'
 );
 
-RESET ROLE;
-
--- 13. Buyer B (authenticated, non-staff) cannot see Buyer A order in bank_transfer_queue.
-
-SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claims = '{"sub": "e9100000-0000-0000-0000-000000000002", "role": "authenticated"}';
-
+-- 13. authenticated role has no SELECT privilege on bank_transfer_queue (migration 003).
 SELECT is(
-  (SELECT count(*)::int FROM public.bank_transfer_queue
-    WHERE order_id = 'e9300000-0000-0000-0000-000000000001'),
+  (SELECT count(*)::int FROM information_schema.role_table_grants
+   WHERE grantee = 'authenticated'
+     AND table_schema = 'public'
+     AND table_name = 'bank_transfer_queue'
+     AND privilege_type = 'SELECT'),
   0,
-  'buyer B cannot read buyer A order in bank_transfer_queue (cross-buyer isolation)'
+  'authenticated role has no SELECT privilege on bank_transfer_queue (revoked in migration 003)'
 );
-
-RESET ROLE;
 
 -- ── Cleanup ───────────────────────────────────────────────────────────────────
 -- All fixtures are cleaned up by the ROLLBACK below.
