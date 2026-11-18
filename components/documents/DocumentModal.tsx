@@ -68,13 +68,13 @@ export default function DocumentModal() {
 
   // Escape key closes modal
   useEffect(() => {
-    if (!doc) return;
+    if (!slug) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") closeModal();
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [doc, closeModal]);
+  }, [slug, closeModal]);
 
   // Scroll lock while open — uses a CSS class so concurrent overlays don't
   // prematurely restore scroll when one unmounts while another is still open
