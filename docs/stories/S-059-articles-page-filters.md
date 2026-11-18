@@ -183,6 +183,13 @@ $ bash scripts/check.sh
 - **P1 ✅ RESOLVED** `ArticleGrid` missing `articleType` — prop added, load-more fetch appends `?type=`, route.ts reads and validates param in e5d0acc.
 - 7 new type-filter tests added (pills, clearAll, chip ×, unknown EC). 27/27 passing.
 
+**full-review 2026-11-18 — round 9 (Mode A P2 fixes, HEAD 27304207) — APPROVE WITH FOLLOW-UPS**
+
+- **P2 ✅ RESOLVED** `page.tsx:81` — `"Ceylon Safety"` replaced with `t("auth.brand.wordmark")` in 2730420.
+- **P2 ✅ RESOLVED** `ArticleFilters.tsx:84` — `aria-label={t("articles.filter.sort_by")}` added to `<select>` in 2730420.
+- **P2 ✅ RESOLVED** `types/database.ts:164` — regeneration comment added in 2730420.
+- No remaining findings. 27/27 tests pass. TypeScript clean.
+
 ## After this merges
 
 - S-060 (article full page) and S-061 (likes/comments UI) can be built
