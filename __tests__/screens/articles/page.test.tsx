@@ -26,6 +26,7 @@ function makeCard(n: number): ArticleCard {
     coverImageKey: `covers/article-${n}.jpg`,
     coverImageAlt: `Cover ${n}`,
     category: { id: "cat-1", name: "Safety", slug: "safety" },
+    articleType: "article" as const,
     authorName: "Author",
     publishedAt: "2026-01-01T00:00:00Z",
     likeCount: n,

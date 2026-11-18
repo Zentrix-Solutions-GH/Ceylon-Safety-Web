@@ -9,8 +9,8 @@ import { ArticlesHeroSlideshow } from "@/components/articles/ArticlesHeroSlidesh
 import { HeroSearchForm } from "@/components/articles/HeroSearchForm";
 import { t } from "@/messages/en";
 import { publicConfig } from "@/lib/config.public";
-import { ARTICLE_RANGES } from "@/types/article";
-import type { ArticleRange } from "@/types/article";
+import { ARTICLE_RANGES, ARTICLE_TYPES } from "@/types/article";
+import type { ArticleRange, ArticleType } from "@/types/article";
 
 function coverUrl(key: string | null): string | undefined {
   if (!key) return undefined;
@@ -26,11 +26,16 @@ function resolveRange(raw: string | undefined): ArticleRange {
   return (ARTICLE_RANGES as string[]).includes(raw) ? (raw as ArticleRange) : "newest";
 }
 
+function resolveType(raw: string | undefined): ArticleType | undefined {
+  if (!raw) return undefined;
+  return (ARTICLE_TYPES as string[]).includes(raw) ? (raw as ArticleType) : undefined;
+}
+
 export async function generateMetadata({
   searchParams,
 }: ArticlesPageProps): Promise<Metadata> {
   const params = await searchParams;
-  const isFiltered = Boolean(params.range || params.category);
+  const isFiltered = Boolean(params.range || params.category || params.type);
   return {
     title: t("articles.page.title"),
     description: t("articles.page.description"),
@@ -42,12 +47,13 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   const params = await searchParams;
   const range = resolveRange(params.range);
   const category = params.category || undefined;
-  const isFiltered = range !== "newest" || Boolean(category);
+  const articleType = resolveType(params.type);
+  const isFiltered = range !== "newest" || Boolean(category) || Boolean(articleType);
 
-  const popularIsSameQuery = range === "month" && !category;
+  const popularIsSameQuery = range === "month" && !category && !articleType;
 
   const [listResult, categories, popularResult] = await Promise.all([
-    listArticles({ range, category }),
+    listArticles({ range, category, articleType }),
     listCategories(),
     popularIsSameQuery ? Promise.resolve(null) : listArticles({ range: "month" }),
   ]);
