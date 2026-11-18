@@ -128,7 +128,7 @@ SELECT throws_ok(
       'testhash4'
     )
   $$,
-  'restrict_violation',
+  '23001',
   'ceylonsafety: download_limit_reached',
   'AC14: download_limit_reached when downloads_used = download_limit (limit=3)'
 );
@@ -142,7 +142,7 @@ SELECT throws_ok(
       'testhash5'
     )
   $$,
-  'insufficient_privilege',
+  '42501',
   'ceylonsafety: entitlement does not belong to this user',
   'AC6: claim_download raises insufficient_privilege for wrong user'
 );
@@ -160,7 +160,7 @@ SELECT throws_ok(
       'testhash6'
     )
   $$,
-  'restrict_violation',
+  '23001',
   'ceylonsafety: entitlement is revoked',
   'AC6: claim_download raises restrict_violation for revoked entitlement'
 );
