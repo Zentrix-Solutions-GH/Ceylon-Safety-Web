@@ -165,6 +165,17 @@ $ bash scripts/check.sh
 - **P1** `components/articles/ArticleFilters.tsx:84-99` — Custom `<select>` chevron SVG; verify cross-browser (Safari/Firefox) the chevron renders correctly when `appearance-none` strips native arrow.
 - **P1** `app/(public)/articles/page.tsx:131-136` — `<ArticleGrid>` does not receive `articleType` prop; load-more will not apply the type filter. Add `articleType={articleType}` and thread through to the load-more API call.
 
+**full-review 2026-11-18 — round 7 (Mode B, HEAD 352c8430) — REQUEST CHANGES**
+
+- **P0** `__tests__/components/articles/ArticleFilters.test.tsx:30,71,81` — `getByRole("button", { name: /all categories/i })` throws: label renamed to "All" in messages/en.ts. Fix query to `/^all$/i`.
+- **P0** `__tests__/components/articles/ArticleFilters.test.tsx:35,37,53,90` — Range button queries (`/newest/i`, `/last week/i`, `/last month/i`) throw: range moved to `<select>` element, not buttons. Replace with `getByRole("combobox")` / `getByDisplayValue`.
+- **P1** `app/(public)/articles/page.tsx:131-136` + `components/articles/ArticleGrid.tsx` — `articleType` still not passed to `ArticleGrid`; load-more drops type filter silently. *(carry-forward from round 6)*
+- **P1** `__tests__/components/articles/ArticleFilters.test.tsx` — Zero tests for type pills (setType, All types, chip ×, clearAll with type).
+- **P1** `__tests__/screens/articles/page.test.tsx` — No test for `?type=guide` param → `listArticles({ articleType: "guide" })`.
+- **P2** `ArticleFilters.tsx:84` — Sort-by `<select>` missing `aria-label`.
+- **P2** `types/database.ts:164` — Manual patch typed as `string`, no regeneration comment.
+- **P2** `app/(public)/articles/page.tsx:83` — `"Ceylon Safety"` hardcoded, must use `t("key")`.
+
 ## After this merges
 
 - S-060 (article full page) and S-061 (likes/comments UI) can be built
