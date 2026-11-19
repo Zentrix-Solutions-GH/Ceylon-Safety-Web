@@ -57,6 +57,7 @@ const vals = collect([
   ["CRON_SECRET", string],
   ["RESEND_API_KEY", string],
   ["EMAIL_FROM", string],
+  ["IP_HASH_SECRET", string],
 ]);
 
 // CSP config — validated separately so errors are specific
@@ -82,6 +83,7 @@ export const serverConfig = {
   cronSecret: vals["CRON_SECRET"],
   resendApiKey: vals["RESEND_API_KEY"],
   emailFrom: vals["EMAIL_FROM"],
+  ipHashSecret: vals["IP_HASH_SECRET"],
   videoPlaceholderKey: optional("VIDEO_PLACEHOLDER_KEY", "placeholders/video.jpg"),
   feedRateLimitPerMinute: parseInt(optional("FEED_RATE_LIMIT_PER_MINUTE", "60"), 10),
   countersRateLimitPerMinute: parseInt(optional("COUNTERS_RATE_LIMIT_PER_MINUTE", "60"), 10),

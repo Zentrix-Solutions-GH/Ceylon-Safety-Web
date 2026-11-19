@@ -19,6 +19,7 @@ export default defineConfig({
       NEXT_PUBLIC_APP_URL: "https://localhost:3000",
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
       NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL: "https://cdn.test.example.com",
+      IP_HASH_SECRET: "test-ip-hash-secret-vitest-only",
     },
   },
   resolve: {

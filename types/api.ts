@@ -17,6 +17,9 @@ export const COMMON_ERROR_CODES = [
   "reauth_required",
   "mfa_required",
   "slip_invalid",
+  "download_limit_reached",
+  "file_unavailable",
+  "request_already_open",
   "unknown",
 ] as const;
 

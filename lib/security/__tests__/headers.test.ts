@@ -23,6 +23,8 @@ function makeEnv(extra: Record<string, string> = {}) {
     // S-040: Resend email config
     RESEND_API_KEY: "re_test_key",
     EMAIL_FROM: "noreply@ceylonsafety.com",
+    // S-085: download IP hash
+    IP_HASH_SECRET: "test-ip-hash-secret",
     ...extra,
   };
 }
