@@ -27,7 +27,7 @@ export async function SideAdColumn({ side }: SideAdColumnProps) {
   }
 
   return (
-    <div className="sticky top-20">
+    <div className="sticky top-20 bottom-0">
       <AdUnit clientId={ads.clientId} slot={slot} />
     </div>
   );

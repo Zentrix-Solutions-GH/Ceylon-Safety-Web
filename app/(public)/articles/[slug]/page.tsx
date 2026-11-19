@@ -68,7 +68,7 @@ export default async function ArticleSlugPage({ params }: Props) {
   });
 
   return (
-    <div className="bg-white">
+    <article className="bg-white">
       {/* Cover image hero */}
       {coverUrl && (
         <div className="relative h-72 w-full overflow-hidden bg-gray-900 sm:h-96 lg:h-[480px]">
@@ -155,13 +155,13 @@ export default async function ArticleSlugPage({ params }: Props) {
             href="/articles"
             className="text-sm font-medium text-primary hover:underline"
           >
-            ← More articles
+            {t("article.more_articles")}
           </Link>
         </div>
 
         {/* Comments */}
         <div className="mt-10 border-t border-gray-100 pt-8">
-          <h2 className="mb-6 text-lg font-bold text-gray-900">Comments</h2>
+          <h2 className="mb-6 text-lg font-bold text-gray-900">{t("article.comments_heading")}</h2>
           <CommentForm articleId={article.id} />
           <div className="mt-8">
             <CommentThread
@@ -172,7 +172,7 @@ export default async function ArticleSlugPage({ params }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 

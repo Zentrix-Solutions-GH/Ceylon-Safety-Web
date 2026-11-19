@@ -385,6 +385,8 @@ const en = {
 
   // --- article full page (S-060) ---
   "article.back_to_articles": "Back to articles",
+  "article.more_articles": "← More articles",
+  "article.comments_heading": "Comments",
   "article.unavailable": "This article is not available.",
 
   // --- article likes + comments (S-061) ---

@@ -50,8 +50,8 @@ export default async function HomePage() {
         <div className="mx-auto max-w-screen-2xl px-4">
           <div className="flex items-start justify-center gap-6">
 
-            {/* Left ad column — hidden below lg */}
-            <aside className="hidden lg:block w-[160px] shrink-0" aria-label="Advertisement">
+            {/* Left ad column — hidden below xl (1280px); advertising design section 5 */}
+            <aside className="hidden xl:block w-[160px] shrink-0" aria-label="Advertisement">
               <SideAdColumn side="left" />
             </aside>
 
@@ -67,8 +67,8 @@ export default async function HomePage() {
               <Feed firstPage={firstPage} autoLoadUntilPage={AUTO_LOAD_UNTIL_PAGE} />
             </div>
 
-            {/* Right ad column — hidden below lg */}
-            <aside className="hidden lg:block w-[160px] shrink-0" aria-label="Advertisement">
+            {/* Right ad column — hidden below xl (1280px); advertising design section 5 */}
+            <aside className="hidden xl:block w-[160px] shrink-0" aria-label="Advertisement">
               <SideAdColumn side="right" />
             </aside>
 
