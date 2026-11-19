@@ -68,9 +68,9 @@ Retrospective fixes applied after PR review (PR review head `e938172`):
 - **P0** `docs/stories/` — no story file existed at review time. This file is the retrospective fix. (full-review 2026-11-19)
 - **P0** `components/ads/AdUnit.tsx` — no consent gate; ad request fired unconditionally. Fixed: now checks `getConsent() === "accepted"` before rendering `<ins>` or pushing to `adsbygoogle`. (full-review 2026-11-19)
 - **P0** `components/ads/`, `components/articles/ArticleDrawer.tsx` — zero tests for new code. Fixed: three test files added. (full-review 2026-11-19)
-- **P1** `app/(public)/page.tsx:54,71` — `hidden lg:block` (1024 px); advertising design section 5 requires 1280 px. Deferred.
-- **P1** `components/ads/SideAdColumn.tsx:27` — empty gutter div reserved in prod when ads disabled; spec forbids empty gutters. Deferred.
-- **P1** `components/ads/SideAdColumn.tsx:31` — `sticky top-20` has no bottom constraint. Deferred.
-- **P1** `app/(public)/articles/[slug]/page.tsx:158,164` — hardcoded strings. Deferred.
-- **P1** `app/(public)/articles/[slug]/page.tsx` — `<article>` semantic element removed. Deferred.
-- **P1** `docs/stories/S-home-ad-layout.md:AC1` — AC1 marked `[x]` ("≥ 1280 px") but code ships at 1024 px; Out of Scope section defers the fix — these two directly contradict. Mark AC1 as `[ ]` or reword to 1024 px. (full-review 2026-11-19)
+- **P1** `app/(public)/page.tsx:54,71` — `hidden lg:block` (1024 px); advertising design section 5 requires 1280 px. Fixed in `7b0a155`.
+- **P1** `components/ads/SideAdColumn.tsx:27` — empty gutter div reserved in prod when ads disabled; spec forbids empty gutters. Fixed in `f052c93`.
+- **P1** `components/ads/SideAdColumn.tsx:31` — `sticky top-20` has no bottom constraint. Fixed in `7b0a155` (`bottom-0` added; full sticky range requires self-stretch on aside — P2).
+- **P1** `app/(public)/articles/[slug]/page.tsx:158,164` — hardcoded strings. Fixed in `7b0a155`.
+- **P1** `app/(public)/articles/[slug]/page.tsx` — `<article>` semantic element removed. Fixed in `7b0a155`.
+- **P1** `docs/stories/S-home-ad-layout.md:AC1` — AC1 marked `[x]` while code shipped at 1024 px. Fixed in `26784ee`/`7b0a155`.
