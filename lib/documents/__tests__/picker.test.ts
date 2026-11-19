@@ -9,18 +9,17 @@ vi.mock("@/lib/config", () => ({
   r2Config: () => null,
 }));
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseAnonClient: vi.fn(),
   createSupabaseServiceRoleClient: vi.fn(),
 }));
 vi.mock("@/lib/auth/server", () => ({ requireStaff: vi.fn() }));
 vi.mock("@/lib/ratelimit/index", () => ({ checkRateLimit: vi.fn() }));
 
 import { requireStaff } from "@/lib/auth/server";
-import { createSupabaseAnonClient } from "@/lib/supabase/server";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { listDocumentPickerItems } from "@/lib/documents/public";
 
 const mockRequireStaff = vi.mocked(requireStaff);
-const mockAnonClient = vi.mocked(createSupabaseAnonClient);
+const mockAnonClient = vi.mocked(createSupabaseServiceRoleClient);
 
 beforeEach(() => vi.clearAllMocks());
 
