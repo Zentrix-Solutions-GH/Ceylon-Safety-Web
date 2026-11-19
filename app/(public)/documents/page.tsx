@@ -93,16 +93,18 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
 
           {/* Main content */}
           <div className="min-w-0 flex-1">
-            <DocumentsPageClient
-              docs={docs}
-              mediaBase={mediaBase}
-              allSlugs={allSlugs}
-              allCategories={allCategories}
-              total={total}
-              pageSize={pageSize}
-              currentPage={page}
-              sort={sort}
-            />
+            <Suspense fallback={<div className="animate-pulse rounded-lg bg-muted h-96 w-full" aria-hidden="true" />}>
+              <DocumentsPageClient
+                docs={docs}
+                mediaBase={mediaBase}
+                allSlugs={allSlugs}
+                allCategories={allCategories}
+                total={total}
+                pageSize={pageSize}
+                currentPage={page}
+                sort={sort}
+              />
+            </Suspense>
           </div>
         </div>
       </div>
