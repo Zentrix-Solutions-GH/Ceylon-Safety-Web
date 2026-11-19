@@ -1,11 +1,61 @@
 // S-086: AC9 — email logs must not contain personal data
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Unit test: validate that the error strings we write to email_logs.error
-// do not embed personal data. The sendEmail wrapper strips personal data
-// by design (only writes constructor name / error code, not message text).
-// This test documents and locks in that contract.
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/config", () => ({
+  serverConfig: {
+    resendApiKey: "re_test",
+    emailFrom: "Ceylon Safety <no-reply@ceylonsafety.lk>",
+  },
+}));
+
+// Capture the DB update calls so we can inspect what error string was stored.
+const updateEqMock = vi.fn().mockResolvedValue({ error: null });
+const updateMock = vi.fn().mockReturnValue({ eq: updateEqMock });
+const selectSingleMock = vi.fn().mockResolvedValue({
+  data: { id: 1 },
+  error: null,
+});
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServiceRoleClient: () => ({
+    from: vi.fn().mockReturnValue({
+      insert: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: selectSingleMock,
+        }),
+      }),
+      update: updateMock,
+    }),
+  }),
+}));
+
+// Resend SDK throws an error whose message contains the recipient address.
+// sendEmail must NOT write that message into email_logs.error.
+class NetworkError extends Error {
+  constructor() {
+    super("Could not connect — recipient: buyer@example.com leaked in transport");
+    this.name = "NetworkError";
+  }
+}
+
+vi.mock("resend", () => ({
+  Resend: vi.fn().mockImplementation(() => ({
+    emails: {
+      send: vi.fn().mockRejectedValue(new NetworkError()),
+    },
+  })),
+}));
+
+import { sendEmail } from "@/lib/resend/client";
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  // Re-arm mocks cleared above
+  updateEqMock.mockResolvedValue({ error: null });
+  updateMock.mockReturnValue({ eq: updateEqMock });
+  selectSingleMock.mockResolvedValue({ data: { id: 1 }, error: null });
+});
 
 describe("email log error sanitisation (AC9)", () => {
   it("only stores error class name, not error message (AC9)", () => {
@@ -31,19 +81,32 @@ describe("email log error sanitisation (AC9)", () => {
     expect(stored).not.toContain("192");
   });
 
-  it("logs only template and related_id, not the recipient address (AC9)", () => {
-    // The email_logs.to_email column is intentionally NOT logged to console;
-    // sendEmail only logs template, status, error code — never to_email.
-    // This test asserts the documented contract as a type-level guard.
-    const logFields: Record<string, unknown> = {
+  it("stores only the error class name in email_logs, never the error message or recipient address (AC9)", async () => {
+    // sendEmail throws from Resend with a message that contains the recipient email.
+    // The DB update's error field must contain only the class name ("NetworkError"),
+    // not the message text ("buyer@example.com ...").
+    await sendEmail({
+      to: "buyer@example.com",
       template: "receipt",
-      related_type: "order",
-      related_id: "ord-123",
-      status: "failed",
-      error: "FetchError",
-      // to_email must NOT appear in any log statement
-    };
-    expect(Object.keys(logFields)).not.toContain("to_email");
-    expect(Object.keys(logFields)).not.toContain("email");
+      relatedType: "order",
+      relatedId: "ord-ac9-test",
+      subject: "Your receipt",
+      html: "<p>receipt</p>",
+      text: "receipt",
+    });
+
+    // The update call that sets status=failed must have been called
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "failed" }),
+    );
+
+    // Extract the error string that was written
+    const updateArg = vi.mocked(updateMock).mock.calls[0]?.[0] as { error?: string };
+    const storedError = updateArg?.error ?? "";
+
+    expect(storedError).toBe("NetworkError");
+    expect(storedError).not.toContain("@");
+    expect(storedError).not.toContain("buyer");
+    expect(storedError).not.toContain("example.com");
   });
 });
