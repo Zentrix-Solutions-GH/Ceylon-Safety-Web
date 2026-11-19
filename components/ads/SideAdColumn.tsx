@@ -23,8 +23,7 @@ export async function SideAdColumn({ side }: SideAdColumnProps) {
   }
 
   if (!ads.enabled || !ads.clientId || !slot) {
-    // Reserve the space as an empty gutter — ready for future ads
-    return <div className="h-[600px] w-[160px]" />;
+    return null;
   }
 
   return (
