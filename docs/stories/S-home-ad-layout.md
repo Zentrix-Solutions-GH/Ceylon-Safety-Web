@@ -18,7 +18,7 @@ This story was created retrospectively to document work that was implemented wit
 
 ## Acceptance Criteria
 
-- [x] AC1: Home page shows a left and right ad column at ≥ 1280 px viewport width; below that threshold the feed takes the full width.
+- [ ] AC1: Home page shows a left and right ad column at ≥ 1280 px viewport width; below that threshold the feed takes the full width. *(currently ships at 1024 px — 1280 px breakpoint deferred, see Out of Scope)*
 - [x] AC2: `SideAdColumn` renders a labelled placeholder box in development; in production with no ads configured it renders nothing.
 - [x] AC3: `SideAdColumn` renders a live `AdUnit` only when `ads_enabled = true`, `adsense_client_id` and the relevant slot id are all present.
 - [x] AC4: `AdUnit` checks cookie consent before rendering the `<ins>` element or pushing to `window.adsbygoogle`. No Google request is made before the visitor accepts.
@@ -75,3 +75,4 @@ Retrospective fixes applied after PR review (PR review head `e938172`):
 - **P1** `components/ads/SideAdColumn.tsx:31` — `sticky top-20` has no bottom constraint. Deferred.
 - **P1** `app/(public)/articles/[slug]/page.tsx:158,164` — hardcoded strings. Deferred.
 - **P1** `app/(public)/articles/[slug]/page.tsx` — `<article>` semantic element removed. Deferred.
+- **P1** `docs/stories/S-home-ad-layout.md:AC1` — AC1 marked `[x]` ("≥ 1280 px") but code ships at 1024 px; Out of Scope section defers the fix — these two directly contradict. Mark AC1 as `[ ]` or reword to 1024 px. (full-review 2026-11-19)
