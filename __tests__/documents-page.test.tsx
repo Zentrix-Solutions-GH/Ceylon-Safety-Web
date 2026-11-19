@@ -15,7 +15,6 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { DocumentCard } from "@/components/documents/DocumentCard";
-import { DocumentFilters } from "@/components/documents/DocumentFilters";
 import type { PublicDocumentCard } from "@/types/document";
 
 const MEDIA_BASE = "https://cdn.test.example.com";
@@ -38,11 +37,6 @@ function makeDoc(overrides: Partial<PublicDocumentCard> = {}): PublicDocumentCar
   };
 }
 
-const CATEGORIES = [
-  { id: "cat-1", name: "Fire Safety" },
-  { id: "cat-2", name: "Chemical Safety" },
-];
-
 // ─── DocumentCard ─────────────────────────────────────────────────────────────
 
 describe("DocumentCard", () => {
@@ -64,16 +58,16 @@ describe("DocumentCard", () => {
 
   it("AC1: renders language badges for each available language", () => {
     render(<DocumentCard doc={makeDoc({ languages: ["en", "si", "ta"] })} mediaBase={MEDIA_BASE} onOpen={vi.fn()} />);
-    expect(screen.getByText(/EN/i)).toBeInTheDocument();
-    expect(screen.getByText(/SI/i)).toBeInTheDocument();
-    expect(screen.getByText(/TA/i)).toBeInTheDocument();
+    expect(screen.getByText("en")).toBeInTheDocument();
+    expect(screen.getByText("si")).toBeInTheDocument();
+    expect(screen.getByText("ta")).toBeInTheDocument();
   });
 
   it("EC5: only shows language badges for available languages", () => {
     render(<DocumentCard doc={makeDoc({ languages: ["en"] })} mediaBase={MEDIA_BASE} onOpen={vi.fn()} />);
-    expect(screen.getByText(/EN/i)).toBeInTheDocument();
-    expect(screen.queryByText(/SI/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/TA/i)).not.toBeInTheDocument();
+    expect(screen.getByText("en")).toBeInTheDocument();
+    expect(screen.queryByText("si")).not.toBeInTheDocument();
+    expect(screen.queryByText("ta")).not.toBeInTheDocument();
   });
 
   it("AC1: shows placeholder when coverImageKey is null", () => {
@@ -105,91 +99,6 @@ describe("DocumentCard", () => {
     render(<DocumentCard doc={makeDoc()} mediaBase={MEDIA_BASE} onOpen={onOpen} />);
     await userEvent.click(screen.getByRole("article"));
     expect(onOpen).toHaveBeenCalledWith("fire-safety-checklist");
-  });
-});
-
-// ─── DocumentFilters ──────────────────────────────────────────────────────────
-
-describe("DocumentFilters", () => {
-  beforeEach(() => {
-    mockReplace.mockReset();
-    mockSearchParams.get.mockReturnValue(null);
-  });
-
-  it("AC2: renders category selector and type selector", () => {
-    render(<DocumentFilters categories={CATEGORIES} />);
-    expect(screen.getByRole("combobox", { name: /category/i })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: /type/i })).toBeInTheDocument();
-  });
-
-  it("AC2: selecting a category appends category param to URL", async () => {
-    render(<DocumentFilters categories={CATEGORIES} />);
-    const catSelect = screen.getByRole("combobox", { name: /category/i });
-    await userEvent.selectOptions(catSelect, "cat-1");
-    expect(mockReplace).toHaveBeenCalledWith(expect.stringContaining("category=cat-1"));
-  });
-
-  it("AC2: selecting a type appends type param to URL", async () => {
-    render(<DocumentFilters categories={CATEGORIES} />);
-    const typeSelect = screen.getByRole("combobox", { name: /type/i });
-    await userEvent.selectOptions(typeSelect, "checklist");
-    expect(mockReplace).toHaveBeenCalledWith(expect.stringContaining("type=checklist"));
-  });
-
-  it("AC2: clear filters button removes all query params", async () => {
-    mockSearchParams.get.mockImplementation((k: string) =>
-      k === "category" ? "cat-1" : k === "type" ? "checklist" : null
-    );
-    render(<DocumentFilters categories={CATEGORIES} />);
-    await userEvent.click(screen.getByRole("button", { name: /clear/i }));
-    const call = mockReplace.mock.calls[0][0] as string;
-    expect(call).not.toContain("category=");
-    expect(call).not.toContain("type=");
-  });
-
-  it("EC3: clear filters button not shown when no filters active", () => {
-    render(<DocumentFilters categories={CATEGORIES} />);
-    expect(screen.queryByRole("button", { name: /clear/i })).not.toBeInTheDocument();
-  });
-
-  it("AC3: search input submits to /search?scope=documents&q=...", async () => {
-    render(<DocumentFilters categories={CATEGORIES} />);
-    const input = screen.getByRole("searchbox");
-    await userEvent.type(input, "fire drill");
-    await userEvent.click(screen.getByRole("button", { name: /search/i }));
-    expect(mockReplace).toHaveBeenCalledWith(
-      expect.stringContaining("/search?scope=documents&q=fire+drill")
-    );
-  });
-
-  it("AC3: empty search query does not navigate", async () => {
-    render(<DocumentFilters categories={CATEGORIES} />);
-    await userEvent.click(screen.getByRole("button", { name: /search/i }));
-    expect(mockReplace).not.toHaveBeenCalled();
-  });
-
-  it("AC2: selecting a category preserves an existing type param", async () => {
-    mockSearchParams.get.mockImplementation((k: string) =>
-      k === "type" ? "checklist" : null
-    );
-    render(<DocumentFilters categories={CATEGORIES} />);
-    const catSelect = screen.getByRole("combobox", { name: /category/i });
-    await userEvent.selectOptions(catSelect, "cat-1");
-    const url = mockReplace.mock.calls[0][0] as string;
-    expect(url).toContain("category=cat-1");
-    expect(url).toContain("type=checklist");
-  });
-
-  it("AC2: selecting a type preserves an existing category param", async () => {
-    mockSearchParams.get.mockImplementation((k: string) =>
-      k === "category" ? "cat-2" : null
-    );
-    render(<DocumentFilters categories={CATEGORIES} />);
-    const typeSelect = screen.getByRole("combobox", { name: /type/i });
-    await userEvent.selectOptions(typeSelect, "safety_sign");
-    const url = mockReplace.mock.calls[0][0] as string;
-    expect(url).toContain("type=safety_sign");
-    expect(url).toContain("category=cat-2");
   });
 });
 
@@ -240,6 +149,7 @@ describe("DocumentsPageClient", () => {
         docs={filteredDocs}
         mediaBase={MEDIA_BASE}
         allSlugs={["fire-safety-checklist", "fire-safety-sign"]}
+        allCategories={[]}
       />
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); // dialog is in DocumentModal
@@ -254,6 +164,7 @@ describe("DocumentsPageClient", () => {
         docs={[makeDoc()]}
         mediaBase={MEDIA_BASE}
         allSlugs={["fire-safety-checklist"]}
+        allCategories={[]}
       />
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -270,6 +181,7 @@ describe("DocumentsPageClient", () => {
         docs={[makeDoc()]}
         mediaBase={MEDIA_BASE}
         allSlugs={["fire-safety-checklist"]}
+        allCategories={[]}
       />
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); // dialog is in DocumentModal
@@ -283,7 +195,7 @@ describe("DocumentsPageClient", () => {
     // Start with modal closed
     mockSearchParams.get.mockReturnValue(null);
     const { rerender } = render(
-      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} />
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} allCategories={[]} />
     );
     expect(scrollTo).not.toHaveBeenCalled();
 
@@ -292,13 +204,13 @@ describe("DocumentsPageClient", () => {
       k === "document" ? "fire-safety-checklist" : null
     );
     rerender(
-      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} />
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} allCategories={[]} />
     );
 
     // Modal closes (URL loses ?document=) — useEffect calls scrollTo
     mockSearchParams.get.mockReturnValue(null);
     rerender(
-      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} />
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} allCategories={[]} />
     );
     expect(scrollTo).toHaveBeenCalledWith({ top: 500 });
   });

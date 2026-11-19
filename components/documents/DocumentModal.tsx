@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { formatPrice } from "@/lib/utils/price";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { t } from "@/messages/en";
 import { addToCart } from "@/app/actions/cart";
@@ -15,13 +16,6 @@ type CartStatus =
   | { type: "toast"; message: string }
   | { type: "inline_error"; message: string };
 
-function formatPrice(cents: number): string {
-  return (cents / 100).toLocaleString("en-LK", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
 export default function DocumentModal() {
   const router = useRouter();
   const pathname = usePathname();
@@ -32,7 +26,6 @@ export default function DocumentModal() {
   const [loading, setLoading] = useState(false);
   const [selectedLang, setSelectedLang] = useState<DocumentLanguage | null>(null);
   const [status, setStatus] = useState<CartStatus>({ type: "idle" });
-  const backdropRef = useRef<HTMLDivElement>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Clear any pending toast timer on unmount to prevent stale setStatus calls
@@ -75,23 +68,23 @@ export default function DocumentModal() {
 
   // Escape key closes modal
   useEffect(() => {
-    if (!doc) return;
+    if (!slug) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") closeModal();
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [doc, closeModal]);
+  }, [slug, closeModal]);
 
   // Scroll lock while open — uses a CSS class so concurrent overlays don't
   // prematurely restore scroll when one unmounts while another is still open
   useEffect(() => {
-    if (!doc) return;
+    if (!slug) return;
     document.body.classList.add("overflow-hidden");
     return () => {
       document.body.classList.remove("overflow-hidden");
     };
-  }, [doc]);
+  }, [slug]);
 
   // Clear toast after 3s
   function showToast(message: string) {
@@ -198,7 +191,6 @@ export default function DocumentModal() {
     >
       {/* Backdrop */}
       <div
-        ref={backdropRef}
         className="absolute inset-0 bg-black/60"
         onClick={closeModal}
         aria-hidden="true"

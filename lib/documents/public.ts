@@ -190,6 +190,48 @@ export async function listPublicDocuments(
 }
 
 // ---------------------------------------------------------------------------
+// listAllDocumentSlugsAndCategories — lightweight fetch for the slug guard
+// and category sidebar (no pagination). Only reads slug, category_id, name.
+// ---------------------------------------------------------------------------
+
+export interface SlugAndCategory {
+  slug: string;
+  categoryId: string;
+  categoryName: string | null;
+}
+
+async function queryAllDocumentSlugsAndCategories(): Promise<SlugAndCategory[]> {
+  const supabase = createSupabaseAnonClient();
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("documents")
+    .select("slug, category_id, categories(name)")
+    .eq("status", "published")
+    .lte("published_at", now)
+    .is("deleted_at", null)
+    .order("published_at", { ascending: false })
+    .limit(10000);
+
+  if (error || !data) return [];
+
+  return (data as { slug: string; category_id: string; categories: { name: string | null } | null }[]).map((row) => ({
+    slug: row.slug,
+    categoryId: row.category_id,
+    categoryName: row.categories?.name ?? null,
+  }));
+}
+
+export async function listAllDocumentSlugsAndCategories(): Promise<SlugAndCategory[]> {
+  const cached = unstable_cache(
+    queryAllDocumentSlugsAndCategories,
+    ["docs-all-slugs-categories"],
+    { revalidate: LIST_CACHE_SECONDS, tags: [DOCUMENTS_LIST_TAG] }
+  );
+  return cached();
+}
+
+// ---------------------------------------------------------------------------
 // getPublicDocument — by slug, used server-side by the page (AC3, EC1, EC5)
 // ---------------------------------------------------------------------------
 
