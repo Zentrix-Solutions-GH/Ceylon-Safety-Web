@@ -209,25 +209,6 @@ export function DocumentSidebar({ categories, onSortChange }: DocumentSidebarPro
 
       <div className="mb-4 border-t border-gray-100" />
 
-      {/* Price tier (UI only) */}
-      <div className="mb-4">
-        <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-gray-500">
-          {t("documents.filter.price_tier.label")}
-        </div>
-        <div className="flex justify-between text-[10px] text-gray-500">
-          <span>{t("documents.filter.price_tier.free")}</span>
-          <span>Rs. 10,000</span>
-        </div>
-        <input
-          type="range"
-          min={0}
-          max={10000}
-          defaultValue={10000}
-          className="mt-1 w-full accent-red-600"
-          aria-label="Maximum price"
-        />
-      </div>
-
       {/* Reset Filters */}
       <button
         type="button"

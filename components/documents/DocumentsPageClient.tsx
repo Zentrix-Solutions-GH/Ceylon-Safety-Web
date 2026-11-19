@@ -8,6 +8,65 @@ import { t } from "@/messages/en";
 import { formatPrice } from "@/lib/utils/price";
 import type { PublicDocumentCard, DocumentCategory } from "@/types/document";
 
+const LIST_PLACEHOLDER = "/images/document-placeholder.jpg";
+
+function DocListRow({
+  doc,
+  mediaBase,
+  onOpen,
+}: {
+  doc: PublicDocumentCard;
+  mediaBase: string;
+  onOpen: (slug: string) => void;
+}) {
+  const [imgSrc, setImgSrc] = useState(
+    doc.coverImageKey ? `${mediaBase}/${doc.coverImageKey}` : LIST_PLACEHOLDER
+  );
+  const isFree = doc.priceCents === 0;
+  const price = formatPrice(doc.priceCents);
+  return (
+    <div
+      key={doc.slug}
+      className="flex cursor-pointer gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+      onClick={() => onOpen(doc.slug)}
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter") onOpen(doc.slug); }}
+    >
+      <div className="h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imgSrc}
+          alt={doc.title}
+          className="h-full w-full object-cover"
+          onError={() => setImgSrc(LIST_PLACEHOLDER)}
+        />
+      </div>
+      <div className="min-w-0 flex-1">
+        {doc.categoryName && (
+          <span className="text-[10px] font-bold uppercase tracking-widest text-red-600">{doc.categoryName}</span>
+        )}
+        <h3 className="mt-0.5 line-clamp-1 text-sm font-bold text-gray-900">{doc.title}</h3>
+        <div className="mt-1 flex flex-wrap gap-3 text-[11px] text-gray-500">
+          {doc.pageCount != null && <span>{t("documents.card.pages", { n: String(doc.pageCount) })}</span>}
+          <span>{t("documents.card.downloads", { n: String(doc.downloadCount) })}</span>
+        </div>
+      </div>
+      <div className="flex shrink-0 flex-col items-end justify-between">
+        <span className={`text-sm font-extrabold ${isFree ? "text-green-600" : "text-gray-900"}`}>
+          {isFree ? t("documents.card.free") : `Rs. ${price}`}
+        </span>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOpen(doc.slug); }}
+          className="rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700"
+        >
+          {isFree ? t("documents.card.get_free") : t("documents.card.add_to_cart")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface DocumentsPageClientProps {
   docs: PublicDocumentCard[];
   mediaBase: string;
@@ -219,51 +278,9 @@ export function DocumentsPageClient({
         <DocumentGrid docs={docs} mediaBase={mediaBase} onOpen={onOpen} isFiltered={isFiltered} />
       ) : (
         <div className="space-y-3">
-          {docs.map((doc) => {
-            const isFree = doc.priceCents === 0;
-            const price = formatPrice(doc.priceCents);
-            return (
-              <div
-                key={doc.slug}
-                className="flex cursor-pointer gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
-                onClick={() => onOpen(doc.slug)}
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter") onOpen(doc.slug); }}
-              >
-                <div className="h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={doc.coverImageKey ? `${mediaBase}/${doc.coverImageKey}` : "/images/document-placeholder.jpg"}
-                    alt={doc.title}
-                    className="h-full w-full object-cover"
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/images/document-placeholder.jpg"; }}
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  {doc.categoryName && (
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-red-600">{doc.categoryName}</span>
-                  )}
-                  <h3 className="mt-0.5 line-clamp-1 text-sm font-bold text-gray-900">{doc.title}</h3>
-                  <div className="mt-1 flex flex-wrap gap-3 text-[11px] text-gray-500">
-                    {doc.pageCount != null && <span>{t("documents.card.pages", { n: String(doc.pageCount) })}</span>}
-                    <span>{t("documents.card.downloads", { n: String(doc.downloadCount) })}</span>
-                  </div>
-                </div>
-                <div className="flex shrink-0 flex-col items-end justify-between">
-                  <span className={`text-sm font-extrabold ${isFree ? "text-green-600" : "text-gray-900"}`}>
-                    {isFree ? t("documents.card.free") : `Rs. ${price}`}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); onOpen(doc.slug); }}
-                    className="rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700"
-                  >
-                    {isFree ? t("documents.card.get_free") : t("documents.card.add_to_cart")}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+          {docs.map((doc) => (
+            <DocListRow key={doc.slug} doc={doc} mediaBase={mediaBase} onOpen={onOpen} />
+          ))}
           {docs.length === 0 && (
             <p className="py-16 text-center text-sm text-gray-400">
               {isFiltered ? t("documents.empty.filtered") : t("documents.empty.all")}
