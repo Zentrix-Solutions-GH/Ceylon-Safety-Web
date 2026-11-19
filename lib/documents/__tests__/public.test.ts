@@ -29,14 +29,13 @@ vi.mock("next/cache", () => {
 });
 
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseAnonClient: vi.fn(),
   createSupabaseServiceRoleClient: vi.fn(),
 }));
 
-import { createSupabaseAnonClient } from "@/lib/supabase/server";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { listPublicDocuments, getPublicDocument } from "@/lib/documents/public";
 
-const mockAnonClient = vi.mocked(createSupabaseAnonClient);
+const mockAnonClient = vi.mocked(createSupabaseServiceRoleClient);
 
 // Build a thenable Supabase-like query chain where every method returns the
 // same proxy object. The chain is also a Promise (has .then) so await works.
