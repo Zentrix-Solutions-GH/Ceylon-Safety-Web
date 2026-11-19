@@ -1,6 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { serverConfig } from "@/lib/config";
 import { FEED_TAG, HOME_FIRST_PAGE_TAG } from "@/lib/cache/tags";
@@ -98,7 +98,7 @@ type GetFeedResult =
   | { ok: false; code: "validation_failed" | "unknown" };
 
 async function queryFeed(cursor?: string): Promise<GetFeedResult> {
-  const supabase = createSupabaseAnonClient();
+  const supabase = createSupabaseServiceRoleClient();
 
   const now = new Date().toISOString();
 
@@ -137,17 +137,30 @@ async function queryFeed(cursor?: string): Promise<GetFeedResult> {
   if (articleIds.length > 0) {
     const { data: articles } = await supabase
       .from("articles")
-      .select("id, slug, authors(display_name), categories(name)")
+      .select("id, slug, category_id, categories(name), author_id")
       .in("id", articleIds);
 
+    const authorIds = (articles ?? []).map((a) => a.author_id).filter(Boolean) as string[];
+    const authorMap: Record<string, string> = {};
+    if (authorIds.length > 0) {
+      const { data: authors } = await supabase
+        .from("authors")
+        .select("id, name")
+        .in("id", authorIds);
+      for (const au of authors ?? []) {
+        if (au.id) authorMap[au.id] = au.name ?? "";
+      }
+    }
+
     for (const a of articles ?? []) {
-      const authorName = Array.isArray(a.authors)
-        ? (a.authors[0] as { display_name: string } | undefined)?.display_name ?? null
-        : (a.authors as { display_name: string } | null)?.display_name ?? null;
       const categoryName = Array.isArray(a.categories)
         ? (a.categories[0] as { name: string } | undefined)?.name ?? null
         : (a.categories as { name: string } | null)?.name ?? null;
-      enrichMap[a.id] = { slug: a.slug ?? null, author_name: authorName, category_name: categoryName };
+      enrichMap[a.id] = {
+        slug: a.slug ?? null,
+        author_name: a.author_id ? (authorMap[a.author_id] ?? null) : null,
+        category_name: categoryName,
+      };
     }
   }
 

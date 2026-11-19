@@ -129,7 +129,10 @@ async function queryPublicDocuments(
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  const supabase = createSupabaseAnonClient();
+  // Service role used so the document_files join returns metadata rows.
+  // document_files has no anon RLS policy (file_key is never selected here).
+  // The published/deleted_at filters below replicate what anon RLS would enforce.
+  const supabase = createSupabaseServiceRoleClient();
   const now = new Date().toISOString();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -201,7 +204,7 @@ export interface SlugAndCategory {
 }
 
 async function queryAllDocumentSlugsAndCategories(): Promise<SlugAndCategory[]> {
-  const supabase = createSupabaseAnonClient();
+  const supabase = createSupabaseServiceRoleClient();
   const now = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -236,7 +239,7 @@ export async function listAllDocumentSlugsAndCategories(): Promise<SlugAndCatego
 // ---------------------------------------------------------------------------
 
 async function queryPublicDocument(slug: string): Promise<GetPublicDocumentResult> {
-  const supabase = createSupabaseAnonClient();
+  const supabase = createSupabaseServiceRoleClient();
   const now = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -379,7 +382,7 @@ export async function listDocumentPickerItems(
   const from = (page - 1) * PICKER_PAGE_SIZE;
   const to = from + PICKER_PAGE_SIZE;
 
-  const supabase = createSupabaseAnonClient();
+  const supabase = createSupabaseServiceRoleClient();
 
   const now = new Date().toISOString();
 

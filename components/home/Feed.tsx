@@ -16,14 +16,18 @@ interface FeedProps {
 function CardSkeleton() {
   return (
     <div
-      className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+      className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-md"
       aria-hidden="true"
     >
-      <div className="aspect-video bg-gray-200 animate-pulse motion-reduce:animate-none" />
-      <div className="flex flex-col gap-2 p-4">
-        <div className="h-3 w-1/3 rounded bg-gray-200 animate-pulse motion-reduce:animate-none" />
+      <div className="aspect-[16/9] w-full bg-gray-200 animate-pulse motion-reduce:animate-none" />
+      <div className="flex flex-col gap-3 p-5">
+        <div className="h-5 w-3/4 rounded bg-gray-200 animate-pulse motion-reduce:animate-none" />
         <div className="h-4 w-full rounded bg-gray-200 animate-pulse motion-reduce:animate-none" />
-        <div className="h-4 w-5/6 rounded bg-gray-200 animate-pulse motion-reduce:animate-none" />
+        <div className="h-4 w-2/3 rounded bg-gray-200 animate-pulse motion-reduce:animate-none" />
+        <div className="mt-2 flex items-center gap-2">
+          <div className="h-7 w-7 rounded-full bg-gray-200 animate-pulse motion-reduce:animate-none" />
+          <div className="h-3 w-24 rounded bg-gray-200 animate-pulse motion-reduce:animate-none" />
+        </div>
       </div>
     </div>
   );
@@ -45,6 +49,7 @@ function FeedCard({ item }: { item: FeedItem }) {
       publishedAt={item.publishedAt}
       likeCount={item.likeCount}
       commentCount={item.commentCount}
+      large
     />
   );
 }
@@ -113,7 +118,7 @@ export function Feed({ firstPage, autoLoadUntilPage }: FeedProps) {
 
   return (
     <section aria-label={t("home.feed_label")}>
-      <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
+      <ul className="grid gap-6" role="list">
         {items.map((item) => (
           <li key={item.id}>
             <FeedCard item={item} />

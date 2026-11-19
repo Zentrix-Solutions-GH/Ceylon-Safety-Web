@@ -6,9 +6,11 @@ import { Feed } from "@/components/home/Feed";
 import { Counters } from "@/components/home/Counters";
 import { HeroSection } from "@/components/home/HeroSection";
 import { SafetyDomains } from "@/components/home/SafetyDomains";
-import { PopularDocuments } from "@/components/home/PopularDocuments";
+import { PopularDocumentsGrid } from "@/components/home/PopularDocuments";
+import { listPublicDocuments } from "@/lib/documents/public";
 import { TrainerCTA } from "@/components/home/TrainerCTA";
 import { VideoModalLoader } from "@/components/videos/VideoModalLoader";
+import { SideAdColumn } from "@/components/ads/SideAdColumn";
 import { publicConfig } from "@/lib/config.public";
 import { t } from "@/messages/en";
 
@@ -22,9 +24,10 @@ export const metadata: Metadata = {
 const AUTO_LOAD_UNTIL_PAGE = 3;
 
 export default async function HomePage() {
-  const [feedResult, counters] = await Promise.all([
+  const [feedResult, counters, docsResult] = await Promise.all([
     getFeed().catch((err) => { console.error("[HomePage] feed error", err); return { ok: false as const, page: undefined }; }),
     getCounters().catch((err) => { console.error("[HomePage] counters error", err); return { articles: null, documents: null, users: null, downloads: null }; }),
+    listPublicDocuments({ sort: "popular", page: 1 }).catch(() => ({ ok: false as const, code: "unknown" as const, reason: "fetch failed" })),
   ]);
 
   const firstPage = feedResult.ok
@@ -36,21 +39,40 @@ export default async function HomePage() {
       <HeroSection />
       {/* pt-8 compensates for the search bar that overflows the hero by ~50% of its height */}
       <div className="pt-8">
-        <PopularDocuments />
+        {docsResult.ok && docsResult.data.documents.length > 0 && (
+          <PopularDocumentsGrid docs={docsResult.data.documents.slice(0, 4)} />
+        )}
         <SafetyDomains />
       </div>
 
-      {/* Latest Today */}
+      {/* Latest Today — 3-column layout: left ad | feed | right ad (lg+) */}
       <div className="bg-white py-10">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">{t("home.latest.heading")}</h2>
-              <p className="text-sm text-gray-500 mt-0.5">{t("home.latest.description")}</p>
+        <div className="mx-auto max-w-screen-2xl px-4">
+          <div className="flex items-start justify-center gap-6">
+
+            {/* Left ad column — hidden below lg */}
+            <aside className="hidden lg:block w-[160px] shrink-0" aria-label="Advertisement">
+              <SideAdColumn side="left" />
+            </aside>
+
+            {/* Main content */}
+            <div className="min-w-0 w-full max-w-3xl">
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">{t("home.latest.heading")}</h2>
+                  <p className="text-sm text-gray-500 mt-0.5">{t("home.latest.description")}</p>
+                </div>
+                <Counters data={counters} />
+              </div>
+              <Feed firstPage={firstPage} autoLoadUntilPage={AUTO_LOAD_UNTIL_PAGE} />
             </div>
-            <Counters data={counters} />
+
+            {/* Right ad column — hidden below lg */}
+            <aside className="hidden lg:block w-[160px] shrink-0" aria-label="Advertisement">
+              <SideAdColumn side="right" />
+            </aside>
+
           </div>
-          <Feed firstPage={firstPage} autoLoadUntilPage={AUTO_LOAD_UNTIL_PAGE} />
         </div>
       </div>
 
