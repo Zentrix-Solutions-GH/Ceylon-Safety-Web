@@ -163,9 +163,9 @@ export default function DocumentModal() {
         aria-label={t("document_modal.loading")}
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
+        {/* Backdrop — intentionally no onClick: modal closes only via the X button */}
         <div
           className="absolute inset-0 bg-black/60"
-          onClick={closeModal}
           aria-hidden="true"
           data-testid="modal-backdrop"
         />

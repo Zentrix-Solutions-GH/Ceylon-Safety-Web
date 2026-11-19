@@ -452,6 +452,22 @@ describe("document stats and kind badge", () => {
   });
 });
 
+// --- AC6 (skeleton): loading skeleton backdrop does not close modal ---
+describe("AC6 (skeleton): backdrop click during loading does not close", () => {
+  it("does NOT close modal on backdrop click while document is loading", async () => {
+    withSlug("safety-checklist");
+    // Keep the fetch in-flight so the loading skeleton stays visible
+    mockGetPublicDocument.mockReturnValueOnce(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<DocumentModal />);
+    // Skeleton dialog should be present
+    await screen.findByRole("dialog");
+    const backdrop = screen.getByTestId("modal-backdrop");
+    await user.click(backdrop);
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+});
+
 // --- EC5: Mobile layout ---
 describe("EC5: mobile layout classes", () => {
   it("modal panel has overflow-y-auto and max-h-[90vh] for mobile scroll", async () => {
