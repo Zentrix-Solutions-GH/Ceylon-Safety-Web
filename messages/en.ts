@@ -873,6 +873,7 @@ const en = {
   // --- LockedPreview (S-076) ---
   "locked_preview.alt": "Locked preview of {title}",
   "locked_preview.placeholder_alt": "No preview available",
+  "locked_preview.purchase_to_unlock": "Purchase to unlock",
 } as const;
 
 export type MessageKey = keyof typeof en;

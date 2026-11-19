@@ -198,105 +198,131 @@ export default function DocumentModal() {
       />
 
       {/* Panel */}
-      <div className="relative z-10 w-full max-w-lg overflow-y-auto rounded-2xl bg-background shadow-2xl max-h-[90vh]">
+      <div className="relative z-10 w-full max-w-2xl overflow-y-auto rounded-2xl bg-background shadow-2xl max-h-[90vh]">
         {/* Close button */}
         <button
           type="button"
           onClick={closeModal}
           aria-label={t("document_modal.close")}
-          className="absolute right-4 top-4 z-10 rounded-full p-1.5 text-muted-foreground hover:bg-muted"
+          className="absolute right-4 top-4 z-20 rounded-full p-1.5 text-muted-foreground hover:bg-muted transition-colors"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
-        <div className="p-6 space-y-4">
-          {/* Cover / locked preview */}
-          <LockedPreview coverImageKey={doc.coverImageKey} title={doc.title} />
+        <div className="grid grid-cols-1 md:grid-cols-5">
+          {/* Left: cover preview */}
+          <div className="md:col-span-2 p-5 pb-0 md:pb-5">
+            <LockedPreview coverImageKey={doc.coverImageKey} title={doc.title} />
 
-          {/* Title */}
-          <h2 className="text-xl font-semibold leading-snug">{doc.title}</h2>
+            {/* Doc stats */}
+            <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+              {doc.pageCount != null && (
+                <span className="flex items-center gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  {doc.pageCount} pages
+                </span>
+              )}
+              {doc.downloadCount > 0 && (
+                <span className="flex items-center gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  {doc.downloadCount.toLocaleString()} downloads
+                </span>
+              )}
+            </div>
+          </div>
 
-          {/* Category */}
-          {doc.categoryName && (
-            <span className="inline-block rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-              {doc.categoryName}
-            </span>
-          )}
+          {/* Right: details */}
+          <div className="md:col-span-3 p-5 md:pl-4 flex flex-col gap-3">
+            {/* Kind + category badges */}
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
+                {doc.docKind.replace("_", " ")}
+              </span>
+              {doc.categoryName && (
+                <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                  {doc.categoryName}
+                </span>
+              )}
+            </div>
 
-          {/* Price */}
-          <p className="text-2xl font-bold text-primary">
-            {t("document_modal.price", { price: formatPrice(doc.priceCents) })}
-          </p>
+            {/* Title */}
+            <h2 className="text-lg font-bold leading-snug">{doc.title}</h2>
 
-          {/* Description */}
-          {doc.description && (
-            <p className="text-sm text-muted-foreground leading-relaxed">{doc.description}</p>
-          )}
+            {/* Price */}
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-extrabold text-primary">
+                {t("document_modal.price", { price: formatPrice(doc.priceCents) })}
+              </span>
+            </div>
 
-          {/* Language picker */}
-          {hasNoLanguages ? (
-            <p className="text-sm text-destructive" aria-live="polite">
-              {t("document_modal.unavailable_message")}
-            </p>
-          ) : (
-            <LanguagePicker
-              availableLanguages={doc.languages}
-              selected={selectedLang}
-              onChange={setSelectedLang}
-              disabled={isLoading}
-            />
-          )}
+            {/* Description */}
+            {doc.description && (
+              <p className="text-sm text-muted-foreground leading-relaxed border-t pt-3">
+                {doc.description}
+              </p>
+            )}
 
-          {/* Inline error */}
-          {status.type === "inline_error" && (
-            <p className="text-sm text-destructive" role="alert">
-              {status.message}
-            </p>
-          )}
+            {/* Language picker */}
+            {hasNoLanguages ? (
+              <p className="text-sm text-destructive" aria-live="polite">
+                {t("document_modal.unavailable_message")}
+              </p>
+            ) : (
+              <div className="border-t pt-3">
+                <p className="mb-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("language_picker.label")}</p>
+                <LanguagePicker
+                  availableLanguages={doc.languages}
+                  selected={selectedLang}
+                  onChange={setSelectedLang}
+                  disabled={isLoading}
+                />
+              </div>
+            )}
 
-          {/* Toast */}
-          {status.type === "toast" && (
-            <p className="text-sm text-foreground" role="status" aria-live="polite">
-              {status.message}
-            </p>
-          )}
+            {/* Inline error */}
+            {status.type === "inline_error" && (
+              <p className="text-sm text-destructive" role="alert">{status.message}</p>
+            )}
 
-          {/* CTA buttons */}
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={isLoading || hasNoLanguages}
-              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isLoading
-                ? t("document_modal.adding")
-                : hasNoLanguages
-                  ? t("document_modal.unavailable_label")
-                  : t("document_modal.add_to_cart")}
-            </button>
-            <button
-              type="button"
-              onClick={handleBuyNow}
-              disabled={isLoading || hasNoLanguages}
-              className="flex-1 rounded-lg border border-primary px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isLoading ? t("document_modal.buying") : t("document_modal.buy_now")}
-            </button>
+            {/* Toast */}
+            {status.type === "toast" && (
+              <p className="text-sm text-foreground" role="status" aria-live="polite">{status.message}</p>
+            )}
+
+            {/* CTA buttons */}
+            <div className="mt-auto flex flex-col gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={isLoading || hasNoLanguages}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+              >
+                {!isLoading && (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                )}
+                {isLoading
+                  ? t("document_modal.adding")
+                  : hasNoLanguages
+                    ? t("document_modal.unavailable_label")
+                    : t("document_modal.add_to_cart")}
+              </button>
+              <button
+                type="button"
+                onClick={handleBuyNow}
+                disabled={isLoading || hasNoLanguages}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-primary px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+              >
+                {isLoading ? t("document_modal.buying") : t("document_modal.buy_now")}
+              </button>
+            </div>
           </div>
         </div>
       </div>
