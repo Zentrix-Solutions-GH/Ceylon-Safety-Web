@@ -372,6 +372,82 @@ describe("EC4: only one modal shown at a time", () => {
   });
 });
 
+// --- docKind badge, page count, download count stats ---
+describe("document stats and kind badge", () => {
+  beforeEach(() => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({ ok: true, document: DOC });
+  });
+
+  it("shows the docKind label from messages", async () => {
+    render(<DocumentModal />);
+    await screen.findByText("Checklist");
+  });
+
+  it("shows page count stat when pageCount > 0", async () => {
+    render(<DocumentModal />);
+    await screen.findByText(/12 pages/i);
+  });
+
+  it("hides page count stat when pageCount is null", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({
+      ok: true,
+      document: { ...DOC, pageCount: null },
+    });
+    render(<DocumentModal />);
+    await screen.findByText("Safety Checklist");
+    expect(screen.queryByText(/pages/i)).toBeNull();
+  });
+
+  it("hides page count stat when pageCount is 0", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({
+      ok: true,
+      document: { ...DOC, pageCount: 0 },
+    });
+    render(<DocumentModal />);
+    await screen.findByText("Safety Checklist");
+    expect(screen.queryByText(/pages/i)).toBeNull();
+  });
+
+  it("shows download count stat when downloadCount > 0", async () => {
+    render(<DocumentModal />);
+    await screen.findByText(/42 downloads/i);
+  });
+
+  it("hides download count stat when downloadCount is 0", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({
+      ok: true,
+      document: { ...DOC, downloadCount: 0 },
+    });
+    render(<DocumentModal />);
+    await screen.findByText("Safety Checklist");
+    expect(screen.queryByText(/downloads/i)).toBeNull();
+  });
+
+  it("shows correct kind label for safety_sign", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({
+      ok: true,
+      document: { ...DOC, docKind: "safety_sign" },
+    });
+    render(<DocumentModal />);
+    await screen.findByText("Safety Sign");
+  });
+
+  it("shows correct kind label for toolbox_talk", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({
+      ok: true,
+      document: { ...DOC, docKind: "toolbox_talk" },
+    });
+    render(<DocumentModal />);
+    await screen.findByText("Toolbox Talk");
+  });
+});
+
 // --- EC5: Mobile layout ---
 describe("EC5: mobile layout classes", () => {
   it("modal panel has overflow-y-auto and max-h-[90vh] for mobile scroll", async () => {

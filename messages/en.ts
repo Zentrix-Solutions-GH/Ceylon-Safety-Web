@@ -863,6 +863,11 @@ const en = {
   "document_modal.toast.already_in_cart": "Already in your cart",
   "document_modal.toast.cart_full": "Your cart is full (50 items max)",
   "document_modal.toast.unavailable": "This document is no longer available",
+  "document_modal.stat.pages": "{count} pages",
+  "document_modal.stat.downloads": "{count} downloads",
+  "document_modal.kind.checklist": "Checklist",
+  "document_modal.kind.safety_sign": "Safety Sign",
+  "document_modal.kind.toolbox_talk": "Toolbox Talk",
 
   // --- LanguagePicker (S-076) ---
   "language_picker.label": "Choose language",

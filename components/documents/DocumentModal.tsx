@@ -8,7 +8,14 @@ import { addToCart } from "@/app/actions/cart";
 import { getPublicDocument } from "@/app/actions/getDocument";
 import LockedPreview from "@/components/documents/LockedPreview";
 import LanguagePicker from "@/components/documents/LanguagePicker";
-import type { PublicDocument, DocumentLanguage } from "@/types/document";
+import type { PublicDocument, DocumentLanguage, DocKind } from "@/types/document";
+import type { MessageKey } from "@/messages/en";
+
+const DOC_KIND_LABEL: Record<DocKind, MessageKey> = {
+  checklist: "document_modal.kind.checklist",
+  safety_sign: "document_modal.kind.safety_sign",
+  toolbox_talk: "document_modal.kind.toolbox_talk",
+};
 
 type CartStatus =
   | { type: "idle" }
@@ -170,7 +177,7 @@ export default function DocumentModal() {
           aria-hidden="true"
           data-testid="modal-backdrop"
         />
-        <div className="relative z-10 w-full max-w-lg rounded-2xl bg-background shadow-2xl p-6 flex items-center justify-center min-h-[200px]">
+        <div className="relative z-10 w-full max-w-2xl rounded-2xl bg-background shadow-2xl p-6 flex items-center justify-center min-h-[200px]">
           <span className="text-sm text-muted-foreground">{t("document_modal.loading")}</span>
         </div>
       </div>
@@ -218,12 +225,12 @@ export default function DocumentModal() {
 
             {/* Doc stats */}
             <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-              {doc.pageCount != null && (
+              {doc.pageCount != null && doc.pageCount > 0 && (
                 <span className="flex items-center gap-1">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  {doc.pageCount} pages
+                  {t("document_modal.stat.pages", { count: String(doc.pageCount) })}
                 </span>
               )}
               {doc.downloadCount > 0 && (
@@ -231,7 +238,7 @@ export default function DocumentModal() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  {doc.downloadCount.toLocaleString()} downloads
+                  {t("document_modal.stat.downloads", { count: doc.downloadCount.toLocaleString() })}
                 </span>
               )}
             </div>
@@ -241,8 +248,8 @@ export default function DocumentModal() {
           <div className="md:col-span-3 p-5 md:pl-4 flex flex-col gap-3">
             {/* Kind + category badges */}
             <div className="flex flex-wrap gap-2">
-              <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
-                {doc.docKind.replace("_", " ")}
+              <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                {t(DOC_KIND_LABEL[doc.docKind])}
               </span>
               {doc.categoryName && (
                 <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
@@ -255,11 +262,9 @@ export default function DocumentModal() {
             <h2 className="text-lg font-bold leading-snug">{doc.title}</h2>
 
             {/* Price */}
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold text-primary">
-                {t("document_modal.price", { price: formatPrice(doc.priceCents) })}
-              </span>
-            </div>
+            <p className="text-3xl font-extrabold text-primary">
+              {t("document_modal.price", { price: formatPrice(doc.priceCents) })}
+            </p>
 
             {/* Description */}
             {doc.description && (
