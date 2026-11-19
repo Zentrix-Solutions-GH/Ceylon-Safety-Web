@@ -73,15 +73,7 @@ export default function DocumentModal() {
     };
   }, [slug]);
 
-  // Escape key closes modal
-  useEffect(() => {
-    if (!slug) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") closeModal();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [slug, closeModal]);
+  // Escape key intentionally NOT wired: modal closes only via the X button
 
   // Scroll lock while open — uses a CSS class so concurrent overlays don't
   // prematurely restore scroll when one unmounts while another is still open
@@ -196,10 +188,9 @@ export default function DocumentModal() {
       aria-label={t("document_modal.aria_label", { title: doc.title })}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
-      {/* Backdrop */}
+      {/* Backdrop — intentionally no onClick: modal closes only via the X button */}
       <div
         className="absolute inset-0 bg-black/60"
-        onClick={closeModal}
         aria-hidden="true"
         data-testid="modal-backdrop"
       />
@@ -220,7 +211,7 @@ export default function DocumentModal() {
 
         <div className="grid grid-cols-1 md:grid-cols-5">
           {/* Left: cover preview */}
-          <div className="md:col-span-2 p-5 pb-0 md:pb-5">
+          <div className="md:col-span-2 px-5 pt-5 pb-0 md:pb-5">
             <LockedPreview coverImageKey={doc.coverImageKey} title={doc.title} />
 
             {/* Doc stats */}

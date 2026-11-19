@@ -325,16 +325,16 @@ describe("AC6: closing modal", () => {
     expect(mockReplace).toHaveBeenCalledWith("/documents", { scroll: false });
   });
 
-  it("closes modal on Escape key", async () => {
+  it("does NOT close modal on Escape key", async () => {
     withSlug("safety-checklist");
     mockGetPublicDocument.mockResolvedValue({ ok: true, document: DOC });
     render(<DocumentModal />);
     await screen.findByRole("dialog");
     fireEvent.keyDown(document, { key: "Escape" });
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/documents", { scroll: false }));
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it("closes modal on backdrop click", async () => {
+  it("does NOT close modal on backdrop click", async () => {
     withSlug("safety-checklist");
     mockGetPublicDocument.mockResolvedValue({ ok: true, document: DOC });
     const user = userEvent.setup();
@@ -342,7 +342,7 @@ describe("AC6: closing modal", () => {
     await screen.findByRole("dialog");
     const backdrop = screen.getByTestId("modal-backdrop");
     await user.click(backdrop);
-    expect(mockReplace).toHaveBeenCalledWith("/documents", { scroll: false });
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });
 
