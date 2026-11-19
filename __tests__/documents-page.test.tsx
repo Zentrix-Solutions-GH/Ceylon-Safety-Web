@@ -64,16 +64,16 @@ describe("DocumentCard", () => {
 
   it("AC1: renders language badges for each available language", () => {
     render(<DocumentCard doc={makeDoc({ languages: ["en", "si", "ta"] })} mediaBase={MEDIA_BASE} onOpen={vi.fn()} />);
-    expect(screen.getByText(/EN/i)).toBeInTheDocument();
-    expect(screen.getByText(/SI/i)).toBeInTheDocument();
-    expect(screen.getByText(/TA/i)).toBeInTheDocument();
+    expect(screen.getByText("en")).toBeInTheDocument();
+    expect(screen.getByText("si")).toBeInTheDocument();
+    expect(screen.getByText("ta")).toBeInTheDocument();
   });
 
   it("EC5: only shows language badges for available languages", () => {
     render(<DocumentCard doc={makeDoc({ languages: ["en"] })} mediaBase={MEDIA_BASE} onOpen={vi.fn()} />);
-    expect(screen.getByText(/EN/i)).toBeInTheDocument();
-    expect(screen.queryByText(/SI/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/TA/i)).not.toBeInTheDocument();
+    expect(screen.getByText("en")).toBeInTheDocument();
+    expect(screen.queryByText("si")).not.toBeInTheDocument();
+    expect(screen.queryByText("ta")).not.toBeInTheDocument();
   });
 
   it("AC1: shows placeholder when coverImageKey is null", () => {
