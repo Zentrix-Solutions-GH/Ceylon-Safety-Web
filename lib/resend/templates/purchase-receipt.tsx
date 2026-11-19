@@ -18,6 +18,8 @@ export interface ReceiptEmailData {
   pdfAttached?: boolean;
   /** Set when the invoice is not yet ready; shown as a link instead (EC4). */
   orderPageUrl?: string;
+  /** Set to true for bank_approved emails to show a "link works once" note. */
+  onceNote?: boolean;
 }
 
 function formatLkr(cents: number): string {
@@ -45,9 +47,18 @@ export function renderReceiptEmail(data: ReceiptEmailData): {
   html: string;
   text: string;
 } {
-  const { orderNumber, orderDate, items, totalCents, appUrl, supportEmail, refundPolicyUrl } = data;
+  const { orderNumber, orderDate, items, totalCents, appUrl, supportEmail, refundPolicyUrl, onceNote } = data;
   const dateStr = formatDate(orderDate);
   const totalStr = formatLkr(totalCents);
+
+  const onceNoteHtml = onceNote
+    ? `<p style="margin:16px 0 0;font-size:14px;color:#374151;background:#fff7ed;border-left:3px solid #E30613;padding:12px;">
+  Please note: each download link works once. Use it on the device you wish to save the file to.
+</p>`
+    : "";
+  const onceNoteText = onceNote
+    ? "\nNote: Each download link works once. Use it on the device you wish to save the file to.\n"
+    : "";
 
   const invoiceNote = data.pdfAttached
     ? "Your invoice is attached to this email."
@@ -121,6 +132,7 @@ export function renderReceiptEmail(data: ReceiptEmailData): {
               </table>
 
               <p style="margin:0 0 16px;font-size:14px;color:#374151;">${invoiceNote}</p>
+              ${onceNoteHtml}
 
               <p style="margin:0 0 8px;font-size:14px;color:#374151;">
                 Need help? Contact us at <a href="mailto:${supportEmail}" style="color:#E30613;">${supportEmail}</a>
@@ -154,8 +166,7 @@ ${itemRowsText}
 
 Total: LKR ${totalStr}
 
-${invoiceNoteText}
-
+${invoiceNoteText}${onceNoteText}
 Need help? ${supportEmail}
 Refund policy: ${refundPolicyUrl}
 

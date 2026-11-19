@@ -86,6 +86,14 @@ export async function resendMyReceiptLib(
     return { ok: false, error: "Could not fetch order items" };
   }
 
+  const missingEntitlement = (items as Array<{ entitlements: Array<{ id: string }> }>).some(
+    (item) => !item.entitlements?.[0]?.id,
+  );
+  if (missingEntitlement) {
+    console.error("resend_receipt: entitlement_missing", { order_id: orderId });
+    return { ok: false, error: "Entitlement missing for one or more items" };
+  }
+
   const appUrl = publicConfig.appUrl;
 
   const emailData = {

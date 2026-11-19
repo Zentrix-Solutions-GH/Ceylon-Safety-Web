@@ -97,6 +97,14 @@ export async function ensureReceiptEmail(
     return { ok: false };
   }
 
+  const missingEntitlement = (items as Array<{ entitlements: Array<{ id: string }> }>).some(
+    (item) => !item.entitlements?.[0]?.id,
+  );
+  if (missingEntitlement) {
+    console.error("receipt: entitlement_missing", { order_id: orderId });
+    return { ok: false };
+  }
+
   const appUrl = publicConfig.appUrl;
   const template = isBank ? "bank_approved" : "receipt";
 
