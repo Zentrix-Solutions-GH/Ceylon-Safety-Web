@@ -145,7 +145,11 @@ describe("AC1: modal shows required fields", () => {
 
   it("shows cover image", async () => {
     render(<DocumentModal />);
-    await waitFor(() => screen.getByRole("img", { name: /Safety Checklist/i }));
+    // Cover is blurred/decorative so alt=""; find by src URL instead
+    await waitFor(() => {
+      const imgs = document.querySelectorAll('img[src*="safety-checklist"]');
+      if (imgs.length === 0) throw new Error("cover image not found");
+    });
   });
 });
 
