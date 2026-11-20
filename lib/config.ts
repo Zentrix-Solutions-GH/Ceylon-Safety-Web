@@ -85,6 +85,8 @@ export const serverConfig = {
   emailFrom: vals["EMAIL_FROM"],
   ipHashSecret: vals["IP_HASH_SECRET"],
   videoPlaceholderKey: optional("VIDEO_PLACEHOLDER_KEY", "placeholders/video.jpg"),
+  supportEmail: optional("SUPPORT_EMAIL", "support@ceylonsafety.lk"),
+  emailDailyLimit: parseInt(optional("EMAIL_DAILY_LIMIT", "90"), 10),
   feedRateLimitPerMinute: parseInt(optional("FEED_RATE_LIMIT_PER_MINUTE", "60"), 10),
   countersRateLimitPerMinute: parseInt(optional("COUNTERS_RATE_LIMIT_PER_MINUTE", "60"), 10),
   documentsPageSize: parseInt(optional("DOCUMENTS_PAGE_SIZE", "12"), 10),

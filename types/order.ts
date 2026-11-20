@@ -77,3 +77,5 @@ export interface ReconcileResult {
   alertCount: number;
   orderNumbers: string[];
 }
+
+export type EmailTemplate = "receipt" | "receipt_resend" | "bank_approved";
