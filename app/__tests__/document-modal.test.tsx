@@ -145,7 +145,11 @@ describe("AC1: modal shows required fields", () => {
 
   it("shows cover image", async () => {
     render(<DocumentModal />);
-    await waitFor(() => screen.getByRole("img", { name: /Safety Checklist/i }));
+    // Cover is blurred/decorative so alt=""; find by src URL instead
+    await waitFor(() => {
+      const imgs = document.querySelectorAll('img[src*="safety-checklist"]');
+      if (imgs.length === 0) throw new Error("cover image not found");
+    });
   });
 });
 
@@ -246,6 +250,19 @@ describe("AC3: Add to Cart", () => {
     await user.click(screen.getByRole("button", { name: /add to cart/i }));
     await screen.findByText(/no longer available/i);
   });
+
+  it("redirects to /sign-in with next param when not signed in", async () => {
+    mockAddToCart.mockResolvedValueOnce({ ok: false, code: "not_signed_in" });
+    const user = userEvent.setup();
+    render(<DocumentModal />);
+    await screen.findByText("Safety Checklist");
+    await user.click(screen.getByRole("button", { name: /add to cart/i }));
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.stringContaining("/sign-in?next=")
+      )
+    );
+  });
 });
 
 // --- AC4: Buy Now ---
@@ -321,7 +338,7 @@ describe("AC6: closing modal", () => {
     expect(mockReplace).toHaveBeenCalledWith("/documents", { scroll: false });
   });
 
-  it("closes modal on Escape key", async () => {
+  it("closes modal on Escape key (WAI-ARIA dialog requirement)", async () => {
     withSlug("safety-checklist");
     mockGetPublicDocument.mockResolvedValue({ ok: true, document: DOC });
     render(<DocumentModal />);
@@ -330,7 +347,7 @@ describe("AC6: closing modal", () => {
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/documents", { scroll: false }));
   });
 
-  it("closes modal on backdrop click", async () => {
+  it("does NOT close modal on backdrop click", async () => {
     withSlug("safety-checklist");
     mockGetPublicDocument.mockResolvedValue({ ok: true, document: DOC });
     const user = userEvent.setup();
@@ -338,7 +355,7 @@ describe("AC6: closing modal", () => {
     await screen.findByRole("dialog");
     const backdrop = screen.getByTestId("modal-backdrop");
     await user.click(backdrop);
-    expect(mockReplace).toHaveBeenCalledWith("/documents", { scroll: false });
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });
 
@@ -369,6 +386,112 @@ describe("EC4: only one modal shown at a time", () => {
     await waitFor(() => screen.getByRole("dialog"));
     const dialogs = screen.getAllByRole("dialog");
     expect(dialogs.length).toBe(1);
+  });
+});
+
+// --- docKind badge, page count, download count stats ---
+describe("document stats and kind badge", () => {
+  beforeEach(() => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({ ok: true, document: DOC });
+  });
+
+  it("shows the docKind label from messages", async () => {
+    render(<DocumentModal />);
+    await screen.findByText("Checklist");
+  });
+
+  it("shows page count stat when pageCount > 0", async () => {
+    render(<DocumentModal />);
+    await screen.findByText(/12 pages/i);
+  });
+
+  it("hides page count stat when pageCount is null", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({
+      ok: true,
+      document: { ...DOC, pageCount: null },
+    });
+    render(<DocumentModal />);
+    await screen.findByText("Safety Checklist");
+    expect(screen.queryByText(/pages/i)).toBeNull();
+  });
+
+  it("hides page count stat when pageCount is 0", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({
+      ok: true,
+      document: { ...DOC, pageCount: 0 },
+    });
+    render(<DocumentModal />);
+    await screen.findByText("Safety Checklist");
+    expect(screen.queryByText(/pages/i)).toBeNull();
+  });
+
+  it("shows download count stat when downloadCount > 0", async () => {
+    render(<DocumentModal />);
+    await screen.findByText(/42 downloads/i);
+  });
+
+  it("hides download count stat when downloadCount is 0", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({
+      ok: true,
+      document: { ...DOC, downloadCount: 0 },
+    });
+    render(<DocumentModal />);
+    await screen.findByText("Safety Checklist");
+    expect(screen.queryByText(/downloads/i)).toBeNull();
+  });
+
+  it("shows correct kind label for safety_sign", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({
+      ok: true,
+      document: { ...DOC, docKind: "safety_sign" },
+    });
+    render(<DocumentModal />);
+    await screen.findByText("Safety Sign");
+  });
+
+  it("shows correct kind label for toolbox_talk", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockResolvedValue({
+      ok: true,
+      document: { ...DOC, docKind: "toolbox_talk" },
+    });
+    render(<DocumentModal />);
+    await screen.findByText("Toolbox Talk");
+  });
+});
+
+// --- AC6 (skeleton): loading skeleton backdrop does not close modal ---
+describe("AC6 (skeleton): backdrop click during loading does not close", () => {
+  it("does NOT close modal on backdrop click while document is loading", async () => {
+    withSlug("safety-checklist");
+    // Keep the fetch in-flight so the loading skeleton stays visible
+    mockGetPublicDocument.mockReturnValueOnce(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<DocumentModal />);
+    // Skeleton dialog should be present
+    await screen.findByRole("dialog");
+    const backdrop = screen.getByTestId("modal-backdrop");
+    await user.click(backdrop);
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+});
+
+// --- AC6 (skeleton): close button in loading skeleton ---
+describe("AC6 (skeleton): close button during loading", () => {
+  it("closes modal via X button while document is loading", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockReturnValueOnce(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<DocumentModal />);
+    await screen.findByRole("dialog");
+    const closeBtn = screen.getByRole("button", { name: /close/i });
+    await user.click(closeBtn);
+    expect(mockReplace).toHaveBeenCalledOnce();
   });
 });
 
@@ -445,5 +568,13 @@ describe("AC7: loading skeleton", () => {
     // Resolve — full modal replaces the skeleton
     resolve({ ok: true, document: DOC });
     await screen.findByText("Safety Checklist");
+  });
+
+  it("clears loading state and hides modal when getPublicDocument rejects", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockReturnValueOnce(Promise.reject(new Error("network error")));
+    render(<DocumentModal />);
+    // Modal disappears after the rejection resolves (loading→false, doc→null → returns null)
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });

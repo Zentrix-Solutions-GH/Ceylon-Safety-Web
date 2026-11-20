@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { listPublicDocuments, listAllDocumentSlugsAndCategories } from "@/lib/documents/public";
+import { listPublicDocuments, listDocumentCategories } from "@/lib/documents/public";
 import { publicConfig } from "@/lib/config.public";
 import { DocumentSidebar } from "@/components/documents/DocumentSidebar";
 import { DocumentsPageClient } from "@/components/documents/DocumentsPageClient";
@@ -8,7 +8,7 @@ import DocumentModal from "@/components/documents/DocumentModal";
 import { ArticlesHeroSlideshow } from "@/components/articles/ArticlesHeroSlideshow";
 import { HeroSearchForm } from "@/components/articles/HeroSearchForm";
 import { t } from "@/messages/en";
-import type { DocKind, DocumentCategory } from "@/types/document";
+import type { DocKind } from "@/types/document";
 
 interface DocumentsPageProps {
   searchParams: Promise<Record<string, string>>;
@@ -44,21 +44,13 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
   const sort = resolveSort(params.sort);
   const page = resolvePage(params.page);
 
-  const [result, allItems] = await Promise.all([
+  const [result, allCategories] = await Promise.all([
     listPublicDocuments({ category, type, sort, page }),
-    listAllDocumentSlugsAndCategories(),
+    listDocumentCategories(),
   ]);
   const docs = result.ok ? result.data.documents : [];
   const total = result.ok ? result.data.total : 0;
   const pageSize = result.ok ? result.data.pageSize : 12;
-  const allSlugs = allItems.map((d) => d.slug);
-  const fullMap = new Map<string, string>();
-  for (const item of allItems) {
-    if (item.categoryId && item.categoryName) {
-      fullMap.set(item.categoryId, item.categoryName);
-    }
-  }
-  const allCategories: DocumentCategory[] = Array.from(fullMap.entries()).map(([id, name]) => ({ id, name }));
 
   const mediaBase = publicConfig.mediaCdnUrl;
 
@@ -93,16 +85,17 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
 
           {/* Main content */}
           <div className="min-w-0 flex-1">
-            <DocumentsPageClient
-              docs={docs}
-              mediaBase={mediaBase}
-              allSlugs={allSlugs}
-              allCategories={allCategories}
-              total={total}
-              pageSize={pageSize}
-              currentPage={page}
-              sort={sort}
-            />
+            <Suspense fallback={<div className="animate-pulse rounded-lg bg-muted h-96 w-full" aria-hidden="true" />}>
+              <DocumentsPageClient
+                docs={docs}
+                mediaBase={mediaBase}
+                allCategories={allCategories}
+                total={total}
+                pageSize={pageSize}
+                currentPage={page}
+                sort={sort}
+              />
+            </Suspense>
           </div>
         </div>
       </div>

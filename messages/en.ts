@@ -828,6 +828,8 @@ const en = {
   "documents.view.list": "List view",
   "documents.filter.mobile_open": "Filters",
   "documents.filter.mobile_title": "Filters",
+  "documents.filter.chip.remove_category": "Remove {name} filter",
+  "documents.filter.chip.remove_type": "Remove type filter",
   "documents.modal.close": "Close document preview",
   "documents.modal.loading": "Loading document…",
   "documents.modal.label": "Document preview",
@@ -863,6 +865,11 @@ const en = {
   "document_modal.toast.already_in_cart": "Already in your cart",
   "document_modal.toast.cart_full": "Your cart is full (50 items max)",
   "document_modal.toast.unavailable": "This document is no longer available",
+  "document_modal.stat.pages": "{count} pages",
+  "document_modal.stat.downloads": "{count} downloads",
+  "document_modal.kind.checklist": "Checklist",
+  "document_modal.kind.safety_sign": "Safety Sign",
+  "document_modal.kind.toolbox_talk": "Toolbox Talk",
 
   // --- LanguagePicker (S-076) ---
   "language_picker.label": "Choose language",
@@ -873,6 +880,7 @@ const en = {
   // --- LockedPreview (S-076) ---
   "locked_preview.alt": "Locked preview of {title}",
   "locked_preview.placeholder_alt": "No preview available",
+  "locked_preview.purchase_to_unlock": "Purchase to unlock",
 } as const;
 
 export type MessageKey = keyof typeof en;

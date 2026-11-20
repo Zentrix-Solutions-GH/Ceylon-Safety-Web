@@ -5,8 +5,15 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { DocumentGrid } from "./DocumentGrid";
 import { DocumentSidebar } from "./DocumentSidebar";
 import { t } from "@/messages/en";
+import type { MessageKey } from "@/messages/en";
 import { formatPrice } from "@/lib/utils/price";
-import type { PublicDocumentCard, DocumentCategory } from "@/types/document";
+import type { PublicDocumentCard, DocumentCategory, DocKind } from "@/types/document";
+
+const DOC_KIND_LABEL: Record<DocKind, MessageKey> = {
+  checklist: "documents.filter.type.checklist",
+  safety_sign: "documents.filter.type.safety_sign",
+  toolbox_talk: "documents.filter.type.toolbox_talk",
+};
 
 const LIST_PLACEHOLDER = "/images/document-placeholder.jpg";
 
@@ -25,12 +32,9 @@ function DocListRow({
   const isFree = doc.priceCents === 0;
   const price = formatPrice(doc.priceCents);
   return (
-    <div
-      key={doc.slug}
+    <article
       className="flex cursor-pointer gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
       onClick={() => onOpen(doc.slug)}
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter") onOpen(doc.slug); }}
     >
       <div className="h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-gray-100">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -53,7 +57,7 @@ function DocListRow({
       </div>
       <div className="flex shrink-0 flex-col items-end justify-between">
         <span className={`text-sm font-extrabold ${isFree ? "text-green-600" : "text-gray-900"}`}>
-          {isFree ? t("documents.card.free") : `Rs. ${price}`}
+          {isFree ? t("documents.card.free") : t("documents.card.price", { price })}
         </span>
         <button
           type="button"
@@ -63,14 +67,13 @@ function DocListRow({
           {isFree ? t("documents.card.get_free") : t("documents.card.add_to_cart")}
         </button>
       </div>
-    </div>
+    </article>
   );
 }
 
 interface DocumentsPageClientProps {
   docs: PublicDocumentCard[];
   mediaBase: string;
-  allSlugs: string[];
   allCategories: DocumentCategory[];
   total?: number;
   pageSize?: number;
@@ -86,7 +89,6 @@ const SORT_OPTIONS: { value: "newest" | "popular"; label: string }[] = [
 export function DocumentsPageClient({
   docs,
   mediaBase,
-  allSlugs,
   allCategories,
   total = 0,
   pageSize = 12,
@@ -104,9 +106,8 @@ export function DocumentsPageClient({
   const currentCategory = searchParams.get("category") ?? "";
   const currentType = searchParams.get("type") ?? "";
   const isFiltered = Boolean(currentCategory || currentType);
-  const knownSlugs = new Set(allSlugs);
   const rawParam = searchParams.get("document");
-  const modalSlug = rawParam && knownSlugs.has(rawParam) ? rawParam : null;
+  const modalSlug = rawParam;
   const totalPages = Math.ceil(total / pageSize);
 
   // Showing X-Y of N
@@ -251,7 +252,7 @@ export function DocumentsPageClient({
                 type="button"
                 onClick={() => removeFilter("category")}
                 className="ml-0.5 rounded-full hover:text-red-900"
-                aria-label={`Remove ${activeCategoryName} filter`}
+                aria-label={t("documents.filter.chip.remove_category", { name: activeCategoryName ?? "" })}
               >
                 ✕
               </button>
@@ -259,12 +260,12 @@ export function DocumentsPageClient({
           )}
           {currentType && (
             <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
-              {currentType.replace("_", " ")}
+              {currentType in DOC_KIND_LABEL ? t(DOC_KIND_LABEL[currentType as DocKind]) : currentType}
               <button
                 type="button"
                 onClick={() => removeFilter("type")}
                 className="ml-0.5 rounded-full hover:text-red-900"
-                aria-label="Remove type filter"
+                aria-label={t("documents.filter.chip.remove_type")}
               >
                 ✕
               </button>

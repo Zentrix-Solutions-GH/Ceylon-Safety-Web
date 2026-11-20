@@ -136,10 +136,10 @@ describe("DocumentsPageClient", () => {
     mockSearchParams.get.mockReturnValue(null);
   });
 
-  it("EC2: DocumentsPageClient accepts a slug in allSlugs even when not in filtered docs (modal rendered by DocumentModal, not here)", () => {
-    // docs is filtered (only checklist); allSlugs includes a safety_sign slug.
+  it("EC2: DocumentsPageClient renders without error when ?document= param is not among current-page docs", () => {
+    // docs is filtered (only checklist); the URL has a safety_sign slug not in docs.
     // DocumentsPageClient no longer renders the dialog — DocumentModal (in page.tsx)
-    // does. This test confirms the component renders without error in this state.
+    // does. This confirms the component renders without error in this state.
     const filteredDocs = [makeDoc({ docKind: "checklist" })];
     mockSearchParams.get.mockImplementation((k: string) =>
       k === "document" ? "fire-safety-sign" : k === "type" ? "checklist" : null
@@ -148,14 +148,13 @@ describe("DocumentsPageClient", () => {
       <DocumentsPageClient
         docs={filteredDocs}
         mediaBase={MEDIA_BASE}
-        allSlugs={["fire-safety-checklist", "fire-safety-sign"]}
         allCategories={[]}
       />
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); // dialog is in DocumentModal
   });
 
-  it("EC2: modal does not open for a slug absent from allSlugs (deleted/unpublished)", () => {
+  it("EC2: DocumentsPageClient renders without error when ?document= slug is not in current-page docs", () => {
     mockSearchParams.get.mockImplementation((k: string) =>
       k === "document" ? "deleted-doc" : null
     );
@@ -163,7 +162,6 @@ describe("DocumentsPageClient", () => {
       <DocumentsPageClient
         docs={[makeDoc()]}
         mediaBase={MEDIA_BASE}
-        allSlugs={["fire-safety-checklist"]}
         allCategories={[]}
       />
     );
@@ -180,7 +178,6 @@ describe("DocumentsPageClient", () => {
       <DocumentsPageClient
         docs={[makeDoc()]}
         mediaBase={MEDIA_BASE}
-        allSlugs={["fire-safety-checklist"]}
         allCategories={[]}
       />
     );
@@ -195,7 +192,7 @@ describe("DocumentsPageClient", () => {
     // Start with modal closed
     mockSearchParams.get.mockReturnValue(null);
     const { rerender } = render(
-      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} allCategories={[]} />
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allCategories={[]} />
     );
     expect(scrollTo).not.toHaveBeenCalled();
 
@@ -204,14 +201,29 @@ describe("DocumentsPageClient", () => {
       k === "document" ? "fire-safety-checklist" : null
     );
     rerender(
-      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} allCategories={[]} />
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allCategories={[]} />
     );
 
     // Modal closes (URL loses ?document=) — useEffect calls scrollTo
     mockSearchParams.get.mockReturnValue(null);
     rerender(
-      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allSlugs={["fire-safety-checklist"]} allCategories={[]} />
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allCategories={[]} />
     );
     expect(scrollTo).toHaveBeenCalledWith({ top: 500 });
+  });
+
+  it("AC4: clicking list-row article body (outside button) calls onOpen", async () => {
+    mockSearchParams.get.mockReturnValue(null);
+    render(
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allCategories={[]} />
+    );
+    // Switch to list view
+    await userEvent.click(screen.getByRole("button", { name: "List view" }));
+    // Click the article body
+    await userEvent.click(screen.getByRole("article"));
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringContaining("document=fire-safety-checklist"),
+      expect.anything()
+    );
   });
 });
