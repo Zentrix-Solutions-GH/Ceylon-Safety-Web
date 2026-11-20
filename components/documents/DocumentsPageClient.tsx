@@ -34,7 +34,8 @@ function DocListRow({
   return (
     <article
       key={doc.slug}
-      className="flex gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+      className="flex cursor-pointer gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+      onClick={() => onOpen(doc.slug)}
     >
       <div className="h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-gray-100">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -61,7 +62,7 @@ function DocListRow({
         </span>
         <button
           type="button"
-          onClick={() => onOpen(doc.slug)}
+          onClick={(e) => { e.stopPropagation(); onOpen(doc.slug); }}
           className="rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700"
         >
           {isFree ? t("documents.card.get_free") : t("documents.card.add_to_cart")}

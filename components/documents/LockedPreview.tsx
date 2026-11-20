@@ -66,7 +66,7 @@ export default function LockedPreview({ coverImageKey, title }: Props) {
             src={publicUrl(coverImageKey)}
             alt=""
             fill
-            className="object-cover blur-2xl brightness-40 scale-110 select-none pointer-events-none"
+            className="object-cover blur-2xl brightness-50 scale-110 select-none pointer-events-none"
             sizes="560px"
             draggable={false}
           />
@@ -79,7 +79,7 @@ export default function LockedPreview({ coverImageKey, title }: Props) {
             src={publicUrl(coverImageKey)}
             alt=""
             fill
-            className="object-cover blur-sm brightness-60 scale-105 select-none pointer-events-none"
+            className="object-cover blur-sm brightness-75 scale-105 select-none pointer-events-none"
             sizes="(max-width: 768px) 100vw, 560px"
             draggable={false}
           />
