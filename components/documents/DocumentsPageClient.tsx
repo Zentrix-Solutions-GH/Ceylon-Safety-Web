@@ -28,9 +28,10 @@ function DocListRow({
     <div
       key={doc.slug}
       className="flex cursor-pointer gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+      role="button"
       onClick={() => onOpen(doc.slug)}
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter") onOpen(doc.slug); }}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpen(doc.slug); }}
     >
       <div className="h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-gray-100">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -53,7 +54,7 @@ function DocListRow({
       </div>
       <div className="flex shrink-0 flex-col items-end justify-between">
         <span className={`text-sm font-extrabold ${isFree ? "text-green-600" : "text-gray-900"}`}>
-          {isFree ? t("documents.card.free") : `Rs. ${price}`}
+          {isFree ? t("documents.card.free") : t("documents.card.price", { price })}
         </span>
         <button
           type="button"
@@ -249,7 +250,7 @@ export function DocumentsPageClient({
                 type="button"
                 onClick={() => removeFilter("category")}
                 className="ml-0.5 rounded-full hover:text-red-900"
-                aria-label={`Remove ${activeCategoryName} filter`}
+                aria-label={t("documents.filter.chip.remove_category", { name: activeCategoryName ?? "" })}
               >
                 ✕
               </button>
@@ -262,7 +263,7 @@ export function DocumentsPageClient({
                 type="button"
                 onClick={() => removeFilter("type")}
                 className="ml-0.5 rounded-full hover:text-red-900"
-                aria-label="Remove type filter"
+                aria-label={t("documents.filter.chip.remove_type")}
               >
                 ✕
               </button>

@@ -828,6 +828,8 @@ const en = {
   "documents.view.list": "List view",
   "documents.filter.mobile_open": "Filters",
   "documents.filter.mobile_title": "Filters",
+  "documents.filter.chip.remove_category": "Remove {name} filter",
+  "documents.filter.chip.remove_type": "Remove type filter",
   "documents.modal.close": "Close document preview",
   "documents.modal.loading": "Loading document…",
   "documents.modal.label": "Document preview",
