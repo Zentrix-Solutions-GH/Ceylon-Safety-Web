@@ -58,16 +58,22 @@ export default function DocumentModal() {
     }
     let cancelled = false;
     setLoading(true);
-    getPublicDocument(slug).then((result) => {
-      if (cancelled) return;
-      setLoading(false);
-      if (result.ok) {
-        setDoc(result.document);
-        setSelectedLang(result.document.languages[0] ?? null);
-      } else {
+    getPublicDocument(slug)
+      .then((result) => {
+        if (cancelled) return;
+        setLoading(false);
+        if (result.ok) {
+          setDoc(result.document);
+          setSelectedLang(result.document.languages[0] ?? null);
+        } else {
+          setDoc(null);
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoading(false);
         setDoc(null);
-      }
-    });
+      });
     return () => {
       cancelled = true;
     };

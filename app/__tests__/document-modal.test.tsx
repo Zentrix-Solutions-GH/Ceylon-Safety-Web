@@ -542,4 +542,12 @@ describe("AC7: loading skeleton", () => {
     resolve({ ok: true, document: DOC });
     await screen.findByText("Safety Checklist");
   });
+
+  it("clears loading state and hides modal when getPublicDocument rejects", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockReturnValueOnce(Promise.reject(new Error("network error")));
+    render(<DocumentModal />);
+    // Modal disappears after the rejection resolves (loading→false, doc→null → returns null)
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
 });
