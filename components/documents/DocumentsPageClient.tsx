@@ -33,7 +33,6 @@ function DocListRow({
   const price = formatPrice(doc.priceCents);
   return (
     <article
-      key={doc.slug}
       className="flex cursor-pointer gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
       onClick={() => onOpen(doc.slug)}
     >

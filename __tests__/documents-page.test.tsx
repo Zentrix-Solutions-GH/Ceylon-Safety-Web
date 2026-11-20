@@ -211,4 +211,19 @@ describe("DocumentsPageClient", () => {
     );
     expect(scrollTo).toHaveBeenCalledWith({ top: 500 });
   });
+
+  it("AC4: clicking list-row article body (outside button) calls onOpen", async () => {
+    mockSearchParams.get.mockReturnValue(null);
+    render(
+      <DocumentsPageClient docs={[makeDoc()]} mediaBase={MEDIA_BASE} allCategories={[]} />
+    );
+    // Switch to list view
+    await userEvent.click(screen.getByRole("button", { name: "List view" }));
+    // Click the article body
+    await userEvent.click(screen.getByRole("article"));
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringContaining("document=fire-safety-checklist"),
+      expect.anything()
+    );
+  });
 });

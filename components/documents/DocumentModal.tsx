@@ -91,6 +91,13 @@ export default function DocumentModal() {
     };
   }, [slug]);
 
+  function redirectToSignIn() {
+    if (!doc) return;
+    const next = encodeURIComponent(`/documents?document=${doc.slug}`);
+    router.push(`/sign-in?next=${next}`);
+    setStatus({ type: "idle" });
+  }
+
   // Clear toast after 3s
   function showToast(message: string) {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -105,12 +112,7 @@ export default function DocumentModal() {
     const result = await addToCart(doc.id, selectedLang);
 
     if (!result.ok) {
-      if (result.code === "not_signed_in") {
-        const next = encodeURIComponent(`/documents?document=${doc.slug}`);
-        router.push(`/sign-in?next=${next}`);
-        setStatus({ type: "idle" });
-        return;
-      }
+      if (result.code === "not_signed_in") { redirectToSignIn(); return; }
       if (result.code === "already_in_cart") {
         showToast(t("document_modal.toast.already_in_cart"));
         return;
@@ -138,12 +140,7 @@ export default function DocumentModal() {
     const result = await addToCart(doc.id, selectedLang);
 
     if (!result.ok) {
-      if (result.code === "not_signed_in") {
-        const next = encodeURIComponent(`/documents?document=${doc.slug}`);
-        router.push(`/sign-in?next=${next}`);
-        setStatus({ type: "idle" });
-        return;
-      }
+      if (result.code === "not_signed_in") { redirectToSignIn(); return; }
       if (result.code === "document_unavailable") {
         setStatus({ type: "inline_error", message: t("document_modal.toast.unavailable") });
         return;

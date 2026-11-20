@@ -41,6 +41,8 @@ export default function LockedPreview({ coverImageKey, title }: Props) {
     );
   }
 
+  const coverSrc = publicUrl(coverImageKey);
+
   return (
     /*
      * Wrapper creates 14px breathing room at the top and right so the back
@@ -63,7 +65,7 @@ export default function LockedPreview({ coverImageKey, title }: Props) {
           style={{ transform: "translate(7px,-7px) rotate(1.5deg)", transformOrigin: "bottom left" }}
         >
           <Image
-            src={publicUrl(coverImageKey)}
+            src={coverSrc}
             alt=""
             fill
             className="object-cover blur-2xl brightness-50 scale-110 select-none pointer-events-none"
@@ -76,7 +78,7 @@ export default function LockedPreview({ coverImageKey, title }: Props) {
         {/* Page 1 — front, locked preview */}
         <div className="absolute inset-0 overflow-hidden rounded-xl shadow-2xl">
           <Image
-            src={publicUrl(coverImageKey)}
+            src={coverSrc}
             alt=""
             fill
             className="object-cover blur-sm brightness-75 scale-105 select-none pointer-events-none"
