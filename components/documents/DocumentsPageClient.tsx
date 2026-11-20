@@ -5,8 +5,15 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { DocumentGrid } from "./DocumentGrid";
 import { DocumentSidebar } from "./DocumentSidebar";
 import { t } from "@/messages/en";
+import type { MessageKey } from "@/messages/en";
 import { formatPrice } from "@/lib/utils/price";
-import type { PublicDocumentCard, DocumentCategory } from "@/types/document";
+import type { PublicDocumentCard, DocumentCategory, DocKind } from "@/types/document";
+
+const DOC_KIND_LABEL: Record<DocKind, MessageKey> = {
+  checklist: "documents.filter.type.checklist",
+  safety_sign: "documents.filter.type.safety_sign",
+  toolbox_talk: "documents.filter.type.toolbox_talk",
+};
 
 const LIST_PLACEHOLDER = "/images/document-placeholder.jpg";
 
@@ -25,13 +32,9 @@ function DocListRow({
   const isFree = doc.priceCents === 0;
   const price = formatPrice(doc.priceCents);
   return (
-    <div
+    <article
       key={doc.slug}
-      className="flex cursor-pointer gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
-      role="button"
-      onClick={() => onOpen(doc.slug)}
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpen(doc.slug); }}
+      className="flex gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
     >
       <div className="h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-gray-100">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -58,13 +61,13 @@ function DocListRow({
         </span>
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onOpen(doc.slug); }}
+          onClick={() => onOpen(doc.slug)}
           className="rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700"
         >
           {isFree ? t("documents.card.get_free") : t("documents.card.add_to_cart")}
         </button>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -258,7 +261,7 @@ export function DocumentsPageClient({
           )}
           {currentType && (
             <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
-              {currentType.replace("_", " ")}
+              {currentType in DOC_KIND_LABEL ? t(DOC_KIND_LABEL[currentType as DocKind]) : currentType}
               <button
                 type="button"
                 onClick={() => removeFilter("type")}
