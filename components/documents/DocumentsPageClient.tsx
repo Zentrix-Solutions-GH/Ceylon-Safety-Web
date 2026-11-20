@@ -106,9 +106,8 @@ export function DocumentsPageClient({
   const currentCategory = searchParams.get("category") ?? "";
   const currentType = searchParams.get("type") ?? "";
   const isFiltered = Boolean(currentCategory || currentType);
-  const knownSlugs = new Set(docs.map((d) => d.slug));
   const rawParam = searchParams.get("document");
-  const modalSlug = rawParam && knownSlugs.has(rawParam) ? rawParam : null;
+  const modalSlug = rawParam;
   const totalPages = Math.ceil(total / pageSize);
 
   // Showing X-Y of N

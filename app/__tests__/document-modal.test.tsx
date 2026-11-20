@@ -250,6 +250,19 @@ describe("AC3: Add to Cart", () => {
     await user.click(screen.getByRole("button", { name: /add to cart/i }));
     await screen.findByText(/no longer available/i);
   });
+
+  it("redirects to /sign-in with next param when not signed in", async () => {
+    mockAddToCart.mockResolvedValueOnce({ ok: false, code: "not_signed_in" });
+    const user = userEvent.setup();
+    render(<DocumentModal />);
+    await screen.findByText("Safety Checklist");
+    await user.click(screen.getByRole("button", { name: /add to cart/i }));
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.stringContaining("/sign-in?next=")
+      )
+    );
+  });
 });
 
 // --- AC4: Buy Now ---
@@ -325,13 +338,13 @@ describe("AC6: closing modal", () => {
     expect(mockReplace).toHaveBeenCalledWith("/documents", { scroll: false });
   });
 
-  it("does NOT close modal on Escape key", async () => {
+  it("closes modal on Escape key (WAI-ARIA dialog requirement)", async () => {
     withSlug("safety-checklist");
     mockGetPublicDocument.mockResolvedValue({ ok: true, document: DOC });
     render(<DocumentModal />);
     await screen.findByRole("dialog");
     fireEvent.keyDown(document, { key: "Escape" });
-    expect(mockReplace).not.toHaveBeenCalled();
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/documents", { scroll: false }));
   });
 
   it("does NOT close modal on backdrop click", async () => {

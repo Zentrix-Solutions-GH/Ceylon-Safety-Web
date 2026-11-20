@@ -79,7 +79,15 @@ export default function DocumentModal() {
     };
   }, [slug]);
 
-  // Escape key intentionally NOT wired: modal closes only via the X button
+  // Escape key closes modal (WAI-ARIA dialog pattern requirement)
+  useEffect(() => {
+    if (!slug) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") closeModal();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [slug, closeModal]);
 
   // Scroll lock while open — uses a CSS class so concurrent overlays don't
   // prematurely restore scroll when one unmounts while another is still open
@@ -92,10 +100,10 @@ export default function DocumentModal() {
   }, [slug]);
 
   function redirectToSignIn() {
+    setStatus({ type: "idle" });
     if (!doc) return;
     const next = encodeURIComponent(`/documents?document=${doc.slug}`);
     router.push(`/sign-in?next=${next}`);
-    setStatus({ type: "idle" });
   }
 
   // Clear toast after 3s

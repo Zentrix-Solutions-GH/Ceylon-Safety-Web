@@ -235,6 +235,39 @@ export async function listAllDocumentSlugsAndCategories(): Promise<SlugAndCatego
 }
 
 // ---------------------------------------------------------------------------
+// listDocumentCategories — categories with at least one published doc.
+// Targeted query: selects only id+name, far cheaper than the full slug scan.
+// ---------------------------------------------------------------------------
+
+export async function listDocumentCategories(): Promise<import("@/types/document").DocumentCategory[]> {
+  const cached = unstable_cache(
+    async () => {
+      const supabase = createSupabaseServiceRoleClient();
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from("documents")
+        .select("category_id, categories(name)")
+        .eq("status", "published")
+        .lte("published_at", now)
+        .is("deleted_at", null)
+        .not("category_id", "is", null);
+      if (error || !data) return [];
+      const seen = new Set<string>();
+      const result: import("@/types/document").DocumentCategory[] = [];
+      for (const row of data as { category_id: string; categories: { name: string } | null }[]) {
+        if (!row.category_id || seen.has(row.category_id)) continue;
+        seen.add(row.category_id);
+        if (row.categories?.name) result.push({ id: row.category_id, name: row.categories.name });
+      }
+      return result.sort((a, b) => a.name.localeCompare(b.name));
+    },
+    ["docs-categories"],
+    { revalidate: LIST_CACHE_SECONDS, tags: [DOCUMENTS_LIST_TAG] }
+  );
+  return cached();
+}
+
+// ---------------------------------------------------------------------------
 // getPublicDocument — by slug, used server-side by the page (AC3, EC1, EC5)
 // ---------------------------------------------------------------------------
 
