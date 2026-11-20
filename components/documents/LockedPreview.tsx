@@ -10,7 +10,7 @@ interface Props {
 export default function LockedPreview({ coverImageKey, title }: Props) {
   if (!coverImageKey) {
     return (
-      <div className="relative w-full" style={{ paddingTop: "14px", paddingRight: "14px" }} data-testid="locked-preview-placeholder">
+      <div className="relative w-full" style={{ paddingTop: "14px", paddingRight: "14px" }} data-testid="locked-preview-placeholder" aria-label={title}>
         <div className="relative h-64 w-full">
           {/* Page 3 — back */}
           <div
@@ -46,7 +46,7 @@ export default function LockedPreview({ coverImageKey, title }: Props) {
      * Wrapper creates 14px breathing room at the top and right so the back
      * pages (translated outward) are visible and not clipped by the column.
      */
-    <div className="relative w-full" style={{ paddingTop: "14px", paddingRight: "14px" }}>
+    <div className="relative w-full" style={{ paddingTop: "14px", paddingRight: "14px" }} aria-label={title}>
       <div className="relative h-64 w-full">
 
         {/* Page 3 — back, plain paper */}
