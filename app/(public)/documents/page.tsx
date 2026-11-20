@@ -51,7 +51,6 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
   const docs = result.ok ? result.data.documents : [];
   const total = result.ok ? result.data.total : 0;
   const pageSize = result.ok ? result.data.pageSize : 12;
-  const allSlugs = allItems.map((d) => d.slug);
   const fullMap = new Map<string, string>();
   for (const item of allItems) {
     if (item.categoryId && item.categoryName) {
@@ -97,7 +96,6 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
               <DocumentsPageClient
                 docs={docs}
                 mediaBase={mediaBase}
-                allSlugs={allSlugs}
                 allCategories={allCategories}
                 total={total}
                 pageSize={pageSize}
