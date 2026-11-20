@@ -468,6 +468,20 @@ describe("AC6 (skeleton): backdrop click during loading does not close", () => {
   });
 });
 
+// --- AC6 (skeleton): close button in loading skeleton ---
+describe("AC6 (skeleton): close button during loading", () => {
+  it("closes modal via X button while document is loading", async () => {
+    withSlug("safety-checklist");
+    mockGetPublicDocument.mockReturnValueOnce(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<DocumentModal />);
+    await screen.findByRole("dialog");
+    const closeBtn = screen.getByRole("button", { name: /close/i });
+    await user.click(closeBtn);
+    expect(mockReplace).toHaveBeenCalledOnce();
+  });
+});
+
 // --- EC5: Mobile layout ---
 describe("EC5: mobile layout classes", () => {
   it("modal panel has overflow-y-auto and max-h-[90vh] for mobile scroll", async () => {

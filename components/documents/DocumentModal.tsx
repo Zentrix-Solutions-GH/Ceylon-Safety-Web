@@ -176,6 +176,16 @@ export default function DocumentModal() {
           data-testid="modal-backdrop"
         />
         <div className="relative z-10 w-full max-w-2xl rounded-2xl bg-background shadow-2xl p-6 flex items-center justify-center min-h-[200px]">
+          <button
+            type="button"
+            onClick={closeModal}
+            aria-label={t("document_modal.close")}
+            className="absolute right-4 top-4 z-20 rounded-full p-1.5 text-muted-foreground hover:bg-muted transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
           <span className="text-sm text-muted-foreground">{t("document_modal.loading")}</span>
         </div>
       </div>
