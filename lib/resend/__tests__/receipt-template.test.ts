@@ -147,4 +147,10 @@ describe("renderBankApprovedEmail", () => {
     expect(typeof html).toBe("string");
     expect(typeof text).toBe("string");
   });
+
+  it("subject reads 'Your order is approved', not 'Your receipt' (P2)", () => {
+    const { subject } = renderBankApprovedEmail(BASE);
+    expect(subject).toMatch(/approved/i);
+    expect(subject).not.toMatch(/^Your receipt/i);
+  });
 });

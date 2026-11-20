@@ -250,9 +250,12 @@ describe("ensureReceiptEmail — bank_approved idempotency (EC6)", () => {
 
 describe("ensureReceiptEmail — concurrent runs (EC1)", () => {
   it("returns ok:true from both runs — sendEmail insert-first guard deduplicates at DB level", async () => {
-    // The idempotency guarantee lives inside sendEmail (unique index on email_logs).
-    // When a concurrent call hits the unique index, sendEmail swallows the 23505 error
-    // and returns void (no re-throw). Both callers therefore get ok:true.
+    // The idempotency guarantee for `receipt` orders lives inside sendEmail via a
+    // unique index on email_logs(template, related_type, related_id). The second
+    // concurrent insert raises a 23505 error, which sendEmail swallows (returns void).
+    // NOTE: This test uses a mocked sendEmail and does NOT exercise the DB unique
+    // index directly. Full deduplication coverage requires a pgTAP integration test
+    // against a real Supabase instance.
     vi.mocked(sendEmail).mockResolvedValue(undefined);
 
     const [r1, r2] = await Promise.all([

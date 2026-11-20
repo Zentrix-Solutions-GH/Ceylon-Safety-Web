@@ -29,7 +29,7 @@ vi.mock("@/lib/resend/templates/purchase-receipt", () => ({
 }));
 
 import { sendEmail } from "@/lib/resend/client";
-import { resendMyReceiptLib } from "@/lib/orders/resend-receipt";
+import { resendMyReceiptLib, resendReceiptForOrder } from "@/lib/orders/resend-receipt";
 
 const ORDER_ID = "ord-00000000-0000-4000-8000-000000000002";
 const USER_ID = "user-buyer-99";
@@ -55,8 +55,9 @@ function makeChain<T>(result: T) {
   return chain;
 }
 
-function makeDb(options?: { resendCount?: number; isOwner?: boolean }) {
+function makeDb(options?: { resendCount?: number; isOwner?: boolean; resendCountError?: boolean }) {
   const resendCount = options?.resendCount ?? 0;
+  const resendCountError = options?.resendCountError ?? false;
   const isOwner = options?.isOwner !== false;
 
   const orderRow = isOwner
@@ -92,7 +93,10 @@ function makeDb(options?: { resendCount?: number; isOwner?: boolean }) {
         return { select: () => makeChain({ count: 0, error: null }) };
       }
       // Resend rate-limit check
-      return { select: () => makeChain({ count: resendCount, error: null }) };
+      const rateResult = resendCountError
+        ? { count: null, error: { message: "db error" } }
+        : { count: resendCount, error: null };
+      return { select: () => makeChain(rateResult) };
     }
     if (table === "orders") {
       const chain: Record<string, unknown> = {
@@ -155,5 +159,65 @@ describe("resendMyReceiptLib — rate limit (EC5)", () => {
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/rate.?limit|too many/i);
     expect(vi.mocked(sendEmail)).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the rate-limit DB query errors (P1)", async () => {
+    const result = await resendMyReceiptLib(ORDER_ID, USER_ID, makeDb({ resendCountError: true }));
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/rate.?limit|verify/i);
+    expect(vi.mocked(sendEmail)).not.toHaveBeenCalled();
+  });
+});
+
+// ─── AC6: admin resend path ───────────────────────────────────────────────────
+
+function makeDbAdmin() {
+  const orderRow = {
+    id: ORDER_ID,
+    order_number: "CS-00005",
+    status: "paid",
+    payment_method: "card",
+    total_cents: 199000,
+    created_at: "2026-11-18T04:30:00.000Z",
+    user_id: USER_ID,
+    profiles: { email: "buyer99@example.com" },
+  };
+  const itemRows = [
+    {
+      id: "item-99",
+      title_snapshot: "Safety Signs Pack",
+      language: "en",
+      line_total_cents: 199000,
+      entitlements: [{ id: "ent-yyy" }],
+    },
+  ];
+  const fromMock = vi.fn((table: string) => {
+    if (table === "orders") {
+      const chain: Record<string, unknown> = {
+        select: () => chain,
+        eq: () => chain,
+        single: () => Promise.resolve({ data: orderRow, error: null }),
+      };
+      return chain;
+    }
+    if (table === "order_items") {
+      const chain: Record<string, unknown> = {
+        select: () => chain,
+        eq: () => Promise.resolve({ data: itemRows, error: null }),
+      };
+      return chain;
+    }
+    return {};
+  });
+  return { from: fromMock } as never;
+}
+
+describe("resendReceiptForOrder — admin path (AC6)", () => {
+  it("sends receipt_resend without an owner check (AC6)", async () => {
+    const result = await resendReceiptForOrder(ORDER_ID, makeDbAdmin());
+    expect(result.ok).toBe(true);
+    expect(vi.mocked(sendEmail)).toHaveBeenCalledWith(
+      expect.objectContaining({ template: "receipt_resend" }),
+    );
   });
 });

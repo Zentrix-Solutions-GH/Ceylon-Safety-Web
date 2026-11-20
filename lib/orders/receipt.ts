@@ -7,21 +7,21 @@ import { sendEmail } from "@/lib/resend/client";
 import { renderReceiptEmail } from "@/lib/resend/templates/purchase-receipt";
 import { renderBankApprovedEmail } from "@/lib/resend/templates/bank-approved";
 import { safeErrorMessage } from "@/lib/errors";
+import {
+  colomboTodayUtc,
+  fetchOrderItems,
+  buildEmailData,
+  REFUND_POLICY_PATH,
+} from "@/lib/orders/receipt-helpers";
 
 type SB = SupabaseClient<Database>;
 
-const REFUND_POLICY_PATH = "/refund-policy";
-
 async function checkEmailBudget(sb: SB): Promise<boolean> {
-  const utcMidnight = new Date(
-    new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Colombo" }) + "T00:00:00+05:30",
-  );
-
   const { count, error } = await (sb
     .from("email_logs")
     .select("id", { count: "exact", head: true })
     .in("status", ["sent", "queued"])
-    .gte("created_at", utcMidnight.toISOString()) as unknown as Promise<{
+    .gte("created_at", colomboTodayUtc().toISOString()) as unknown as Promise<{
     count: number | null;
     error: unknown;
   }>);
@@ -38,14 +38,12 @@ export async function ensureReceiptEmail(
   orderId: string,
   sb: SB,
 ): Promise<{ ok: boolean }> {
-  // AC8: check email budget before sending
   const withinBudget = await checkEmailBudget(sb);
   if (!withinBudget) {
     console.error("receipt: email_daily_limit_reached", { order_id: orderId });
     return { ok: false };
   }
 
-  // Fetch order with buyer email via profiles join
   const { data: order, error: orderError } = await sb
     .from("orders")
     .select("id, order_number, status, payment_method, total_cents, created_at, user_id, profiles(email)")
@@ -86,63 +84,30 @@ export async function ensureReceiptEmail(
     return { ok: false };
   }
 
-  // Fetch items with entitlements
-  const { data: items, error: itemsError } = await sb
-    .from("order_items")
-    .select("id, title_snapshot, language, line_total_cents, entitlements(id)")
-    .eq("order_id", orderId);
+  const items = await fetchOrderItems(orderId, sb);
+  if (!items) return { ok: false };
 
-  if (itemsError || !items) {
-    console.error("receipt: items_not_found", { order_id: orderId, message: safeErrorMessage(itemsError) });
-    return { ok: false };
-  }
-
-  const missingEntitlement = (items as Array<{ entitlements: Array<{ id: string }> }>).some(
-    (item) => !item.entitlements?.[0]?.id,
-  );
-  if (missingEntitlement) {
+  if (items.some((item) => !item.entitlements?.[0]?.id)) {
     console.error("receipt: entitlement_missing", { order_id: orderId });
     return { ok: false };
   }
 
   const appUrl = publicConfig.appUrl;
   const template = isBank ? "bank_approved" : "receipt";
-
-  const emailData = {
-    orderNumber: order.order_number as string,
-    orderDate: order.created_at as string,
-    items: (items as Array<{
-      id: string;
-      title_snapshot: string;
-      language: string;
-      line_total_cents: number;
-      entitlements: Array<{ id: string }>;
-    }>).map((item) => ({
-      titleSnapshot: item.title_snapshot,
-      language: item.language ?? "en",
-      lineTotalCents: item.line_total_cents,
-      entitlementId: item.entitlements?.[0]?.id ?? "",
-    })),
-    totalCents: order.total_cents as number,
+  const emailData = buildEmailData(
+    order,
+    items as Parameters<typeof buildEmailData>[1],
     appUrl,
-    supportEmail: serverConfig.supportEmail,
-    refundPolicyUrl: `${appUrl}${REFUND_POLICY_PATH}`,
-  };
+    serverConfig.supportEmail,
+    `${appUrl}${REFUND_POLICY_PATH}`,
+  );
 
   const { subject, html, text } = isBank
     ? renderBankApprovedEmail(emailData)
     : renderReceiptEmail(emailData);
 
   try {
-    await sendEmail({
-      to: buyerEmail,
-      template,
-      relatedType: "order",
-      relatedId: orderId,
-      subject,
-      html,
-      text,
-    });
+    await sendEmail({ to: buyerEmail, template, relatedType: "order", relatedId: orderId, subject, html, text });
   } catch (err) {
     console.error("receipt: send_failed", { order_id: orderId, message: safeErrorMessage(err) });
     return { ok: false };

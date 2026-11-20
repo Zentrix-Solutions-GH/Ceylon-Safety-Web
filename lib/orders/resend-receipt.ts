@@ -6,66 +6,28 @@ import { serverConfig, publicConfig } from "@/lib/config";
 import { sendEmail } from "@/lib/resend/client";
 import { renderReceiptEmail } from "@/lib/resend/templates/purchase-receipt";
 import { safeErrorMessage } from "@/lib/errors";
+import {
+  colomboTodayUtc,
+  fetchOrderItems,
+  buildEmailData,
+  REFUND_POLICY_PATH,
+} from "@/lib/orders/receipt-helpers";
 
 type SB = SupabaseClient<Database>;
 
-const REFUND_POLICY_PATH = "/refund-policy";
 const RESEND_DAILY_LIMIT = 3;
 
-export async function resendMyReceiptLib(
+/** Shared send logic used by both user-facing and admin resend. */
+async function sendResendEmail(
   orderId: string,
-  userId: string,
+  order: {
+    order_number: unknown;
+    created_at: unknown;
+    total_cents: unknown;
+    profiles: unknown;
+  },
   sb: SB,
 ): Promise<{ ok: boolean; error?: string }> {
-  // Check email budget first
-  const colomboToday = new Date(
-    new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Colombo" }) + "T00:00:00+05:30",
-  );
-  const { count: budgetCount, error: budgetError } = await (sb
-    .from("email_logs")
-    .select("id", { count: "exact", head: true })
-    .in("status", ["sent", "queued"])
-    .gte("created_at", colomboToday.toISOString()) as unknown as Promise<{
-    count: number | null;
-    error: unknown;
-  }>);
-
-  if (!budgetError && (budgetCount ?? 0) >= serverConfig.emailDailyLimit) {
-    console.error("resend_receipt: email_daily_limit_reached", { order_id: orderId });
-    return { ok: false, error: "Email daily limit reached" };
-  }
-
-  // Fetch order — must be owned by this user; include buyer email via profiles join
-  const { data: order, error: orderError } = await sb
-    .from("orders")
-    .select("id, order_number, status, payment_method, total_cents, created_at, user_id, profiles(email)")
-    .eq("id", orderId)
-    .eq("user_id", userId)
-    .single();
-
-  if (orderError || !order) {
-    return { ok: false, error: "Order not found or not allowed" };
-  }
-
-  if (order.status !== "paid") {
-    return { ok: false, error: "Order is not paid" };
-  }
-
-  // Rate limit: at most RESEND_DAILY_LIMIT receipt_resend emails per order per day
-  const { count: resendCount, error: resendCountError } = await (sb
-    .from("email_logs")
-    .select("id", { count: "exact", head: true })
-    .eq("template", "receipt_resend")
-    .eq("related_id", orderId)
-    .gte("created_at", colomboToday.toISOString()) as unknown as Promise<{
-    count: number | null;
-    error: unknown;
-  }>);
-
-  if (!resendCountError && (resendCount ?? 0) >= RESEND_DAILY_LIMIT) {
-    return { ok: false, error: "Rate limit: too many resend requests today" };
-  }
-
   const buyerEmail = Array.isArray(order.profiles)
     ? (order.profiles[0] as { email: string } | undefined)?.email
     : (order.profiles as { email: string } | null)?.email;
@@ -75,47 +37,22 @@ export async function resendMyReceiptLib(
     return { ok: false, error: "Could not fetch buyer email" };
   }
 
-  // Fetch items and entitlements
-  const { data: items, error: itemsError } = await sb
-    .from("order_items")
-    .select("id, title_snapshot, language, line_total_cents, entitlements(id)")
-    .eq("order_id", orderId);
+  const items = await fetchOrderItems(orderId, sb);
+  if (!items) return { ok: false, error: "Could not fetch order items" };
 
-  if (itemsError || !items) {
-    console.error("resend_receipt: items_not_found", { order_id: orderId, message: safeErrorMessage(itemsError) });
-    return { ok: false, error: "Could not fetch order items" };
-  }
-
-  const missingEntitlement = (items as Array<{ entitlements: Array<{ id: string }> }>).some(
-    (item) => !item.entitlements?.[0]?.id,
-  );
-  if (missingEntitlement) {
+  if (items.some((item) => !item.entitlements?.[0]?.id)) {
     console.error("resend_receipt: entitlement_missing", { order_id: orderId });
     return { ok: false, error: "Entitlement missing for one or more items" };
   }
 
   const appUrl = publicConfig.appUrl;
-
-  const emailData = {
-    orderNumber: order.order_number as string,
-    orderDate: order.created_at as string,
-    items: (items as Array<{
-      id: string;
-      title_snapshot: string;
-      language: string;
-      line_total_cents: number;
-      entitlements: Array<{ id: string }>;
-    }>).map((item) => ({
-      titleSnapshot: item.title_snapshot,
-      language: item.language ?? "en",
-      lineTotalCents: item.line_total_cents,
-      entitlementId: item.entitlements?.[0]?.id ?? "",
-    })),
-    totalCents: order.total_cents as number,
+  const emailData = buildEmailData(
+    order,
+    items as Parameters<typeof buildEmailData>[1],
     appUrl,
-    supportEmail: serverConfig.supportEmail,
-    refundPolicyUrl: `${appUrl}${REFUND_POLICY_PATH}`,
-  };
+    serverConfig.supportEmail,
+    `${appUrl}${REFUND_POLICY_PATH}`,
+  );
 
   const { subject, html, text } = renderReceiptEmail(emailData);
 
@@ -135,4 +72,91 @@ export async function resendMyReceiptLib(
   }
 
   return { ok: true };
+}
+
+/** User-facing resend: owner check + 3/day rate limit. */
+export async function resendMyReceiptLib(
+  orderId: string,
+  userId: string,
+  sb: SB,
+): Promise<{ ok: boolean; error?: string }> {
+  const colomboToday = colomboTodayUtc();
+
+  // Budget check (fail open — consistent with ensureReceiptEmail)
+  const { count: budgetCount, error: budgetError } = await (sb
+    .from("email_logs")
+    .select("id", { count: "exact", head: true })
+    .in("status", ["sent", "queued"])
+    .gte("created_at", colomboToday.toISOString()) as unknown as Promise<{
+    count: number | null;
+    error: unknown;
+  }>);
+
+  if (!budgetError && (budgetCount ?? 0) >= serverConfig.emailDailyLimit) {
+    console.error("resend_receipt: email_daily_limit_reached", { order_id: orderId });
+    return { ok: false, error: "Email daily limit reached" };
+  }
+
+  // Owner check
+  const { data: order, error: orderError } = await sb
+    .from("orders")
+    .select("id, order_number, status, payment_method, total_cents, created_at, user_id, profiles(email)")
+    .eq("id", orderId)
+    .eq("user_id", userId)
+    .single();
+
+  if (orderError || !order) {
+    return { ok: false, error: "Order not found or not allowed" };
+  }
+
+  if (order.status !== "paid") {
+    return { ok: false, error: "Order is not paid" };
+  }
+
+  // Rate limit: at most RESEND_DAILY_LIMIT per order per day (P1: fail closed on DB error)
+  const { count: resendCount, error: resendCountError } = await (sb
+    .from("email_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("template", "receipt_resend")
+    .eq("related_id", orderId)
+    .gte("created_at", colomboToday.toISOString()) as unknown as Promise<{
+    count: number | null;
+    error: unknown;
+  }>);
+
+  if (resendCountError) {
+    console.error("resend_receipt: rate_limit_check_failed", { order_id: orderId, message: safeErrorMessage(resendCountError) });
+    return { ok: false, error: "Could not verify rate limit" };
+  }
+
+  if ((resendCount ?? 0) >= RESEND_DAILY_LIMIT) {
+    return { ok: false, error: "Rate limit: too many resend requests today" };
+  }
+
+  return sendResendEmail(orderId, order, sb);
+}
+
+/**
+ * Admin resend (AC6): no owner check, no per-user rate limit.
+ * Called by S-089 with a service-role Supabase client.
+ */
+export async function resendReceiptForOrder(
+  orderId: string,
+  sb: SB,
+): Promise<{ ok: boolean; error?: string }> {
+  const { data: order, error: orderError } = await sb
+    .from("orders")
+    .select("id, order_number, status, payment_method, total_cents, created_at, user_id, profiles(email)")
+    .eq("id", orderId)
+    .single();
+
+  if (orderError || !order) {
+    return { ok: false, error: "Order not found" };
+  }
+
+  if (order.status !== "paid") {
+    return { ok: false, error: "Order is not paid" };
+  }
+
+  return sendResendEmail(orderId, order, sb);
 }
