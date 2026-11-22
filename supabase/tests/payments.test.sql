@@ -5,7 +5,7 @@
 -- Requires Docker + local Supabase stack.
 
 BEGIN;
-SELECT plan(154);
+SELECT plan(155);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- UUID legend (all hex-valid, non-overlapping with earlier test files)
@@ -575,6 +575,26 @@ BEGIN
   END;
 END $$;
 SELECT ok(true, 'EC10: duplicate receipt email refused');
+
+-- EC10: second bank_approved email for same order refused (S-086: added to unique index)
+DO $$
+BEGIN
+  INSERT INTO public.email_logs (to_email, template, related_type, related_id, status)
+  VALUES (
+    'cust_a_p@test.invalid', 'bank_approved', 'order',
+    '11000001-0000-0000-0000-000000000001', 'sent'
+  );
+  BEGIN
+    INSERT INTO public.email_logs (to_email, template, related_type, related_id, status)
+    VALUES (
+      'cust_a_p@test.invalid', 'bank_approved', 'order',
+      '11000001-0000-0000-0000-000000000001', 'sent'
+    );
+    RAISE EXCEPTION 'EC10: second bank_approved email should be refused';
+  EXCEPTION WHEN unique_violation THEN NULL;
+  END;
+END $$;
+SELECT ok(true, 'EC10: duplicate bank_approved email refused by UNIQUE index (S-086)');
 
 -- EC10: receipt_resend repeats are allowed (not in unique index)
 DO $$
