@@ -1,11 +1,11 @@
 ---
 id: S-087
 title: Invoice PDF and invoice download route
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-087-invoice-pdf
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/109
 depends_on: [S-086]
 reqs: [REQ-054, REQ-053, REQ-155, REQ-156, REQ-206]
 ---
