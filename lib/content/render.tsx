@@ -56,15 +56,14 @@ function countLinksInNodes(nodes: InlineNode[]): number {
 function renderMark(mark: Mark, children: React.ReactNode, key: string): React.ReactNode {
   switch (mark.type) {
     case "bold":
-      return <strong key={key}>{children}</strong>;
+      return <strong key={key} className="font-semibold text-gray-900">{children}</strong>;
     case "italic":
-      return <em key={key}>{children}</em>;
+      return <em key={key} className="italic">{children}</em>;
     case "underline":
-      return <u key={key}>{children}</u>;
+      return <u key={key} className="underline">{children}</u>;
     case "link": {
       const href = mark.attrs.href;
       if (checkLink(href).ok !== true) {
-        // Drop the link; render text only
         return <React.Fragment key={key}>{children}</React.Fragment>;
       }
       const target = isOutbound(href) ? "_blank" : undefined;
@@ -74,6 +73,7 @@ function renderMark(mark: Mark, children: React.ReactNode, key: string): React.R
           href={href}
           rel="nofollow ugc noopener noreferrer"
           target={target}
+          className="text-primary underline hover:text-primary-dark"
         >
           {children}
         </a>
@@ -106,18 +106,25 @@ function renderInlines(nodes: InlineNode[] | undefined): React.ReactNode {
 
 // ─── Block renderers ─────────────────────────────────────────────────────────
 
+const HEADING_CLASS: Record<number, string> = {
+  2: "mt-8 mb-3 text-2xl font-bold text-gray-900",
+  3: "mt-6 mb-2 text-xl font-bold text-gray-900",
+  4: "mt-4 mb-2 text-lg font-semibold text-gray-800",
+};
+
 function renderParagraph(node: ParagraphNode, key: number): React.ReactNode {
-  return <p key={key}>{renderInlines(node.content)}</p>;
+  return <p key={key} className="mb-4 leading-relaxed text-gray-700">{renderInlines(node.content)}</p>;
 }
 
 function renderHeading(node: HeadingNode, key: number): React.ReactNode {
   const Tag = `h${node.attrs.level}` as "h1" | "h2" | "h3" | "h4";
-  return <Tag key={key}>{renderInlines(node.content)}</Tag>;
+  const cls = HEADING_CLASS[node.attrs.level] ?? "mt-6 mb-2 font-bold text-gray-900";
+  return <Tag key={key} className={cls}>{renderInlines(node.content)}</Tag>;
 }
 
 function renderListItem(node: ListItemNode, key: number): React.ReactNode {
   return (
-    <li key={key}>
+    <li key={key} className="mb-1 leading-relaxed text-gray-700">
       {node.content.map((child, i) => renderBlock(child as ArticleNode, i))}
     </li>
   );
@@ -125,7 +132,7 @@ function renderListItem(node: ListItemNode, key: number): React.ReactNode {
 
 function renderBulletList(node: BulletListNode, key: number): React.ReactNode {
   return (
-    <ul key={key}>
+    <ul key={key} className="mb-4 ml-5 list-disc space-y-1">
       {node.content.map((item, i) => renderListItem(item, i))}
     </ul>
   );
@@ -133,7 +140,7 @@ function renderBulletList(node: BulletListNode, key: number): React.ReactNode {
 
 function renderOrderedList(node: OrderedListNode, key: number): React.ReactNode {
   return (
-    <ol key={key}>
+    <ol key={key} className="mb-4 ml-5 list-decimal space-y-1">
       {node.content.map((item, i) => renderListItem(item, i))}
     </ol>
   );
@@ -142,12 +149,11 @@ function renderOrderedList(node: OrderedListNode, key: number): React.ReactNode 
 function renderImage(node: ImageNode, key: number): React.ReactNode {
   const { key: imgKey, alt, decorative, caption } = node.attrs;
   const altText = decorative ? "" : (alt ?? "");
-  // The src is resolved by the frontend using the image key (S-060)
   return (
-    <figure key={key}>
+    <figure key={key} className="my-6">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={imgKey} alt={altText} />
-      {caption ? <figcaption>{caption}</figcaption> : null}
+      <img src={imgKey} alt={altText} className="w-full rounded-lg object-cover" />
+      {caption ? <figcaption className="mt-2 text-center text-xs text-gray-500">{caption}</figcaption> : null}
     </figure>
   );
 }
@@ -157,12 +163,13 @@ function renderVideo(node: VideoNode, key: number): React.ReactNode {
   if (!video_id) return null;
   const thumbSrc = thumbnailKey ? `${publicConfig.mediaCdnUrl}/${thumbnailKey}` : undefined;
   return (
-    <a key={key} href={`/?video=${video_id}`} data-block="video">
+    <a key={key} href={`/?video=${video_id}`} data-block="video"
+      className="my-4 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 hover:bg-gray-100 transition-colors">
       {thumbSrc && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={thumbSrc} alt={title ?? ""} />
+        <img src={thumbSrc} alt={title ?? ""} className="h-16 w-24 shrink-0 rounded object-cover" />
       )}
-      {title && <span>{title}</span>}
+      {title && <span className="text-sm font-medium text-gray-800">{title}</span>}
     </a>
   );
 }

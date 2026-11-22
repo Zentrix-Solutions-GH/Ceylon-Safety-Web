@@ -1,6 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { requireStaff } from "@/lib/auth/server";
 import { serverConfig } from "@/lib/config";
 import {
@@ -129,7 +129,10 @@ async function queryPublicDocuments(
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  const supabase = createSupabaseAnonClient();
+  // Service role used so the document_files join returns metadata rows.
+  // document_files has no anon RLS policy (file_key is never selected here).
+  // The published/deleted_at filters below replicate what anon RLS would enforce.
+  const supabase = createSupabaseServiceRoleClient();
   const now = new Date().toISOString();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -190,11 +193,86 @@ export async function listPublicDocuments(
 }
 
 // ---------------------------------------------------------------------------
+// listAllDocumentSlugsAndCategories — lightweight fetch for the slug guard
+// and category sidebar (no pagination). Only reads slug, category_id, name.
+// ---------------------------------------------------------------------------
+
+export interface SlugAndCategory {
+  slug: string;
+  categoryId: string;
+  categoryName: string | null;
+}
+
+async function queryAllDocumentSlugsAndCategories(): Promise<SlugAndCategory[]> {
+  const supabase = createSupabaseServiceRoleClient();
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("documents")
+    .select("slug, category_id, categories(name)")
+    .eq("status", "published")
+    .lte("published_at", now)
+    .is("deleted_at", null)
+    .order("published_at", { ascending: false })
+    .limit(10000);
+
+  if (error || !data) return [];
+
+  return (data as { slug: string; category_id: string; categories: { name: string | null } | null }[]).map((row) => ({
+    slug: row.slug,
+    categoryId: row.category_id,
+    categoryName: row.categories?.name ?? null,
+  }));
+}
+
+export async function listAllDocumentSlugsAndCategories(): Promise<SlugAndCategory[]> {
+  const cached = unstable_cache(
+    queryAllDocumentSlugsAndCategories,
+    ["docs-all-slugs-categories"],
+    { revalidate: LIST_CACHE_SECONDS, tags: [DOCUMENTS_LIST_TAG] }
+  );
+  return cached();
+}
+
+// ---------------------------------------------------------------------------
+// listDocumentCategories — categories with at least one published doc.
+// Targeted query: selects only id+name, far cheaper than the full slug scan.
+// ---------------------------------------------------------------------------
+
+export async function listDocumentCategories(): Promise<import("@/types/document").DocumentCategory[]> {
+  const cached = unstable_cache(
+    async () => {
+      const supabase = createSupabaseServiceRoleClient();
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from("documents")
+        .select("category_id, categories(name)")
+        .eq("status", "published")
+        .lte("published_at", now)
+        .is("deleted_at", null)
+        .not("category_id", "is", null);
+      if (error || !data) return [];
+      const seen = new Set<string>();
+      const result: import("@/types/document").DocumentCategory[] = [];
+      for (const row of data as { category_id: string; categories: { name: string } | null }[]) {
+        if (!row.category_id || seen.has(row.category_id)) continue;
+        seen.add(row.category_id);
+        if (row.categories?.name) result.push({ id: row.category_id, name: row.categories.name });
+      }
+      return result.sort((a, b) => a.name.localeCompare(b.name));
+    },
+    ["docs-categories"],
+    { revalidate: LIST_CACHE_SECONDS, tags: [DOCUMENTS_LIST_TAG] }
+  );
+  return cached();
+}
+
+// ---------------------------------------------------------------------------
 // getPublicDocument — by slug, used server-side by the page (AC3, EC1, EC5)
 // ---------------------------------------------------------------------------
 
 async function queryPublicDocument(slug: string): Promise<GetPublicDocumentResult> {
-  const supabase = createSupabaseAnonClient();
+  const supabase = createSupabaseServiceRoleClient();
   const now = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -337,7 +415,7 @@ export async function listDocumentPickerItems(
   const from = (page - 1) * PICKER_PAGE_SIZE;
   const to = from + PICKER_PAGE_SIZE;
 
-  const supabase = createSupabaseAnonClient();
+  const supabase = createSupabaseServiceRoleClient();
 
   const now = new Date().toISOString();
 

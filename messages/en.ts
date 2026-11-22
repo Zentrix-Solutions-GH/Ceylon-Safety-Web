@@ -385,6 +385,8 @@ const en = {
 
   // --- article full page (S-060) ---
   "article.back_to_articles": "Back to articles",
+  "article.more_articles": "← More articles",
+  "article.comments_heading": "Comments",
   "article.unavailable": "This article is not available.",
 
   // --- article likes + comments (S-061) ---
@@ -803,6 +805,31 @@ const en = {
   "documents.card.pages": "{n} pages",
   "documents.card.downloads": "{n} downloads",
   "documents.card.unavailable": "Currently unavailable",
+  "documents.card.add_to_cart": "Add to cart",
+  "documents.card.get_free": "Get Free",
+  "documents.card.free": "FREE",
+  "documents.card.rating": "{n} rating",
+  "documents.sort.popular": "Most Downloaded",
+  "documents.sort.newest": "Newest",
+  "documents.sort.price_asc": "Price: Low-High",
+  "documents.filter.topics.label": "Industrial Topics",
+  "documents.filter.format.label": "Format / Extension",
+  "documents.filter.format.checklist": "PDF Documents",
+  "documents.filter.format.toolbox_talk": "Know How & Slide Decks",
+  "documents.filter.format.safety_sign": "Fillable Templates",
+  "documents.filter.header": "Filter Documents",
+  "documents.filter.most_downloaded": "Most Downloaded",
+  "documents.filter.price_tier.label": "Price Tier (LKR)",
+  "documents.filter.price_tier.free": "Free",
+  "documents.filter.reset": "Reset Filters",
+  "documents.results.showing": "Showing {from}–{to} of {total} {label}",
+  "documents.results.label": "documents",
+  "documents.view.grid": "Grid view",
+  "documents.view.list": "List view",
+  "documents.filter.mobile_open": "Filters",
+  "documents.filter.mobile_title": "Filters",
+  "documents.filter.chip.remove_category": "Remove {name} filter",
+  "documents.filter.chip.remove_type": "Remove type filter",
   "documents.modal.close": "Close document preview",
   "documents.modal.loading": "Loading document…",
   "documents.modal.label": "Document preview",
@@ -838,6 +865,11 @@ const en = {
   "document_modal.toast.already_in_cart": "Already in your cart",
   "document_modal.toast.cart_full": "Your cart is full (50 items max)",
   "document_modal.toast.unavailable": "This document is no longer available",
+  "document_modal.stat.pages": "{count} pages",
+  "document_modal.stat.downloads": "{count} downloads",
+  "document_modal.kind.checklist": "Checklist",
+  "document_modal.kind.safety_sign": "Safety Sign",
+  "document_modal.kind.toolbox_talk": "Toolbox Talk",
 
   // --- LanguagePicker (S-076) ---
   "language_picker.label": "Choose language",
@@ -848,6 +880,7 @@ const en = {
   // --- LockedPreview (S-076) ---
   "locked_preview.alt": "Locked preview of {title}",
   "locked_preview.placeholder_alt": "No preview available",
+  "locked_preview.purchase_to_unlock": "Purchase to unlock",
 } as const;
 
 export type MessageKey = keyof typeof en;

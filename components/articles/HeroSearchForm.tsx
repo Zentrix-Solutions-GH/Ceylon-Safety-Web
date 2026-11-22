@@ -3,7 +3,7 @@
 import { type FormEvent } from "react";
 import { t } from "@/messages/en";
 
-export function HeroSearchForm() {
+export function HeroSearchForm({ scope = "articles" }: { scope?: string }) {
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     const form = e.currentTarget;
     const q = (form.elements.namedItem("q") as HTMLInputElement).value.trim();
@@ -19,7 +19,7 @@ export function HeroSearchForm() {
       onSubmit={handleSubmit}
       className="flex overflow-hidden rounded-lg shadow-lg"
     >
-      <input type="hidden" name="scope" value="articles" />
+      <input type="hidden" name="scope" value={scope} />
       <input
         type="search"
         name="q"

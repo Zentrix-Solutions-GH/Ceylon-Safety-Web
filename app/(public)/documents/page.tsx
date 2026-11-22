@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { listPublicDocuments } from "@/lib/documents/public";
+import { listPublicDocuments, listDocumentCategories } from "@/lib/documents/public";
 import { publicConfig } from "@/lib/config.public";
-import { DocumentFilters } from "@/components/documents/DocumentFilters";
+import { DocumentSidebar } from "@/components/documents/DocumentSidebar";
 import { DocumentsPageClient } from "@/components/documents/DocumentsPageClient";
 import DocumentModal from "@/components/documents/DocumentModal";
+import { ArticlesHeroSlideshow } from "@/components/articles/ArticlesHeroSlideshow";
+import { HeroSearchForm } from "@/components/articles/HeroSearchForm";
 import { t } from "@/messages/en";
 import type { DocKind } from "@/types/document";
 
@@ -18,7 +20,6 @@ export const metadata: Metadata = {
   alternates: { canonical: "/documents" },
 };
 
-// AC6: s-maxage=60, stale-while-revalidate
 export const revalidate = 60;
 
 function resolveType(raw: string | undefined): DocKind | undefined {
@@ -27,35 +28,77 @@ function resolveType(raw: string | undefined): DocKind | undefined {
   return (valid as string[]).includes(raw) ? (raw as DocKind) : undefined;
 }
 
+function resolveSort(raw: string | undefined): "newest" | "popular" {
+  return raw === "popular" ? "popular" : "newest";
+}
+
+function resolvePage(raw: string | undefined): number {
+  const n = parseInt(raw ?? "1", 10);
+  return isNaN(n) || n < 1 ? 1 : n;
+}
+
 export default async function DocumentsPage({ searchParams }: DocumentsPageProps) {
   const params = await searchParams;
   const category = params.category || undefined;
   const type = resolveType(params.type);
-  const result = await listPublicDocuments({ category, type });
-  const docs = result.ok ? result.data.documents : [];
+  const sort = resolveSort(params.sort);
+  const page = resolvePage(params.page);
 
-  // Fetch unfiltered list for the category dropdown and allSlugs (EC2 guard).
-  // Reuse the filtered result when no filter is active — same query, no extra round-trip.
-  const allResult = (category || type) ? await listPublicDocuments({}) : result;
-  const allDocs = allResult.ok ? allResult.data.documents : [];
-  const fullMap = new Map<string, string>();
-  for (const doc of allDocs) {
-    if (doc.categoryId && doc.categoryName) {
-      fullMap.set(doc.categoryId, doc.categoryName);
-    }
-  }
-  const allCategories = Array.from(fullMap.entries()).map(([id, name]) => ({ id, name }));
-  const allSlugs = allDocs.map((d) => d.slug);
+  const [result, allCategories] = await Promise.all([
+    listPublicDocuments({ category, type, sort, page }),
+    listDocumentCategories(),
+  ]);
+  const docs = result.ok ? result.data.documents : [];
+  const total = result.ok ? result.data.total : 0;
+  const pageSize = result.ok ? result.data.pageSize : 12;
 
   const mediaBase = publicConfig.mediaCdnUrl;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="mb-6 text-3xl font-bold text-gray-900">{t("documents.page.title")}</h1>
+    <div>
+      {/* Hero Banner */}
+      <div className="relative overflow-hidden bg-gray-900">
+        <ArticlesHeroSlideshow />
+        <div className="relative mx-auto max-w-6xl px-4 py-14 text-white">
+          <div className="max-w-2xl">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-red-300">
+              {t("auth.brand.wordmark")}
+            </p>
+            <h1 className="mb-3 text-4xl font-extrabold tracking-tight sm:text-5xl">
+              {t("documents.page.title")}
+            </h1>
+            <p className="mb-8 text-sm text-gray-300 sm:text-base">
+              {t("documents.page.description")}
+            </p>
+            <HeroSearchForm scope="documents" />
+          </div>
+        </div>
+      </div>
 
-      <DocumentFilters categories={allCategories} />
+      {/* Sidebar + Grid */}
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <div className="flex gap-6">
+          {/* Sidebar */}
+          <aside className="hidden w-64 shrink-0 lg:block">
+            <DocumentSidebar categories={allCategories} />
+          </aside>
 
-      <DocumentsPageClient docs={docs} mediaBase={mediaBase} allSlugs={allSlugs} />
+          {/* Main content */}
+          <div className="min-w-0 flex-1">
+            <Suspense fallback={<div className="animate-pulse rounded-lg bg-muted h-96 w-full" aria-hidden="true" />}>
+              <DocumentsPageClient
+                docs={docs}
+                mediaBase={mediaBase}
+                allCategories={allCategories}
+                total={total}
+                pageSize={pageSize}
+                currentPage={page}
+                sort={sort}
+              />
+            </Suspense>
+          </div>
+        </div>
+      </div>
 
       <Suspense fallback={null}>
         <DocumentModal />
