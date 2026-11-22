@@ -192,6 +192,10 @@ function makeDbAdmin() {
     },
   ];
   const fromMock = vi.fn((table: string) => {
+    if (table === "email_logs") {
+      // Budget check — below limit
+      return { select: () => makeChain({ count: 0, error: null }) };
+    }
     if (table === "orders") {
       const chain: Record<string, unknown> = {
         select: () => chain,

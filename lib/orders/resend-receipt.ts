@@ -11,6 +11,7 @@ import {
   fetchOrderItems,
   buildEmailData,
   REFUND_POLICY_PATH,
+  type RawItem,
 } from "@/lib/orders/receipt-helpers";
 
 type SB = SupabaseClient<Database>;
@@ -48,7 +49,7 @@ async function sendResendEmail(
   const appUrl = publicConfig.appUrl;
   const emailData = buildEmailData(
     order,
-    items as Parameters<typeof buildEmailData>[1],
+    items as RawItem[],
     appUrl,
     serverConfig.supportEmail,
     `${appUrl}${REFUND_POLICY_PATH}`,
@@ -139,11 +140,27 @@ export async function resendMyReceiptLib(
 /**
  * Admin resend (AC6): no owner check, no per-user rate limit.
  * Called by S-089 with a service-role Supabase client.
+ * Respects the shared email budget so a bulk admin action cannot exceed Resend's daily limit.
  */
 export async function resendReceiptForOrder(
   orderId: string,
   sb: SB,
 ): Promise<{ ok: boolean; error?: string }> {
+  const colomboToday = colomboTodayUtc();
+  const { count: budgetCount, error: budgetError } = await (sb
+    .from("email_logs")
+    .select("id", { count: "exact", head: true })
+    .in("status", ["sent", "queued"])
+    .gte("created_at", colomboToday.toISOString()) as unknown as Promise<{
+    count: number | null;
+    error: unknown;
+  }>);
+
+  if (!budgetError && (budgetCount ?? 0) >= serverConfig.emailDailyLimit) {
+    console.error("resend_receipt: email_daily_limit_reached", { order_id: orderId });
+    return { ok: false, error: "Email daily limit reached" };
+  }
+
   const { data: order, error: orderError } = await sb
     .from("orders")
     .select("id, order_number, status, payment_method, total_cents, created_at, user_id, profiles(email)")

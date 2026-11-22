@@ -12,6 +12,7 @@ import {
   fetchOrderItems,
   buildEmailData,
   REFUND_POLICY_PATH,
+  type RawItem,
 } from "@/lib/orders/receipt-helpers";
 
 type SB = SupabaseClient<Database>;
@@ -96,7 +97,7 @@ export async function ensureReceiptEmail(
   const template = isBank ? "bank_approved" : "receipt";
   const emailData = buildEmailData(
     order,
-    items as Parameters<typeof buildEmailData>[1],
+    items as RawItem[],
     appUrl,
     serverConfig.supportEmail,
     `${appUrl}${REFUND_POLICY_PATH}`,

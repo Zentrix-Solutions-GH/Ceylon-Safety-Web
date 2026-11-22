@@ -16,7 +16,7 @@ export function colomboTodayUtc(): Date {
   );
 }
 
-type RawItem = {
+export type RawItem = {
   id: string;
   title_snapshot: string;
   language: string;
@@ -35,7 +35,7 @@ export async function fetchOrderItems(
     .eq("order_id", orderId);
 
   if (error || !data) {
-    console.error("receipt: items_not_found", { order_id: orderId, message: safeErrorMessage(error) });
+    console.error("orders: items_not_found", { order_id: orderId, message: safeErrorMessage(error) });
     return null;
   }
 
