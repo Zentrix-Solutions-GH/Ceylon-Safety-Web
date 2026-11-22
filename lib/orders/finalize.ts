@@ -4,20 +4,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { FinalizeResult } from "@/types/order";
 import { safeErrorMessage } from "@/lib/errors";
+import { ensureReceiptEmail } from "@/lib/orders/receipt";
 
 type SB = SupabaseClient<Database>;
 
-// Stub — real implementation arrives with S-087 (invoice) and S-086 (email).
+// Stub — real implementation arrives with S-087 (invoice).
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function ensureInvoice(_orderId: string, _sb: SB): Promise<{ ok: boolean }> {
   return { ok: false }; // not ready until S-087 merges
 }
 
-// Stub — real implementation arrives with S-086.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function ensureReceiptEmail(_orderId: string, _sb: SB): Promise<{ ok: boolean }> {
-  return { ok: false }; // not ready until S-086 merges
-}
+export { ensureReceiptEmail };
 
 // Runs finalize steps for a single order.
 // Called by the job loop and by runFinalizeNow.

@@ -2,6 +2,7 @@ import "server-only";
 import { Resend } from "resend";
 import { serverConfig } from "@/lib/config";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import type { EmailTemplate } from "@/types/order";
 
 // Postgres unique-violation error code
 const PG_UNIQUE_VIOLATION = "23505";
@@ -9,11 +10,12 @@ const PG_UNIQUE_VIOLATION = "23505";
 
 export interface SendEmailOptions {
   to: string;
-  template: string;
+  template: EmailTemplate;
   relatedType?: string;
   relatedId?: string;
   subject: string;
   html: string;
+  text?: string;
 }
 
 /**
@@ -29,6 +31,12 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
   if (opts.relatedType && !opts.relatedId) {
     // relatedType without relatedId stores NULL, bypassing the unique index silently.
     throw new Error(`sendEmail: relatedId is required when relatedType is set (got relatedType="${opts.relatedType}")`);
+  }
+
+  if (!opts.text) {
+    // All transactional emails must include a plain-text part for accessibility and
+    // deliverability. This will become a hard error once all templates produce text.
+    console.warn("sendEmail: text part missing for template", opts.template);
   }
 
   const db = createSupabaseServiceRoleClient();
@@ -73,6 +81,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
       to: opts.to,
       subject: opts.subject,
       html: opts.html,
+      ...(opts.text ? { text: opts.text } : {}),
     });
 
     if (sendError || !data) {
