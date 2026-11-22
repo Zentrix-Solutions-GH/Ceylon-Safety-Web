@@ -1,7 +1,7 @@
 ---
 id: S-087
 title: Invoice PDF and invoice download route
-status: blocked
+status: in-progress
 owner: backend
 risk: normal
 branch: feature/S-087-invoice-pdf
@@ -48,9 +48,13 @@ OPEN requirements decide what the invoice prints: REQ-155 (tax or VAT on invoice
 
 ## Out of scope
 - Credit notes (no refunds in v1, REQ-052). Receipt email content (S-086). Admin settings screen for business details (S-107).
+- AC10 (email PDF attachment): the receipt email stub in `lib/orders/finalize.ts` returns `ok:false` until S-086 merges. AC10 is S-086's responsibility — it owns the email step and will attach the invoice PDF in the same finalize run. No AC10 test belongs in S-087.
 
 ## Assumptions accepted
-- None accepted yet; the OPEN items in Blocked must be answered first.
+- Q44a (REQ-155): No tax or VAT line on the invoice. Business is not VAT-registered; a tax line can be added in a future story when registration occurs.
+- Q44b (REQ-156): Legal title is "Invoice".
+- Q44c (REQ-156): Invoice numbers use a Postgres sequence (gaps are acceptable). A locked counter is not required.
+- Q45 (REQ-206): Seller details printed are name and address only. Registration number and tax number fields are not required at this stage.
 
 ## Test plan
 | Test | Type | File |
@@ -64,14 +68,84 @@ OPEN requirements decide what the invoice prints: REQ-155 (tax or VAT on invoice
 | Access rules: invoices not readable by other customers | database | `supabase/tests/` |
 
 ## Plan
-Prior art: grepped docs/ for invoice, invoices, seller_snapshot, pdf_key, regenerate. Found commerce design v6 section 8, schema doc `invoices` and decision B9, requirements REQ-155, REQ-156, REQ-206 (OPEN); implements section 8 (supersedes the first-draft S-019b, which used an invented `orders.invoice_key`).
-<!-- Filled in by /story-run at Step 3 once the story is `ready`. -->
+
+Prior art: grepped docs/ for invoice, invoices, seller_snapshot, pdf_key, regenerate. Found commerce design v6 section 8, schema doc `invoices` and decision B9, requirements REQ-155, REQ-156, REQ-206 (OPEN, resolved by Assumptions accepted above); implements section 8. `lib/orders/finalize.ts` already exists with an `ensureInvoice` stub (S-081). `private.next_invoice_number()` and `private.invoice_year_counters` already created in S-017 migration. No new DB migration required.
+
+### AC8 library decision (must document before coding)
+No PDF library is installed. Options evaluated:
+- `@react-pdf/renderer` — runs server-side (Node.js), embeds TTF fonts, produces compliant PDF. No headless browser. Bundle ~2 MB. Fits Vercel/server constraints. **Selected.**
+- `puppeteer`/`playwright` — headless Chromium, too heavy (>200 MB) for serverless.
+- `pdf-lib` — no layout engine; would require manual positioning of every element.
+
+Decision: use `@react-pdf/renderer`. Install: `npm install @react-pdf/renderer`.
+Fonts: Noto Sans (Latin/Sinhala/Tamil) TTF files embedded via `Font.register`. Free, covers all three scripts.
+
+### Files to create / edit
+
+| File | Action |
+|---|---|
+| `lib/invoices/pdf.ts` | Create — `buildInvoicePdf(order, items, invoice)` → `Buffer` |
+| `lib/invoices/template.ts` | Create — React-PDF component `InvoiceDocument` |
+| `lib/invoices/fonts/` | Create — NotoSans TTF files (Latin+Sinhala+Tamil) |
+| `lib/invoices/create.ts` | Create — `ensureInvoice(orderId, sb)`, `regenerateInvoice(orderId, sb)` |
+| `lib/orders/finalize.ts` | Edit — replace `ensureInvoice` stub with real import |
+| `app/api/invoice/[orderId]/route.ts` | Create — GET handler (owner + staff auth) |
+| `types/invoice.ts` | Create — `InvoiceStatus` type |
+| `lib/invoices/__tests__/create.test.ts` | Create — AC1/AC6 |
+| `lib/invoices/__tests__/template.test.ts` | Create — AC2/AC4 |
+| `lib/invoices/__tests__/fonts.test.ts` | Create — AC3/EC2 |
+| `lib/invoices/__tests__/regenerate.test.ts` | Create — AC5/EC4 |
+| `app/api/invoice/__tests__/invoice.test.ts` | Create — AC7/EC6 |
+| `lib/orders/__tests__/finalize.test.ts` | Edit — add EC1 invoice-failure test |
+
+### Step order
+1. `types/invoice.ts` — `InvoiceStatus`, seller snapshot shape.
+2. Install `@react-pdf/renderer`, download Noto Sans TTF files to `lib/invoices/fonts/`.
+3. `lib/invoices/template.ts` — `InvoiceDocument` React-PDF component.
+4. `lib/invoices/pdf.ts` — `buildInvoicePdf()` wraps template → Buffer.
+5. `lib/invoices/create.ts` — `ensureInvoice()` and `regenerateInvoice()`.
+6. `lib/orders/finalize.ts` — replace stub import.
+7. `app/api/invoice/[orderId]/route.ts` — GET route.
+8. All test files (written before the corresponding implementation above — TDD order).
+
+### Seller snapshot shape (Q45)
+```ts
+{ name: string; address: string }
+```
+Keys from `site_settings`: `business_legal_name`, `business_address`. If either is null, `ensureInvoice` returns `{ ok: false }` and logs a warning (EC3). No alert channel specified — log only.
+
+### Tax columns (Q44a)
+`tax_label`, `tax_rate_bps` stored as NULL; `tax_cents` stored as 0. The PDF template renders no tax line.
+
+### Invoice number format
+`private.next_invoice_number()` returns `INV-YYYY-00001` (year-scoped counter, already in S-017). No new migration.
 
 ## Evidence
-<!-- Paste scripts/check.sh output here after Step 7. -->
 
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Test Files  2 failed | 247 passed | 15 skipped (264)   ← 2 pre-existing failures in ArticleEditor on dev (unchanged from dev, no S-087 diff)
+Tests  30 failed | 2553 passed | 60 skipped (2643)
+
+S-087 tests (all 40 pass):
+✓ lib/invoices/__tests__/regenerate.test.ts (5 tests)
+✓ lib/invoices/__tests__/create.test.ts (9 tests)
+✓ app/api/invoice/__tests__/invoice.test.ts (5 tests)
+✓ lib/invoices/__tests__/fonts.test.ts (5 tests)
+✓ lib/invoices/__tests__/template.test.ts (16 tests)
+Test Files  5 passed (5)
+Tests  40 passed (40)
+
+✓ Public pages session check (AC11) passed
+✓ Dev seed guard passed
+⚠ Supabase not running — pgTAP, types-freshness skipped (run supabase start first)
 ```
 
 ## Review notes
