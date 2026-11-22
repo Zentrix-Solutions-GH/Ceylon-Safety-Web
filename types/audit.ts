@@ -27,6 +27,7 @@ export type AuditEventName =
   // Settings and ads
   | "settings.change"
   | "settings.contact_change"
+  | "settings.business_change"
   | "ads.settings_change"
   // Documents
   | "document.save"

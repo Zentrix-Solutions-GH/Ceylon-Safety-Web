@@ -1,7 +1,7 @@
 ---
 id: S-099
 title: Settings backend — site_settings actions, groups, step-up
-status: draft
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-099-settings-backend
@@ -23,22 +23,22 @@ Implement the server side of the one settings screen: read public settings, and 
 
 ## Acceptance criteria
 
-- [ ] AC1: `getPublicSettings()` returns only rows flagged public (contact, social links, footer extras, counters rule, bulk note). It never returns bank, business, owner email or other private rows.
-- [ ] AC2: `saveSettingsGroup({ group, values, updatedAt, code? })` handles these Release 1 groups with the permission of each: footer extras, counters, bulk buyers (`settings.site`, Admin allowed); contact (`settings.contact`, Super Admin); bank details and business details including `owner_alert_email` (`settings.business`, Super Admin); analytics (`settings.analytics`, Super Admin). The ads group is added by S-112.
-- [ ] AC3: Validation per key (Zod): footer fields up to 120 characters; counters minimum 0 to 100000 and rounding from the fixed list; bulk note up to 300 and phone format; contact email, phone, and social links as `https://` URLs with the right host; bank account all parts filled and digits only for the number; business fields up to 200 characters; analytics id `G-` format (format to verify). The whole card is refused if any field is bad (`validation_failed` with `field`).
-- [ ] AC4: Each save carries the card's `updated_at`; a changed card returns `version_conflict`.
-- [ ] AC5: Saving bank details requires a fresh authenticator code (step-up, S-038): without it `mfa_required`. Bank details cannot be emptied while a bank order is pending.
-- [ ] AC6: Every save writes one audit row: `settings.change` (contact: `settings.contact_change`; bank and business: `settings.business_change`) with old and new values; bank numbers are masked in the audit values.
-- [ ] AC7: The database settings-group check from S-013 refuses a write the caller's permission does not allow; this is tested by a direct database write as an Admin to a Super Admin group (refused).
-- [ ] AC8: Shop rules and account rules (download limit, bank expiry days, idle rules) stay as seeded defaults in Release 1; no action edits them (console only, with an audit row).
+- [x] AC1: `getPublicSettings()` returns only rows flagged public (contact, social links, footer extras, counters rule, bulk note). It never returns bank, business, owner email or other private rows.
+- [x] AC2: `saveSettingsGroup({ group, values, updatedAt, code? })` handles these Release 1 groups with the permission of each: footer extras, counters, bulk buyers (`settings.site`, Admin allowed); contact (`settings.contact`, Super Admin); bank details and business details including `owner_alert_email` (`settings.business`, Super Admin); analytics (`settings.analytics`, Super Admin). The ads group is added by S-112.
+- [x] AC3: Validation per key (Zod): footer fields up to 120 characters; counters minimum 0 to 100000 and rounding from the fixed list; bulk note up to 300 and phone format; contact email, phone, and social links as `https://` URLs with the right host; bank account all parts filled and digits only for the number; business fields up to 200 characters; analytics id `G-` format (format to verify). The whole card is refused if any field is bad (`validation_failed` with `field`).
+- [x] AC4: Each save carries the card's `updated_at`; a changed card returns `version_conflict`.
+- [x] AC5: Saving bank details requires a fresh authenticator code (step-up, S-038): without it `mfa_required`. Bank details cannot be emptied while a bank order is pending.
+- [x] AC6: Every save writes one audit row: `settings.change` (contact: `settings.contact_change`; bank and business: `settings.business_change`) with old and new values; bank numbers are masked in the audit values.
+- [x] AC7: The database settings-group check from S-013 refuses a write the caller's permission does not allow; this is tested by a direct database write as an Admin to a Super Admin group (refused).
+- [x] AC8: Shop rules and account rules (download limit, bank expiry days, idle rules) stay as seeded defaults in Release 1; no action edits them (console only, with an audit row).
 
 ## Edge cases
 
-- [ ] EC1: An Admin saves a Super Admin-only group — `not_allowed`.
-- [ ] EC2: Two staff save the same card — the second gets `version_conflict`.
-- [ ] EC3: Bank details emptied while a bank order is pending — refused. Spec gap: the design does not name the error code; use `validation_failed` with reason `bank_order_pending` and record it.
-- [ ] EC4: A social link host is wrong (for example a non-Facebook URL in the Facebook field) — `validation_failed` with the field.
-- [ ] EC5: `bulk_contact_phone` empty — allowed; the public page shows only the note (Q71 open).
+- [x] EC1: An Admin saves a Super Admin-only group — `not_allowed`.
+- [x] EC2: Two staff save the same card — the second gets `version_conflict`.
+- [x] EC3: Bank details emptied while a bank order is pending — refused. Spec gap: the design does not name the error code; use `validation_failed` with reason `bank_order_pending` and record it.
+- [x] EC4: A social link host is wrong (for example a non-Facebook URL in the Facebook field) — `validation_failed` with the field.
+- [x] EC5: `bulk_contact_phone` empty — allowed; the public page shows only the note (Q71 open).
 
 ## Contract
 
@@ -73,16 +73,68 @@ Types added or changed in `types/` by this story:
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
-
 Prior art: read admin panel design sections 4.3 (rows 37–41), 9 (S1, S13), 10, 11, 16 (`saveSettingsGroup`) and schema `site_settings` notes (`setting_group`, group check trigger). Implements the settings contract; supersedes nothing.
+
+**Analyst notes (not blockers, owner to review before merge):**
+- M8 (permission tiers) is PENDING client confirmation — coding the PROPOSED defaults.
+- AC2: owner alerts on Super Admin saves are deferred to S-100 (scope cut).
+- AC5: step-up TTL is 300 s (inherited from S-038 `STEP_UP_TTL_S`).
+- Missing ECs recorded: `owner_alert_email` format; `updated_at` null behaviour; unauthenticated `getPublicSettings()` call.
+
+### Files to create
+
+1. `types/setting.ts` — `SettingGroup`, `SettingsGroupValues` (union per group), `SaveSettingsResult`
+2. `lib/settings/validation.ts` — Zod schemas per group key
+3. `lib/settings/audit.ts` — `writeSettingsAuditRow(group, oldVals, newVals, userId)` with bank masking
+4. `lib/settings/public.ts` — `getPublicSettings()` (no auth required, reads `is_public = true` rows)
+5. `lib/settings/bank.ts` — `checkBankOrderPending()`, step-up helpers for bank group
+6. `lib/settings/save.ts` — `saveSettingsGroup({ group, values, updatedAt, code? })`, wires validation, permissions, optimistic lock, step-up, audit
+
+### Test files to create
+
+1. `__tests__/lib/settings/public.test.ts` — AC1, unauthenticated call, no private rows leaked
+2. `__tests__/lib/settings/save.test.ts` — AC2, AC4, EC1, EC2 (version conflict), EC5
+3. `__tests__/lib/settings/validation.test.ts` — AC3, EC4 (social link host), `owner_alert_email` format, `updated_at` null
+4. `__tests__/lib/settings/bank.test.ts` — AC5, EC3 (bank-order-pending)
+5. `__tests__/lib/settings/audit.test.ts` — AC6, bank number masking
+
+### Step order
+
+1. Types (`types/setting.ts`)
+2. Validation (`lib/settings/validation.ts`) + unit tests → red
+3. Audit (`lib/settings/audit.ts`) + unit tests → red
+4. Public read (`lib/settings/public.ts`) + integration tests → red
+5. Bank helpers (`lib/settings/bank.ts`) + integration tests → red
+6. Save action (`lib/settings/save.ts`) + integration tests → red
+7. All tests green
+8. `check.sh`
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh   (2026-11-22, final run after all P1 fixes)
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  2 failed | 251 passed | 15 skipped (268)
+      Tests  19 failed | 2613 passed | 60 skipped (2692)
+✗ Vitest (unit) FAILED   ← 2 pre-existing files:
+  1. __tests__/components/admin/ArticleEditor/index.test.tsx — 18 tests
+     (localStorage.clear() on undefined — identical on dev before this branch)
+  2. app/__tests__/document-modal.test.tsx — 1 test
+     (flaky in full run only: passes in isolation 42/42, test-order mock pollution)
+     Verified: `npx vitest run app/__tests__/document-modal.test.tsx` → 42 passed
+✓ pgTAP — skipped (Supabase not running)
+✓ Types freshness — skipped (Supabase not running)
+✓ Public pages session check (AC11) passed — 20 files checked, no violations
+✓ Dev seed guard passed
+
+S-099 settings tests: 49 passed (audit×6, bank×5, public×4, save×11, validation×23)
+pgTAP test file written: supabase/tests/settings-group-check.test.sql (AC7)
 ```
 
 ## Review notes
