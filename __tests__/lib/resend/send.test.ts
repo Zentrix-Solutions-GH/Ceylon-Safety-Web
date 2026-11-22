@@ -50,7 +50,7 @@ function makeResendMock(sendError: Error | null = null) {
 
 const SEND_OPTS = {
   to: "user@example.com",
-  template: "welcome",
+  template: "welcome" as const,
   relatedType: "user",
   relatedId: "u-uuid",
   subject: "Welcome",
