@@ -51,6 +51,7 @@ export function buildEmailData(
   appUrl: string,
   supportEmail: string,
   refundPolicyUrl: string,
+  orderPageUrl?: string,
 ): ReceiptEmailData {
   return {
     orderNumber: order.order_number as string,
@@ -65,5 +66,6 @@ export function buildEmailData(
     appUrl,
     supportEmail,
     refundPolicyUrl,
+    orderPageUrl,
   };
 }

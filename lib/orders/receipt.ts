@@ -61,7 +61,7 @@ export async function ensureReceiptEmail(
 
   const isBank = order.payment_method === "bank_transfer";
 
-  // EC6: bank_approved has no unique index — check email_logs before sending
+  // EC6: belt-and-suspenders check; unique index on email_logs (migration 20261122000001) also prevents duplicates
   if (isBank) {
     const { data: existing } = await sb
       .from("email_logs")
@@ -94,12 +94,14 @@ export async function ensureReceiptEmail(
 
   const appUrl = publicConfig.appUrl;
   const template = isBank ? "bank_approved" : "receipt";
+  const orderPageUrl = `${appUrl}/orders/${orderId}`;
   const emailData = buildEmailData(
     order,
     items as RawItem[],
     appUrl,
     serverConfig.supportEmail,
     `${appUrl}${REFUND_POLICY_PATH}`,
+    orderPageUrl,
   );
 
   const { subject, html, text } = isBank

@@ -37,6 +37,7 @@ vi.mock("@/lib/resend/templates/bank-approved", () => ({
 }));
 
 import { sendEmail } from "@/lib/resend/client";
+import { renderReceiptEmail } from "@/lib/resend/templates/purchase-receipt";
 import { ensureReceiptEmail } from "@/lib/orders/receipt";
 
 const ORDER_ID = "ord-00000000-0000-4000-8000-000000000001";
@@ -268,5 +269,31 @@ describe("ensureReceiptEmail — concurrent runs (EC1)", () => {
     expect(r2.ok).toBe(true);
     // Exactly two calls to sendEmail — neither crashed; the DB-level guard handles deduplication.
     expect(vi.mocked(sendEmail)).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ─── AC7: html and text parts are both non-empty ──────────────────────────────
+
+describe("ensureReceiptEmail — email parts (AC7)", () => {
+  it("passes non-empty html and text to sendEmail (AC7)", async () => {
+    await ensureReceiptEmail(ORDER_ID, makeDb());
+
+    const args = vi.mocked(sendEmail).mock.calls[0]?.[0];
+    expect(args?.html).toBeTruthy();
+    expect(args?.text).toBeTruthy();
+  });
+});
+
+// ─── AC3: orderPageUrl is wired up ───────────────────────────────────────────
+
+describe("ensureReceiptEmail — orderPageUrl wire-up (AC3)", () => {
+  it("passes orderPageUrl derived from appUrl and orderId to renderReceiptEmail (AC3)", async () => {
+    await ensureReceiptEmail(ORDER_ID, makeDb());
+
+    expect(vi.mocked(renderReceiptEmail)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderPageUrl: expect.stringContaining(ORDER_ID),
+      }),
+    );
   });
 });

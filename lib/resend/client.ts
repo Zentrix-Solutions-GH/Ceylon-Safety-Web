@@ -2,6 +2,7 @@ import "server-only";
 import { Resend } from "resend";
 import { serverConfig } from "@/lib/config";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import type { EmailTemplate } from "@/types/order";
 
 // Postgres unique-violation error code
 const PG_UNIQUE_VIOLATION = "23505";
@@ -9,7 +10,7 @@ const PG_UNIQUE_VIOLATION = "23505";
 
 export interface SendEmailOptions {
   to: string;
-  template: string;
+  template: EmailTemplate;
   relatedType?: string;
   relatedId?: string;
   subject: string;

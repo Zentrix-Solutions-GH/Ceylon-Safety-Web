@@ -2,11 +2,10 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import { serverConfig, publicConfig } from "@/lib/config";
+import { serverConfig, publicConfig, REFUND_POLICY_PATH } from "@/lib/config";
 import { sendEmail } from "@/lib/resend/client";
 import { renderReceiptEmail } from "@/lib/resend/templates/purchase-receipt";
 import { safeErrorMessage } from "@/lib/errors";
-import { REFUND_POLICY_PATH } from "@/lib/config";
 import {
   colomboTodayUtc,
   fetchOrderItems,
@@ -47,12 +46,14 @@ async function sendResendEmail(
   }
 
   const appUrl = publicConfig.appUrl;
+  const orderPageUrl = `${appUrl}/orders/${orderId}`;
   const emailData = buildEmailData(
     order,
     items as RawItem[],
     appUrl,
     serverConfig.supportEmail,
     `${appUrl}${REFUND_POLICY_PATH}`,
+    orderPageUrl,
   );
 
   const { subject, html, text } = renderReceiptEmail(emailData);
@@ -83,28 +84,8 @@ export async function resendMyReceiptLib(
 ): Promise<{ ok: boolean; error?: string }> {
   const colomboToday = colomboTodayUtc();
 
-  // Budget check: fail open — a DB error here should not silently block the user's resend.
-  // Asymmetry vs. the rate-limit check below (which fails closed) is intentional:
-  // the budget is a shared operational guard; the rate limit is a user-facing abuse gate.
-  // Alert on budget-check errors is deferred to S-100.
-  const { count: budgetCount, error: budgetError } = await (sb
-    .from("email_logs")
-    .select("id", { count: "exact", head: true })
-    .in("status", ["sent", "queued"])
-    .gte("created_at", colomboToday.toISOString()) as unknown as Promise<{
-    count: number | null;
-    error: unknown;
-  }>);
-
-  if (budgetError) {
-    // S-100: replace with alertAdmin once available.
-    console.error("resend_receipt: budget_check_failed — allowing send (fail open)", { order_id: orderId, message: safeErrorMessage(budgetError) });
-  } else if ((budgetCount ?? 0) >= serverConfig.emailDailyLimit) {
-    console.error("resend_receipt: email_daily_limit_reached", { order_id: orderId });
-    return { ok: false, error: "Email daily limit reached" };
-  }
-
-  // Owner check — also fetches profile status to block suspended accounts (AC5).
+  // Owner check first — also fetches profile status to block suspended accounts (AC5).
+  // Budget check runs after so unauthorized callers skip the extra DB round-trip.
   const { data: order, error: orderError } = await sb
     .from("orders")
     .select("id, order_number, status, payment_method, total_cents, created_at, user_id, profiles(email, status)")
@@ -129,7 +110,28 @@ export async function resendMyReceiptLib(
     return { ok: false, error: "Order is not paid" };
   }
 
-  // Rate limit: at most RESEND_DAILY_LIMIT per order per day (P1: fail closed on DB error)
+  // Budget check: fail open — a DB error here should not silently block the user's resend.
+  // Asymmetry vs. the rate-limit check below (which fails closed) is intentional:
+  // the budget is a shared operational guard; the rate limit is a user-facing abuse gate.
+  // Alert on budget-check errors is deferred to S-100.
+  const { count: budgetCount, error: budgetError } = await (sb
+    .from("email_logs")
+    .select("id", { count: "exact", head: true })
+    .in("status", ["sent", "queued"])
+    .gte("created_at", colomboToday.toISOString()) as unknown as Promise<{
+    count: number | null;
+    error: unknown;
+  }>);
+
+  if (budgetError) {
+    // S-100: replace with alertAdmin once available.
+    console.error("resend_receipt: budget_check_failed — allowing send (fail open)", { order_id: orderId, message: safeErrorMessage(budgetError) });
+  } else if ((budgetCount ?? 0) >= serverConfig.emailDailyLimit) {
+    console.error("resend_receipt: email_daily_limit_reached", { order_id: orderId });
+    return { ok: false, error: "Email daily limit reached" };
+  }
+
+  // Rate limit: at most RESEND_DAILY_LIMIT per order per day (fail closed on DB error)
   const { count: resendCount, error: resendCountError } = await (sb
     .from("email_logs")
     .select("id", { count: "exact", head: true })

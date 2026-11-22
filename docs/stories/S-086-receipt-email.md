@@ -135,7 +135,12 @@ check.sh: 9 passed, 1 failed (pre-existing ArticleEditor localStorage failure �
 ```
 
 ## Review notes
-Reviewer returned REQUEST CHANGES (2026-11-19). Two P1 items fixed:
+Round-3 full review (2026-11-22) found 3 P1 findings on the full PR diff (missed by scoped re-reviews):
+- **P1** `lib/orders/receipt.ts:64` — Stale comment "EC6: bank_approved has no unique index — check email_logs before sending"; migration 20261122000001 (this PR) added bank_approved to the index, making the comment wrong. (full-review 2026-11-22)
+- **P1** `lib/orders/receipt-helpers.ts:buildEmailData` / `receipt.ts:97–103` — `orderPageUrl` never built or passed; the template's "link to order page when invoice is ready" branch (AC3) is unreachable. Every email omits the order-page link. Fix: derive `orderPageUrl = appUrl + "/orders/" + orderId` and pass it to `buildEmailData`. (full-review 2026-11-22)
+- **P1** `types/order.ts:81` — `EmailTemplate` type defined but never used as a TypeScript constraint anywhere; template values in `receipt.ts`, `resend-receipt.ts`, and `client.ts` are bare string literals (CLAUDE.md shelfware rule). (full-review 2026-11-22)
+
+Round 1–2 review (2026-11-19). Two P1 items fixed:
 - P1a: `SUPPORT_EMAIL` was hardcoded in `receipt.ts` and `resend-receipt.ts` — moved to `serverConfig.supportEmail` via `optional("SUPPORT_EMAIL", "support@ceylonsafety.lk")` in `lib/config.ts`.
 - P1b: `bank_approved` had no idempotency guard (no unique index). Added pre-check in `ensureReceiptEmail`: before rendering/sending for a bank order, queries `email_logs` for an existing `bank_approved` row; returns `ok:true` early if found (EC6).
 - P1c: EC1 concurrent-runs test strengthened: now asserts sendEmail is called twice and both return ok:true, with explicit comment documenting that the DB-level unique index (inside sendEmail) is the deduplication mechanism.

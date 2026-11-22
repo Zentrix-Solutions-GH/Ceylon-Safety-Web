@@ -8,10 +8,10 @@ export function renderBankApprovedEmail(data: ReceiptEmailData): {
   html: string;
   text: string;
 } {
-  const { html, text, subject: baseSubject } = renderReceiptEmail({ ...data, onceNote: true });
+  const { html, text } = renderReceiptEmail({ ...data, onceNote: true });
 
   return {
-    subject: baseSubject.replace("Your receipt", "Your order is approved"),
+    subject: `Your order is approved — Order ${data.orderNumber}`,
     html,
     text,
   };
