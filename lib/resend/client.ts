@@ -32,6 +32,12 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
     throw new Error(`sendEmail: relatedId is required when relatedType is set (got relatedType="${opts.relatedType}")`);
   }
 
+  if (!opts.text) {
+    // All transactional emails must include a plain-text part for accessibility and
+    // deliverability. This will become a hard error once all templates produce text.
+    console.warn("sendEmail: text part missing for template", opts.template);
+  }
+
   const db = createSupabaseServiceRoleClient();
 
   // Step 1: insert log row and capture the new row's id for precise updates

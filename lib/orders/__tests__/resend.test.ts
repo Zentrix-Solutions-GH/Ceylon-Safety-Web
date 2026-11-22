@@ -13,6 +13,7 @@ vi.mock("@/lib/config", () => ({
     emailDailyLimit: 90,
   },
   publicConfig: { appUrl: "https://ceylonsafety.lk" },
+  REFUND_POLICY_PATH: "/refund-policy",
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServiceRoleClient: vi.fn(),
@@ -55,10 +56,11 @@ function makeChain<T>(result: T) {
   return chain;
 }
 
-function makeDb(options?: { resendCount?: number; isOwner?: boolean; resendCountError?: boolean }) {
+function makeDb(options?: { resendCount?: number; isOwner?: boolean; resendCountError?: boolean; suspended?: boolean }) {
   const resendCount = options?.resendCount ?? 0;
   const resendCountError = options?.resendCountError ?? false;
   const isOwner = options?.isOwner !== false;
+  const profileStatus = options?.suspended ? "suspended" : "active";
 
   const orderRow = isOwner
     ? {
@@ -69,7 +71,7 @@ function makeDb(options?: { resendCount?: number; isOwner?: boolean; resendCount
         total_cents: 199000,
         created_at: "2026-11-18T04:30:00.000Z",
         user_id: USER_ID,
-        profiles: { email: "buyer99@example.com" },
+        profiles: { email: "buyer99@example.com", status: profileStatus },
       }
     : null;
 
@@ -142,6 +144,13 @@ describe("resendMyReceiptLib — owner only (AC5)", () => {
     const result = await resendMyReceiptLib(ORDER_ID, "other-user", makeDb({ isOwner: false }));
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/not found|forbidden|not allowed/i);
+    expect(vi.mocked(sendEmail)).not.toHaveBeenCalled();
+  });
+
+  it("blocks a suspended account (AC5 active-account guard)", async () => {
+    const result = await resendMyReceiptLib(ORDER_ID, USER_ID, makeDb({ suspended: true }));
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/not active|suspended/i);
     expect(vi.mocked(sendEmail)).not.toHaveBeenCalled();
   });
 });

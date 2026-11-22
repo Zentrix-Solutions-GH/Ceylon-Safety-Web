@@ -177,6 +177,9 @@ export function r2Config(): {
   return { accountId, accessKeyId, secretAccessKey, bucketPublic, bucketPrivate, publicMediaBaseUrl };
 }
 
+// Well-known public paths used in emails (S-086).
+export const REFUND_POLICY_PATH = "/refund-policy";
+
 // File size limits for document uploads (S-070).
 export const PPTX_MAX_BYTES = 100 * 1024 * 1024; // 100 MB
 export const PREVIEW_MAX_BYTES = 10 * 1024 * 1024; // 10 MB

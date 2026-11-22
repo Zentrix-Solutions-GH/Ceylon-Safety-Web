@@ -7,8 +7,6 @@ import { safeErrorMessage } from "@/lib/errors";
 
 export type SB = SupabaseClient<Database>;
 
-export const REFUND_POLICY_PATH = "/refund-policy";
-
 /** Returns the UTC start of today's calendar day in the Asia/Colombo timezone. */
 export function colomboTodayUtc(): Date {
   return new Date(

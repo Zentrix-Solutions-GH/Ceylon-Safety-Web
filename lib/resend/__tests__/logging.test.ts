@@ -58,27 +58,50 @@ beforeEach(() => {
 });
 
 describe("email log error sanitisation (AC9)", () => {
-  it("only stores error class name, not error message (AC9)", () => {
-    class FetchError extends Error {
-      constructor() {
-        super("Could not reach https://api.resend.com — user: someone@example.com");
-        this.name = "FetchError";
-      }
-    }
+  it("stores named error class, not the error message, in email_logs (AC9)", async () => {
+    // The Resend mock throws NetworkError whose message contains the recipient.
+    // sendEmail must store only the class name ("NetworkError") in the DB row.
+    await sendEmail({
+      to: "buyer@example.com",
+      template: "receipt",
+      relatedType: "order",
+      relatedId: "ord-ac9-named",
+      subject: "Your receipt",
+      html: "<p>receipt</p>",
+      text: "receipt",
+    });
 
-    const err = new FetchError();
-    // Simulate what sendEmail does: use constructor name, never the message
-    const stored = err.constructor.name !== "Error" ? err.constructor.name : "network_error";
-    expect(stored).toBe("FetchError");
-    expect(stored).not.toContain("example.com");
-    expect(stored).not.toContain("@");
+    const updateArg = vi.mocked(updateMock).mock.calls[0]?.[0] as { error?: string };
+    const storedError = updateArg?.error ?? "";
+    expect(storedError).toBe("NetworkError");
+    expect(storedError).not.toContain("@");
+    expect(storedError).not.toContain("buyer");
   });
 
-  it("falls back to 'network_error' for plain Error (AC9)", () => {
-    const err = new Error("connection refused at 192.168.1.1");
-    const stored = err.constructor.name !== "Error" ? err.constructor.name : "network_error";
-    expect(stored).toBe("network_error");
-    expect(stored).not.toContain("192");
+  it("falls back to 'network_error' when a plain Error is thrown (AC9)", async () => {
+    // Re-arm the Resend mock to throw a plain Error (constructor.name === "Error").
+    const { Resend } = await import("resend");
+    vi.mocked(Resend).mockImplementationOnce(
+      () =>
+        ({
+          emails: { send: vi.fn().mockRejectedValue(new Error("connection refused at 192.168.1.1")) },
+        }) as never,
+    );
+
+    await sendEmail({
+      to: "buyer2@example.com",
+      template: "receipt",
+      relatedType: "order",
+      relatedId: "ord-ac9-plain",
+      subject: "Your receipt",
+      html: "<p>receipt</p>",
+      text: "receipt",
+    });
+
+    const updateArg = vi.mocked(updateMock).mock.calls[0]?.[0] as { error?: string };
+    const storedError = updateArg?.error ?? "";
+    expect(storedError).toBe("network_error");
+    expect(storedError).not.toContain("192");
   });
 
   it("stores only the error class name in email_logs, never the error message or recipient address (AC9)", async () => {

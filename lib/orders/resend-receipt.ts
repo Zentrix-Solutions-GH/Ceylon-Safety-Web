@@ -6,11 +6,11 @@ import { serverConfig, publicConfig } from "@/lib/config";
 import { sendEmail } from "@/lib/resend/client";
 import { renderReceiptEmail } from "@/lib/resend/templates/purchase-receipt";
 import { safeErrorMessage } from "@/lib/errors";
+import { REFUND_POLICY_PATH } from "@/lib/config";
 import {
   colomboTodayUtc,
   fetchOrderItems,
   buildEmailData,
-  REFUND_POLICY_PATH,
   type RawItem,
 } from "@/lib/orders/receipt-helpers";
 
@@ -83,7 +83,10 @@ export async function resendMyReceiptLib(
 ): Promise<{ ok: boolean; error?: string }> {
   const colomboToday = colomboTodayUtc();
 
-  // Budget check (fail open — consistent with ensureReceiptEmail)
+  // Budget check: fail open — a DB error here should not silently block the user's resend.
+  // Asymmetry vs. the rate-limit check below (which fails closed) is intentional:
+  // the budget is a shared operational guard; the rate limit is a user-facing abuse gate.
+  // Alert on budget-check errors is deferred to S-100.
   const { count: budgetCount, error: budgetError } = await (sb
     .from("email_logs")
     .select("id", { count: "exact", head: true })
@@ -93,21 +96,33 @@ export async function resendMyReceiptLib(
     error: unknown;
   }>);
 
-  if (!budgetError && (budgetCount ?? 0) >= serverConfig.emailDailyLimit) {
+  if (budgetError) {
+    // S-100: replace with alertAdmin once available.
+    console.error("resend_receipt: budget_check_failed — allowing send (fail open)", { order_id: orderId, message: safeErrorMessage(budgetError) });
+  } else if ((budgetCount ?? 0) >= serverConfig.emailDailyLimit) {
     console.error("resend_receipt: email_daily_limit_reached", { order_id: orderId });
     return { ok: false, error: "Email daily limit reached" };
   }
 
-  // Owner check
+  // Owner check — also fetches profile status to block suspended accounts (AC5).
   const { data: order, error: orderError } = await sb
     .from("orders")
-    .select("id, order_number, status, payment_method, total_cents, created_at, user_id, profiles(email)")
+    .select("id, order_number, status, payment_method, total_cents, created_at, user_id, profiles(email, status)")
     .eq("id", orderId)
     .eq("user_id", userId)
     .single();
 
   if (orderError || !order) {
     return { ok: false, error: "Order not found or not allowed" };
+  }
+
+  // Active-account guard (equivalent to requireActiveAccount for a lib function).
+  const profile = Array.isArray(order.profiles)
+    ? (order.profiles[0] as { email: string; status: string } | undefined)
+    : (order.profiles as { email: string; status: string } | null);
+
+  if (!profile || profile.status !== "active") {
+    return { ok: false, error: "Account not active" };
   }
 
   if (order.status !== "paid") {
@@ -139,8 +154,13 @@ export async function resendMyReceiptLib(
 
 /**
  * Admin resend (AC6): no owner check, no per-user rate limit.
- * Called by S-089 with a service-role Supabase client.
+ * Must be called with a service-role Supabase client; a user-scoped client
+ * would have RLS scope the orders query to the calling user, silently returning
+ * no rows for other users' orders.
  * Respects the shared email budget so a bulk admin action cannot exceed Resend's daily limit.
+ * Budget fail-open is intentional: dropped order emails are worse than over-sending.
+ * Rate-limit in resendMyReceiptLib fails closed because that path is user-initiated.
+ * Full alert transport for budget-check failures is deferred to S-100.
  */
 export async function resendReceiptForOrder(
   orderId: string,
@@ -156,7 +176,10 @@ export async function resendReceiptForOrder(
     error: unknown;
   }>);
 
-  if (!budgetError && (budgetCount ?? 0) >= serverConfig.emailDailyLimit) {
+  if (budgetError) {
+    // S-100: replace with alertAdmin once available.
+    console.error("resend_receipt: budget_check_failed — allowing send (fail open)", { order_id: orderId, message: safeErrorMessage(budgetError) });
+  } else if ((budgetCount ?? 0) >= serverConfig.emailDailyLimit) {
     console.error("resend_receipt: email_daily_limit_reached", { order_id: orderId });
     return { ok: false, error: "Email daily limit reached" };
   }

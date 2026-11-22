@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import { serverConfig, publicConfig } from "@/lib/config";
+import { serverConfig, publicConfig, REFUND_POLICY_PATH } from "@/lib/config";
 import { sendEmail } from "@/lib/resend/client";
 import { renderReceiptEmail } from "@/lib/resend/templates/purchase-receipt";
 import { renderBankApprovedEmail } from "@/lib/resend/templates/bank-approved";
@@ -11,7 +11,6 @@ import {
   colomboTodayUtc,
   fetchOrderItems,
   buildEmailData,
-  REFUND_POLICY_PATH,
   type RawItem,
 } from "@/lib/orders/receipt-helpers";
 

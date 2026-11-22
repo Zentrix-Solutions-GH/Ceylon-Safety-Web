@@ -56,6 +56,20 @@ describe("finalizeOrder", () => {
     errorSpy.mockRestore();
   });
 
+  it("AC10: receipt ok:true + invoice ok:false → finalized_at stays null", async () => {
+    const { finalizeOrder } = await import("@/lib/orders/finalize");
+    const sb = makeSb();
+    const result = await finalizeOrder("order-ac10", sb as unknown as SB, {
+      invoice: vi.fn().mockResolvedValue({ ok: false }),
+      email: vi.fn().mockResolvedValue({ ok: true }),
+    });
+
+    // Both steps must succeed for finalized_at to be set.
+    expect(result.invoiceOk).toBe(false);
+    expect(result.emailOk).toBe(true);
+    expect(result.finalizedAt).toBeNull();
+  });
+
   it("EC1: invoice step fails but email step still runs; finalized_at stays null until both succeed", async () => {
     const { finalizeOrder } = await import("@/lib/orders/finalize");
     const emailMock = vi.fn().mockResolvedValue({ ok: false });

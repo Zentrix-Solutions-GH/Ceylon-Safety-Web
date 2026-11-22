@@ -13,6 +13,7 @@ vi.mock("@/lib/config", () => ({
     emailDailyLimit: 90,
   },
   publicConfig: { appUrl: "https://ceylonsafety.lk" },
+  REFUND_POLICY_PATH: "/refund-policy",
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServiceRoleClient: vi.fn(),
