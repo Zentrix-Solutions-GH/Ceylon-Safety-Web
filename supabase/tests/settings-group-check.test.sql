@@ -40,8 +40,12 @@ SELECT has_trigger('public', 'site_settings', 'trg_site_settings_group_check',
   'S-099: group-check trigger exists');
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Test 3 (as postgres/service role): can update a contact-group row
+-- Test 3: simulate service-role write (the trigger early-returns when
+-- current_setting('role') = 'service_role'). pgTAP runs as postgres, not
+-- the Supabase service_role JWT, so we set the GUC directly.
 -- ─────────────────────────────────────────────────────────────────────────────
+SELECT set_config('role', 'service_role', true);
+
 SELECT lives_ok(
   $q$
     UPDATE public.site_settings
@@ -51,14 +55,18 @@ SELECT lives_ok(
   'S-099: service role can update contact group row'
 );
 
+-- Clear the GUC before switching to authenticated role.
+SELECT set_config('role', '', true);
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Test 4: Admin user (settings.site only) blocked from contact-group row
 -- Switch to authenticated role and set JWT claim to admin user.
 -- SET ROLE at top level (not inside DO) so the role applies to the
 -- subsequent throws_ok() call.
+-- PERFORM is PL/pgSQL syntax; use SELECT at top-level SQL.
 -- ─────────────────────────────────────────────────────────────────────────────
 SET ROLE authenticated;
-PERFORM set_config(
+SELECT set_config(
   'request.jwt.claims',
   json_build_object(
     'sub',  '99100000-0000-0000-0000-000000000002',
