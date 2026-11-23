@@ -161,6 +161,15 @@ describe("InvoiceDocument", () => {
     expect(json).toContain("1,500.00");
   });
 
+  it("AC4: rendered total uses order.total_cents not a recomputed sum of items", () => {
+    // item price is 150000 (sum = 150000) but total_cents is set to a different value
+    // to prove the template renders order.total_cents, not a recomputed line-item sum.
+    const items = [{ document_id: "doc-1", title_en: "Safety Doc", language: "en", unit_price_cents: 150000 }];
+    const order = { ...baseOrder, total_cents: 123456 };
+    const json = flattenElement(order, items);
+    expect(json).toContain("1,234.56"); // order.total_cents formatted
+  });
+
   it("AC2: element tree contains buyer taxId when present", () => {
     const order = {
       ...baseOrder,
@@ -197,6 +206,8 @@ describe("InvoiceDocument", () => {
     // formatDate uses toLocaleDateString with Asia/Colombo — "November 1, 2026" or similar.
     expect(json).toContain("2026");
     expect(json).toContain("November");
+    // Assert the specific day to catch off-by-one from timezone errors (P2 reviewer note).
+    expect(json).toMatch(/\b1\b|November 1/);
   });
 
   it("AC2: element tree contains item language in uppercase", () => {

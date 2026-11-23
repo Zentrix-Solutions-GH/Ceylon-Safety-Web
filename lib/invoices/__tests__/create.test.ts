@@ -155,10 +155,17 @@ describe("ensureInvoice", () => {
     expect(mockPut).toHaveBeenCalledWith(expect.any(String), "invoices/order-1.pdf", expect.any(Buffer), "application/pdf");
   });
 
-  it("AC1: invoice_number comes from private.next_invoice_number() rpc", async () => {
+  it("AC1: invoice_number comes from private.next_invoice_number() rpc and is passed to INSERT", async () => {
     const sb = makeSupabase({ invoiceNumber: "INV-2026-00042" });
     const result = await ensureInvoice("order-1", sb);
     expect(result.ok).toBe(true);
+    // rpc must be called once with the correct function name
+    expect((sb as unknown as { rpc: ReturnType<typeof vi.fn> }).rpc).toHaveBeenCalledOnce();
+    expect((sb as unknown as { rpc: ReturnType<typeof vi.fn> }).rpc).toHaveBeenCalledWith("next_invoice_number");
+    // the returned number must be in the INSERT payload
+    expect((sb as unknown as { _invoicesInsert: ReturnType<typeof vi.fn> })._invoicesInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ invoice_number: "INV-2026-00042" }),
+    );
   });
 
   it("AC1: tax_label and tax_rate_bps are null, tax_cents is 0 (Q44a: no VAT)", async () => {

@@ -139,10 +139,9 @@ export async function ensureInvoice(
     if (insertError) {
       if ((insertError as { code?: string }).code === "23505") {
         // A concurrent run already inserted this invoice row.
-        // Re-read to check whether that run also completed the R2 upload.
-        // If pdf_key is set, the concurrent write succeeded — we are done.
-        // If pdf_key is still null, return ok:false so finalize retries and
-        // eventually takes the upload path, preventing a permanently stranded row.
+        // Re-read to confirm whether the concurrent write also set pdf_key.
+        // ok:true only when pdf_key is confirmed set; ok:false lets finalize retry
+        // so the upload path eventually completes and no row is permanently stranded.
         const { data: concurrent } = await sb
           .from("invoices")
           .select("pdf_key")
@@ -184,6 +183,11 @@ export async function ensureInvoice(
   return { ok: true };
 }
 
+/**
+ * Re-renders the invoice PDF for an existing invoice row using its frozen seller snapshot.
+ * Does not enforce auth internally — the caller (S-089 admin route) must require staff
+ * permission before invoking this function.
+ */
 export async function regenerateInvoice(
   orderId: string,
   sb: SB,
