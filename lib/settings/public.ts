@@ -14,7 +14,11 @@ export async function getPublicSettings(): Promise<PublicSettings> {
     .select("key, value")
     .eq("is_public", true);
 
-  if (error || !data) return {};
+  if (error) {
+    console.error("[settings/public] DB error fetching public settings — returning empty", error);
+    return {};
+  }
+  if (!data) return {};
 
   const result: PublicSettings = {};
   for (const row of data) {

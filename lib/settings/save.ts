@@ -131,9 +131,15 @@ export async function saveSettingsGroup(
   if (upsertError) throw upsertError;
 
   // 8. Write audit row (AC6). Runs after the upsert — a transient audit error
-  //    leaves the settings committed without a trail. The error is re-thrown so
-  //    the caller sees a failure and the inconsistency surfaces in logs.
-  await writeSettingsAuditRow(group, oldValues, sanitizedValues, actorId);
+  //    leaves the settings committed without a trail. The error is logged
+  //    explicitly so the inconsistency surfaces in monitoring, then re-thrown
+  //    so the caller sees a failure.
+  try {
+    await writeSettingsAuditRow(group, oldValues, sanitizedValues, actorId);
+  } catch (auditErr) {
+    console.error("[settings/save] audit write failed after upsert — settings saved, audit trail missing", { group, actorId });
+    throw auditErr;
+  }
 
   return { ok: true };
 }

@@ -94,6 +94,17 @@ describe("saveSettingsGroup", () => {
     expect(requireStaff).toHaveBeenCalledWith("settings.site");
   });
 
+  it("EC1: Admin cannot save analytics group (not_allowed)", async () => {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" } as never);
+
+    const result = await saveSettingsGroup({
+      group: "analytics",
+      values: { analytics_ga4_id: "G-XXXX" },
+      updatedAt: "2026-01-01T00:00:00Z",
+    });
+    expect(result).toEqual({ ok: false, code: "not_allowed" });
+  });
+
   it("EC1: Admin cannot save contact group (not_allowed)", async () => {
     vi.mocked(requireStaff).mockResolvedValue({ ok: false, code: "not_allowed" } as never);
 

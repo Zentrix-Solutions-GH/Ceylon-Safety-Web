@@ -12,6 +12,7 @@ export async function checkBankOrderPending(): Promise<boolean> {
   const { count, error } = await supabase
     .from("orders")
     .select("id", { count: "exact", head: true })
+    .eq("payment_provider", "bank_transfer")
     .in("status", ["pending_verification"]);
 
   if (error) throw error; // fail closed: surface DB errors rather than silently permitting the clear
