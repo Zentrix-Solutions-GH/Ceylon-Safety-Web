@@ -81,8 +81,8 @@ SELECT throws_ok(
        SET value = '"hacked@evil.com"'::jsonb
      WHERE key = 'contact_email';
   $q$,
-  'P0001',
-  'S-099: Admin cannot update contact-group row (trigger RAISE EXCEPTION P0001)'
+  '23001',
+  'S-099: Admin cannot update contact-group row (trigger RAISE restrict_violation)'
 );
 
 -- ─────────────────────────────────────────────────────────────────────────────
