@@ -99,6 +99,11 @@ export async function saveSettingsGroup(
   // 7. Upsert all changed keys in one call (single DB round-trip, atomic on
   //    partial failure). Uses sanitizedValues (Zod-parsed) — unknown keys stripped.
   //    Service role bypasses RLS; trigger enforces permission per group.
+  //    setting_group is included so INSERT works on first-time keys. For existing
+  //    rows the ON CONFLICT UPDATE sets it to the same stored value
+  //    (NEW IS DISTINCT FROM OLD = false → trigger's reclassification guard does
+  //    not fire). Cross-group key injection is prevented by Zod schema stripping
+  //    above: sanitizedValues only contains keys belonging to `group`.
   const rows = Object.entries(sanitizedValues).map(([key, value]) => ({
     key,
     value: value as never,

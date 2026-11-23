@@ -139,9 +139,10 @@ pgTAP test file written: supabase/tests/settings-group-check.test.sql (AC7)
 
 ## Review notes
 
-- **P0** `lib/settings/save.ts:101-109` — Non-atomic multi-key UPDATE loop. Partial write if any key's update throws — key N-1 committed, keys N+ not written, audit row skipped. Fix: replace with a single `.upsert([...])` call or a Postgres RPC inside a transaction. (full-review 2026-11-23)
-- **P1** `lib/settings/validation.ts`, `socialUrlSchema` — `www.` subdomain rejected. `https://www.facebook.com/...` has hostname `www.facebook.com`, not `facebook.com` — fails validation. Fix: `u.hostname === allowedHost || u.hostname === "www." + allowedHost`. (full-review 2026-11-23)
-- **P1** `supabase/tests/settings-group-check.test.sql` — pgTAP test written but never run (Supabase not running during check.sh). Run `supabase start && supabase test db` and paste output in Evidence before merge. (full-review 2026-11-23)
+- ~~**P0** `lib/settings/save.ts:101-109` — non-atomic loop~~ **resolved** (`1d15161` — single `.upsert()`)
+- ~~**P1** `lib/settings/validation.ts` — `www.` subdomain rejected~~ **resolved** (`1d15161`)
+- ~~**P1** pgTAP never run~~ **resolved** — CI db-tests now executes it (`7295e3f`)
+- **P2** `lib/settings/save.ts:99-112` — upsert rows include `setting_group`; old `.update()` was scoped by group. Defensively correct (Zod strips cross-group keys; service_role bypasses trigger); add a comment. (full-review 2026-11-23 re-review)
 
 ## After this merges, a user can:
 
