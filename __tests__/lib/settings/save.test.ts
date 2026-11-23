@@ -182,6 +182,21 @@ describe("saveSettingsGroup", () => {
     expect(result).toEqual({ ok: false, code: "version_conflict" });
   });
 
+  it("P1-fix: malformed updatedAt string returns version_conflict (not a bypass)", async () => {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: true, user: SA_USER } as never);
+    const rows = [{ key: "contact_email", value: "old@x.lk", updated_at: "2026-01-01T00:00:00Z" }];
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeServerDb({ existingRows: rows }) as never
+    );
+
+    const result = await saveSettingsGroup({
+      group: "contact",
+      values: { contact_email: "new@x.lk" },
+      updatedAt: "not-a-date",
+    });
+    expect(result).toEqual({ ok: false, code: "version_conflict" });
+  });
+
   it("AC3: validation_failed returned when validateGroup fails", async () => {
     vi.mocked(requireStaff).mockResolvedValue({ ok: true, user: ADMIN_USER } as never);
     vi.mocked(validateGroup).mockReturnValue({ ok: false, field: "footer_business_name" });
@@ -192,6 +207,22 @@ describe("saveSettingsGroup", () => {
       updatedAt: "2026-01-01T00:00:00Z",
     });
     expect(result).toEqual({ ok: false, code: "validation_failed", field: "footer_business_name" });
+  });
+
+  it("P1-fix: business-group save without bank_account_details does NOT require step-up", async () => {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: true, user: SA_USER } as never);
+    const rows = [{ key: "business_legal_name", value: "Old Ltd", updated_at: "2026-01-01T00:00:00Z" }];
+    vi.mocked(createSupabaseServiceRoleClient).mockReturnValue(
+      makeServerDb({ existingRows: rows }) as never
+    );
+
+    const result = await saveSettingsGroup({
+      group: "business",
+      values: { business_legal_name: "New Ltd" },
+      updatedAt: "2026-01-01T00:00:00Z",
+    });
+    expect(result).toEqual({ ok: true });
+    expect(enforceStepUpForBank).not.toHaveBeenCalled();
   });
 
   it("AC5: bank group save without code returns mfa_required", async () => {

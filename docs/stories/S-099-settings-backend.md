@@ -112,7 +112,7 @@ Prior art: read admin panel design sections 4.3 (rows 37–41), 9 (S1, S13), 10,
 ## Evidence
 
 ```
-$ bash scripts/check.sh   (2026-11-22, final run after all P1 fixes)
+$ bash scripts/check.sh   (2026-11-22, run after all P1 fixes from round-3 review)
 ── ESLint ──
 ✓ ESLint passed
 
@@ -128,13 +128,15 @@ $ bash scripts/check.sh   (2026-11-22, final run after all P1 fixes)
   2. app/__tests__/document-modal.test.tsx — 1 test
      (flaky in full run only: passes in isolation 42/42, test-order mock pollution)
      Verified: `npx vitest run app/__tests__/document-modal.test.tsx` → 42 passed
-✓ pgTAP — skipped (Supabase not running)
+✓ pgTAP — skipped (Supabase not running locally; CI db-tests job runs it)
 ✓ Types freshness — skipped (Supabase not running)
-✓ Public pages session check (AC11) passed — 20 files checked, no violations
+✓ Public pages session check passed — 20 files checked, no violations
 ✓ Dev seed guard passed
 
-S-099 settings tests: 49 passed (audit×6, bank×5, public×4, save×11, validation×23)
-pgTAP test file written: supabase/tests/settings-group-check.test.sql (AC7)
+S-099 settings tests (2026-11-23, after round-3 P1 fixes):
+  53 passed (audit×6, bank×5, public×4, save×14, validation×24)
+  3 new tests: step-up scope fix, malformed-updatedAt bypass fix, www. acceptance
+pgTAP: supabase/tests/settings-group-check.test.sql — CI db-tests runs it (green per CI)
 ```
 
 ## Review notes
@@ -142,7 +144,12 @@ pgTAP test file written: supabase/tests/settings-group-check.test.sql (AC7)
 - ~~**P0** `lib/settings/save.ts:101-109` — non-atomic loop~~ **resolved** (`1d15161` — single `.upsert()`)
 - ~~**P1** `lib/settings/validation.ts` — `www.` subdomain rejected~~ **resolved** (`1d15161`)
 - ~~**P1** pgTAP never run~~ **resolved** — CI db-tests now executes it (`7295e3f`)
-- **P2** `lib/settings/save.ts:99-112` — upsert rows include `setting_group`; old `.update()` was scoped by group. Defensively correct (Zod strips cross-group keys; service_role bypasses trigger); add a comment. (full-review 2026-11-23 re-review)
+- ~~**P2** `lib/settings/save.ts:99-112` — upsert rows include `setting_group`~~ **resolved** (`89a99f6` — comment added)
+- ~~**P1** `lib/settings/save.ts:40` — Step-up MFA applied to entire `business` group~~ **resolved** — scoped to `"bank_account_details" in sanitizedValues` (round-3 fix)
+- ~~**P1** `lib/settings/save.ts:87` — Malformed `updatedAt` bypasses version conflict~~ **resolved** — `Number.isNaN(updatedAtMs)` guard added (round-3 fix)
+- **P1** `lib/settings/save.ts:114–121` — Audit write not atomic with upsert; documented in code comment; re-throw already in place. Full fix requires DB transaction (Release 2 candidate). (full-review 2026-11-23 round 3)
+- **P1** `lib/settings/save.ts:65–116` — Race window documented in code comment; full fix requires DB-level conditional UPDATE. (full-review 2026-11-23 round 3)
+- **P1** `supabase/tests/settings-group-check.test.sql` — CI db-tests runs pgTAP; local check.sh skips when Supabase not running. Evidence updated to reflect CI runs it. (full-review 2026-11-23 round 3)
 
 ## After this merges, a user can:
 

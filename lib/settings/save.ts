@@ -36,8 +36,10 @@ export async function saveSettingsGroup(
   }
   const sanitizedValues = validation.parsed;
 
-  // 3. Step-up for bank details (AC5).
-  if (group === "business") {
+  // 3. Step-up for bank details (AC5). Only required when bank_account_details
+  //    is in the payload — other business-group fields (business_legal_name,
+  //    owner_alert_email) do not need re-authentication.
+  if (group === "business" && "bank_account_details" in sanitizedValues) {
     try {
       await enforceStepUpForBank(actorId, code);
     } catch (err) {
@@ -47,7 +49,7 @@ export async function saveSettingsGroup(
     }
 
     // EC3: refuse to clear bank_account_details while a bank order is pending.
-    if ("bank_account_details" in sanitizedValues && sanitizedValues.bank_account_details === null) {
+    if (sanitizedValues.bank_account_details === null) {
       const pending = await checkBankOrderPending();
       if (pending) {
         return { ok: false, code: "validation_failed", reason: "bank_order_pending" };
@@ -79,12 +81,17 @@ export async function saveSettingsGroup(
       return max === null || ts > max ? ts : max;
     }, null);
 
-    // If caller sent null updatedAt and rows exist → conflict (analyst-gap EC).
+    // Guard: a non-ISO updatedAt string produces NaN from new Date(), which
+    // makes the < comparison always false — treat it as a conflict to prevent
+    // the bypass.
+    const updatedAtMs = updatedAt === null ? NaN : new Date(updatedAt).getTime();
+
+    // If caller sent null/invalid updatedAt and rows exist → conflict.
     // If caller's timestamp is older than the latest row → conflict.
     if (
-      updatedAt === null ||
+      Number.isNaN(updatedAtMs) ||
       (latestUpdatedAt !== null &&
-        new Date(updatedAt) < new Date(latestUpdatedAt))
+        updatedAtMs < new Date(latestUpdatedAt).getTime())
     ) {
       return { ok: false, code: "version_conflict" };
     }
@@ -111,13 +118,21 @@ export async function saveSettingsGroup(
     updated_by: actorId,
   }));
 
+  // NOTE: version check (step 5) and this upsert are two separate DB calls, so
+  // two concurrent saves with identical updatedAt can both pass the guard and
+  // both succeed (the second silently overwrites the first). A DB-level
+  // conditional UPDATE (WHERE updated_at = $expected) would close this window
+  // but requires an RPC migration. Acceptable for Release 1 (low-frequency
+  // admin-only saves). Owner is aware — documented in S-099 review notes.
   const { error: upsertError } = await supabase
     .from("site_settings")
     .upsert(rows, { onConflict: "key" });
 
   if (upsertError) throw upsertError;
 
-  // 8. Write audit row (AC6).
+  // 8. Write audit row (AC6). Runs after the upsert — a transient audit error
+  //    leaves the settings committed without a trail. The error is re-thrown so
+  //    the caller sees a failure and the inconsistency surfaces in logs.
   await writeSettingsAuditRow(group, oldValues, sanitizedValues, actorId);
 
   return { ok: true };
