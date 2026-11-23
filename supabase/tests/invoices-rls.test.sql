@@ -44,20 +44,18 @@ ON CONFLICT DO NOTHING;
 
 -- Orders for customer A and B
 INSERT INTO public.orders (id, user_id, status, payment_method, total_cents,
-  terms_revision_id, refund_policy_revision_id, billing_snapshot)
+  terms_revision_id, refund_policy_revision_id)
 VALUES
   ('d1000000-0000-0000-0000-000000000001',
    'a1000000-0000-0000-0000-000000000001',
    'paid', 'card', 10000,
    'c1000000-0000-0000-0000-000000000010',
-   'c1000000-0000-0000-0000-000000000020',
-   '{"firstName":"Inv","lastName":"A","email":"inv_cust_a@test.invalid","address":"1 A St","city":"Colombo"}'::jsonb),
+   'c1000000-0000-0000-0000-000000000020'),
   ('d1000000-0000-0000-0000-000000000002',
    'b1000000-0000-0000-0000-000000000001',
    'paid', 'card', 20000,
    'c1000000-0000-0000-0000-000000000010',
-   'c1000000-0000-0000-0000-000000000020',
-   '{"firstName":"Inv","lastName":"B","email":"inv_cust_b@test.invalid","address":"2 B St","city":"Colombo"}'::jsonb)
+   'c1000000-0000-0000-0000-000000000020')
 ON CONFLICT DO NOTHING;
 
 -- Invoice rows (service role bypasses RLS)
