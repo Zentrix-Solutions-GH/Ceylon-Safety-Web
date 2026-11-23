@@ -134,14 +134,15 @@ $ bash scripts/check.sh
 Test Files  2 failed | 247 passed | 15 skipped (264)   ← 2 pre-existing failures in ArticleEditor on dev (unchanged from dev, no S-087 diff)
 Tests  30 failed | 2553 passed | 60 skipped (2643)
 
-S-087 tests (all 46 pass):
+S-087 tests (all 51 pass after full-review fixes):
 ✓ lib/invoices/__tests__/regenerate.test.ts (5 tests)
-✓ lib/invoices/__tests__/create.test.ts (9 tests)
+✓ lib/invoices/__tests__/create.test.ts (10 tests)   ← +1 P0 retry-upload test
 ✓ app/api/invoice/__tests__/invoice.test.ts (7 tests)
 ✓ lib/invoices/__tests__/fonts.test.ts (5 tests)
-✓ lib/invoices/__tests__/template.test.ts (20 tests)
-Test Files  5 passed (5)
-Tests  46 passed (46)
+✓ lib/invoices/__tests__/template.test.ts (24 tests)  ← +4 AC2 assertions
+✓ lib/orders/__tests__/finalize.test.ts (12 tests)    ← fixed import-chain issue
+Test Files  6 passed (6)
+Tests  51 passed (51)
 
 ✓ Public pages session check (AC11) passed
 ✓ Dev seed guard passed
@@ -154,6 +155,11 @@ Tests  46 passed (46)
 - **P0** `supabase/tests/invoices-rls.test.sql` — pgTAP RLS suite exists but was NOT run (Supabase not running). Must run `supabase start && bash scripts/check.sh` and paste pgTAP output in Evidence before merge. (full-review 2026-11-23)
 - **P1** `lib/invoices/create.ts:79` — `sb.rpc("next_invoice_number" as never)` suppresses a TS error; function lives in `private` schema which PostgREST does not expose by default. Confirm public wrapper or `extra_search_path` is configured in S-017 migration, or add a wrapper. (full-review 2026-11-23)
 - **P1** `lib/invoices/__tests__/template.test.ts` — AC2 missing assertions: order.id (order number), issued_at Asia/Colombo formatted date, item language column value, refund-policy reference text. (full-review 2026-11-23)
+- **P1** `lib/invoices/__tests__/create.test.ts:148` — rpc test only asserted `ok:true`; did not verify rpc called with "next_invoice_number" or that returned number is in INSERT payload. Fixed in 286f22c. (full-review 2026-11-23)
+- **P1** `lib/invoices/__tests__/template.test.ts` — AC4 no test proving template renders `order.total_cents` and not a recomputed sum. Fixed in 286f22c. (full-review 2026-11-23)
+- **P1** `lib/invoices/create.ts:regenerateInvoice` — no auth contract documented; caller must enforce staff auth. JSDoc added in 286f22c. (full-review 2026-11-23)
+- **P0** `docs/stories/S-087-invoice-pdf.md ## Evidence` — pgTAP RLS suite (7 assertions) skipped; must run `supabase start && bash scripts/check.sh` and paste output. (full-review 2026-11-23)
+- **P1** EC1 (`lib/orders/__tests__/finalize.test.ts:79`) — reviewer flagged as missing; test exists and covers invoice `ok:false` not blocking email step. No change needed. (full-review 2026-11-23)
 
 ## After this merges, a user can:
 - Receive and download an invoice PDF for a paid order (from the invoice link and as the email attachment); the link is shown in My Purchases (S-096).
