@@ -51,6 +51,12 @@ describe("validateSiteGroup", () => {
     if (!r.ok) expect(r.field).toBe("counters_min_visible");
   });
 
+  it("AC3: counters_min_visible above 100000 is rejected", () => {
+    const r = validateSiteGroup({ counters_min_visible: 100001 });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.field).toBe("counters_min_visible");
+  });
+
   it("AC3: counters_rounding must be from the fixed list (100 is valid)", () => {
     const r = validateSiteGroup({ counters_rounding: 100 });
     expect(r.ok).toBe(true);
@@ -173,6 +179,11 @@ describe("validateAnalyticsGroup", () => {
     const r = validateAnalyticsGroup({ analytics_measurement_id: "UA-12345" });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.field).toBe("analytics_measurement_id");
+  });
+
+  it("P2-fix: lowercase G- measurement id is accepted (case-insensitive)", () => {
+    const r = validateAnalyticsGroup({ analytics_measurement_id: "g-abcdef1234" });
+    expect(r.ok).toBe(true);
   });
 
   it("AC3: null measurement id is allowed", () => {

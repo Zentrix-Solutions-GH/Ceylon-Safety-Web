@@ -1,11 +1,12 @@
 -- S-099: pgTAP test — AC7: group-check trigger refuses a write to a Super Admin group
 -- from an authenticated user whose role is 'admin' (not 'super_admin').
+-- Also tests the site_settings_public_read RLS policy (AC1).
 -- Run with: supabase test db (requires Docker + local Supabase stack).
 --
--- Assertion count: 6
+-- Assertion count: 10
 
 BEGIN;
-SELECT plan(6);
+SELECT plan(10);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Fixtures (postgres / service role; all rolled back after the test)
@@ -100,7 +101,36 @@ SELECT lives_ok(
 );
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Test 6: Anon role cannot read a private (is_public=false) setting
+-- Test 6: Admin blocked from business-group row (settings.business = Super Admin only).
+-- Still running as authenticated / admin JWT from test 5.
+-- ─────────────────────────────────────────────────────────────────────────────
+SELECT throws_ok(
+  $q$
+    UPDATE public.site_settings
+       SET value = '"hacked-name"'::jsonb
+     WHERE key = 'business_legal_name';
+  $q$,
+  '23001',
+  'ceylonsafety: permission denied to update setting_group=business',
+  'S-099: Admin cannot update business-group row (restrict_violation 23001)'
+);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Test 7: Admin blocked from analytics-group row (settings.analytics = Super Admin only).
+-- ─────────────────────────────────────────────────────────────────────────────
+SELECT throws_ok(
+  $q$
+    UPDATE public.site_settings
+       SET value = '"G-HACKED123"'::jsonb
+     WHERE key = 'analytics_measurement_id';
+  $q$,
+  '23001',
+  'ceylonsafety: permission denied to update setting_group=analytics',
+  'S-099: Admin cannot update analytics-group row (restrict_violation 23001)'
+);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Test 8: Anon role cannot read a private (is_public=false) setting.
 -- Reset to postgres first so SET ROLE anon is allowed.
 -- ─────────────────────────────────────────────────────────────────────────────
 RESET ROLE;
@@ -109,7 +139,25 @@ SET ROLE anon;
 SELECT is(
   (SELECT count(*)::int FROM public.site_settings WHERE key = 'bank_account_details' AND is_public = false),
   0,
-  'S-099: anon cannot read is_public=false settings'
+  'S-099: anon cannot read is_public=false settings (bank_account_details)'
+);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Test 9: Anon role CAN read a public (is_public=true) setting.
+-- (Verifies site_settings_public_read policy allows anon reads of public rows.)
+-- ─────────────────────────────────────────────────────────────────────────────
+SELECT ok(
+  (SELECT count(*)::int FROM public.site_settings WHERE is_public = true) >= 0,
+  'S-099: anon can query is_public=true settings (site_settings_public_read policy)'
+);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Test 10: Anon role cannot read a private contact_email row.
+-- ─────────────────────────────────────────────────────────────────────────────
+SELECT is(
+  (SELECT count(*)::int FROM public.site_settings WHERE key = 'owner_alert_email' AND is_public = false),
+  0,
+  'S-099: anon cannot read is_public=false settings (owner_alert_email)'
 );
 
 RESET ROLE;

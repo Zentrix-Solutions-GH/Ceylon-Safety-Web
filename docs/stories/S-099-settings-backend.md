@@ -133,10 +133,10 @@ $ bash scripts/check.sh   (2026-11-22, run after all P1 fixes from round-3 revie
 ✓ Public pages session check passed — 20 files checked, no violations
 ✓ Dev seed guard passed
 
-S-099 settings tests (2026-11-23, after round-4 P2 fixes):
-  54 passed (audit×6, bank×5, public×4, save×15, validation×24)
-  new tests: step-up scope, malformed-updatedAt bypass, www. acceptance, analytics not_allowed
-pgTAP: supabase/tests/settings-group-check.test.sql — CI db-tests runs it (green per CI)
+S-099 settings tests (2026-11-23, after round-6 fixes):
+  56 passed (audit×6, bank×5, public×4, save×15, validation×26)
+  new tests: counters_max_visible:100001 fails, lowercase GA4 accepted
+pgTAP: supabase/tests/settings-group-check.test.sql — 10 assertions (up from 6); CI db-tests runs it
 ```
 
 ## Review notes
@@ -150,6 +150,14 @@ pgTAP: supabase/tests/settings-group-check.test.sql — CI db-tests runs it (gre
 - **P1** `lib/settings/save.ts:114–121` — Audit write not atomic with upsert; documented in code comment; re-throw already in place. Full fix requires DB transaction (Release 2 candidate). (full-review 2026-11-23 round 3)
 - **P1** `lib/settings/save.ts:65–116` — Race window documented in code comment; full fix requires DB-level conditional UPDATE. (full-review 2026-11-23 round 3)
 - **P1** `supabase/tests/settings-group-check.test.sql` — CI db-tests runs pgTAP; local check.sh skips when Supabase not running. Evidence updated to reflect CI runs it. (full-review 2026-11-23 round 3)
+- ~~**P1** `lib/settings/save.ts:42–58` — Step-up check ran before version conflict; valid TOTP code consumed on stale saves~~ **resolved** — moved `enforceStepUpForBank` to after the version conflict check (round-6 fix)
+- ~~**P1** `supabase/migrations/20261122000002_settings-backend.sql` — `ADD CONSTRAINT CHECK` without `NOT VALID`~~ **resolved** — verified new list is strict superset of previous constraint; added explicit comment (round-6 fix)
+- ~~**P1** `supabase/tests/settings-group-check.test.sql` — No pgTAP test for `site_settings_public_read` RLS policy~~ **resolved** — tests 8-10 added: anon blocked from private rows, anon allowed for public rows (round-6 fix)
+- ~~**P1** AC8 — No runtime guard for unknown group string~~ **resolved** — `save.ts:24` has `if (!permission) return { ok: false, code: "not_allowed" }` covering unknown group at runtime (confirmed, no code change needed)
+- ~~**P2** `lib/settings/validation.ts:91` — GA4 regex rejects lowercase~~ **resolved** — added `/i` flag; test added (round-6 fix)
+- ~~**P2** `lib/settings/public.ts:18` — `console.error` may leak schema details~~ **resolved** — now logs only `error.message` (round-6 fix)
+- ~~**P2** validation.test.ts — No test for `counters_min_visible: 100001` failing~~ **resolved** — test added (round-6 fix)
+- ~~**P2** pgTAP trigger test only covered contact group~~ **resolved** — tests 6 and 7 added for business and analytics groups (round-6 fix)
 
 ## After this merges, a user can:
 

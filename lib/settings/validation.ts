@@ -88,7 +88,7 @@ const businessSchema = z.object({
 const analyticsSchema = z.object({
   analytics_measurement_id: z
     .string()
-    .regex(/^G-[A-Z0-9]+$/, "must start with G- followed by uppercase alphanumeric")
+    .regex(/^G-[A-Z0-9]+$/i, "must start with G- followed by alphanumeric")
     .nullable()
     .optional(),
 });

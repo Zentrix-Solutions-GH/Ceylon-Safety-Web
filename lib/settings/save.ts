@@ -36,28 +36,7 @@ export async function saveSettingsGroup(
   }
   const sanitizedValues = validation.parsed;
 
-  // 3. Step-up for bank details (AC5). Only required when bank_account_details
-  //    is in the payload — other business-group fields (business_legal_name,
-  //    owner_alert_email) do not need re-authentication.
-  if (group === "business" && "bank_account_details" in sanitizedValues) {
-    try {
-      await enforceStepUpForBank(actorId, code);
-    } catch (err) {
-      const e = err as { code?: string };
-      if (e.code === "mfa_required") return { ok: false, code: "mfa_required" };
-      throw err;
-    }
-
-    // EC3: refuse to clear bank_account_details while a bank order is pending.
-    if (sanitizedValues.bank_account_details === null) {
-      const pending = await checkBankOrderPending();
-      if (pending) {
-        return { ok: false, code: "validation_failed", reason: "bank_order_pending" };
-      }
-    }
-  }
-
-  // 4. Fetch current rows for version check and audit (AC4, AC6).
+  // 3. Fetch current rows for version check and audit (AC4, AC6).
   const keys = Object.keys(sanitizedValues);
 
   if (keys.length === 0) return { ok: true };
@@ -72,7 +51,7 @@ export async function saveSettingsGroup(
 
   if (fetchError) throw fetchError;
 
-  // 5. Version conflict check (AC4).
+  // 4. Version conflict check (AC4).
   // Find the most recent updated_at among the rows we're about to touch.
   if (currentRows && currentRows.length > 0) {
     const latestUpdatedAt = currentRows.reduce<string | null>((max, row) => {
@@ -94,6 +73,30 @@ export async function saveSettingsGroup(
         updatedAtMs < new Date(latestUpdatedAt).getTime())
     ) {
       return { ok: false, code: "version_conflict" };
+    }
+  }
+
+  // 5. Step-up for bank details (AC5). Only required when bank_account_details
+  //    is in the payload — other business-group fields (business_legal_name,
+  //    owner_alert_email) do not need re-authentication.
+  //    Placed AFTER version conflict: a stale-timestamp save is rejected
+  //    before the user is asked to re-authenticate, so a valid TOTP code is
+  //    never consumed on a save that would have been rejected anyway.
+  if (group === "business" && "bank_account_details" in sanitizedValues) {
+    try {
+      await enforceStepUpForBank(actorId, code);
+    } catch (err) {
+      const e = err as { code?: string };
+      if (e.code === "mfa_required") return { ok: false, code: "mfa_required" };
+      throw err;
+    }
+
+    // EC3: refuse to clear bank_account_details while a bank order is pending.
+    if (sanitizedValues.bank_account_details === null) {
+      const pending = await checkBankOrderPending();
+      if (pending) {
+        return { ok: false, code: "validation_failed", reason: "bank_order_pending" };
+      }
     }
   }
 

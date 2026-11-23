@@ -38,6 +38,11 @@ $$;
 ALTER TABLE public.admin_audit_log
   DROP CONSTRAINT IF EXISTS admin_audit_log_action_check;
 
+-- NOT VALID omitted intentionally: the new list is a strict superset of the
+-- previous constraint values, so all existing rows already satisfy it.
+-- Verified against the prior constraint definition in schema_foundation migration.
+-- If ever uncertain about the superset invariant, add NOT VALID here and
+-- use VALIDATE CONSTRAINT in a follow-up migration.
 ALTER TABLE public.admin_audit_log
   ADD CONSTRAINT admin_audit_log_action_check CHECK (action IN (
     'article.save',             'article.publish',          'article.hide',

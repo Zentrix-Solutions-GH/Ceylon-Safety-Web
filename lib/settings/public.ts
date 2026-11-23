@@ -15,7 +15,7 @@ export async function getPublicSettings(): Promise<PublicSettings> {
     .eq("is_public", true);
 
   if (error) {
-    console.error("[settings/public] DB error fetching public settings — returning empty", error);
+    console.error("[settings/public] DB error fetching public settings — returning empty", error.message);
     return {};
   }
   if (!data) return {};
