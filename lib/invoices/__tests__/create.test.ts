@@ -51,6 +51,7 @@ function makeSupabase(options: {
   settings?: Record<string, string | null>;
   settingsError?: { message: string } | null;
   existingInvoice?: ExistingInvoice;
+  existingInvoiceOnRetry?: ExistingInvoice;
   insertError?: { message: string; code?: string } | null;
   updateError?: { message: string } | null;
   invoiceNumber?: string;
@@ -64,11 +65,15 @@ function makeSupabase(options: {
     settings = { business_legal_name: "Ceylon Safety Ltd", business_address: "Colombo 03", contact_email: "support@ceylonsafety.lk" },
     settingsError = null,
     existingInvoice = null,
+    existingInvoiceOnRetry = undefined,
     insertError = null,
     updateError = null,
     invoiceNumber = "INV-2026-00001",
     rpcError = null,
   } = options;
+
+  const invoicesInsertMock = vi.fn().mockResolvedValue({ error: insertError ?? null });
+  let invoicesFromCallCount = 0;
 
   const selectChain = {
     eq: vi.fn().mockReturnThis(),
@@ -102,14 +107,19 @@ function makeSupabase(options: {
       };
     }
     if (table === "invoices") {
+      invoicesFromCallCount++;
+      const resolvedData =
+        invoicesFromCallCount > 1 && existingInvoiceOnRetry !== undefined
+          ? existingInvoiceOnRetry
+          : existingInvoice;
       return {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
-            maybeSingle: vi.fn().mockResolvedValue({ data: existingInvoice, error: null }),
+            maybeSingle: vi.fn().mockResolvedValue({ data: resolvedData, error: null }),
           }),
         }),
         // Two-phase write: INSERT without pdf_key (no .select().single() chain).
-        insert: vi.fn().mockResolvedValue({ error: insertError ?? null }),
+        insert: invoicesInsertMock,
         // Phase 2: UPDATE to set pdf_key after R2 upload.
         update: vi.fn().mockReturnValue({
           eq: vi.fn().mockResolvedValue({ error: updateError ?? null }),
@@ -121,7 +131,7 @@ function makeSupabase(options: {
 
   const rpcMock = vi.fn().mockResolvedValue({ data: invoiceNumber, error: rpcError });
 
-  return { from: fromMock, rpc: rpcMock } as unknown as Parameters<typeof ensureInvoice>[1];
+  return { from: fromMock, rpc: rpcMock, _invoicesInsert: invoicesInsertMock } as unknown as Parameters<typeof ensureInvoice>[1] & { _invoicesInsert: ReturnType<typeof vi.fn> };
 }
 
 beforeEach(() => {
@@ -154,9 +164,13 @@ describe("ensureInvoice", () => {
   it("AC1: tax_label and tax_rate_bps are null, tax_cents is 0 (Q44a: no VAT)", async () => {
     const sb = makeSupabase();
     await ensureInvoice("order-1", sb);
-    const fromCalls = (sb.from as ReturnType<typeof vi.fn>).mock.calls;
-    const invoicesCall = fromCalls.find((c: string[]) => c[0] === "invoices");
-    expect(invoicesCall).toBeTruthy();
+    expect((sb as unknown as { _invoicesInsert: ReturnType<typeof vi.fn> })._invoicesInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tax_label: null,
+        tax_rate_bps: null,
+        tax_cents: 0,
+      }),
+    );
   });
 
   it("AC6: returns ok:true without rebuilding when invoice row has pdf_key (fully done)", async () => {
@@ -193,10 +207,27 @@ describe("ensureInvoice", () => {
     expect((sb as unknown as { rpc: ReturnType<typeof vi.fn> }).rpc).not.toHaveBeenCalled();
   });
 
-  it("AC6: unique constraint conflict (code 23505) is treated as already-exists, returns ok:true", async () => {
-    const sb = makeSupabase({ insertError: { message: "duplicate key", code: "23505" } });
+  it("AC6: 23505 conflict — ok:true when competing write completed (pdf_key is set)", async () => {
+    const sb = makeSupabase({
+      insertError: { message: "duplicate key", code: "23505" },
+      existingInvoiceOnRetry: {
+        id: "existing-inv-1",
+        pdf_key: "invoices/order-1.pdf",
+        invoice_number: "INV-2026-00001",
+        issued_at: "2026-11-01T00:00:00Z",
+      },
+    });
     const result = await ensureInvoice("order-1", sb);
     expect(result.ok).toBe(true);
+  });
+
+  it("AC6: 23505 conflict — ok:false when competing write has not set pdf_key (prevents stranded row)", async () => {
+    // existingInvoiceOnRetry not set → re-read returns null → pdf_key absent → ok:false
+    const sb = makeSupabase({
+      insertError: { message: "duplicate key", code: "23505" },
+    });
+    const result = await ensureInvoice("order-1", sb);
+    expect(result.ok).toBe(false);
   });
 
   it("EC3: returns ok:false when business_legal_name is null (empty settings)", async () => {

@@ -87,7 +87,8 @@ export async function ensureInvoice(
     issuedAt = existing.issued_at;
   } else {
     // Fresh create: get a new invoice number from the private schema sequence.
-    // private.next_invoice_number() is SECURITY DEFINER and callable by service_role.
+    // private.next_invoice_number() is SECURITY DEFINER and callable by service_role
+    // via the same (sb as any).rpc() pattern used by claim_download (lib/downloads/claim.ts).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: num, error: rpcError } = await (sb as any).rpc("next_invoice_number");
     if (rpcError || !num) {
@@ -136,8 +137,19 @@ export async function ensureInvoice(
       });
 
     if (insertError) {
-      // 23505 = unique_violation: a concurrent run already inserted this invoice.
-      if ((insertError as { code?: string }).code === "23505") return { ok: true };
+      if ((insertError as { code?: string }).code === "23505") {
+        // A concurrent run already inserted this invoice row.
+        // Re-read to check whether that run also completed the R2 upload.
+        // If pdf_key is set, the concurrent write succeeded — we are done.
+        // If pdf_key is still null, return ok:false so finalize retries and
+        // eventually takes the upload path, preventing a permanently stranded row.
+        const { data: concurrent } = await sb
+          .from("invoices")
+          .select("pdf_key")
+          .eq("order_id", orderId)
+          .maybeSingle();
+        return { ok: concurrent?.pdf_key != null };
+      }
       console.error("ensureInvoice: insert failed", { orderId, error: safeErrorMessage(insertError) });
       return { ok: false };
     }
