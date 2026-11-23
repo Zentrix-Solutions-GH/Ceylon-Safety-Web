@@ -137,7 +137,12 @@ export async function ensureInvoice(
     console.error("ensureInvoice: R2 not configured");
     return { ok: false };
   }
-  await putObject(cfg.bucketPrivate, pdfKey, pdfBytes, "application/pdf");
+  try {
+    await putObject(cfg.bucketPrivate, pdfKey, pdfBytes, "application/pdf");
+  } catch (err) {
+    console.error("ensureInvoice: R2 upload failed", { orderId, error: safeErrorMessage(err) });
+    return { ok: false };
+  }
 
   return { ok: true };
 }
@@ -209,7 +214,12 @@ export async function regenerateInvoice(
     return { ok: false };
   }
   const pdfKey = invoice.pdf_key ?? `invoices/${orderId}.pdf`;
-  await putObject(cfg.bucketPrivate, pdfKey, pdfBytes, "application/pdf");
+  try {
+    await putObject(cfg.bucketPrivate, pdfKey, pdfBytes, "application/pdf");
+  } catch (err) {
+    console.error("regenerateInvoice: R2 upload failed", { orderId, error: safeErrorMessage(err) });
+    return { ok: false };
+  }
 
   return { ok: true };
 }

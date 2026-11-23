@@ -72,11 +72,11 @@ async function serveInvoiceForStaff(orderId: string): Promise<NextResponse> {
     .eq("order_id", orderId)
     .maybeSingle();
 
-  if (error || !data) {
-    return NextResponse.json({ status: "being_prepared" }, { status: 202 });
+  if (error) {
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 
-  if (!data.pdf_key) {
+  if (!data || !data.pdf_key) {
     return NextResponse.json({ status: "being_prepared" }, { status: 202 });
   }
 
@@ -86,7 +86,13 @@ async function serveInvoiceForStaff(orderId: string): Promise<NextResponse> {
 async function streamPdf(pdfKey: string): Promise<NextResponse> {
   const cfg = r2Config();
   if (!cfg) return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
-  const bytes = await getObjectBytes(cfg.bucketPrivate, pdfKey, 10 * 1024 * 1024);
+  let bytes: Buffer;
+  try {
+    bytes = await getObjectBytes(cfg.bucketPrivate, pdfKey, 10 * 1024 * 1024);
+  } catch (err) {
+    console.error("streamPdf: R2 fetch failed", { error: String(err) });
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+  }
 
   return new NextResponse(bytes, {
     status: 200,
