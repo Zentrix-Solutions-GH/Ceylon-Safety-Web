@@ -44,21 +44,15 @@ describe("getPublicSettings", () => {
     });
   });
 
-  it("AC1: does not expose private keys even if DB returns them", async () => {
-    // RLS is the primary guard; this test verifies that if private rows somehow
-    // reach the function (e.g. in a test environment with RLS bypassed), only
-    // the keys the caller asked for are returned. Because getPublicSettings()
-    // passes all returned rows through, we verify via the anon client selection
-    // AND that known-private keys (bank_account_details) are absent when the
-    // mock returns only public keys.
-    const publicRows = [
-      { key: "footer_business_name", value: "CeylonSafety" },
-    ];
-    vi.mocked(createSupabaseAnonClient).mockReturnValue(makeDb(publicRows) as never);
-    const result = await getPublicSettings();
-    expect(result).not.toHaveProperty("bank_account_details");
-    expect(result).not.toHaveProperty("owner_alert_email");
-    expect(result).toHaveProperty("footer_business_name");
+  it("AC1: uses anon client — RLS is the guard against private rows leaking", async () => {
+    // getPublicSettings() passes all DB rows through without an app-level
+    // allowlist; privacy is enforced by the RLS policy "site_settings_public_read"
+    // (.eq("is_public", true) at DB level). This test verifies the anon client
+    // is selected (not service role), confirming the RLS path is active.
+    // If a private row somehow bypassed RLS it would appear in the result —
+    // that is an RLS gap, not a bug in this function.
+    vi.mocked(createSupabaseAnonClient).mockReturnValue(makeDb([]) as never);
+    await getPublicSettings();
     expect(createSupabaseAnonClient).toHaveBeenCalledTimes(1);
   });
 

@@ -137,7 +137,7 @@ export async function saveSettingsGroup(
   try {
     await writeSettingsAuditRow(group, oldValues, sanitizedValues, actorId);
   } catch (auditErr) {
-    console.error("[settings/save] audit write failed after upsert — settings saved, audit trail missing", { group, actorId });
+    console.error("[settings/save] audit write failed after upsert — settings saved, audit trail missing", { group, actorId, error: auditErr });
     throw auditErr;
   }
 

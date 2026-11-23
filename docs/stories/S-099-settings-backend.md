@@ -133,9 +133,9 @@ $ bash scripts/check.sh   (2026-11-22, run after all P1 fixes from round-3 revie
 ✓ Public pages session check passed — 20 files checked, no violations
 ✓ Dev seed guard passed
 
-S-099 settings tests (2026-11-23, after round-3 P1 fixes):
-  53 passed (audit×6, bank×5, public×4, save×14, validation×24)
-  3 new tests: step-up scope fix, malformed-updatedAt bypass fix, www. acceptance
+S-099 settings tests (2026-11-23, after round-4 P2 fixes):
+  54 passed (audit×6, bank×5, public×4, save×15, validation×24)
+  new tests: step-up scope, malformed-updatedAt bypass, www. acceptance, analytics not_allowed
 pgTAP: supabase/tests/settings-group-check.test.sql — CI db-tests runs it (green per CI)
 ```
 
