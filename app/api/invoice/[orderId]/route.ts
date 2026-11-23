@@ -86,9 +86,11 @@ async function serveInvoiceForStaff(orderId: string): Promise<NextResponse> {
 async function streamPdf(pdfKey: string): Promise<NextResponse> {
   const cfg = r2Config();
   if (!cfg) return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
-  let bytes: Buffer;
+  let bytes: Uint8Array;
   try {
-    bytes = await getObjectBytes(cfg.bucketPrivate, pdfKey, 10 * 1024 * 1024);
+    const result = await getObjectBytes(cfg.bucketPrivate, pdfKey, 10 * 1024 * 1024);
+    if (!result) return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+    bytes = result;
   } catch (err) {
     console.error("streamPdf: R2 fetch failed", { error: String(err) });
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
