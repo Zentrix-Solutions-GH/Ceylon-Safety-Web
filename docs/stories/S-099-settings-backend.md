@@ -158,6 +158,7 @@ pgTAP: supabase/tests/settings-group-check.test.sql — 10 assertions (up from 6
 - ~~**P2** `lib/settings/public.ts:18` — `console.error` may leak schema details~~ **resolved** — now logs only `error.message` (round-6 fix)
 - ~~**P2** validation.test.ts — No test for `counters_min_visible: 100001` failing~~ **resolved** — test added (round-6 fix)
 - ~~**P2** pgTAP trigger test only covered contact group~~ **resolved** — tests 6 and 7 added for business and analytics groups (round-6 fix)
+- ~~**P1** `supabase/tests/settings-group-check.test.sql:148–152` — Test 9 `ok(count(*) >= 0)` is a tautology; allow-side of `site_settings_public_read` policy not verified~~ **resolved** — fixture seeds `footer_business_name` as `is_public=true`; assertion changed to `count > 0` (round-7 fix)
 
 ## After this merges, a user can:
 

@@ -26,6 +26,12 @@ BEGIN
   INSERT INTO public.role_permissions (role, action) VALUES
     ('admin', 'settings.site')
   ON CONFLICT (role, action) DO NOTHING;
+  -- Seed one known public row for test 9 (site_settings_public_read allow-side).
+  -- Uses service role (postgres) so the trigger's service_role bypass applies.
+  -- ON CONFLICT: if the row already exists from the seed migration, leave it alone.
+  INSERT INTO public.site_settings (key, value, is_public, setting_group)
+  VALUES ('footer_business_name', '"CeylonSafety Test"'::jsonb, true, 'site')
+  ON CONFLICT (key) DO UPDATE SET is_public = true;
 END;
 $$;
 
@@ -143,12 +149,14 @@ SELECT is(
 );
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Test 9: Anon role CAN read a public (is_public=true) setting.
+-- Test 9: Anon role CAN read the seeded public row (is_public=true).
 -- (Verifies site_settings_public_read policy allows anon reads of public rows.)
+-- The fixture block above sets footer_business_name is_public=true so this
+-- assertion is non-vacuous: it fails if the policy blocks anon reads.
 -- ─────────────────────────────────────────────────────────────────────────────
 SELECT ok(
-  (SELECT count(*)::int FROM public.site_settings WHERE is_public = true) >= 0,
-  'S-099: anon can query is_public=true settings (site_settings_public_read policy)'
+  (SELECT count(*)::int FROM public.site_settings WHERE key = 'footer_business_name' AND is_public = true) > 0,
+  'S-099: anon can read is_public=true settings (site_settings_public_read policy)'
 );
 
 -- ─────────────────────────────────────────────────────────────────────────────
