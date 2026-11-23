@@ -41,6 +41,8 @@ const fakeItems = [
   { document_id: "doc-1", title_snapshot: "Safety Checklist", language: "en", unit_price_cents: 150000 },
 ];
 
+type ExistingInvoice = { id: string; pdf_key: string | null; invoice_number: string; issued_at: string } | null;
+
 function makeSupabase(options: {
   orderRow?: typeof fakeOrderRow | null;
   orderError?: { message: string } | null;
@@ -48,8 +50,9 @@ function makeSupabase(options: {
   itemsError?: { message: string } | null;
   settings?: Record<string, string | null>;
   settingsError?: { message: string } | null;
-  existingInvoice?: { id: string } | null;
+  existingInvoice?: ExistingInvoice;
   insertError?: { message: string; code?: string } | null;
+  updateError?: { message: string } | null;
   invoiceNumber?: string;
   rpcError?: { message: string } | null;
 } = {}) {
@@ -62,6 +65,7 @@ function makeSupabase(options: {
     settingsError = null,
     existingInvoice = null,
     insertError = null,
+    updateError = null,
     invoiceNumber = "INV-2026-00001",
     rpcError = null,
   } = options;
@@ -76,14 +80,6 @@ function makeSupabase(options: {
 
   selectChain.single.mockResolvedValueOnce({ data: orderRow, error: orderError });
 
-  const insertChain = {
-    select: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({
-      data: insertError ? null : { id: "inv-1", invoice_number: invoiceNumber },
-      error: insertError ?? null,
-    }),
-  };
-
   const fromMock = vi.fn().mockImplementation((table: string) => {
     if (table === "orders") return { select: vi.fn().mockReturnValue(selectChain) };
     if (table === "order_items") {
@@ -97,7 +93,9 @@ function makeSupabase(options: {
       return {
         select: vi.fn().mockReturnValue({
           in: vi.fn().mockResolvedValue({
-            data: Object.entries(settings).map(([key, value]) => ({ key, value })),
+            data: Object.entries(settings)
+              .filter(([, v]) => v !== null)
+              .map(([key, value]) => ({ key, value })),
             error: settingsError,
           }),
         }),
@@ -110,7 +108,12 @@ function makeSupabase(options: {
             maybeSingle: vi.fn().mockResolvedValue({ data: existingInvoice, error: null }),
           }),
         }),
-        insert: vi.fn().mockReturnValue(insertChain),
+        // Two-phase write: INSERT without pdf_key (no .select().single() chain).
+        insert: vi.fn().mockResolvedValue({ error: insertError ?? null }),
+        // Phase 2: UPDATE to set pdf_key after R2 upload.
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ error: updateError ?? null }),
+        }),
       };
     }
     return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() };
@@ -156,12 +159,38 @@ describe("ensureInvoice", () => {
     expect(invoicesCall).toBeTruthy();
   });
 
-  it("AC6: returns ok:true without re-creating when invoice already exists (idempotent)", async () => {
-    const sb = makeSupabase({ existingInvoice: { id: "existing-inv-1" } });
+  it("AC6: returns ok:true without rebuilding when invoice row has pdf_key (fully done)", async () => {
+    const sb = makeSupabase({
+      existingInvoice: {
+        id: "existing-inv-1",
+        pdf_key: "invoices/order-1.pdf",
+        invoice_number: "INV-2026-00001",
+        issued_at: "2026-11-01T00:00:00Z",
+      },
+    });
     const result = await ensureInvoice("order-1", sb);
     expect(result.ok).toBe(true);
     expect(mockBuild).not.toHaveBeenCalled();
     expect(mockPut).not.toHaveBeenCalled();
+  });
+
+  it("AC6/P0: retries upload when row exists but pdf_key is null (previous run failed mid-upload)", async () => {
+    // Row was inserted by a previous run but R2 upload failed before pdf_key was set.
+    // ensureInvoice must re-build the PDF and upload it without calling next_invoice_number().
+    const sb = makeSupabase({
+      existingInvoice: {
+        id: "existing-inv-1",
+        pdf_key: null,
+        invoice_number: "INV-2026-00001",
+        issued_at: "2026-11-01T00:00:00Z",
+      },
+    });
+    const result = await ensureInvoice("order-1", sb);
+    expect(result.ok).toBe(true);
+    expect(mockBuild).toHaveBeenCalledOnce();
+    expect(mockPut).toHaveBeenCalledOnce();
+    // Must NOT call next_invoice_number — that would create a gap.
+    expect((sb as unknown as { rpc: ReturnType<typeof vi.fn> }).rpc).not.toHaveBeenCalled();
   });
 
   it("AC6: unique constraint conflict (code 23505) is treated as already-exists, returns ok:true", async () => {
@@ -171,13 +200,13 @@ describe("ensureInvoice", () => {
   });
 
   it("EC3: returns ok:false when business_legal_name is null (empty settings)", async () => {
-    const sb = makeSupabase({ settings: { business_legal_name: null, business_address: "Colombo" } });
+    const sb = makeSupabase({ settings: { business_legal_name: null, business_address: "Colombo", contact_email: null } });
     const result = await ensureInvoice("order-1", sb);
     expect(result.ok).toBe(false);
   });
 
   it("EC3: returns ok:false when business_address is null (empty settings)", async () => {
-    const sb = makeSupabase({ settings: { business_legal_name: "Ceylon Safety", business_address: null } });
+    const sb = makeSupabase({ settings: { business_legal_name: "Ceylon Safety", business_address: null, contact_email: null } });
     const result = await ensureInvoice("order-1", sb);
     expect(result.ok).toBe(false);
   });

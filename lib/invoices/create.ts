@@ -38,16 +38,18 @@ export async function ensureInvoice(
   orderId: string,
   sb: SB,
 ): Promise<{ ok: boolean }> {
-  // Idempotency: return ok:true if invoice already exists.
+  // Idempotency: return ok:true if invoice row exists AND PDF was successfully uploaded.
+  // If the row exists but pdf_key is null, a previous run inserted the row but failed
+  // before the R2 upload — fall through to retry the upload.
   const { data: existing } = await sb
     .from("invoices")
-    .select("id")
+    .select("id, pdf_key, invoice_number, issued_at")
     .eq("order_id", orderId)
     .maybeSingle();
 
-  if (existing) return { ok: true };
+  if (existing?.pdf_key) return { ok: true };
 
-  // Load order.
+  // Load order and items — needed regardless of whether this is a fresh create or a retry upload.
   const { data: orderRaw, error: orderError } = await sb
     .from("orders")
     .select("*")
@@ -60,7 +62,6 @@ export async function ensureInvoice(
   }
   const order = orderRaw as unknown as Parameters<typeof buildInvoicePdf>[0];
 
-  // Load order items.
   const { data: items, error: itemsError } = await sb
     .from("order_items")
     .select("document_id, title_snapshot, language, unit_price_cents")
@@ -71,22 +72,34 @@ export async function ensureInvoice(
     return { ok: false };
   }
 
-  // Load seller snapshot and contact email from business settings.
   const settings = await getInvoiceSettings(sb);
   if (!settings) return { ok: false };
 
-  // Get invoice number via private RPC.
-  const { data: invoiceNumber, error: rpcError } = await sb.rpc("next_invoice_number" as never);
-  if (rpcError || !invoiceNumber) {
-    console.error("ensureInvoice: next_invoice_number rpc failed", { orderId, error: safeErrorMessage(rpcError) });
-    return { ok: false };
-  }
-
-  const issuedAt = new Date().toISOString();
   const pdfKey = `invoices/${orderId}.pdf`;
 
+  let invoiceNumber: string;
+  let issuedAt: string;
+
+  if (existing) {
+    // Row exists but pdf_key is null: re-use the stored invoice_number and issued_at.
+    // Do NOT call next_invoice_number() — that would create a gap in the sequence.
+    invoiceNumber = existing.invoice_number;
+    issuedAt = existing.issued_at;
+  } else {
+    // Fresh create: get a new invoice number from the private schema sequence.
+    // private.next_invoice_number() is SECURITY DEFINER and callable by service_role.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: num, error: rpcError } = await (sb as any).rpc("next_invoice_number");
+    if (rpcError || !num) {
+      console.error("ensureInvoice: next_invoice_number rpc failed", { orderId, error: safeErrorMessage(rpcError) });
+      return { ok: false };
+    }
+    invoiceNumber = num as string;
+    issuedAt = new Date().toISOString();
+  }
+
   const invoiceData = {
-    invoice_number: invoiceNumber as string,
+    invoice_number: invoiceNumber,
     issued_at: issuedAt,
     seller_snapshot: settings.seller,
     support_email: settings.contactEmail,
@@ -95,7 +108,6 @@ export async function ensureInvoice(
     tax_cents: 0,
   };
 
-  // Build PDF.
   const mappedItems = items.map((i) => ({
     document_id: i.document_id ?? "",
     title_en: i.title_snapshot,
@@ -105,33 +117,33 @@ export async function ensureInvoice(
 
   const pdfBytes = await buildInvoicePdf(order, mappedItems, invoiceData);
 
-  // INSERT first — unique constraint on order_id serialises concurrent runs (AC6).
-  // If two runs race, the second hits 23505 and returns ok:true without overwriting R2.
-  // If R2 upload fails after a successful INSERT, regenerateInvoice will re-upload.
-  const { error: insertError } = await sb
-    .from("invoices")
-    .insert({
-      order_id: orderId,
-      invoice_number: invoiceData.invoice_number,
-      issued_at: invoiceData.issued_at,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      seller_snapshot: invoiceData.seller_snapshot as any, // SellerSnapshot not assignable to Json
-      tax_label: null,
-      tax_rate_bps: null,
-      tax_cents: 0,
-      pdf_key: pdfKey,
-    })
-    .select("id")
-    .single();
+  if (!existing) {
+    // Two-phase write: INSERT without pdf_key so a concurrent second caller sees
+    // the row (unique constraint) and returns ok:true, while we still upload the PDF.
+    // On the next finalize retry, pdf_key IS NULL triggers the upload path above.
+    const { error: insertError } = await sb
+      .from("invoices")
+      .insert({
+        order_id: orderId,
+        invoice_number: invoiceData.invoice_number,
+        issued_at: invoiceData.issued_at,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        seller_snapshot: invoiceData.seller_snapshot as any,
+        tax_label: null,
+        tax_rate_bps: null,
+        tax_cents: 0,
+        pdf_key: null, // set after R2 upload succeeds
+      });
 
-  if (insertError) {
-    // 23505 = unique_violation: a concurrent run already inserted this invoice.
-    if ((insertError as { code?: string }).code === "23505") return { ok: true };
-    console.error("ensureInvoice: insert failed", { orderId, error: safeErrorMessage(insertError) });
-    return { ok: false };
+    if (insertError) {
+      // 23505 = unique_violation: a concurrent run already inserted this invoice.
+      if ((insertError as { code?: string }).code === "23505") return { ok: true };
+      console.error("ensureInvoice: insert failed", { orderId, error: safeErrorMessage(insertError) });
+      return { ok: false };
+    }
   }
 
-  // INSERT succeeded — now upload the PDF whose invoice_number matches the DB row.
+  // Upload PDF to R2 (idempotent — safe to retry).
   const cfg = r2Config();
   if (!cfg) {
     console.error("ensureInvoice: R2 not configured");
@@ -141,6 +153,19 @@ export async function ensureInvoice(
     await putObject(cfg.bucketPrivate, pdfKey, pdfBytes, "application/pdf");
   } catch (err) {
     console.error("ensureInvoice: R2 upload failed", { orderId, error: safeErrorMessage(err) });
+    return { ok: false };
+  }
+
+  // Phase 2: set pdf_key now that the R2 object exists.
+  const { error: updateError } = await sb
+    .from("invoices")
+    .update({ pdf_key: pdfKey })
+    .eq("order_id", orderId);
+
+  if (updateError) {
+    // PDF is in R2 but pdf_key not updated — next retry re-uploads (idempotent)
+    // then sets pdf_key. Return ok:false so finalize retries.
+    console.error("ensureInvoice: failed to set pdf_key", { orderId, error: safeErrorMessage(updateError) });
     return { ok: false };
   }
 

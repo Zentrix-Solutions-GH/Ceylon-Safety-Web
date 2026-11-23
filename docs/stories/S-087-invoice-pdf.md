@@ -149,7 +149,11 @@ Tests  46 passed (46)
 ```
 
 ## Review notes
-<!-- Filled in by reviewer agent -->
+
+- **P0** `lib/invoices/create.ts:44–48` — Idempotency guard returns `ok:true` on retry even when the previous run's R2 upload failed; pdf_key column is set in DB but no R2 object exists. Every subsequent download returns 503. Fix: check `pdf_key IS NOT NULL` before early-return, or use a two-phase write (INSERT without pdf_key → upload → UPDATE pdf_key). (full-review 2026-11-23)
+- **P0** `supabase/tests/invoices-rls.test.sql` — pgTAP RLS suite exists but was NOT run (Supabase not running). Must run `supabase start && bash scripts/check.sh` and paste pgTAP output in Evidence before merge. (full-review 2026-11-23)
+- **P1** `lib/invoices/create.ts:79` — `sb.rpc("next_invoice_number" as never)` suppresses a TS error; function lives in `private` schema which PostgREST does not expose by default. Confirm public wrapper or `extra_search_path` is configured in S-017 migration, or add a wrapper. (full-review 2026-11-23)
+- **P1** `lib/invoices/__tests__/template.test.ts` — AC2 missing assertions: order.id (order number), issued_at Asia/Colombo formatted date, item language column value, refund-policy reference text. (full-review 2026-11-23)
 
 ## After this merges, a user can:
 - Receive and download an invoice PDF for a paid order (from the invoice link and as the email attachment); the link is shown in My Purchases (S-096).

@@ -186,6 +186,29 @@ describe("InvoiceDocument", () => {
     expect(json).not.toContain("contact");
   });
 
+  it("AC2: element tree contains order id as order reference", () => {
+    const json = flattenElement();
+    expect(json).toContain(baseOrder.id);
+  });
+
+  it("AC2: element tree contains issued_at date formatted in Asia/Colombo timezone", () => {
+    // 2026-11-01T10:00:00Z = 2026-11-01 15:30 Colombo — same calendar date.
+    const json = flattenElement();
+    // formatDate uses toLocaleDateString with Asia/Colombo — "November 1, 2026" or similar.
+    expect(json).toContain("2026");
+    expect(json).toContain("November");
+  });
+
+  it("AC2: element tree contains item language in uppercase", () => {
+    const json = flattenElement();
+    expect(json).toContain("EN"); // language "en" rendered as item.language.toUpperCase()
+  });
+
+  it("AC2: footer contains refund-policy reference", () => {
+    const json = flattenElement();
+    expect(json).toContain("non-refundable");
+  });
+
   it("EC2: long company name in billing does not throw", async () => {
     const order = {
       ...baseOrder,
