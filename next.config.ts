@@ -21,6 +21,11 @@ const PUBLIC_SOURCE =
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Bundle the Noto Sans font file used by @react-pdf/renderer in the invoice route.
+  // Vercel's output-file tracing does not follow arbitrary lib/ references by default.
+  outputFileTracingIncludes: {
+    "/api/invoice/[orderId]": ["./lib/invoices/fonts/**"],
+  },
   images: {
     remotePatterns: [
       // R2 public bucket and YouTube thumbnails added during S-001 infra setup
