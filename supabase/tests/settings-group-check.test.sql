@@ -26,9 +26,15 @@ BEGIN
   INSERT INTO public.role_permissions (role, action) VALUES
     ('admin', 'settings.site')
   ON CONFLICT (role, action) DO NOTHING;
-  -- Seed one known public row for test 9 (site_settings_public_read allow-side).
-  -- Uses service role (postgres) so the trigger's service_role bypass applies.
-  -- ON CONFLICT: if the row already exists from the seed migration, leave it alone.
+END;
+$$;
+
+-- Seed one known public row for test 9 (site_settings_public_read allow-side).
+-- Must run as service_role so the trigger's early-return bypass fires.
+-- set_config is session-local (true) so the GUC reverts after this DO block.
+DO $$
+BEGIN
+  PERFORM set_config('role', 'service_role', true);
   INSERT INTO public.site_settings (key, value, is_public, setting_group)
   VALUES ('footer_business_name', '"CeylonSafety Test"'::jsonb, true, 'site')
   ON CONFLICT (key) DO UPDATE SET is_public = true;
