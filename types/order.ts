@@ -78,4 +78,14 @@ export interface ReconcileResult {
   orderNumbers: string[];
 }
 
-export type EmailTemplate = "receipt" | "receipt_resend" | "bank_approved" | "welcome" | "bank_expiring";
+export type EmailTemplate =
+  | "receipt"
+  | "receipt_resend"
+  | "bank_approved"
+  | "bank_rejected"
+  | "bank_expiring"
+  | "welcome"
+  | "download_request_approved"
+  | "download_request_rejected"
+  | "idle_deletion_warning"
+  | "account_deletion_otp";

@@ -6,6 +6,10 @@ import { requireStaff } from "@/lib/auth/server";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { isSelfApproval } from "@/lib/bank/review";
+import { publicConfig, serverConfig } from "@/lib/config";
+import { sendQueuedEmail } from "@/lib/resend/client";
+import { renderDownloadApprovedEmail } from "@/lib/resend/templates/download-request-approved";
+import { renderDownloadRejectedEmail } from "@/lib/resend/templates/download-request-rejected";
 import type { ActionResult } from "@/types/api";
 import type { DownloadQueueItem, DownloadQueueResult } from "@/types/download-request";
 
@@ -140,6 +144,36 @@ export async function approveDownloadRequest(
     return { ok: false, code: "unknown" };
   }
 
+  // Send the approval email now that the RPC has queued the email_logs row (S-088 AC3).
+  const buyerProfile = Array.isArray((req as { profiles: unknown }).profiles)
+    ? ((req as { profiles: unknown[] }).profiles[0] as { email: string | null } | null)
+    : ((req as { profiles: unknown }).profiles as { email: string | null } | null);
+  const buyerEmail = buyerProfile?.email;
+
+  if (buyerEmail) {
+    // Fetch order_item_id from the entitlement for the download URL.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: ent } = await (sbService as any)
+      .from("entitlements")
+      .select("order_item_id")
+      .eq("id", (req as { entitlement_id: string }).entitlement_id)
+      .single() as { data: { order_item_id: string | null } | null };
+    const orderItemId = ent?.order_item_id;
+
+    if (orderItemId) {
+      await sendQueuedEmail({
+        template:    "download_request_approved",
+        relatedType: "download_request",
+        relatedId:   requestId,
+        renderEmail: () => renderDownloadApprovedEmail({
+          downloadUrl: `${publicConfig.appUrl}/download/${orderItemId}`,
+          appUrl:      publicConfig.appUrl,
+          supportEmail: serverConfig.emailFrom,
+        }),
+      });
+    }
+  }
+
   return { ok: true };
 }
 
@@ -165,11 +199,11 @@ export async function rejectDownloadRequest(
 
   const sbService = await createSupabaseServiceRoleClient();
 
-  // Fetch the request
+  // Fetch the request (include buyer email for rejection email, S-088 AC4)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: req, error: reqErr } = await (sbService as any)
     .from("download_requests")
-    .select("id, entitlement_id, user_id, status")
+    .select("id, entitlement_id, user_id, status, profiles(email)")
     .eq("id", requestId)
     .single();
 
@@ -194,6 +228,24 @@ export async function rejectDownloadRequest(
       return { ok: false, code: "validation_failed", reason: "already_done" };
     }
     return { ok: false, code: "unknown" };
+  }
+
+  // Send the rejection email now that the RPC has queued the email_logs row (S-088 AC4).
+  const buyerProfile = Array.isArray((req as { profiles: unknown }).profiles)
+    ? ((req as { profiles: unknown[] }).profiles[0] as { email: string | null } | null)
+    : ((req as { profiles: unknown }).profiles as { email: string | null } | null);
+  const buyerEmail = buyerProfile?.email;
+
+  if (buyerEmail) {
+    await sendQueuedEmail({
+      template:    "download_request_rejected",
+      relatedType: "download_request",
+      relatedId:   requestId,
+      renderEmail: () => renderDownloadRejectedEmail({
+        adminNote:    note.trim(),
+        supportEmail: serverConfig.emailFrom,
+      }),
+    });
   }
 
   return { ok: true };

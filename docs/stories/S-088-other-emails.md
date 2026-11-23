@@ -1,7 +1,7 @@
 ---
 id: S-088
 title: Other emails — bank rejected/expiring, download decisions, resend
-status: ready
+status: in-progress
 owner: backend
 risk: normal
 branch: feature/S-088-other-emails
@@ -72,12 +72,75 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 
 Prior art: S-086 (purchase-receipt.tsx template and `lib/resend/client.ts`); commerce design section 6.3 email table; auth design section 12 (deletion OTP). This story adds the remaining templates and retry wrapper; it does not change the sending path established in S-086.
 
-## Evidence
+**Story corrections (analyst findings):**
+- AC1: story said `slip_rejected`; DB schema (line 902) and existing code use `bank_rejected`. Story corrected below.
+- AC6: auth design §12+14 says Supabase Auth sends the reverification OTP via magic link, not our server. `account-deletion-otp.tsx` is a template stub only (not triggered in Release 1), same as `idle-deletion-warning`. Story corrected.
+- AC8: partial unique index covers only `welcome`, `receipt`, `bank_expiring`. Dedup for other templates is application-level via `sendEmail()` insert guard.
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
+**Implementation steps:**
+1. `types/order.ts` — extend `EmailTemplate` union with `"bank_rejected" | "download_request_approved" | "download_request_rejected" | "idle_deletion_warning" | "account_deletion_otp"`
+2. `lib/resend/client.ts` — add retry (AC7: 3 retries, exponential backoff for 5xx/network); add `sendQueuedEmail()` to send an already-queued row (used after DB-inserted rows from RPCs and direct inserts)
+3. Implement 5 stub templates: `bank-rejected` (alias to `slip-rejected`), `download-request-approved`, `download-request-rejected`, `idle-deletion-warning`, `account-deletion-otp`
+4. `lib/admin/actions/bank-transfers.ts` — after `email_logs` insert in `rejectBankOrder` and `rejectAndCancelBankOrder`, call `sendQueuedEmail()` with rendered bank-rejected template
+5. `lib/admin/actions/download-requests.ts` — after `approve_download_request` RPC, call `sendQueuedEmail()` with download-approved template; after `reject_download_request` RPC, call `sendQueuedEmail()` with download-rejected template; fetch buyer email before the RPC
+6. `lib/jobs/expire-bank-orders.ts` — after `bank_expiring` insert, call `sendQueuedEmail()` with bank-expiring template
+7. Tests: `__tests__/lib/resend/client.test.ts`, `__tests__/lib/resend/templates.test.ts`, `__tests__/lib/resend/dedup.test.ts`
+
+**`sendQueuedEmail()` design:** After a DB function/action inserts `status='queued'`, call `sendQueuedEmail({ template, relatedType, relatedId, renderEmail: (to) => { subject, html, text } })`. It fetches the existing queued row (by template+related_type+related_id), renders, calls Resend with retry, updates status.
+
+**Scope note:** `account-deletion-otp` and `idle-deletion-warning` are template stubs only — not triggered in Release 1 (Supabase sends the deletion OTP; idle-deletion cron is Release 2).
+
+## Evidence
 
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Test Files  1 failed | 255 passed | 15 skipped (271)
+      Tests  18 failed | 2647 passed | 60 skipped (2725)
+✗ Vitest (unit) FAILED
+
+NOTE: The 1 failing test file (__tests__/components/admin/ArticleEditor/index.test.tsx,
+18 tests) is pre-existing — it also fails on `dev` without S-088 changes (confirmed by
+stashing S-088 changes and re-running that file alone). Not caused by this story.
+
+S-088 test files all pass:
+- __tests__/lib/resend/client.test.ts (8 tests) ✓
+- __tests__/lib/resend/templates.test.ts (19 tests) ✓
+- __tests__/lib/resend/dedup.test.ts (2 tests) ✓
+- lib/resend/__tests__/logging.test.ts (3 tests) ✓
+- app/api/cron/__tests__/expire-bank.test.ts (7 tests) ✓
+- lib/admin/actions/__tests__/bank-transfers.reject.test.ts (19 tests) ✓
+
+── pgTAP RLS suite ──
+✓ pgTAP RLS suite passed
+
+── pgTAP seed suite ──
+✓ pgTAP seed suite passed
+
+── pgTAP dev seed suite ──
+✓ pgTAP dev seed suite passed
+
+── EC3 dev seed guard (execution) ──
+✓ EC3 dev seed guard (execution) passed
+
+── Types file freshness ──
+✓ Types file freshness passed
+
+── Public pages session check (AC11) ──
+✓ Public pages session check (AC11) passed
+
+── Dev seed guard ──
+✓ Dev seed guard passed
+
+check.sh: 9 passed, 1 failed
+(The 1 failure is pre-existing ArticleEditor test, not S-088)
 ```
 
 ## Review notes
