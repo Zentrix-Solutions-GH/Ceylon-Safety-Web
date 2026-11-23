@@ -82,7 +82,8 @@ SELECT throws_ok(
      WHERE key = 'contact_email';
   $q$,
   '23001',
-  'S-099: Admin cannot update contact-group row (trigger RAISE restrict_violation)'
+  'ceylonsafety: permission denied to update setting_group=contact',
+  'S-099: Admin cannot update contact-group row (restrict_violation 23001)'
 );
 
 -- ─────────────────────────────────────────────────────────────────────────────
