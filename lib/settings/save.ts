@@ -80,7 +80,11 @@ export async function saveSettingsGroup(
 
     // If caller sent null updatedAt and rows exist → conflict (analyst-gap EC).
     // If caller's timestamp is older than the latest row → conflict.
-    if (updatedAt === null || (latestUpdatedAt !== null && updatedAt < latestUpdatedAt)) {
+    if (
+      updatedAt === null ||
+      (latestUpdatedAt !== null &&
+        new Date(updatedAt) < new Date(latestUpdatedAt))
+    ) {
       return { ok: false, code: "version_conflict" };
     }
   }
