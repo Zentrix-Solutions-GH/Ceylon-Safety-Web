@@ -35,20 +35,12 @@ type Chain = Record<string, (...args: any[]) => unknown>;
 
 function makeServerDb(options?: {
   existingRows?: Array<{ key: string; value: unknown; updated_at: string }>;
-  updateError?: { code: string; message: string } | null;
+  upsertError?: { code: string; message: string } | null;
 }) {
   const rows = options?.existingRows ?? [];
-  const updateError = options?.updateError ?? null;
+  const upsertError = options?.upsertError ?? null;
 
-  const updateChain: Chain = {
-    eq: () => updateChain,
-    then(resolve: (v: unknown) => unknown) {
-      return Promise.resolve({ error: updateError }).then(resolve);
-    },
-    catch(reject: (e: unknown) => unknown) {
-      return Promise.resolve({ error: updateError }).catch(reject);
-    },
-  };
+  const upsertResult = Promise.resolve({ error: upsertError });
 
   const selectChain: Chain = {
     select: () => selectChain,
@@ -67,7 +59,7 @@ function makeServerDb(options?: {
       if (table === "site_settings") {
         return {
           select: () => selectChain,
-          update: () => updateChain,
+          upsert: () => upsertResult,
         };
       }
       return { select: () => selectChain };

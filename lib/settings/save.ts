@@ -96,17 +96,21 @@ export async function saveSettingsGroup(
     oldValues[row.key as string] = row.value;
   }
 
-  // 7. Upsert each changed key via service role (bypasses RLS; trigger enforces permission).
-  //    Uses sanitizedValues (Zod-parsed) — unknown keys have been stripped.
-  for (const [key, value] of Object.entries(sanitizedValues)) {
-    const { error: updateError } = await supabase
-      .from("site_settings")
-      .update({ value: value as never, updated_by: actorId })
-      .eq("key", key)
-      .eq("setting_group", group);
+  // 7. Upsert all changed keys in one call (single DB round-trip, atomic on
+  //    partial failure). Uses sanitizedValues (Zod-parsed) — unknown keys stripped.
+  //    Service role bypasses RLS; trigger enforces permission per group.
+  const rows = Object.entries(sanitizedValues).map(([key, value]) => ({
+    key,
+    value: value as never,
+    setting_group: group,
+    updated_by: actorId,
+  }));
 
-    if (updateError) throw updateError;
-  }
+  const { error: upsertError } = await supabase
+    .from("site_settings")
+    .upsert(rows, { onConflict: "key" });
+
+  if (upsertError) throw upsertError;
 
   // 8. Write audit row (AC6).
   await writeSettingsAuditRow(group, oldValues, sanitizedValues, actorId);

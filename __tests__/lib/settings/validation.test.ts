@@ -106,6 +106,16 @@ describe("validateContactGroup", () => {
     if (!r.ok) expect(r.field).toBe("social_instagram");
   });
 
+  it("AC3: www. subdomain accepted for social links", () => {
+    const r = validateContactGroup({
+      social_facebook:  "https://www.facebook.com/ceylonsafety",
+      social_instagram: "https://www.instagram.com/ceylonsafety",
+      social_linkedin:  "https://www.linkedin.com/company/ceylonsafety",
+      social_youtube:   "https://www.youtube.com/@ceylonsafety",
+    });
+    expect(r.ok).toBe(true);
+  });
+
   it("AC3: null social links are allowed (optional)", () => {
     const r = validateContactGroup({ social_facebook: null, social_youtube: null });
     expect(r.ok).toBe(true);

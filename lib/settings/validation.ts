@@ -25,7 +25,10 @@ function socialUrlSchema(allowedHost: string) {
       (val) => {
         try {
           const u = new URL(val);
-          return u.protocol === "https:" && u.hostname === allowedHost;
+          return (
+            u.protocol === "https:" &&
+            (u.hostname === allowedHost || u.hostname === `www.${allowedHost}`)
+          );
         } catch {
           return false;
         }

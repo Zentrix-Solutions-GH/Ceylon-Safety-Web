@@ -139,7 +139,9 @@ pgTAP test file written: supabase/tests/settings-group-check.test.sql (AC7)
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `lib/settings/save.ts:101-109` — Non-atomic multi-key UPDATE loop. Partial write if any key's update throws — key N-1 committed, keys N+ not written, audit row skipped. Fix: replace with a single `.upsert([...])` call or a Postgres RPC inside a transaction. (full-review 2026-11-23)
+- **P1** `lib/settings/validation.ts`, `socialUrlSchema` — `www.` subdomain rejected. `https://www.facebook.com/...` has hostname `www.facebook.com`, not `facebook.com` — fails validation. Fix: `u.hostname === allowedHost || u.hostname === "www." + allowedHost`. (full-review 2026-11-23)
+- **P1** `supabase/tests/settings-group-check.test.sql` — pgTAP test written but never run (Supabase not running during check.sh). Run `supabase start && supabase test db` and paste output in Evidence before merge. (full-review 2026-11-23)
 
 ## After this merges, a user can:
 
