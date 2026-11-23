@@ -43,19 +43,22 @@ VALUES ('c1000000-0000-0000-0000-000000000020', 'c1000000-0000-0000-0000-0000000
 ON CONFLICT DO NOTHING;
 
 -- Orders for customer A and B
-INSERT INTO public.orders (id, user_id, status, payment_method, total_cents,
-  terms_revision_id, refund_policy_revision_id)
+INSERT INTO public.orders (id, order_number, user_id, status, currency, payment_method,
+  subtotal_cents, total_cents, terms_revision_id, refund_policy_revision_id,
+  terms_accepted_at, paid_at)
 VALUES
-  ('d1000000-0000-0000-0000-000000000001',
+  ('d1000000-0000-0000-0000-000000000001', 'CS-2026-RLS01',
    'a1000000-0000-0000-0000-000000000001',
-   'paid', 'card', 10000,
+   'paid', 'LKR', 'card', 10000, 10000,
    'c1000000-0000-0000-0000-000000000010',
-   'c1000000-0000-0000-0000-000000000020'),
-  ('d1000000-0000-0000-0000-000000000002',
+   'c1000000-0000-0000-0000-000000000020',
+   now(), now()),
+  ('d1000000-0000-0000-0000-000000000002', 'CS-2026-RLS02',
    'b1000000-0000-0000-0000-000000000001',
-   'paid', 'card', 20000,
+   'paid', 'LKR', 'card', 20000, 20000,
    'c1000000-0000-0000-0000-000000000010',
-   'c1000000-0000-0000-0000-000000000020')
+   'c1000000-0000-0000-0000-000000000020',
+   now(), now())
 ON CONFLICT DO NOTHING;
 
 -- Invoice rows (service role bypasses RLS)
