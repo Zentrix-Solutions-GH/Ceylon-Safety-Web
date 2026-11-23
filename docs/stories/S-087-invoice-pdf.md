@@ -134,14 +134,14 @@ $ bash scripts/check.sh
 Test Files  2 failed | 247 passed | 15 skipped (264)   ← 2 pre-existing failures in ArticleEditor on dev (unchanged from dev, no S-087 diff)
 Tests  30 failed | 2553 passed | 60 skipped (2643)
 
-S-087 tests (all 40 pass):
+S-087 tests (all 46 pass):
 ✓ lib/invoices/__tests__/regenerate.test.ts (5 tests)
 ✓ lib/invoices/__tests__/create.test.ts (9 tests)
-✓ app/api/invoice/__tests__/invoice.test.ts (5 tests)
+✓ app/api/invoice/__tests__/invoice.test.ts (7 tests)
 ✓ lib/invoices/__tests__/fonts.test.ts (5 tests)
-✓ lib/invoices/__tests__/template.test.ts (16 tests)
+✓ lib/invoices/__tests__/template.test.ts (20 tests)
 Test Files  5 passed (5)
-Tests  40 passed (40)
+Tests  46 passed (46)
 
 ✓ Public pages session check (AC11) passed
 ✓ Dev seed guard passed
