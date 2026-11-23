@@ -1,11 +1,11 @@
 ---
 id: S-088
 title: Other emails — bank rejected/expiring, download decisions, resend
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-088-other-emails
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/110"
 depends_on: [S-084, S-085, S-086]
 reqs: [REQ-049b, REQ-049d, REQ-146b, REQ-154b, REQ-198]
 ---
