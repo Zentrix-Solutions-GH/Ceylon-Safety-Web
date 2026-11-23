@@ -30,21 +30,19 @@ END;
 $$;
 
 -- Seed one known public row for test 9 (site_settings_public_read allow-side).
--- set_config('role', 'service_role', true) allows the INSERT past the trigger.
--- IMPORTANT: is_local=true scopes to the transaction, not just this DO block,
--- so we reset the GUC immediately after the INSERT to prevent the bypass from
--- leaking into tests 4, 6, 7 (which rely on the trigger enforcing permissions).
-DO $$
-BEGIN
-  PERFORM set_config('role', 'service_role', true);
-  INSERT INTO public.site_settings (key, value, is_public, setting_group)
-  VALUES ('footer_business_name', '"CeylonSafety Test"'::jsonb, true, 'site')
-  ON CONFLICT (key) DO UPDATE SET is_public = true;
-  -- Reset: without this the GUC stays 'service_role' for the rest of the
-  -- transaction and the trigger bypass fires in every subsequent test.
-  PERFORM set_config('role', '', true);
-END;
-$$;
+-- Use the same top-level set_config / RESET ROLE pattern as test 3: set the
+-- GUC at statement level, do the INSERT, then reset so the bypass does not
+-- leak into tests 4/6/7. set_config('role','service_role',true) is accepted
+-- at top level (not inside a DO block) without a role-exists check.
+SELECT set_config('role', 'service_role', true);
+
+INSERT INTO public.site_settings (key, value, is_public, setting_group)
+VALUES ('footer_business_name', '"CeylonSafety Test"'::jsonb, true, 'site')
+ON CONFLICT (key) DO UPDATE SET is_public = true;
+
+-- Reset the role GUC to the current session user so subsequent tests do not
+-- inherit the service_role bypass. current_user is 'postgres' in pgTAP.
+SELECT set_config('role', current_user, true);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Test 1: site_settings table exists
@@ -74,6 +72,9 @@ SELECT lives_ok(
 );
 
 -- Reset role back to postgres before switching to authenticated.
+-- Also reset the custom 'role' GUC so the service_role bypass does not leak
+-- into subsequent tests (RESET ROLE only resets the session role, not the GUC).
+SELECT set_config('role', current_user, true);
 RESET ROLE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
