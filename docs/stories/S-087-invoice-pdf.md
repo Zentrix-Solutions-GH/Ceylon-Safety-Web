@@ -123,7 +123,7 @@ Keys from `site_settings`: `business_legal_name`, `business_address`. If either 
 ## Evidence
 
 ```
-$ bash scripts/check.sh
+$ supabase start && bash scripts/check.sh
 ── ESLint ──
 ✓ ESLint passed
 
@@ -131,22 +131,47 @@ $ bash scripts/check.sh
 ✓ TypeScript passed
 
 ── Vitest (unit) ──
-Test Files  2 failed | 247 passed | 15 skipped (264)   ← 2 pre-existing failures in ArticleEditor on dev (unchanged from dev, no S-087 diff)
-Tests  30 failed | 2553 passed | 60 skipped (2643)
+Test Files  1 failed | 252 passed | 15 skipped (268)   ← pre-existing ArticleEditor localStorage.clear() failure on dev (unchanged, no S-087 diff)
+Tests  18 failed | 2618 passed | 60 skipped (2696)
 
-S-087 tests (all 51 pass after full-review fixes):
+S-087 tests (all 66 pass):
 ✓ lib/invoices/__tests__/regenerate.test.ts (5 tests)
-✓ lib/invoices/__tests__/create.test.ts (10 tests)   ← +1 P0 retry-upload test
+✓ lib/invoices/__tests__/create.test.ts (11 tests)
 ✓ app/api/invoice/__tests__/invoice.test.ts (7 tests)
 ✓ lib/invoices/__tests__/fonts.test.ts (5 tests)
-✓ lib/invoices/__tests__/template.test.ts (24 tests)  ← +4 AC2 assertions
-✓ lib/orders/__tests__/finalize.test.ts (12 tests)    ← fixed import-chain issue
+✓ lib/invoices/__tests__/template.test.ts (25 tests)
+✓ lib/orders/__tests__/finalize.test.ts (13 tests)
 Test Files  6 passed (6)
-Tests  51 passed (51)
+Tests  66 passed (66)
 
+── pgTAP RLS suite ──
+✓ pgTAP RLS suite passed (zz-schema-verification.test.sql: 118 tests)
+
+── invoices-rls.test.sql (run directly) ──
+$ supabase db test --db-url postgresql://postgres:postgres@127.0.0.1:54322/postgres supabase/tests/invoices-rls.test.sql
+/…/supabase/tests/invoices-rls.test.sql .. ok
+All tests successful.
+Files=1, Tests=7,  0 wallclock secs
+Result: PASS
+
+── pgTAP seed suite ──
+✓ pgTAP seed suite passed (seed.test.sql: 68 tests)
+
+── pgTAP dev seed suite ──
+✓ pgTAP dev seed suite passed (seed.dev.test.sql: 38 tests)
+
+── Types file freshness ──
+✓ Types file freshness passed
+
+── Public pages session check (AC11) ──
 ✓ Public pages session check (AC11) passed
+
+── Dev seed guard ──
 ✓ Dev seed guard passed
-⚠ Supabase not running — pgTAP, types-freshness skipped (run supabase start first)
+
+════════════════════════════════
+  check.sh: 9 passed, 1 failed  ← 1 failure is pre-existing ArticleEditor (dev), not S-087
+════════════════════════════════
 ```
 
 ## Review notes
