@@ -234,6 +234,19 @@ describe("saveSettingsGroup", () => {
     });
   });
 
+  it("edge: empty values object skips DB and returns ok:true", async () => {
+    vi.mocked(requireStaff).mockResolvedValue({ ok: true, user: ADMIN_USER } as never);
+    vi.mocked(createSupabaseServiceRoleClient).mockClear();
+    // No DB mock needed — the early-return at keys.length === 0 must fire before any DB call.
+    const result = await saveSettingsGroup({
+      group: "site",
+      values: {},
+      updatedAt: null,
+    });
+    expect(result).toEqual({ ok: true });
+    expect(createSupabaseServiceRoleClient).not.toHaveBeenCalled();
+  });
+
   it("EC5: bulk_contact_phone null is accepted for site group", async () => {
     vi.mocked(requireStaff).mockResolvedValue({ ok: true, user: ADMIN_USER } as never);
     const rows = [{ key: "bulk_contact_phone", value: "+94 11 000 0000", updated_at: "2026-01-01T00:00:00Z" }];

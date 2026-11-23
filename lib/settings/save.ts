@@ -56,10 +56,11 @@ export async function saveSettingsGroup(
   }
 
   // 4. Fetch current rows for version check and audit (AC4, AC6).
-  const supabase = createSupabaseServiceRoleClient();
   const keys = Object.keys(sanitizedValues);
 
   if (keys.length === 0) return { ok: true };
+
+  const supabase = createSupabaseServiceRoleClient();
 
   const { data: currentRows, error: fetchError } = await supabase
     .from("site_settings")
