@@ -7,6 +7,12 @@ import type { Database } from "@/types/database";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/orders/receipt", () => ({ ensureReceiptEmail: vi.fn().mockResolvedValue({ ok: false }) }));
+// create.ts imports lib/config which throws at startup without env vars.
+// The finalize tests inject invoice/email steps via the `steps` parameter,
+// so the real ensureInvoice is never called — mock the module to skip the import chain.
+vi.mock("@/lib/invoices/create", () => ({
+  ensureInvoice: vi.fn().mockResolvedValue({ ok: true }),
+}));
 
 type SB = SupabaseClient<Database>;
 

@@ -8,11 +8,7 @@ import { ensureReceiptEmail } from "@/lib/orders/receipt";
 
 type SB = SupabaseClient<Database>;
 
-// Stub — real implementation arrives with S-087 (invoice).
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function ensureInvoice(_orderId: string, _sb: SB): Promise<{ ok: boolean }> {
-  return { ok: false }; // not ready until S-087 merges
-}
+import { ensureInvoice } from "@/lib/invoices/create";
 
 export { ensureReceiptEmail };
 
