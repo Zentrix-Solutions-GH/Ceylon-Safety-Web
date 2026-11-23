@@ -110,10 +110,12 @@ SELECT throws_ok(
   'customer A cannot INSERT into invoices'
 );
 
--- 4. Customer A cannot DELETE an invoice row
-SELECT throws_ok(
-  $$DELETE FROM public.invoices WHERE id = 'e1000000-0000-0000-0000-000000000001'$$,
-  NULL,
+-- 4. Customer A cannot DELETE an invoice row (RLS hides the row; DELETE silently affects 0 rows)
+SELECT is(
+  (WITH del AS (
+    DELETE FROM public.invoices WHERE id = 'e1000000-0000-0000-0000-000000000001' RETURNING id
+  ) SELECT count(*)::int FROM del),
+  0,
   'customer A cannot DELETE invoice rows'
 );
 
