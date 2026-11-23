@@ -29,17 +29,19 @@ END;
 $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- AC7: group-check trigger enforces permission at DB level
+-- Test 1: site_settings table exists
 -- ─────────────────────────────────────────────────────────────────────────────
-
--- 1. site_settings table exists
 SELECT has_table('public', 'site_settings', 'S-099: site_settings table exists');
 
--- 2. trigger exists on the table
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Test 2: group-check trigger exists on the table
+-- ─────────────────────────────────────────────────────────────────────────────
 SELECT has_trigger('public', 'site_settings', 'trg_site_settings_group_check',
   'S-099: group-check trigger exists');
 
--- 3. Super Admin can update a contact-group row (direct DB write as service role succeeds)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Test 3 (as postgres/service role): can update a contact-group row
+-- ─────────────────────────────────────────────────────────────────────────────
 SELECT lives_ok(
   $q$
     UPDATE public.site_settings
@@ -49,22 +51,21 @@ SELECT lives_ok(
   'S-099: service role can update contact group row'
 );
 
--- 4. Admin (authenticated user with settings.site permission only) attempts to update
---    a contact-group row via RLS; should be blocked by the group-check trigger.
---    We switch to 'authenticated' role and set the JWT claim to the admin user.
-DO $$
-BEGIN
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config(
-    'request.jwt.claims',
-    json_build_object(
-      'sub',  '99100000-0000-0000-0000-000000000002',
-      'role', 'authenticated'
-    )::text,
-    true
-  );
-END;
-$$;
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Test 4: Admin user (settings.site only) blocked from contact-group row
+-- Switch to authenticated role and set JWT claim to admin user.
+-- SET ROLE at top level (not inside DO) so the role applies to the
+-- subsequent throws_ok() call.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET ROLE authenticated;
+PERFORM set_config(
+  'request.jwt.claims',
+  json_build_object(
+    'sub',  '99100000-0000-0000-0000-000000000002',
+    'role', 'authenticated'
+  )::text,
+  true
+);
 
 SELECT throws_ok(
   $q$
@@ -75,7 +76,10 @@ SELECT throws_ok(
   'S-099: Admin cannot update contact-group row (trigger or RLS refuses)'
 );
 
--- 5. Admin CAN update a site-group row (settings.site permission)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Test 5: Admin CAN update a site-group row (settings.site permission).
+-- Still running as authenticated / admin JWT from test 4.
+-- ─────────────────────────────────────────────────────────────────────────────
 SELECT lives_ok(
   $q$
     UPDATE public.site_settings
@@ -85,15 +89,12 @@ SELECT lives_ok(
   'S-099: Admin can update site-group row'
 );
 
--- Reset to service role for cleanup
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Test 6: Anon role cannot read a private (is_public=false) setting
+-- Reset to postgres first so SET ROLE anon is allowed.
+-- ─────────────────────────────────────────────────────────────────────────────
 RESET ROLE;
-
--- 6. Anon cannot read a private (is_public=false) setting
-DO $$
-BEGIN
-  SET LOCAL ROLE anon;
-END;
-$$;
+SET ROLE anon;
 
 SELECT is(
   (SELECT count(*)::int FROM public.site_settings WHERE key = 'bank_account_details' AND is_public = false),
