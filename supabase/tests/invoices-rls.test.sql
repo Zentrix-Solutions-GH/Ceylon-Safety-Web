@@ -111,12 +111,14 @@ SELECT throws_ok(
 );
 
 -- 4. Customer A cannot DELETE an invoice row (RLS hides the row; DELETE silently affects 0 rows)
+DELETE FROM public.invoices WHERE id = 'e1000000-0000-0000-0000-000000000001';
+-- Verify as superuser (service role) that the row was NOT actually deleted
+RESET role;
+RESET "request.jwt.claims";
 SELECT is(
-  (WITH del AS (
-    DELETE FROM public.invoices WHERE id = 'e1000000-0000-0000-0000-000000000001' RETURNING id
-  ) SELECT count(*)::int FROM del),
-  0,
-  'customer A cannot DELETE invoice rows'
+  (SELECT count(*)::int FROM public.invoices WHERE id = 'e1000000-0000-0000-0000-000000000001'),
+  1,
+  'customer A cannot DELETE invoice rows — row still exists after attempted DELETE'
 );
 
 RESET role;
