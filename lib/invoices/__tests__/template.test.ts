@@ -161,6 +161,31 @@ describe("InvoiceDocument", () => {
     expect(json).toContain("1,500.00");
   });
 
+  it("AC2: element tree contains buyer taxId when present", () => {
+    const order = {
+      ...baseOrder,
+      billing_snapshot: { ...baseOrder.billing_snapshot, taxId: "VAT123456" },
+    } as unknown as typeof baseOrder;
+    const json = flattenElement(order);
+    expect(json).toContain("VAT123456");
+  });
+
+  it("AC2: element tree omits taxId line when taxId is null", () => {
+    const json = flattenElement();
+    expect(json).not.toContain("Tax ID:");
+  });
+
+  it("AC2: footer contains support email when support_email is set", () => {
+    const invoice = { ...baseInvoice, support_email: "support@example.com" };
+    const json = flattenElement(baseOrder, oneItem, invoice);
+    expect(json).toContain("support@example.com");
+  });
+
+  it("AC2: footer omits contact line when support_email is not set", () => {
+    const json = flattenElement();
+    expect(json).not.toContain("contact");
+  });
+
   it("EC2: long company name in billing does not throw", async () => {
     const order = {
       ...baseOrder,

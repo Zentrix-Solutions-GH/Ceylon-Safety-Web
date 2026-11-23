@@ -9,9 +9,11 @@ import type { SellerSnapshot } from "@/types/invoice";
 
 type SB = SupabaseClient<Database>;
 
-const SETTINGS_KEYS = ["business_legal_name", "business_address"] as const;
+const SETTINGS_KEYS = ["business_legal_name", "business_address", "contact_email"] as const;
 
-async function getSellerSnapshot(sb: SB): Promise<SellerSnapshot | null> {
+type InvoiceSettings = { seller: SellerSnapshot; contactEmail: string | null };
+
+async function getInvoiceSettings(sb: SB): Promise<InvoiceSettings | null> {
   const { data, error } = await sb
     .from("site_settings")
     .select("key, value")
@@ -27,7 +29,9 @@ async function getSellerSnapshot(sb: SB): Promise<SellerSnapshot | null> {
     console.warn("ensureInvoice: business_legal_name or business_address is not configured");
     return null;
   }
-  return { name, address };
+
+  const contactEmail = map["contact_email"];
+  return { seller: { name, address }, contactEmail: typeof contactEmail === "string" ? contactEmail : null };
 }
 
 export async function ensureInvoice(
@@ -67,9 +71,9 @@ export async function ensureInvoice(
     return { ok: false };
   }
 
-  // Load seller snapshot from business settings.
-  const sellerSnapshot = await getSellerSnapshot(sb);
-  if (!sellerSnapshot) return { ok: false };
+  // Load seller snapshot and contact email from business settings.
+  const settings = await getInvoiceSettings(sb);
+  if (!settings) return { ok: false };
 
   // Get invoice number via private RPC.
   const { data: invoiceNumber, error: rpcError } = await sb.rpc("next_invoice_number" as never);
@@ -84,7 +88,8 @@ export async function ensureInvoice(
   const invoiceData = {
     invoice_number: invoiceNumber as string,
     issued_at: issuedAt,
-    seller_snapshot: sellerSnapshot,
+    seller_snapshot: settings.seller,
+    support_email: settings.contactEmail,
     tax_label: null,
     tax_rate_bps: null,
     tax_cents: 0,
@@ -110,7 +115,7 @@ export async function ensureInvoice(
       invoice_number: invoiceData.invoice_number,
       issued_at: invoiceData.issued_at,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      seller_snapshot: invoiceData.seller_snapshot as any,
+      seller_snapshot: invoiceData.seller_snapshot as any, // SellerSnapshot not assignable to Json
       tax_label: null,
       tax_rate_bps: null,
       tax_cents: 0,
@@ -177,11 +182,20 @@ export async function regenerateInvoice(
     unit_price_cents: i.unit_price_cents,
   }));
 
+  // Fetch current contact_email (not frozen — footer shows current contact).
+  const { data: emailRows } = await sb
+    .from("site_settings")
+    .select("key, value")
+    .in("key", ["contact_email"]);
+  const emailMap = Object.fromEntries((emailRows ?? []).map((r) => [r.key, r.value]));
+  const contactEmail = typeof emailMap["contact_email"] === "string" ? emailMap["contact_email"] : null;
+
   // Use the FROZEN seller_snapshot from the invoice row (AC5).
   const invoiceData = {
     invoice_number: invoice.invoice_number,
     issued_at: invoice.issued_at,
     seller_snapshot: invoice.seller_snapshot as unknown as SellerSnapshot,
+    support_email: contactEmail,
     tax_label: invoice.tax_label,
     tax_rate_bps: invoice.tax_rate_bps,
     tax_cents: invoice.tax_cents,

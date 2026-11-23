@@ -85,6 +85,16 @@ function makeSupabase(options: {
         }),
       };
     }
+    if (table === "site_settings") {
+      return {
+        select: vi.fn().mockReturnValue({
+          in: vi.fn().mockResolvedValue({
+            data: [{ key: "contact_email", value: "support@ceylonsafety.lk" }],
+            error: null,
+          }),
+        }),
+      };
+    }
     return { select: vi.fn().mockReturnThis() };
   });
 

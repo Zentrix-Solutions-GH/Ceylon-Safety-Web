@@ -58,7 +58,7 @@ function makeSupabase(options: {
     orderError = null,
     items = fakeItems,
     itemsError = null,
-    settings = { business_legal_name: "Ceylon Safety Ltd", business_address: "Colombo 03" },
+    settings = { business_legal_name: "Ceylon Safety Ltd", business_address: "Colombo 03", contact_email: "support@ceylonsafety.lk" },
     settingsError = null,
     existingInvoice = null,
     insertError = null,

@@ -79,6 +79,7 @@ export interface InvoiceDocumentProps {
     tax_label: string | null;
     tax_rate_bps: number | null;
     tax_cents: number;
+    support_email?: string | null;
   };
 }
 
@@ -118,6 +119,7 @@ export function InvoiceDocument({ order, items, invoice }: InvoiceDocumentProps)
         createElement(Text, { style: styles.label }, "Bill To"),
         createElement(Text, null, `${billing.firstName} ${billing.lastName}`),
         billing.company ? createElement(Text, null, billing.company) : null,
+        billing.taxId ? createElement(Text, null, `Tax ID: ${billing.taxId}`) : null,
         createElement(Text, null, billing.address),
         createElement(Text, null, billing.city),
         createElement(Text, null, billing.email),
@@ -156,7 +158,9 @@ export function InvoiceDocument({ order, items, invoice }: InvoiceDocumentProps)
       // Footer
       createElement(View, { style: styles.footer },
         createElement(Text, null,
-          "Goods once sold are non-refundable unless defective. For enquiries contact support@ceylonsafety.lk."
+          invoice.support_email
+            ? `Goods once sold are non-refundable unless defective. For enquiries contact ${invoice.support_email}.`
+            : "Goods once sold are non-refundable unless defective."
         ),
       ),
     )
