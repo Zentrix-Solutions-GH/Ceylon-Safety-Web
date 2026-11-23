@@ -55,8 +55,8 @@ SELECT lives_ok(
   'S-099: service role can update contact group row'
 );
 
--- Clear the GUC before switching to authenticated role.
-SELECT set_config('role', '', true);
+-- Reset role back to postgres before switching to authenticated.
+RESET ROLE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Test 4: Admin user (settings.site only) blocked from contact-group row
