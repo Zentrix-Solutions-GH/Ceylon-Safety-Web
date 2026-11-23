@@ -30,14 +30,19 @@ END;
 $$;
 
 -- Seed one known public row for test 9 (site_settings_public_read allow-side).
--- Must run as service_role so the trigger's early-return bypass fires.
--- set_config is session-local (true) so the GUC reverts after this DO block.
+-- set_config('role', 'service_role', true) allows the INSERT past the trigger.
+-- IMPORTANT: is_local=true scopes to the transaction, not just this DO block,
+-- so we reset the GUC immediately after the INSERT to prevent the bypass from
+-- leaking into tests 4, 6, 7 (which rely on the trigger enforcing permissions).
 DO $$
 BEGIN
   PERFORM set_config('role', 'service_role', true);
   INSERT INTO public.site_settings (key, value, is_public, setting_group)
   VALUES ('footer_business_name', '"CeylonSafety Test"'::jsonb, true, 'site')
   ON CONFLICT (key) DO UPDATE SET is_public = true;
+  -- Reset: without this the GUC stays 'service_role' for the rest of the
+  -- transaction and the trigger bypass fires in every subsequent test.
+  PERFORM set_config('role', '', true);
 END;
 $$;
 

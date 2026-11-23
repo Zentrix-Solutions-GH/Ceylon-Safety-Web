@@ -159,6 +159,7 @@ pgTAP: supabase/tests/settings-group-check.test.sql — 10 assertions (up from 6
 - ~~**P2** validation.test.ts — No test for `counters_min_visible: 100001` failing~~ **resolved** — test added (round-6 fix)
 - ~~**P2** pgTAP trigger test only covered contact group~~ **resolved** — tests 6 and 7 added for business and analytics groups (round-6 fix)
 - ~~**P1** `supabase/tests/settings-group-check.test.sql:148–152` — Test 9 `ok(count(*) >= 0)` is a tautology; allow-side of `site_settings_public_read` policy not verified~~ **resolved** — fixture seeds `footer_business_name` as `is_public=true`; assertion changed to `count > 0` (round-7 fix)
+- ~~**P1** `supabase/tests/settings-group-check.test.sql:33–42` — `set_config('role', 'service_role', true)` with `is_local=true` persists for the full transaction; trigger bypass leaked into tests 4/6/7~~ **resolved** — added `PERFORM set_config('role', '', true)` reset at end of seed DO block (round-8 fix)
 
 ## After this merges, a user can:
 
