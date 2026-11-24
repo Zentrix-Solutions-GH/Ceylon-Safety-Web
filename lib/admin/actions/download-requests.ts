@@ -160,7 +160,12 @@ export async function approveDownloadRequest(
       .single() as { data: { order_item_id: string | null } | null };
     const orderItemId = ent?.order_item_id;
 
-    if (orderItemId) {
+    if (!orderItemId) {
+      console.error("[approveDownloadRequest] entitlement missing order_item_id — approval email not sent", {
+        request_id: requestId,
+        entitlement_id: (req as { entitlement_id: string }).entitlement_id,
+      });
+    } else {
       await sendQueuedEmail({
         template:    "download_request_approved",
         relatedType: "download_request",
