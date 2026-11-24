@@ -1,11 +1,11 @@
 ---
 id: S-100
 title: Owner alerts and daily owner digest
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-100-owner-alerts-digest
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/111"
 depends_on: [S-040, S-099]
 reqs: []
 ---
@@ -21,20 +21,20 @@ Tell the owner when something sensitive changes (Super Admin-only settings, role
 
 ## Acceptance criteria
 
-- [ ] AC1: A helper `sendOwnerAlert(event, detail)` emails the address in setting `owner_alert_email`. Each alert names what changed, who, when, and old and new value (bank numbers masked). It uses the S-040 send helper so it is logged in `email_logs`.
-- [ ] AC2: Alerts are sent for: every save of a Super Admin-only settings group (called by S-099), role or permission changes (called by S-039), a replaced language file of a published document (called by S-070), a price drop over 50 percent (S-069), each CSV export (S-090), and legal page publish (`pages.publish_legal`, admin panel section 13.2). Each of those stories adds its call; this story provides the helper and tests it with a fake caller.
-- [ ] AC3: Changing `owner_alert_email` sends the alert to the OLD address and to the second team member, not only to the new address.
-- [ ] AC4: When the day's email total is above 80, only customer emails and these owner security alerts are still sent: bank details change, `owner_alert_email` change, role or permission change, contact settings change, a replaced language file of a published document, a price drop over 50 percent. Everything else is held and listed in the next owner daily digest.
-- [ ] AC5: One daily owner digest, registered as `owner-digest` in `JOB_REGISTRY` and triggered via the existing `/api/cron/[job]` route (which checks `x-cron-secret`): money events (approvals, grants, revokes, chargebacks, price changes) and setting changes of the last 24 hours, read from `admin_audit_log`, plus any held alerts. It sends at most one email a day and nothing when there is nothing to report.
-- [ ] AC6: A failed alert never rolls back the admin action; the failure is logged by type and the audit row remains.
-- [ ] AC7: Digest and alerts contain no secrets, no full bank numbers, and no customer personal data beyond order numbers and amounts.
+- [x] AC1: A helper `sendOwnerAlert(event, detail)` emails the address in setting `owner_alert_email`. Each alert names what changed, who, when, and old and new value (bank numbers masked). It uses the S-040 send helper so it is logged in `email_logs`.
+- [x] AC2: Alerts are sent for: every save of a Super Admin-only settings group (called by S-099), role or permission changes (called by S-039), a replaced language file of a published document (called by S-070), a price drop over 50 percent (S-069), each CSV export (S-090), and legal page publish (`pages.publish_legal`, admin panel section 13.2). Each of those stories adds its call; this story provides the helper and tests it with a fake caller.
+- [x] AC3: Changing `owner_alert_email` sends the alert to the OLD address and to the second team member, not only to the new address.
+- [x] AC4: When the day's email total is above 80, only customer emails and these owner security alerts are still sent: bank details change, `owner_alert_email` change, role or permission change, contact settings change, a replaced language file of a published document, a price drop over 50 percent. Everything else is held and listed in the next owner daily digest.
+- [x] AC5: One daily owner digest, registered as `owner-digest` in `JOB_REGISTRY` and triggered via the existing `/api/cron/[job]` route (which checks `x-cron-secret`): money events (approvals, grants, revokes, chargebacks, price changes) and setting changes of the last 24 hours, read from `admin_audit_log`, plus any held alerts. It sends at most one email a day and nothing when there is nothing to report.
+- [x] AC6: A failed alert never rolls back the admin action; the failure is logged by type and the audit row remains.
+- [x] AC7: Digest and alerts contain no secrets, no full bank numbers, and no customer personal data beyond order numbers and amounts.
 
 ## Edge cases
 
-- [ ] EC1: Two settings saves in a row — two alerts, not merged; digest still shows both.
-- [ ] EC2: The day's email count is read from `email_logs` for the Sri Lanka day. Spec gap: the design does not say whether the 80 threshold is a Sri Lanka day or UTC day; use Sri Lanka time and record it.
-- [ ] EC3: Resend is down — the alert is retried by the next digest run; no duplicate sends (idempotent by `related_type="owner_alert"`, `related_id=<audit_row_id>`; digest idempotent by `related_type="owner_digest"`, `related_id=<YYYY-MM-DD Sri Lanka date>`).
-- [ ] EC4: Admin names the Super Admin: alert text shows "Support" for a Super Admin actor if the change is made by our team (admin panel section 11 assumption).
+- [x] EC1: Two settings saves in a row — two alerts, not merged; digest still shows both.
+- [x] EC2: The day's email count is read from `email_logs` for the Sri Lanka day. Spec gap: the design does not say whether the 80 threshold is a Sri Lanka day or UTC day; use Sri Lanka time and record it.
+- [x] EC3: Resend is down — the alert is retried by the next digest run; no duplicate sends (idempotent by `related_type="owner_alert"`, `related_id=<audit_row_id>`; digest idempotent by `related_type="owner_digest"`, `related_id=<YYYY-MM-DD Sri Lanka date>`).
+- [x] EC4: Admin names the Super Admin: alert text shows "Support" for a Super Admin actor if the change is made by our team (admin panel section 11 assumption).
 
 ## Contract
 
