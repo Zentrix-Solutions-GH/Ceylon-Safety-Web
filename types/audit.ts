@@ -42,6 +42,7 @@ export type AuditEventName =
   | "order.resend_email"
   | "order.paid"
   | "order.chargeback"
+  | "order.export"
   | "bank_transfer.approve"
   | "bank_transfer.reject"
   | "download_request.approve"
