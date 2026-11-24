@@ -3,6 +3,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
+
+vi.mock("@/lib/admin/alert", () => ({
+  raiseEmailAlert: vi.fn(),
+}));
+
 vi.mock("@/lib/config", () => ({
   serverConfig: {
     resendApiKey: "re_test",
@@ -40,6 +45,7 @@ vi.mock("resend", () => ({
 }));
 
 import { sendEmail } from "@/lib/resend/client";
+import { raiseEmailAlert } from "@/lib/admin/alert";
 
 const EMAIL_OPTS = {
   to: "buyer@example.com",
@@ -141,6 +147,45 @@ describe("sendEmail retry on 5xx (AC7)", () => {
 
     expect(sendMock).toHaveBeenCalledTimes(1);
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+  });
+});
+
+// ─── EC1/EC3: alert on permanent failure ─────────────────────────────────────
+
+describe("sendEmail raises alert on permanent failure (EC1/EC3)", () => {
+  it("calls raiseEmailAlert when all 3 retries exhausted (EC1 — 429)", async () => {
+    sendMock = vi.fn().mockResolvedValue(makeRateLimitError());
+
+    await sendEmail(EMAIL_OPTS);
+
+    expect(sendMock).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(raiseEmailAlert)).toHaveBeenCalledOnce();
+    expect(vi.mocked(raiseEmailAlert)).toHaveBeenCalledWith(
+      expect.objectContaining({ template: "receipt" })
+    );
+  });
+
+  it("calls raiseEmailAlert on permanent 4xx (EC3 — malformed address)", async () => {
+    sendMock = vi.fn().mockResolvedValue({
+      data: null,
+      error: { name: "ValidationError", statusCode: 422, message: "invalid address" },
+    });
+
+    await sendEmail(EMAIL_OPTS);
+
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(raiseEmailAlert)).toHaveBeenCalledOnce();
+    expect(vi.mocked(raiseEmailAlert)).toHaveBeenCalledWith(
+      expect.objectContaining({ template: "receipt", errorName: "ValidationError" })
+    );
+  });
+
+  it("does NOT call raiseEmailAlert on success", async () => {
+    sendMock = vi.fn().mockResolvedValue(makeSuccess());
+
+    await sendEmail(EMAIL_OPTS);
+
+    expect(vi.mocked(raiseEmailAlert)).not.toHaveBeenCalled();
   });
 });
 

@@ -20,7 +20,7 @@ export function renderIdleDeletionWarningEmail(data: IdleDeletionWarningEmailDat
   html: string;
   text: string;
 } {
-  const { appUrl, deletionDate } = data;
+  const { ownerEmail, appUrl, deletionDate } = data;
   const dateStr = formatDate(deletionDate);
   const signInUrl = `${appUrl}/sign-in`;
 
@@ -54,6 +54,9 @@ export function renderIdleDeletionWarningEmail(data: IdleDeletionWarningEmailDat
             If you have purchased documents, your order history and invoices will be retained as required by law.
             Any unused download links will no longer be accessible after deletion.
           </p>
+          <p style="margin:16px 0 0;font-size:12px;color:#9ca3af;">
+            This email was sent to ${escapeHtml(ownerEmail)}.
+          </p>
         </td>
       </tr>
     </table>
@@ -70,7 +73,9 @@ Your account will be permanently deleted on ${dateStr}.
 To keep your account, sign in before that date:
 ${signInUrl}
 
-If you have purchased documents, your order history and invoices will be retained as required by law.`;
+If you have purchased documents, your order history and invoices will be retained as required by law.
+
+This email was sent to ${ownerEmail}.`;
 
   return {
     subject: `Important: your Ceylon Safety account will be deleted on ${dateStr}`,

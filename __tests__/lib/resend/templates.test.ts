@@ -141,6 +141,16 @@ describe("renderIdleDeletionWarningEmail (AC5)", () => {
     const { text } = renderIdleDeletionWarningEmail(data);
     expect(text.length).toBeGreaterThan(0);
   });
+
+  it("renders ownerEmail in html body (AC5)", () => {
+    const { html } = renderIdleDeletionWarningEmail(data);
+    expect(html).toContain("owner@example.com");
+  });
+
+  it("renders ownerEmail in text body (AC5)", () => {
+    const { text } = renderIdleDeletionWarningEmail(data);
+    expect(text).toContain("owner@example.com");
+  });
 });
 
 // ─── account-deletion-otp stub (AC6) ─────────────────────────────────────────

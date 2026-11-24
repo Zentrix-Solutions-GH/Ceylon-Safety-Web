@@ -2,6 +2,7 @@ import "server-only";
 import { Resend } from "resend";
 import { serverConfig } from "@/lib/config";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { raiseEmailAlert } from "@/lib/admin/alert";
 import type { EmailTemplate } from "@/types/order";
 
 // Postgres unique-violation error code
@@ -128,6 +129,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
       .from("email_logs")
       .update({ status: "failed", error: safeCode })
       .eq("id", logId);
+    raiseEmailAlert({ logId, template: opts.template, errorName: safeCode });
     return;
   }
 
@@ -179,10 +181,12 @@ export async function sendQueuedEmail(opts: SendQueuedEmailOptions): Promise<voi
 
   if (result.error || !result.data) {
     const errorName = result.error?.name ?? "send_failed";
+    const safeCode = String(errorName).slice(0, 120);
     await db
       .from("email_logs")
-      .update({ status: "failed", error: String(errorName).slice(0, 120) })
+      .update({ status: "failed", error: safeCode })
       .eq("id", logRow.id);
+    raiseEmailAlert({ logId: logRow.id, template: opts.template, errorName: safeCode });
     return;
   }
 
