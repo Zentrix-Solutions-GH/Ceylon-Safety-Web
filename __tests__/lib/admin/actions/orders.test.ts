@@ -82,6 +82,45 @@ function makeSuperAdminOk(id = "super-1") {
 describe("getOrdersList", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("S3: returns validation_failed for injection-like search string", async () => {
+    // The OrdersListFilterSchema regex only allows [A-Za-z0-9\s\-_] in search.
+    const result = await getOrdersList({ search: "'; DROP TABLE orders--" });
+    expect(result).toEqual({ ok: false, code: "validation_failed" });
+    expect(requireStaffMock).not.toHaveBeenCalled();
+  });
+
+  it("S3: returns validation_failed for search exceeding 50 chars", async () => {
+    const result = await getOrdersList({ search: "a".repeat(51) });
+    expect(result).toEqual({ ok: false, code: "validation_failed" });
+  });
+
+  it("AC1: search passes .or() covering buyer name and email", async () => {
+    requireStaffMock.mockResolvedValue(makeStaffOk());
+    let capturedOrArg: string | undefined;
+    sbFromImpl = () => ({
+      select: vi.fn().mockReturnThis(),
+      or: vi.fn().mockImplementation((arg: string) => {
+        capturedOrArg = arg;
+        return { order: vi.fn().mockReturnThis(), range: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 }) };
+      }),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 }),
+    });
+
+    await getOrdersList({ search: "Nimal" });
+
+    expect(capturedOrArg).toContain("order_number.ilike.%Nimal%");
+    expect(capturedOrArg).toContain("profiles.first_name.ilike.%Nimal%");
+    expect(capturedOrArg).toContain("profiles.last_name.ilike.%Nimal%");
+    expect(capturedOrArg).toContain("profiles.email.ilike.%Nimal%");
+  });
+
+  it("S17: returns not_allowed when requireStaff returns account_suspended", async () => {
+    requireStaffMock.mockResolvedValue({ ok: false, code: "account_suspended" });
+    const result = await getOrdersList({});
+    expect(result).toEqual({ ok: false, code: "not_allowed" });
+  });
+
   it("AC7: returns not_allowed when staff check fails", async () => {
     requireStaffMock.mockResolvedValue({ ok: false, code: "not_allowed" });
 
@@ -170,6 +209,72 @@ describe("getOrdersList", () => {
 describe("getOrderDetail", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("S3: returns validation_error for non-UUID orderId", async () => {
+    const result = await getOrderDetail("not-a-uuid");
+    expect(result).toEqual({ ok: false, code: "validation_error" });
+    expect(requireStaffMock).not.toHaveBeenCalled();
+  });
+
+  it("AC2: returns billingSnapshot, couponSnapshot, and invoiceUrl for a paid order", async () => {
+    requireStaffMock.mockResolvedValue(makeStaffOk());
+    const order = {
+      ...makeOrder({ status: "paid" }),
+      billing_name: "Nimal Perera",
+      billing_email: "nimal@example.com",
+      billing_phone: "0771234567",
+      billing_company: "Acme Ltd",
+      billing_address: { line1: "10 Main St", city: "Colombo" },
+      coupon_code_snapshot: "SAVE10",
+      coupon_type_snapshot: "percent",
+      coupon_value_snapshot: 10,
+      order_items: [],
+      payment_events: [],
+      entitlements: [],
+      bank_transfer_slips: [],
+    };
+    sbFromImpl = () => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: order, error: null }),
+    });
+
+    const result = await getOrderDetail(TEST_ORDER_ID);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const d = result.data!;
+    expect(d.billingSnapshot).toEqual({
+      name: "Nimal Perera",
+      email: "nimal@example.com",
+      phone: "0771234567",
+      company: "Acme Ltd",
+      address: { line1: "10 Main St", city: "Colombo" },
+    });
+    expect(d.couponSnapshot).toEqual({ code: "SAVE10", type: "percent", value: 10 });
+    expect(d.invoiceUrl).toBe(`/api/invoice/${TEST_ORDER_ID}`);
+  });
+
+  it("AC2: invoiceUrl is null for a non-paid order", async () => {
+    requireStaffMock.mockResolvedValue(makeStaffOk());
+    const order = {
+      ...makeOrder({ status: "pending" }),
+      billing_name: null, billing_email: null, billing_phone: null,
+      billing_company: null, billing_address: null,
+      coupon_code_snapshot: null, coupon_type_snapshot: null, coupon_value_snapshot: null,
+      order_items: [], payment_events: [], entitlements: [], bank_transfer_slips: [],
+    };
+    sbFromImpl = () => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: order, error: null }),
+    });
+
+    const result = await getOrderDetail(TEST_ORDER_ID);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data!.invoiceUrl).toBeNull();
+    expect(result.data!.couponSnapshot).toBeNull();
+  });
+
   it("AC7: returns not_allowed when staff check fails", async () => {
     requireStaffMock.mockResolvedValue({ ok: false, code: "not_allowed" });
     expect(await getOrderDetail(TEST_ORDER_ID)).toEqual({ ok: false, code: "not_allowed" });
@@ -239,6 +344,18 @@ describe("getOrderDetail", () => {
 describe("cancelPendingOrder", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("S3: returns validation_error for non-UUID orderId", async () => {
+    const result = await cancelPendingOrder("bad-id", "some reason");
+    expect(result).toEqual({ ok: false, code: "validation_error" });
+    expect(requireStaffMock).not.toHaveBeenCalled();
+  });
+
+  it("S3: returns validation_error for empty reason", async () => {
+    const result = await cancelPendingOrder(TEST_ORDER_ID, "");
+    expect(result).toEqual({ ok: false, code: "validation_error" });
+    expect(requireStaffMock).not.toHaveBeenCalled();
+  });
+
   it("AC7: returns not_allowed when staff check fails", async () => {
     requireStaffMock.mockResolvedValue({ ok: false, code: "not_allowed" });
     expect(await cancelPendingOrder(TEST_ORDER_ID, "admin override")).toEqual({ ok: false, code: "not_allowed" });
@@ -283,6 +400,12 @@ describe("cancelPendingOrder", () => {
 describe("resolveReview", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("S3: returns validation_error for non-UUID orderId", async () => {
+    const result = await resolveReview("bad-id", "note");
+    expect(result).toEqual({ ok: false, code: "validation_error" });
+    expect(requireStaffMock).not.toHaveBeenCalled();
+  });
+
   it("AC7: returns not_allowed when staff check fails", async () => {
     requireStaffMock.mockResolvedValue({ ok: false, code: "not_allowed" });
     expect(await resolveReview(TEST_ORDER_ID, "looked good")).toEqual({ ok: false, code: "not_allowed" });
@@ -322,6 +445,12 @@ describe("resolveReview", () => {
 describe("resendOrderEmail", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("S3: returns validation_error for non-UUID orderId", async () => {
+    const result = await resendOrderEmail("bad-id");
+    expect(result).toEqual({ ok: false, code: "validation_error" });
+    expect(requireStaffMock).not.toHaveBeenCalled();
+  });
+
   it("AC7: returns not_allowed when staff check fails", async () => {
     requireStaffMock.mockResolvedValue({ ok: false, code: "not_allowed" });
     expect(await resendOrderEmail(TEST_ORDER_ID)).toEqual({ ok: false, code: "not_allowed" });
@@ -357,6 +486,18 @@ describe("resendOrderEmail", () => {
 
 describe("grantOrderAccess", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("S3: returns validation_error for non-UUID orderId", async () => {
+    const result = await grantOrderAccess("bad-id", "support");
+    expect(result).toEqual({ ok: false, code: "validation_error" });
+    expect(requireStaffMock).not.toHaveBeenCalled();
+  });
+
+  it("S3: returns validation_error for empty reason", async () => {
+    const result = await grantOrderAccess(TEST_ORDER_ID, "");
+    expect(result).toEqual({ ok: false, code: "validation_error" });
+    expect(requireStaffMock).not.toHaveBeenCalled();
+  });
 
   it("AC7/EC2: returns not_allowed for non-super-admin (orders.grant permission)", async () => {
     requireStaffMock.mockResolvedValue({ ok: false, code: "not_allowed" });
