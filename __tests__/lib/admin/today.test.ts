@@ -362,25 +362,39 @@ describe("AC3: noStore() is called", () => {
 
 describe("super-admin exclusion: non-empty saIds filters counts", () => {
   it("applies NOT IN filter when super_admin IDs are present", async () => {
+    // Expire the module-level _saIdCache so getSuperAdminIds() re-fetches
+    vi.useFakeTimers();
+    vi.advanceTimersByTime(6 * 60 * 1000);
+
     setupAdminWithAllPerms();
-    // Return one super_admin ID from user_roles
     const SA_ID = "11111111-1111-1111-1111-111111111111";
+    // Track all query-builder instances returned by mockFrom so we can inspect .not() calls
+    const capturedChains: Array<{ table: string; chain: ReturnType<typeof qb> }> = [];
     mockServiceRoleFrom.mockImplementation((table: string) => {
       if (table === "user_roles") return qb({ rows: [{ user_id: SA_ID }] });
       return qb({ count: 2, oldest: "2026-11-01T08:00:00.000Z" });
     });
     mockFrom.mockImplementation((table: string) => {
-      if (table === "user_roles") return qb({ rows: [] });
-      if (table === "orders") return qb({ count: 1, oldest: null, rows: [{ gross: 5000 }] });
-      return qb({ count: 2, oldest: "2026-11-01T08:00:00.000Z" });
+      const chain = table === "orders"
+        ? qb({ count: 1, oldest: null, rows: [{ gross: 5000 }] })
+        : qb({ count: 2, oldest: "2026-11-01T08:00:00.000Z" });
+      capturedChains.push({ table, chain });
+      return chain;
     });
     const result = await getAdminToday();
+    vi.useRealTimers();
+
     expect(result).toMatchObject({ ok: true });
-    if (!result.ok) return;
-    // The NOT IN chain method should have been called on the query builders
-    // (we verify the filter is wired; the mock returns whatever we set above)
-    expect(result.comments).toBeDefined();
-    expect(result.downloadRequests).toBeDefined();
+
+    // Verify that .not("user_id", "in", ...) was called on article_comments and download_requests chains
+    const commentChain = capturedChains.find((c) => c.table === "article_comments")?.chain;
+    const downloadChain = capturedChains.find((c) => c.table === "download_requests")?.chain;
+    expect(commentChain).toBeDefined();
+    expect(downloadChain).toBeDefined();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((commentChain as any).not).toHaveBeenCalledWith("user_id", "in", `(${SA_ID})`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((downloadChain as any).not).toHaveBeenCalledWith("user_id", "in", `(${SA_ID})`);
   });
 });
 
@@ -405,9 +419,10 @@ describe("countTodayOrders: grossCents > 0", () => {
 
 describe("getSuperAdminIds: cache behaviour", () => {
   it("calls service-role DB after TTL expires (stale cache)", async () => {
-    // Advance time 6 minutes to expire whatever cache is loaded from prior tests
+    // Advance time 15 minutes to expire whatever cache is loaded from prior tests
+    // (prior tests may have advanced fake timers, so use a large margin)
     vi.useFakeTimers();
-    vi.advanceTimersByTime(6 * 60 * 1000);
+    vi.advanceTimersByTime(15 * 60 * 1000);
     setupAdminWithAllPerms();
     setupEmptyQueues();
     mockServiceRoleFrom.mockClear();
