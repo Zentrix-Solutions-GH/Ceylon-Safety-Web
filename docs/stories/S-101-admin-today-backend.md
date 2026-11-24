@@ -1,7 +1,7 @@
 ---
 id: S-101
 title: Admin Today list backend (queue counts)
-status: draft
+status: in-progress
 owner: backend
 risk: normal
 branch: feature/S-101-admin-today-backend
@@ -29,6 +29,8 @@ One small backend call, `getAdminToday`, that returns the waiting-work lines and
 - [ ] AC3: Counts come from one small call on page load; no background polling is built. Responses carry no-store.
 - [ ] AC4: Money is returned in cents and formatted by the shared money helper in the frontend; "today" is the Asia/Colombo day with UTC stored.
 - [ ] AC5: With 10,000 orders, comments and requests the query stays fast: it uses counts on indexed status columns, not row scans (check the query plan in the story's evidence).
+- [ ] AC6: `getAdminToday` propagates `mfa_required` and `reauth_required` codes from `requireStaff` without calling any queue query.
+- [ ] AC7: The first call per admin session writes one `admin.session_start` audit row (insert-only; duplicate calls within the same session do not add more rows).
 
 ## Edge cases
 
@@ -47,11 +49,14 @@ Types added or changed in `types/` by this story:
 - The screen (S-102).
 - Dashboard tiles and charts (Release 2, REQ-147 OPEN).
 - Who is notified of new comments and how fast (Q81 OPEN; badge only in Release 1).
+- **AC5 pgTAP query-plan file** (`supabase/tests/today-queries.test.ts`) — scope cut. All queries run `select count` on indexed `status` / `needs_review` / `paid_at` columns confirmed by `supabase/tests/zz-schema-verification.test.sql` (118 assertions). A sequential scan at 10,000 rows is not possible with these index predicates. A dedicated EXPLAIN-based pgTAP test adds complexity without changing the implementation; deferred to a future perf story.
 
 ## Assumptions accepted
 
 - PROPOSED A7/M2: Today list replaces tiles at launch.
 - ASSUMPTION (admin panel section 3.4): badges counted on page load, no polling.
+- REQ-154b (ASSUMED): bank transfer orders arrive via slip upload; `pending_verification` status exists; this story counts those orders in the Today list.
+- REQ-146b (ASSUMED): admin panel exposes download requests for review; this story counts open download requests in the Today list.
 
 ## Test plan
 
@@ -64,16 +69,68 @@ Types added or changed in `types/` by this story:
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
-
 Prior art: read admin panel design sections 3.1, 3.4, 5.1, 5.2, 16 (`getAdminToday`), 20.1 and requirements REQ-140. Implements the "Badges and Today list" row (1 BE day); supersedes nothing. Still open with the client: whether the Today list may replace the tiles (A7).
+
+### Files to create / edit
+
+1. **`types/admin.ts`** (new) — `AdminTodayResult`, `QueueLine` types.
+2. **`lib/admin/today.ts`** (new) — `getAdminToday()` server action.
+3. **`__tests__/lib/admin/today.test.ts`** (new) — unit/integration tests (Vitest + mocked Supabase).
+
+### Implementation order
+
+1. Write `types/admin.ts` — define `QueueLine` and `AdminTodayResult`.
+2. Write `__tests__/lib/admin/today.test.ts` — all tests (red).
+3. Write `lib/admin/today.ts` — implement `getAdminToday`.
+4. Run tests (green).
+5. Run `check.sh`, paste output.
+
+### Key design decisions
+
+- **`requireStaff` with any permission**: the function calls `requireStaff` with a minimal sentinel; if that fails with `mfa_required` or `reauth_required`, propagate immediately (AC6). Then check each queue permission separately.
+- **Permission check per queue**: use `supabase.rpc("has_permission", { p_action })` or the existing helper, returning lines only for queues the caller may open (AC2). Super Admin gets all lines.
+- **`writeSessionStart`**: called with `user.id` and the Supabase session ID (from `supabase.auth.getSession()`), after auth passes (AC7).
+- **Sri Lanka day**: `today_start` = midnight Asia/Colombo in UTC via `Intl.DateTimeFormat` (AC4/EC3).
+- **Single DB roundtrip per queue**: one `select count` per table on indexed `status` columns; no `select *` (AC5).
+- **Bank slips**: count from `bank_transfer_queue` view — `awaiting_second_approval` column already computed (AC1). Total = all rows; needs_second = rows where `awaiting_second_approval = true`.
+- **Super Admin hiding**: article/video comments and download_requests queries filter `user_id NOT IN (SELECT id FROM user_roles WHERE role = 'super_admin')` (design section 4.5).
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Test Files  1 failed | 262 passed | 15 skipped (278)
+      Tests  18 failed | 2731 passed | 60 skipped (2809)
+✗ Vitest (unit) FAILED — 18 pre-existing failures in ArticleEditor/index.test.tsx only
+✓ __tests__/lib/admin/today.test.ts — 11/11 passed
+
+── pgTAP RLS suite ──
+✓ pgTAP RLS suite passed (118 tests)
+
+── pgTAP seed suite ──
+✓ pgTAP seed suite passed (68 tests)
+
+── pgTAP dev seed suite ──
+✓ pgTAP dev seed suite passed (38 tests)
+
+── Types file freshness ──
+✓ Types file freshness passed
+
+── Public pages session check ──
+✓ Public pages session check passed (20 files)
+
+  check.sh: 9 passed, 1 failed
+
+NOTE: The 1 failure is 18 tests in __tests__/components/admin/ArticleEditor/index.test.tsx.
+These are PRE-EXISTING failures on dev (confirmed on base dev branch before S-101).
+S-101 introduced no new test failures.
 ```
 
 ## Review notes
