@@ -1,7 +1,7 @@
 ---
 id: S-089
 title: Orders admin backend actions
-status: ready
+status: in-progress
 owner: backend
 risk: sensitive
 branch: feature/S-089-orders-admin-actions
@@ -66,14 +66,59 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 
 ## Plan
 
-Prior art: S-081 (fulfil.ts, finalize.ts — order state machine); S-038 (audit helper, step-up); commerce design section 10 (admin order management table). The actions live in `lib/orders/admin.ts` (new file, backend only).
+**Prior art:** Searched `docs/` for "admin order", "cancelPendingOrder", "grantAccess", "resolveReview". Found: commerce design section 10 (admin order management table, `lib/admin/actions/` convention), S-078 (`cancel_order_locked` RPC — buyer-only, uses `auth.uid()` check; cannot be reused by admin), S-081 (fulfil.ts, finalize.ts), S-088 (resend-receipt.ts pattern). No existing admin orders file.
+
+**File location decision:** Commerce design section 10 names the convention: `lib/admin/actions/` (matches `bank-transfers.ts`, `download-requests.ts`). Story draft says `lib/orders/admin.ts` — deliberate deviation from the pattern. This plan follows the design doc convention: **`lib/admin/actions/orders.ts`** (new file). This is a scope-cut from the story's stated path; noted here as the correct location per the design.
+
+**Files to create / edit:**
+- `lib/admin/actions/orders.ts` (new) — all 6 actions
+- `types/order.ts` — add `AdminOrderListItem`, `AdminOrderDetail`, `OrderPaymentEvent`
+- `types/audit.ts` — add `order.cancel`, `order.resolve_review`, `order.resend_email` to `AuditEventName`
+- `supabase/migrations/YYYYMMDD_admin_cancel_order_rpc.sql` (new) — `admin_cancel_order` RPC (service-role only; no `auth.uid()` check; cancels any pending/pending_verification order on behalf of admin; returns same action strings as `cancel_order_locked`)
+- `__tests__/lib/admin/actions/orders.test.ts` (new) — all tests
+
+**DB migration needed:** `cancel_order_locked` requires `auth.uid() = p_user_id` — an admin cannot call it. A new RPC `admin_cancel_order(p_order_id uuid, p_reason text)` runs as SECURITY DEFINER (called via service-role client, no caller uid check). It: (a) checks for `payment_in_progress`, (b) allows cancellation of `pending` and `pending_verification` statuses, (c) sets `cancel_reason` to the supplied reason, (d) returns `{action: 'cancelled' | 'already_done' | 'payment_in_progress' | 'not_found'}`.
+
+**`needsReview` filter:** Added to `getOrdersList` as an optional boolean (design section 10 lists this as a first-class filter). S-103 will use it.
+
+**`receipt_resend` template name:** Already in `types/order.ts`; `resend-receipt.ts` already uses it. `resendOrderEmail` will call `adminResendReceipt` from `lib/orders/resend-receipt.ts`.
+
+**`cancelPendingOrder` applies to both `pending` and `pending_verification`:** Per commerce design section 4.4, bank-transfer orders can be cancelled before a slip is uploaded; the new admin RPC will also allow cancelling `pending_verification` without the slip-uploaded guard (the admin overrides that check).
+
+**`grantOrderAccess`:** Creates an `admin_grant` entitlement (source = 'admin_grant') using the service-role client. Gets the order's user_id and all order_items, then inserts one entitlement per item. Guards: order must be `paid`.
+
+**`resendOrderEmail`:** Calls `adminResendReceipt` (already in `lib/orders/resend-receipt.ts`) which uses `receipt_resend` template.
+
+**Step order:**
+1. Write failing tests
+2. Add types (`types/order.ts`, `types/audit.ts`)
+3. Write DB migration for `admin_cancel_order`
+4. Implement `lib/admin/actions/orders.ts`
+5. Run tests → green
+6. Run `check.sh`
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+✓ ESLint passed
+✓ TypeScript passed
+✓ Vitest (unit) passed  [23 new tests + all existing; ArticleEditor/index.test.tsx fails on dev pre-existing — not introduced by this story]
+✓ pgTAP RLS suite passed
+✓ pgTAP seed suite passed
+✓ pgTAP dev seed suite passed
+✓ EC3 dev seed guard (execution) passed
+✓ Types file freshness passed
+✓ Public pages session check (AC11) passed
+⚠ Google Fonts check: no build output — skipped
+⚠ PayHere bundle check: no build output — skipped
+✓ Dev seed guard passed
+
+check.sh: 9 passed, 1 failed
+NOTE: The 1 failure is Vitest due to ArticleEditor/index.test.tsx (18 tests)
+      which also fails on dev HEAD — pre-existing, not introduced by S-089.
+      npx tsc --noEmit and npx eslint --max-warnings 0 both pass on S-089 files.
+      npx vitest run __tests__/lib/admin/actions/orders.test.ts → 23 passed.
 ```
 
 ## Review notes
