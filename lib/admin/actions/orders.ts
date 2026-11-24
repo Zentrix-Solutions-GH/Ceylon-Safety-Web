@@ -177,8 +177,17 @@ export async function getOrderDetail(
       outcome: pe["outcome"] != null ? String(pe["outcome"]) : null,
     };
     if (isSuperAdmin) {
-      // PayHere POST callbacks do not include PAN or CVV per their docs — raw payload is safe to surface to super_admin.
-      event.payload = pe["payload"] as Record<string, unknown> | undefined;
+      const raw = pe["payload"] as Record<string, unknown> | null | undefined;
+      if (raw != null) {
+        // Explicit allowlist — never expose raw JSONB verbatim to avoid leaking any field PayHere may add.
+        event.payload = {
+          status_code: raw["status_code"],
+          amount: raw["amount"],
+          currency: raw["currency"],
+          order_id: raw["order_id"],
+          method: raw["method"],
+        } as Record<string, unknown>;
+      }
     }
     return event;
   });
@@ -285,7 +294,12 @@ export async function cancelPendingOrder(
   if (action !== "cancelled") return { ok: false, code: "unknown" };
 
   // releaseCouponUse is a no-op for orders with no coupon (R1 stub); safe to call unconditionally.
-  await releaseCouponUse({ id: idParsed.data });
+  // Wrapped in try/catch so a coupon-service failure does not roll back the already-committed cancel.
+  try {
+    await releaseCouponUse({ id: idParsed.data });
+  } catch (err) {
+    console.error("releaseCouponUse failed after cancel — coupon slot may need manual release", { orderId: idParsed.data, err });
+  }
 
   await writeAuditRow({
     action: "order.cancel",
@@ -411,9 +425,11 @@ export async function grantOrderAccess(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: insertError } = await (sb as any)
     .from("entitlements")
-    .upsert(entitlements, { onConflict: "user_id,document_id,language", ignoreDuplicates: true });
+    .insert(entitlements);
 
-  if (insertError) return { ok: false, code: "unknown" };
+  // 23505 = unique_violation: duplicate admin_grant is idempotent, treat as success.
+  // The partial unique index (WHERE source = 'admin_grant') enforces uniqueness at the DB level.
+  if (insertError && insertError.code !== "23505") return { ok: false, code: "unknown" };
 
   await writeAuditRow({
     action: "order.grant",

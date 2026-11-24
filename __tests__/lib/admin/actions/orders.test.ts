@@ -20,6 +20,11 @@ vi.mock("@/lib/orders/resend-receipt", () => ({
   resendReceiptForOrder: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
+// ── coupon mock ───────────────────────────────────────────────────────────────
+vi.mock("@/lib/orders/coupon", () => ({
+  releaseCouponUse: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 let sbFromImpl: (table: string) => unknown = () => ({});
 const rpcMock = vi.fn();
@@ -41,10 +46,12 @@ import {
 import { requireStaff } from "@/lib/auth/server";
 import { writeAuditRow } from "@/lib/audit/index";
 import { resendReceiptForOrder } from "@/lib/orders/resend-receipt";
+import { releaseCouponUse } from "@/lib/orders/coupon";
 
 const requireStaffMock = vi.mocked(requireStaff);
 const writeAuditRowMock = vi.mocked(writeAuditRow);
 const resendReceiptMock = vi.mocked(resendReceiptForOrder);
+const releaseCouponUseMock = vi.mocked(releaseCouponUse);
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -365,9 +372,9 @@ describe("getOrderDetail", () => {
     expect(events[0]).not.toHaveProperty("payload");
   });
 
-  it("AC2: super_admin sees raw payment payload", async () => {
+  it("AC2/AC8: super_admin sees allowlisted payment payload fields (not raw JSONB)", async () => {
     requireStaffMock.mockResolvedValue(makeSuperAdminOk());
-    const rawPayload = { card: "4111111111111111" };
+    const rawPayload = { status_code: 2, amount: "10.00", currency: "LKR", order_id: "CS-0001", method: "card", card: "4111111111111111" };
     const order = {
       ...makeOrder(),
       order_items: [],
@@ -384,7 +391,12 @@ describe("getOrderDetail", () => {
     const result = await getOrderDetail(TEST_ORDER_ID);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.data!.paymentEvents[0].payload).toEqual(rawPayload);
+    const payload = result.data!.paymentEvents[0].payload as Record<string, unknown> | undefined;
+    expect(payload).toBeDefined();
+    // Only allowlisted fields are returned
+    expect(payload).toEqual({ status_code: 2, amount: "10.00", currency: "LKR", order_id: "CS-0001", method: "card" });
+    // Raw sensitive field never appears
+    expect(payload).not.toHaveProperty("card");
   });
 });
 
@@ -423,6 +435,7 @@ describe("cancelPendingOrder", () => {
       p_order_id: TEST_ORDER_ID,
       p_reason: "testing cancel",
     });
+    expect(releaseCouponUseMock).toHaveBeenCalledWith({ id: TEST_ORDER_ID });
     expect(writeAuditRowMock).toHaveBeenCalledWith(
       expect.objectContaining({ action: "order.cancel", entityId: TEST_ORDER_ID })
     );
@@ -435,6 +448,7 @@ describe("cancelPendingOrder", () => {
     const result = await cancelPendingOrder(TEST_ORDER_ID, "cancel attempt");
 
     expect(result).toEqual({ ok: false, code: "payment_in_progress" });
+    expect(releaseCouponUseMock).not.toHaveBeenCalled();
     expect(writeAuditRowMock).not.toHaveBeenCalled();
   });
 
@@ -445,6 +459,7 @@ describe("cancelPendingOrder", () => {
     const result = await cancelPendingOrder(TEST_ORDER_ID, "cancel");
 
     expect(result).toEqual({ ok: false, code: "not_allowed" });
+    expect(releaseCouponUseMock).not.toHaveBeenCalled();
   });
 });
 
@@ -469,13 +484,13 @@ describe("resolveReview", () => {
   it("AC4: clears needs_review flag and writes audit row", async () => {
     requireStaffMock.mockResolvedValue(makeStaffOk());
     const updateFn = vi.fn().mockResolvedValue({ error: null });
-    sbFromImpl = () => ({
-      update: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ eq: updateFn }) }),
-    });
+    const updateMock = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ eq: updateFn }) });
+    sbFromImpl = () => ({ update: updateMock });
 
     const result = await resolveReview(TEST_ORDER_ID, "verified");
 
     expect(result).toEqual({ ok: true });
+    expect(updateMock).toHaveBeenCalledWith({ needs_review: false, review_reason: "verified" });
     expect(writeAuditRowMock).toHaveBeenCalledWith(
       expect.objectContaining({ action: "order.resolve_review", entityId: TEST_ORDER_ID })
     );
@@ -511,13 +526,16 @@ describe("resendOrderEmail", () => {
     expect(await resendOrderEmail(TEST_ORDER_ID)).toEqual({ ok: false, code: "not_allowed" });
   });
 
-  it("AC5: calls resendReceiptForOrder and writes audit row", async () => {
+  it("AC5: calls resendReceiptForOrder (uses receipt_resend/_resend template) and writes audit row", async () => {
     requireStaffMock.mockResolvedValue(makeStaffOk());
     resendReceiptMock.mockResolvedValue({ ok: true });
 
     const result = await resendOrderEmail(TEST_ORDER_ID);
 
     expect(result).toEqual({ ok: true });
+    // resendReceiptForOrder is the function that bakes in the receipt_resend template suffix (AC5).
+    // Verifying it is called with the correct orderId confirms the _resend path is taken.
+    expect(resendReceiptMock).toHaveBeenCalledOnce();
     expect(resendReceiptMock).toHaveBeenCalledWith(TEST_ORDER_ID, expect.anything());
     expect(writeAuditRowMock).toHaveBeenCalledWith(
       expect.objectContaining({ action: "order.resend_email", entityId: TEST_ORDER_ID })
@@ -572,7 +590,7 @@ describe("grantOrderAccess", () => {
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: order, error: null }),
       };
-      return { upsert: vi.fn().mockResolvedValue({ error: null }) };
+      return { insert: vi.fn().mockResolvedValue({ error: null }) };
     };
 
     const result = await grantOrderAccess(TEST_ORDER_ID, "support case");
@@ -588,27 +606,46 @@ describe("grantOrderAccess", () => {
         { id: "oi-2", document_id: "doc-2", language: "si" },
       ],
     };
-    const upsertMock = vi.fn().mockResolvedValue({ error: null });
+    const insertMock = vi.fn().mockResolvedValue({ error: null });
     sbFromImpl = (table: string) => {
       if (table === "orders") return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: order, error: null }),
       };
-      return { upsert: upsertMock };
+      return { insert: insertMock };
     };
 
     const result = await grantOrderAccess(TEST_ORDER_ID, "CS-123 support case");
 
     expect(result).toEqual({ ok: true });
-    expect(upsertMock).toHaveBeenCalled();
-    const upsertArg = upsertMock.mock.calls[0][0] as Array<Record<string, unknown>>;
-    expect(Array.isArray(upsertArg)).toBe(true);
-    expect(upsertArg).toHaveLength(2);
-    expect(upsertArg[0]).toMatchObject({ source: "admin_grant", document_id: "doc-1", language: "en" });
+    expect(insertMock).toHaveBeenCalled();
+    const insertArg = insertMock.mock.calls[0][0] as Array<Record<string, unknown>>;
+    expect(Array.isArray(insertArg)).toBe(true);
+    expect(insertArg).toHaveLength(2);
+    expect(insertArg[0]).toMatchObject({ source: "admin_grant", document_id: "doc-1", language: "en" });
     expect(writeAuditRowMock).toHaveBeenCalledWith(
       expect.objectContaining({ action: "order.grant", entityId: TEST_ORDER_ID })
     );
+  });
+
+  it("AC6: duplicate grant (23505) is treated as success (idempotent)", async () => {
+    requireStaffMock.mockResolvedValue(makeSuperAdminOk());
+    const order = {
+      ...makeOrder({ status: "paid" }),
+      order_items: [{ id: "oi-1", document_id: "doc-1", language: "en" }],
+    };
+    sbFromImpl = (table: string) => {
+      if (table === "orders") return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: order, error: null }),
+      };
+      return { insert: vi.fn().mockResolvedValue({ error: { code: "23505", message: "duplicate key" } }) };
+    };
+
+    const result = await grantOrderAccess(TEST_ORDER_ID, "duplicate grant");
+    expect(result).toEqual({ ok: true });
   });
 
   it("AC8: no raw card numbers in audit log (writeAuditRow masks them)", async () => {
@@ -623,7 +660,7 @@ describe("grantOrderAccess", () => {
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: order, error: null }),
       };
-      return { upsert: vi.fn().mockResolvedValue({ error: null }) };
+      return { insert: vi.fn().mockResolvedValue({ error: null }) };
     };
 
     await grantOrderAccess(TEST_ORDER_ID, "support");
