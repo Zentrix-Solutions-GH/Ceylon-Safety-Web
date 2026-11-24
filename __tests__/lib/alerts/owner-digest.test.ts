@@ -183,6 +183,36 @@ describe("AC5: owner digest job", () => {
     expect(mockSendEmail).toHaveBeenCalledTimes(2);
   });
 
+  it("passes DIGEST_ACTIONS filter to admin_audit_log query (not all events)", async () => {
+    let capturedInArgs: unknown[] = [];
+    const capturingAuditChain: Record<string, (...a: unknown[]) => unknown> = {
+      select: () => capturingAuditChain,
+      gte: () => capturingAuditChain,
+      in: (...args: unknown[]) => {
+        capturedInArgs = args;
+        return {
+          order: () => ({
+            then(resolve: (v: unknown) => unknown) {
+              return Promise.resolve({ data: [], error: null }).then(resolve);
+            },
+          }),
+        };
+      },
+    };
+    const db = makeDb({ auditRows: [], heldAlerts: [] });
+    const originalFrom = db.from.bind(db);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (db as any).from = (table: string) =>
+      table === "admin_audit_log" ? capturingAuditChain : originalFrom(table);
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(db);
+    await ownerDigestJob();
+    // Second arg to .in() is the action list
+    const actionList = capturedInArgs[1] as string[];
+    expect(actionList).toContain("order.paid");
+    expect(actionList).not.toContain("user.login");
+    expect(actionList).not.toContain("admin.session_start");
+  });
+
   it("AC7: digest body does not expose actor_id or other customer PII", async () => {
     (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(
       makeDb({

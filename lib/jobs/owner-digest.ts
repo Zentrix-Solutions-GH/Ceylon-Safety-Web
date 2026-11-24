@@ -2,12 +2,15 @@ import "server-only";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/resend/client";
 import { currentSlDate, slDayBoundaries } from "@/lib/alerts/email-budget";
+import type { AuditEventName } from "@/types/audit";
 
 function escHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 // Money and settings events included in the digest (AC5).
+// `satisfies` ensures every entry remains a valid AuditEventName — a rename in
+// types/audit.ts will produce a compile error here rather than silently missing events.
 const DIGEST_ACTIONS = [
   "order.paid",
   "order.grant",
@@ -22,7 +25,7 @@ const DIGEST_ACTIONS = [
   "settings.change",
   "settings.contact_change",
   "settings.business_change",
-];
+] satisfies AuditEventName[];
 
 type AuditRow = {
   id: number;

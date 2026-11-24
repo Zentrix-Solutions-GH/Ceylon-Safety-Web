@@ -350,3 +350,33 @@ describe("EC4: Super Admin actor shown as Support", () => {
     expect(call.html).not.toContain("Super Admin User");
   });
 });
+
+describe("EC3 double-fault: both sendEmail and holdAlert throw", () => {
+  it("does not produce an unhandled rejection when holdAlert insert also fails", async () => {
+    const failingHeldChain = {
+      insert: () => ({
+        then(resolve: (v: unknown) => unknown) {
+          return Promise.resolve({ data: null, error: { code: "XX000" } }).then(resolve);
+        },
+      }),
+    };
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: (table: string) => {
+        if (table === "site_settings")
+          return makeDb("owner@example.com", null).from("site_settings");
+        if (table === "owner_alert_held") return failingHeldChain;
+        return failingHeldChain;
+      },
+    });
+    mockSendEmail.mockRejectedValue(new Error("Resend down"));
+    // Must resolve (not reject) even when holdAlert's insert returns an error.
+    await expect(
+      sendOwnerAlert("role.change", {
+        auditRowId: "audit-df",
+        actorName: "Ivan",
+        actorId: "user-10",
+        changedAt: "2026-11-24T15:00:00Z",
+      })
+    ).resolves.toBeUndefined();
+  });
+});
