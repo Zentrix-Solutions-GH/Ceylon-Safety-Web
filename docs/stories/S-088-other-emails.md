@@ -160,6 +160,12 @@ check.sh: 9 passed, 1 failed
 - **P1** `lib/admin/actions/__tests__/download-requests.test.ts` — `approveDownloadRequest` success test asserts only `result.ok`; does not assert `sendQueuedEmail` is called with `download_request_approved`. Add mock + call assertion. (full-review 2026-11-24)
 - **P1** `lib/admin/actions/__tests__/download-requests.test.ts` — `rejectDownloadRequest` success test has the same gap for `download_request_rejected`. (full-review 2026-11-24)
 - **Re-review 2026-11-24** (HEAD 5fddffb): All P0 and P1 findings resolved. One P2 remains: no test for the error-skip branch in `bank-transfers.reject.test.ts` (non-unique insert error → `sendQueuedEmail` not called). Overall 91/100. APPROVE WITH FOLLOW-UPS.
+- **P0** `lib/resend/client.ts` (~line 162) — `sendQueuedEmail` swallows DB fetch error silently; email permanently lost with no log. Fix: destructure `{ data, error: fetchErr }` and log + return on error. (full-review 2026-11-24, third review)
+- **P0** `lib/admin/actions/bank-transfers.ts:275,367`, `lib/admin/actions/download-requests.ts:176,251`, `lib/jobs/expire-bank-orders.ts:137` — `serverConfig.emailFrom` (display-name address) passed as `supportEmail`; produces broken `mailto:` links. Fix: use `serverConfig.supportEmail`. (full-review 2026-11-24, third review)
+- **P1** `__tests__/lib/resend/client.test.ts` — real wall-clock sleeps in retry tests; add `vi.useFakeTimers()` + `runAllTimersAsync()`. (full-review 2026-11-24, third review)
+- **P1** `lib/admin/actions/download-requests.ts` (~line 156) — entitlement fetch error not checked; email silently skipped. Fix: destructure `{ data, error: entErr }` and check `entErr`. (full-review 2026-11-24, third review)
+- **P1** `__tests__/lib/resend/templates.test.ts:59–60` — bank-expiring date assertion too shallow. Fix: assert full "30 November 2026". (full-review 2026-11-24, third review)
+- **Re-review 2026-11-24** (HEAD aced420): All P0 and P1 from third review resolved. Two P2s remain (no alert on fetchErr due to missing logId; TOCTOU double-send). Overall 90/100. APPROVE WITH FOLLOW-UPS.
 
 ## After this merges
 
