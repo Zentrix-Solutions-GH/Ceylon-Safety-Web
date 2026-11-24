@@ -119,10 +119,14 @@ let _saIdCache: { ids: string[]; expiresAt: number } | null = null;
 async function getSuperAdminIds(): Promise<string[]> {
   const now = Date.now();
   if (_saIdCache && _saIdCache.expiresAt > now) return _saIdCache.ids;
-  const { data } = await createSupabaseServiceRoleClient()
+  const { data, error } = await createSupabaseServiceRoleClient()
     .from("user_roles")
     .select("user_id")
     .eq("role", "super_admin");
+  if (error) {
+    console.error("[getSuperAdminIds] failed:", error);
+    return _saIdCache?.ids ?? []; // return stale cache on error rather than caching empty
+  }
   const ids = (data ?? [])
     .map((r: { user_id: string }) => r.user_id)
     .filter((id: string) => UUID_RE.test(id));
@@ -170,6 +174,8 @@ async function countComments(supabase: Supabase, saIds: string[]): Promise<Queue
 
 async function countBankSlips(): Promise<BankSlipLine> {
   // bank_transfer_queue has REVOKE ALL FROM authenticated — must use service role.
+  // The view is already scoped to o.status = 'pending_verification' (migration
+  // 20261118000002_bank-transfer-approval.sql:81) — no extra status filter needed.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sr: any = createSupabaseServiceRoleClient();
   const [cntRes, oldRes, secRes] = await Promise.all([
@@ -221,6 +227,7 @@ async function countTodayOrders(supabase: Supabase): Promise<TodayOrdersLine> {
     supabase.from("orders").select("gross:total_cents.sum()").eq("status", "paid").gte("paid_at", start).lt("paid_at", end),
   ]);
   type SumRow = { gross: number | null };
+  if (sumRes.error) console.error("[countTodayOrders] aggregate failed:", sumRes.error);
   const sumRow = (sumRes.data as SumRow[] | null)?.[0] ?? null;
   return { count: cntRes.count ?? 0, grossCents: sumRow?.gross ?? 0 };
 }
@@ -243,7 +250,7 @@ export async function getAdminToday(): Promise<ActionResult<AdminTodayResult>> {
   // access_token would cause duplicate rows on token refresh (P1d fix).
   const sessionKey = user.lastFullSignIn ?? user.id;
   // Audit failure must not block the read — catch and swallow.
-  try { await writeSessionStart(user.id, sessionKey); } catch { /* non-fatal */ }
+  try { await writeSessionStart(user.id, sessionKey); } catch (e) { console.error("[getAdminToday] writeSessionStart failed:", e); }
 
   // Fetch super_admin IDs once to exclude from counts (design section 4.5).
   const saIds = await getSuperAdminIds();
