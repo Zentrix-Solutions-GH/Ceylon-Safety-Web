@@ -150,6 +150,9 @@ export interface SendQueuedEmailOptions {
  * Send an email whose email_logs row was already inserted (by a DB function or action)
  * with status = 'queued'. Fetches the row, calls Resend with retry, and updates status.
  *
+ * Fire-and-forget: returns void and never throws. Callers return { ok: true } regardless
+ * of send outcome; failures are written to email_logs and surfaced via raiseEmailAlert.
+ *
  * Used for: bank_rejected, download_request_approved, download_request_rejected,
  * bank_expiring (when queued by the job before calling this).
  */

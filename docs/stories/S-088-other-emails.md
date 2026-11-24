@@ -143,9 +143,22 @@ check.sh: 9 passed, 1 failed
 (The 1 failure is pre-existing ArticleEditor test, not S-088)
 ```
 
+## Gap fixes (post-PR)
+
+**EC1/EC3 alert (a6f8566):**
+- Added `lib/admin/alert.ts` — `raiseEmailAlert({ logId, template, errorName })` stub; S-100 replaces the implementation
+- Both `sendEmail` and `sendQueuedEmail` now call `raiseEmailAlert` on permanent failure (after writing `status='failed'` to `email_logs`)
+- 3 new tests in `client.test.ts`: EC1 (429 exhausted), EC3 (422 malformed), and success path (no alert)
+
+**ownerEmail in idle-deletion-warning (a6f8566):**
+- `ownerEmail` is now destructured and rendered in both HTML (`<p>This email was sent to …</p>`) and text bodies
+- 2 new tests in `templates.test.ts` confirm it appears in both outputs
+
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `lib/admin/actions/bank-transfers.ts:255–261` and `:340–346` — `email_logs.insert()` result not checked before calling `sendQueuedEmail`; a non-unique DB error silently drops the email with no log. Fix: capture `{ error: insertError }`, check for non-null + non-23505, and log or return error. (full-review 2026-11-24)
+- **P1** `lib/admin/actions/__tests__/download-requests.test.ts` — `approveDownloadRequest` success test asserts only `result.ok`; does not assert `sendQueuedEmail` is called with `download_request_approved`. Add mock + call assertion. (full-review 2026-11-24)
+- **P1** `lib/admin/actions/__tests__/download-requests.test.ts` — `rejectDownloadRequest` success test has the same gap for `download_request_rejected`. (full-review 2026-11-24)
 
 ## After this merges
 

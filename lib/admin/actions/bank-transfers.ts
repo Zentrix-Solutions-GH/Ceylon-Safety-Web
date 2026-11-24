@@ -252,23 +252,30 @@ export async function rejectBankOrder(
     : (order.profiles as { email?: string | null } | null)?.email;
 
   if (buyerEmail) {
-    await sbService.from("email_logs").insert({
+    const { error: emailInsertErr } = await sbService.from("email_logs").insert({
       to_email:     buyerEmail,
       template:     "bank_rejected",
       related_type: "bank_transfer_slip",
       related_id:   slipId,
       status:       "queued",
     });
-    await sendQueuedEmail({
-      template:    "bank_rejected",
-      relatedType: "bank_transfer_slip",
-      relatedId:   slipId,
-      renderEmail: () => renderBankRejectedEmail({
-        reason:       reason.trim(),
-        orderPageUrl: `${publicConfig.appUrl}/orders/${orderId}`,
-        supportEmail: serverConfig.emailFrom,
-      }),
-    });
+    if (emailInsertErr && emailInsertErr.code !== "23505") {
+      console.error("[rejectBankOrder] email_logs insert failed — rejection email not sent", {
+        slip_id: slipId,
+        code: emailInsertErr.code,
+      });
+    } else {
+      await sendQueuedEmail({
+        template:    "bank_rejected",
+        relatedType: "bank_transfer_slip",
+        relatedId:   slipId,
+        renderEmail: () => renderBankRejectedEmail({
+          reason:       reason.trim(),
+          orderPageUrl: `${publicConfig.appUrl}/orders/${orderId}`,
+          supportEmail: serverConfig.emailFrom,
+        }),
+      });
+    }
   }
 
   return { ok: true };
@@ -337,23 +344,30 @@ export async function rejectAndCancelBankOrder(
     : (order.profiles as { email?: string | null } | null)?.email;
 
   if (buyerEmail) {
-    await sbService.from("email_logs").insert({
+    const { error: emailInsertErr } = await sbService.from("email_logs").insert({
       to_email:     buyerEmail,
       template:     "bank_rejected",
       related_type: "order",
       related_id:   orderId,
       status:       "queued",
     });
-    await sendQueuedEmail({
-      template:    "bank_rejected",
-      relatedType: "order",
-      relatedId:   orderId,
-      renderEmail: () => renderBankRejectedEmail({
-        reason:       reason.trim(),
-        orderPageUrl: `${publicConfig.appUrl}/orders/${orderId}`,
-        supportEmail: serverConfig.emailFrom,
-      }),
-    });
+    if (emailInsertErr && emailInsertErr.code !== "23505") {
+      console.error("[rejectAndCancelBankOrder] email_logs insert failed — rejection email not sent", {
+        order_id: orderId,
+        code: emailInsertErr.code,
+      });
+    } else {
+      await sendQueuedEmail({
+        template:    "bank_rejected",
+        relatedType: "order",
+        relatedId:   orderId,
+        renderEmail: () => renderBankRejectedEmail({
+          reason:       reason.trim(),
+          orderPageUrl: `${publicConfig.appUrl}/orders/${orderId}`,
+          supportEmail: serverConfig.emailFrom,
+        }),
+      });
+    }
   }
 
   return { ok: true };

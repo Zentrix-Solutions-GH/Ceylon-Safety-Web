@@ -251,6 +251,10 @@ export async function rejectDownloadRequest(
         supportEmail: serverConfig.emailFrom,
       }),
     });
+  } else {
+    console.error("[rejectDownloadRequest] no buyer email — rejection email not sent", {
+      request_id: requestId,
+    });
   }
 
   return { ok: true };
