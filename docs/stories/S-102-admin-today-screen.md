@@ -1,11 +1,11 @@
 ---
 id: S-102
 title: Admin Today list and menu badges
-status: in-progress
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-102-admin-today-screen
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/114
 depends_on: [S-045, S-101]
 reqs: [REQ-140, REQ-150]
 ---
