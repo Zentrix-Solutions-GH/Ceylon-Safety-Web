@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/config", () => ({
   serverConfig: { supabaseServiceRoleKey: "srk" },
+  publicConfig: { appUrl: "https://ceylonsafety.lk" },
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(),
@@ -13,6 +14,12 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/auth/server", () => ({ requireStaff: vi.fn() }));
 vi.mock("@/lib/auth/step-up", () => ({ requireStepUp: vi.fn(), _resetCacheForTest: vi.fn() }));
 vi.mock("@/lib/ratelimit", () => ({ checkRateLimit: vi.fn() }));
+vi.mock("@/lib/resend/client", () => ({
+  sendQueuedEmail: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/resend/templates/bank-rejected", () => ({
+  renderBankRejectedEmail: vi.fn().mockReturnValue({ subject: "s", html: "<p/>", text: "t" }),
+}));
 
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { requireStaff } from "@/lib/auth/server";
