@@ -2,10 +2,16 @@
 // AC6: no ad/analytics scripts — this layout has no ScriptGate.
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getAdminToday } from "@/lib/admin/today";
 import AdminShell from "./AdminShell";
+
+// React cache() deduplicates concurrent calls within one request render.
+// app/admin/page.tsx imports this wrapper so layout + page share one result.
+export const getAdminTodayCached = cache(getAdminToday);
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -36,11 +42,38 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     // Non-fatal — email fallback is fine
   }
 
+  // S-102: Fetch badge counts for sidebar. Non-fatal — shell renders without them.
+  let badgeCounts = null;
+  let ordersNeedingReview = false;
+  let badgeOldestAt: Partial<Record<"comments" | "bankTransfers" | "downloadRequests", string>> = {};
+  try {
+    const todayResult = await getAdminTodayCached();
+    if (todayResult.ok) {
+      // ActionResult<AdminTodayResult> success shape: { ok: true } & AdminTodayResult
+      badgeCounts = {
+        comments: todayResult.comments?.count ?? 0,
+        bankTransfers: todayResult.bankSlips?.count ?? 0,
+        downloadRequests: todayResult.downloadRequests?.count ?? 0,
+      };
+      ordersNeedingReview = (todayResult.ordersNeedingReview?.count ?? 0) > 0;
+      badgeOldestAt = {
+        ...(todayResult.comments?.oldestAt ? { comments: todayResult.comments.oldestAt } : {}),
+        ...(todayResult.bankSlips?.oldestAt ? { bankTransfers: todayResult.bankSlips.oldestAt } : {}),
+        ...(todayResult.downloadRequests?.oldestAt ? { downloadRequests: todayResult.downloadRequests.oldestAt } : {}),
+      };
+    }
+  } catch {
+    // Non-fatal — badges just won't show
+  }
+
   return (
     <AdminShell
       displayName={displayName}
       email={user.email}
       role={user.claimedRole!}
+      badgeCounts={badgeCounts}
+      ordersNeedingReview={ordersNeedingReview}
+      badgeOldestAt={badgeOldestAt}
     >
       {children}
     </AdminShell>

@@ -468,6 +468,25 @@ const en = {
   "admin.badge.comments_aria": "pending comments",
   "admin.badge.bank_transfers_aria": "pending bank transfers",
   "admin.badge.download_requests_aria": "pending download requests",
+  "admin.badge.orders_needs_review_aria": "orders need review",
+
+  // S-102: Admin Today page
+  "admin.today.page_title": "Today",
+  "admin.today.heading": "Today",
+  "admin.today.empty": "Nothing is waiting. Well done.",
+  "admin.today.error_mfa_required": "Enter the code from your authenticator app.",
+  "admin.today.error_reauth_required": "Please sign in again to continue.",
+  "admin.today.error_rate_limited": "Too many requests. Please wait and try again.",
+  "admin.today.error_generic": "Could not load the Today list.",
+  "admin.today.retry": "Try again",
+  "admin.today.comments_label": "Comments waiting",
+  "admin.today.bank_slips_label": "Bank transfers waiting",
+  "admin.today.bank_slips_second_approval": "needs second approval",
+  "admin.today.download_requests_label": "Download requests waiting",
+  "admin.today.orders_review_label": "Orders needing review",
+  "admin.today.today_orders_label": "Today's orders",
+  "admin.today.view_queue": "View queue",
+  "admin.today.oldest_age_label": "Oldest waiting",
 
   // S-058: Admin articles list
   "admin.articles.page_title": "Articles",

@@ -15,6 +15,8 @@ interface AdminShellProps {
   email: string;
   role: UserRole;
   badgeCounts?: AdminBadgeCounts | null;
+  ordersNeedingReview?: boolean;
+  badgeOldestAt?: Partial<Record<keyof AdminBadgeCounts, string>>;
 }
 
 export default function AdminShell({
@@ -23,6 +25,8 @@ export default function AdminShell({
   email,
   role,
   badgeCounts = null,
+  ordersNeedingReview = false,
+  badgeOldestAt,
 }: AdminShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -31,6 +35,8 @@ export default function AdminShell({
       <AdminSidebar
         role={role}
         badgeCounts={badgeCounts}
+        ordersNeedingReview={ordersNeedingReview}
+        badgeOldestAt={badgeOldestAt}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

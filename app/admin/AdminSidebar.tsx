@@ -9,6 +9,18 @@ import { PERMISSION_MAP } from "@/lib/auth/permissions";
 import type { UserRole } from "@/types/auth";
 import type { AdminBadgeCounts } from "./AdminShell";
 
+// ─── Age formatting ───────────────────────────────────────────────────────────
+
+function formatRelativeAge(isoString: string): string {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const diffMins = Math.floor(diffMs / 60_000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+}
+
 // ─── Permission helpers ───────────────────────────────────────────────────────
 
 function hasPermission(role: UserRole, permission: string): boolean {
@@ -48,7 +60,7 @@ function buildGroups(): NavGroup[] {
   return [
     {
       label: t("admin.nav.today"),
-      items: [{ label: t("admin.nav.today"), href: "/admin/dashboard" }],
+      items: [{ label: t("admin.nav.today"), href: "/admin" }],
     },
     {
       label: t("admin.nav.work_queues"),
@@ -135,11 +147,13 @@ function buildGroups(): NavGroup[] {
 interface AdminSidebarProps {
   role: UserRole;
   badgeCounts: AdminBadgeCounts | null;
+  ordersNeedingReview?: boolean;
+  badgeOldestAt?: Partial<Record<keyof AdminBadgeCounts, string>>;
   open: boolean;
   onClose: () => void;
 }
 
-export default function AdminSidebar({ role, badgeCounts, open, onClose }: AdminSidebarProps) {
+export default function AdminSidebar({ role, badgeCounts, ordersNeedingReview = false, badgeOldestAt, open, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   // buildGroups() calls t() which returns static strings — memoize to avoid rebuilding the array on every render.
   const groups = useMemo(() => buildGroups(), []);
@@ -190,7 +204,9 @@ export default function AdminSidebar({ role, badgeCounts, open, onClose }: Admin
                 <ul role="list">
                   {visibleItems.map((item) => {
                     const count = item.badge ? (badgeCounts?.[item.badge] ?? 0) : 0;
+                    const ageIso = item.badge ? badgeOldestAt?.[item.badge] : undefined;
                     const isActive = pathname === item.href;
+                    const showOrdersDot = item.href === "/admin/orders" && ordersNeedingReview;
                     return (
                       <li key={item.href}>
                         <Link
@@ -207,10 +223,18 @@ export default function AdminSidebar({ role, badgeCounts, open, onClose }: Admin
                           {count > 0 && (
                             <span
                               aria-label={`${count} ${item.badge ? t(BADGE_ARIA[item.badge]) : ""}`}
+                              title={ageIso ? `${t("admin.today.oldest_age_label")}: ${formatRelativeAge(ageIso)}` : undefined}
                               className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground"
                             >
                               {count > 99 ? "99+" : count}
                             </span>
+                          )}
+                          {showOrdersDot && (
+                            <span
+                              role="status"
+                              aria-label={t("admin.badge.orders_needs_review_aria")}
+                              className="ml-2 h-2 w-2 rounded-full bg-destructive"
+                            />
                           )}
                         </Link>
                       </li>
