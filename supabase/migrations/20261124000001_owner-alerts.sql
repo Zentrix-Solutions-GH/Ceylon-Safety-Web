@@ -45,6 +45,10 @@ COMMENT ON TABLE public.owner_alert_held IS
   'S-100: Alerts held when daily email budget (80) is exceeded. '
   'Flushed into the next owner digest run.';
 
+-- Index for the digest job's .lt("created_at", ...) filter.
+CREATE INDEX IF NOT EXISTS owner_alert_held_created_at_idx
+  ON public.owner_alert_held (created_at);
+
 -- RLS: service_role only (no customer access)
 ALTER TABLE public.owner_alert_held ENABLE ROW LEVEL SECURITY;
 

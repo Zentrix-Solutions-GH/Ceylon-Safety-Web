@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/resend/client";
 import { isBudgetExceeded, isSecurityAlert } from "@/lib/alerts/email-budget";
 import type { OwnerAlertEvent } from "@/types/audit";
 import type { Json } from "@/types/database";
+import { escHtml } from "@/lib/alerts/render-utils";
 
 export interface AlertDetail {
   auditRowId: string;
@@ -19,11 +20,6 @@ export interface AlertDetail {
 // Mask runs of 8+ digits (bank account numbers etc.) — AC1, AC7.
 function maskSensitive(value: string): string {
   return value.replace(/\d{8,}/g, "****");
-}
-
-// Minimal HTML escaping for interpolated values — prevents malformed email HTML.
-function escHtml(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function renderAlertHtml(event: OwnerAlertEvent, detail: AlertDetail): string {
@@ -119,15 +115,25 @@ export async function sendOwnerAlert(event: OwnerAlertEvent, detail: AlertDetail
       });
       sent = true;
       if (second) {
-        await sendEmail({
-          to: second,
-          template: "owner_alert",
-          relatedType: "owner_alert",
-          relatedId: `${detail.auditRowId}-second`,
-          subject,
-          html,
-          text,
-        });
+        // Track separately: a failure on the second address must still trigger
+        // holdAlert, but must not overwrite `sent` (primary already succeeded).
+        let secondSent = false;
+        try {
+          await sendEmail({
+            to: second,
+            template: "owner_alert",
+            relatedType: "owner_alert",
+            relatedId: `${detail.auditRowId}-second`,
+            subject,
+            html,
+            text,
+          });
+          secondSent = true;
+        } catch (secondErr: unknown) {
+          const name = secondErr instanceof Error ? secondErr.constructor.name : "UnknownError";
+          console.error("[owner-alert] second address send failed:", name, "event:", event);
+        }
+        if (!secondSent) await holdAlert(event, detail);
       }
       return;
     }

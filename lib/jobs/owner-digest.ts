@@ -3,10 +3,7 @@ import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/resend/client";
 import { currentSlDate, slDayBoundaries } from "@/lib/alerts/email-budget";
 import type { AuditEventName } from "@/types/audit";
-
-function escHtml(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+import { escHtml } from "@/lib/alerts/render-utils";
 
 // Money and settings events included in the digest (AC5).
 // `satisfies` ensures every entry remains a valid AuditEventName — a rename in
@@ -30,7 +27,6 @@ const DIGEST_ACTIONS = [
 type AuditRow = {
   id: number;
   action: string;
-  actor_id: string | null;
   created_at: string;
 };
 
@@ -102,7 +98,7 @@ export async function ownerDigestJob(): Promise<{ ok: boolean }> {
     const since = slDayBoundaries(slDate).startUtc;
     const { data: auditData } = await db
       .from("admin_audit_log")
-      .select("id, action, actor_id, created_at")
+      .select("id, action, created_at")
       .gte("created_at", since)
       .in("action", DIGEST_ACTIONS)
       .order("created_at", { ascending: true });

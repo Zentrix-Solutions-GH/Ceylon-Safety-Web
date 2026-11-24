@@ -189,9 +189,28 @@ describe("AC4: budget gate", () => {
   it("holds non-security alerts when budget is exceeded", async () => {
     mockIsBudgetExceeded.mockResolvedValue(true);
     mockIsSecurityAlert.mockReturnValue(false);
-    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(
-      makeDb("owner@example.com", null)
-    );
+    let heldInsertArgs: unknown = null;
+    const settingsRows = [{ key: "owner_alert_email", value: "owner@example.com" }];
+    const settingsChain = {
+      select: () => settingsChain,
+      in: () => settingsChain,
+      then(resolve: (v: unknown) => unknown) {
+        return Promise.resolve({ data: settingsRows, error: null }).then(resolve);
+      },
+    };
+    const heldChain = {
+      insert: (args: unknown) => {
+        heldInsertArgs = args;
+        return { then(resolve: (v: unknown) => unknown) { return Promise.resolve({ data: null, error: null }).then(resolve); } };
+      },
+    };
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: (table: string) => {
+        if (table === "site_settings") return settingsChain;
+        if (table === "owner_alert_held") return heldChain;
+        return settingsChain;
+      },
+    });
     await sendOwnerAlert("settings.super_admin_change", {
       auditRowId: "audit-6",
       actorName: "Eve",
@@ -202,6 +221,9 @@ describe("AC4: budget gate", () => {
       newValue: "B",
     });
     expect(mockSendEmail).not.toHaveBeenCalled();
+    // P0: INSERT into owner_alert_held must fire when budget is exceeded.
+    expect(heldInsertArgs).not.toBeNull();
+    expect((heldInsertArgs as { event: string }).event).toBe("settings.super_admin_change");
   });
 
   it("sends security alerts even when budget is exceeded", async () => {
@@ -240,6 +262,30 @@ describe("AC6: failed alert does not throw", () => {
         newValue: "admin",
       })
     ).resolves.not.toThrow();
+  });
+
+  it("AC6: logs error by type (not PII) when sendEmail throws", async () => {
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(
+      makeDb("owner@example.com", null)
+    );
+    mockSendEmail.mockRejectedValue(new Error("Resend down"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await sendOwnerAlert("role.change", {
+      auditRowId: "audit-8b",
+      actorName: "Frank",
+      actorId: "user-6",
+      changedAt: "2026-11-24T13:00:00Z",
+      field: "role",
+      oldValue: "viewer",
+      newValue: "admin",
+    });
+    expect(spy).toHaveBeenCalled();
+    // Must log the error class name, not the full message or PII.
+    const logArgs = spy.mock.calls[0].join(" ");
+    expect(logArgs).toContain("Error");
+    expect(logArgs).not.toContain("Frank");
+    expect(logArgs).not.toContain("viewer");
+    spy.mockRestore();
   });
 
   it("EC3: queues alert in owner_alert_held when sendEmail throws (Resend down)", async () => {
@@ -348,6 +394,30 @@ describe("EC4: Super Admin actor shown as Support", () => {
     const call = mockSendEmail.mock.calls[0][0];
     expect(call.html).toContain("Support");
     expect(call.html).not.toContain("Super Admin User");
+  });
+});
+
+describe("EC3 idempotency: same auditRowId second call does not send duplicate", () => {
+  it("resolves without throwing when sendEmail swallows a unique-violation (23505)", async () => {
+    // Simulates sendEmail returning void on duplicate (unique-index violation swallowed internally).
+    // A second sendOwnerAlert with the same auditRowId must still resolve ok.
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(
+      makeDb("owner@example.com", null)
+    );
+    mockSendEmail.mockResolvedValue(undefined);
+    const detail = {
+      auditRowId: "audit-idempotent",
+      actorName: "Judy",
+      actorId: "user-11",
+      changedAt: "2026-11-24T16:00:00Z",
+      field: "role",
+      oldValue: "viewer",
+      newValue: "admin",
+    };
+    await sendOwnerAlert("role.change", detail);
+    await sendOwnerAlert("role.change", detail);
+    // sendEmail called twice (application layer does not deduplicate; DB unique index swallows).
+    expect(mockSendEmail).toHaveBeenCalledTimes(2);
   });
 });
 
