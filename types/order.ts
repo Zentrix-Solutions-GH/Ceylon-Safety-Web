@@ -88,4 +88,6 @@ export type EmailTemplate =
   | "download_request_approved"
   | "download_request_rejected"
   | "idle_deletion_warning"
-  | "account_deletion_otp";
+  | "account_deletion_otp"
+  | "owner_alert"
+  | "owner_digest";
