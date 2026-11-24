@@ -619,17 +619,16 @@ describe("grantOrderAccess", () => {
     const result = await grantOrderAccess(TEST_ORDER_ID, "CS-123 support case");
 
     expect(result).toEqual({ ok: true });
-    expect(insertMock).toHaveBeenCalled();
-    const insertArg = insertMock.mock.calls[0][0] as Array<Record<string, unknown>>;
-    expect(Array.isArray(insertArg)).toBe(true);
-    expect(insertArg).toHaveLength(2);
-    expect(insertArg[0]).toMatchObject({ source: "admin_grant", document_id: "doc-1", language: "en" });
+    // One insert call per order item (row-by-row for idempotency)
+    expect(insertMock).toHaveBeenCalledTimes(2);
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ source: "admin_grant", document_id: "doc-1", language: "en" }));
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ source: "admin_grant", document_id: "doc-2", language: "si" }));
     expect(writeAuditRowMock).toHaveBeenCalledWith(
       expect.objectContaining({ action: "order.grant", entityId: TEST_ORDER_ID })
     );
   });
 
-  it("AC6: duplicate grant (23505) is treated as success (idempotent)", async () => {
+  it("AC6: duplicate grant (23505) per item is treated as success (idempotent)", async () => {
     requireStaffMock.mockResolvedValue(makeSuperAdminOk());
     const order = {
       ...makeOrder({ status: "paid" }),
@@ -646,6 +645,35 @@ describe("grantOrderAccess", () => {
 
     const result = await grantOrderAccess(TEST_ORDER_ID, "duplicate grant");
     expect(result).toEqual({ ok: true });
+  });
+
+  it("AC6: mixed duplicate/new batch — only duplicate rows are skipped, all others inserted", async () => {
+    requireStaffMock.mockResolvedValue(makeSuperAdminOk());
+    const order = {
+      ...makeOrder({ status: "paid" }),
+      order_items: [
+        { id: "oi-1", document_id: "doc-1", language: "en" },
+        { id: "oi-2", document_id: "doc-2", language: "si" },
+      ],
+    };
+    let callIndex = 0;
+    const insertMock = vi.fn().mockImplementation(() => {
+      // First item: already granted (23505); second item: new grant
+      const err = callIndex++ === 0 ? { code: "23505", message: "duplicate key" } : null;
+      return Promise.resolve({ error: err });
+    });
+    sbFromImpl = (table: string) => {
+      if (table === "orders") return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: order, error: null }),
+      };
+      return { insert: insertMock };
+    };
+
+    const result = await grantOrderAccess(TEST_ORDER_ID, "partial re-grant");
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledTimes(2);
   });
 
   it("AC8: no raw card numbers in audit log (writeAuditRow masks them)", async () => {

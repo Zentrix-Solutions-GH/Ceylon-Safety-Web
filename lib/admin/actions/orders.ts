@@ -412,24 +412,25 @@ export async function grantOrderAccess(
     return { ok: true };
   }
 
-  const entitlements = orderItems.map((item) => ({
-    user_id: String(r["user_id"] ?? ""),
-    item_type: "document",
-    document_id: String(item["document_id"] ?? ""),
-    language: String(item["language"] ?? "en"),
-    source: "admin_grant",
-    granted_by: auth.user.id,
-    download_limit: 1,
-  }));
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: insertError } = await (sb as any)
-    .from("entitlements")
-    .insert(entitlements);
-
-  // 23505 = unique_violation: duplicate admin_grant is idempotent, treat as success.
-  // The partial unique index (WHERE source = 'admin_grant') enforces uniqueness at the DB level.
-  if (insertError && insertError.code !== "23505") return { ok: false, code: "unknown" };
+  // Insert entitlements one row at a time so a 23505 on a previously-granted item
+  // does not roll back the entire batch — typical orders have 1–3 items.
+  for (const item of orderItems) {
+    const entitlement = {
+      user_id: String(r["user_id"] ?? ""),
+      item_type: "document",
+      document_id: String(item["document_id"] ?? ""),
+      language: String(item["language"] ?? "en"),
+      source: "admin_grant",
+      granted_by: auth.user.id,
+      download_limit: 1,
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: insertError } = await (sb as any)
+      .from("entitlements")
+      .insert(entitlement);
+    // 23505 = unique_violation: already granted — idempotent, skip this item.
+    if (insertError && insertError.code !== "23505") return { ok: false, code: "unknown" };
+  }
 
   await writeAuditRow({
     action: "order.grant",

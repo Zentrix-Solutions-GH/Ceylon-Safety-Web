@@ -123,14 +123,16 @@ NOTE: The 1 failure is Vitest due to ArticleEditor/index.test.tsx (18 tests)
 
 ## Review notes
 
-- **P0** `__tests__/lib/admin/actions/orders.test.ts` (cancelPendingOrder success test) — RPC call never asserted; test passes even if the RPC line is deleted. Add `expect(rpcMock).toHaveBeenCalledWith("admin_cancel_order", { p_order_id: TEST_ORDER_ID, p_reason: "testing cancel" })`. (full-review 2026-11-24)
-- **P0** `supabase/migrations/20261124000002_admin_cancel_order_rpc.sql:25` — `SECURITY DEFINER` sets `search_path = public, private`; must be `SET search_path = public` only for defence-in-depth. (full-review 2026-11-24)
-- **P1** `lib/admin/actions/orders.ts:286` — `releaseCouponUse` called without coupon guard; verify function tolerates no-coupon orders or add guard. (full-review 2026-11-24)
-- **P1** `lib/admin/actions/orders.ts:410` — `grantOrderAccess` plain `.insert()` creates duplicates if called twice; use upsert or add unique constraint. (full-review 2026-11-24)
-- **P1** `supabase/migrations/20261124000004_profiles_search_indexes.sql:8` — `CREATE EXTENSION pg_trgm` in migration fails on hosted Supabase non-Enterprise; move to Dashboard / `supabase/extensions.sql`. (full-review 2026-11-24)
-- **P1** `lib/admin/actions/orders.ts:179-182` — raw `payment_events.payload` exposed to `super_admin`; verify PayHere strips PAN/CVV before exposing. (full-review 2026-11-24)
-- **P1** `__tests__/lib/admin/actions/orders.test.ts` — no tests for `dateFrom`, `dateTo`, `paymentMethod` filters (AC1). (full-review 2026-11-24) → **Fixed in re-review commit 61a7690**
-- **P1** `lib/admin/actions/orders.ts:413` — `grantOrderAccess` upsert uses `onConflict: "user_id,document_id,language,source"` but no unique constraint on those columns exists in migrations; existing unique index covers `order_item_id` only. Add migration or verify constraint. (full-review re-review 2026-11-24)
+- **P0** `__tests__/lib/admin/actions/orders.test.ts` (cancelPendingOrder success test) — RPC call never asserted; test passes even if the RPC line is deleted. Add `expect(rpcMock).toHaveBeenCalledWith("admin_cancel_order", { p_order_id: TEST_ORDER_ID, p_reason: "testing cancel" })`. (full-review 2026-11-24) → **Fixed commit 61a7690**
+- **P0** `supabase/migrations/20261124000002_admin_cancel_order_rpc.sql:25` — `SECURITY DEFINER` sets `search_path = public, private`; must be `SET search_path = public` only for defence-in-depth. (full-review 2026-11-24) → **Fixed commit 61a7690**
+- **P1** `lib/admin/actions/orders.ts:286` — `releaseCouponUse` called without coupon guard; verify function tolerates no-coupon orders or add guard. (full-review 2026-11-24) → **Resolved: R1 no-op documented commit 61a7690; try/catch added commit e5973fd**
+- **P1** `lib/admin/actions/orders.ts:410` — `grantOrderAccess` plain `.insert()` creates duplicates if called twice; use upsert or add unique constraint. (full-review 2026-11-24) → **Fixed commit 61a7690 (upsert), then e5973fd (insert + 23505)**
+- **P1** `supabase/migrations/20261124000004_profiles_search_indexes.sql:8` — `CREATE EXTENSION pg_trgm` in migration fails on hosted Supabase non-Enterprise; move to Dashboard / `supabase/extensions.sql`. (full-review 2026-11-24) → **Fixed: Dashboard prerequisite documented commit 61a7690**
+- **P1** `lib/admin/actions/orders.ts:179-182` — raw `payment_events.payload` exposed to `super_admin`; verify PayHere strips PAN/CVV before exposing. (full-review 2026-11-24) → **Fixed: explicit allowlist commit e5973fd**
+- **P1** `__tests__/lib/admin/actions/orders.test.ts` — no tests for `dateFrom`, `dateTo`, `paymentMethod` filters (AC1). (full-review 2026-11-24) → **Fixed commit 61a7690**
+- **P1** `lib/admin/actions/orders.ts:413` — `grantOrderAccess` upsert uses `onConflict: "user_id,document_id,language,source"` but no unique constraint on those columns exists in migrations. (full-review re-review 2026-11-24) → **Fixed: migration 20261124000005 added commit 20f2993**
+- **P0** `lib/admin/actions/orders.ts:413` — `grantOrderAccess` upsert uses partial index as `onConflict` target; PostgREST throws at runtime for duplicate grants. (full-review re-review 4 2026-11-24) → **Fixed: replaced with insert + 23505 handling commit e5973fd**
+- **P1** `__tests__/lib/admin/actions/orders.test.ts` — `releaseCouponUse` not mocked; `resolveReview` update payload not asserted; AC5 `_resend` suffix not verified. (full-review re-review 4 2026-11-24) → **Fixed commit e5973fd**
 
 ## After this merges
 
