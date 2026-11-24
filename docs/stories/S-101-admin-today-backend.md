@@ -1,11 +1,12 @@
 ---
 id: S-101
 title: Admin Today list backend (queue counts)
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-101-admin-today-backend
-pr: ~
+pr: "112"
+pr_url: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/112
 depends_on: [S-051, S-084, S-085]
 reqs: [REQ-140, REQ-146b, REQ-150, REQ-154b, REQ-195]
 ---
@@ -24,20 +25,20 @@ One small backend call, `getAdminToday`, that returns the waiting-work lines and
 
 ## Acceptance criteria
 
-- [ ] AC1: `getAdminToday()` starts with `requireStaff` (any staff with at least one permission) and returns: pending comments (article and video comment tables) with oldest age; bank transfer orders in `pending_verification` with a slip, oldest age, and the count waiting a second approval; open download requests with oldest age; orders with `needs_review`; today's paid orders (Sri Lanka day) with gross LKR.
-- [ ] AC2: Each line is returned only if the caller may open that queue (`comments.moderate`, `bank_transfers.review`, `download_requests.review`, `orders.read`). A Maintainer with no permissions is refused (`not_allowed`).
-- [ ] AC3: Counts come from one small call on page load; no background polling is built. Responses carry no-store.
-- [ ] AC4: Money is returned in cents and formatted by the shared money helper in the frontend; "today" is the Asia/Colombo day with UTC stored.
-- [ ] AC5: With 10,000 orders, comments and requests the query stays fast: it uses counts on indexed status columns, not row scans (check the query plan in the story's evidence).
-- [ ] AC6: `getAdminToday` propagates `mfa_required` and `reauth_required` codes from `requireStaff` without calling any queue query.
-- [ ] AC7: The first call per admin session writes one `admin.session_start` audit row (insert-only; duplicate calls within the same session do not add more rows).
+- [x] AC1: `getAdminToday()` starts with `requireStaff` (any staff with at least one permission) and returns: pending comments (article and video comment tables) with oldest age; bank transfer orders in `pending_verification` with a slip, oldest age, and the count waiting a second approval; open download requests with oldest age; orders with `needs_review`; today's paid orders (Sri Lanka day) with gross LKR.
+- [x] AC2: Each line is returned only if the caller may open that queue (`comments.moderate`, `bank_transfers.review`, `download_requests.review`, `orders.read`). A Maintainer with no permissions is refused (`not_allowed`).
+- [x] AC3: Counts come from one small call on page load; no background polling is built. Responses carry no-store.
+- [x] AC4: Money is returned in cents and formatted by the shared money helper in the frontend; "today" is the Asia/Colombo day with UTC stored.
+- [ ] AC5: With 10,000 orders, comments and requests the query stays fast: it uses counts on indexed status columns, not row scans (check the query plan in the story's evidence). — query-plan pgTAP file scoped out; see Out of scope.
+- [x] AC6: `getAdminToday` propagates `mfa_required` and `reauth_required` codes from `requireStaff` without calling any queue query.
+- [x] AC7: The first call per admin session writes one `admin.session_start` audit row (insert-only; duplicate calls within the same session do not add more rows).
 
 ## Edge cases
 
-- [ ] EC1: Empty queues — all counts are 0 and the lines are still returned (the frontend shows "Nothing is waiting. Well done.").
-- [ ] EC2: A staff member whose role was removed this minute — refused at the next call.
-- [ ] EC3: Orders at 23:59 and 00:01 Sri Lanka time land on the right day.
-- [ ] EC4: Video comments are a Release 2 feature but the table exists — counted if rows exist, otherwise 0.
+- [x] EC1: Empty queues — all counts are 0 and the lines are still returned (the frontend shows "Nothing is waiting. Well done.").
+- [x] EC2: A staff member whose role was removed this minute — refused at the next call.
+- [x] EC3: Orders at 23:59 and 00:01 Sri Lanka time land on the right day.
+- [x] EC4: Video comments are a Release 2 feature but the table exists — counted if rows exist, otherwise 0.
 
 ## Contract
 
