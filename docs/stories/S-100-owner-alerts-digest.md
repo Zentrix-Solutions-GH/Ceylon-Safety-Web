@@ -149,7 +149,10 @@ pgTAP and types-freshness checks skipped — Supabase not running locally.
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0 FIXED** `lib/alerts/owner-alert.ts:99` — AC3 broken: `to: owner` reads the current DB value; if S-099 commits the new email before calling `sendOwnerAlert`, the alert goes to the new address, not the old one. Fix: use `to: detail.oldValue ?? owner` for `settings.owner_alert_email_change` sends. (full-review 2026-11-24, fixed 2026-11-24)
+- **P0 FIXED** `lib/alerts/owner-alert.ts:130-134` — EC3 broken: catch block logs and returns without calling `holdAlert`; a Resend failure silently drops the alert with no retry path. Fix: call `await holdAlert(event, detail)` inside the catch. (full-review 2026-11-24, fixed 2026-11-24)
+- **P1** `lib/alerts/owner-alert.ts:255-266` — HTML template interpolates values without escaping; a `<` or `&` in a field value malforms the email. Fix: apply minimal HTML-escape on interpolated values. (full-review 2026-11-24)
+- **P1** `lib/jobs/owner-digest.ts:92` — `since` uses a rolling UTC 24 h window; use `slDayBoundaries(slDate).startUtc` for SL calendar-day consistency with the idempotency key. (full-review 2026-11-24)
 
 ## After this merges, a user can:
 

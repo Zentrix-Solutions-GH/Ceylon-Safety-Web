@@ -805,6 +805,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"owner_alert_held": {
+                  Row: {
+                    "audit_row_id": number | null,"created_at": string,"detail": NonNullable<Json>,"event": string,"id": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "audit_row_id"?: number | null,"created_at"?: string,"detail": NonNullable<Json>,"event": string,"id"?: never
+                  }
+                  Update: {
+                    "audit_row_id"?: number | null,"created_at"?: string,"detail"?: NonNullable<Json>,"event"?: string,"id"?: never
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"page_revisions": {
                   Row: {
                     "body": Json | null,"id": string,"page_id": string,"published_at": string | null,"published_by": string | null,"title": string | null,"version": number

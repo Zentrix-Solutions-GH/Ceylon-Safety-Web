@@ -1,9 +1,13 @@
 -- S-100: pgTAP test — owner_alert_held RLS (S5, S6, S7)
 -- Verifies that:
---   S5: anon role cannot SELECT / INSERT / DELETE from owner_alert_held
---   S6: authenticated non-service role cannot read another row
---   S7: service_role can INSERT, SELECT, and DELETE
+--   S5: anon role sees 0 rows (RLS blocks) and cannot INSERT
+--   S6: authenticated role sees 0 rows (RLS blocks) and cannot INSERT
+--   S7: service_role (postgres session) can INSERT, SELECT, and DELETE
 -- Run with: supabase test db (requires Docker + local Supabase stack).
+--
+-- Note: RLS with no matching policy returns 0 rows for SELECT (not 42501).
+-- The 42501 only fires for INSERT/UPDATE/DELETE where the check fails.
+-- INSERT on a table with no matching policy raises "violates row-level security".
 --
 -- Assertion count: 6
 
@@ -27,16 +31,15 @@ SELECT ok(
 );
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- S5: anon cannot SELECT
+-- S5: anon sees 0 rows (RLS denies) and cannot INSERT
 -- ─────────────────────────────────────────────────────────────────────────────
 
 SET LOCAL ROLE anon;
 
-SELECT throws_ok(
-  $$ SELECT * FROM public.owner_alert_held $$,
-  '42501',
-  NULL,
-  'S5: anon role is blocked from SELECT on owner_alert_held'
+SELECT is(
+  (SELECT count(*)::int FROM public.owner_alert_held),
+  0,
+  'S5: anon role sees 0 rows from owner_alert_held (RLS denies)'
 );
 
 SELECT throws_ok(
@@ -47,16 +50,15 @@ SELECT throws_ok(
 );
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- S6: authenticated (non-service) role cannot SELECT
+-- S6: authenticated (non-service) role sees 0 rows and cannot INSERT
 -- ─────────────────────────────────────────────────────────────────────────────
 
 SET LOCAL ROLE authenticated;
 
-SELECT throws_ok(
-  $$ SELECT * FROM public.owner_alert_held $$,
-  '42501',
-  NULL,
-  'S6: authenticated role is blocked from SELECT on owner_alert_held'
+SELECT is(
+  (SELECT count(*)::int FROM public.owner_alert_held),
+  0,
+  'S6: authenticated role sees 0 rows from owner_alert_held (RLS denies)'
 );
 
 SELECT throws_ok(
@@ -67,13 +69,16 @@ SELECT throws_ok(
 );
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- S7: service_role can DELETE (reset GUC first)
+-- S7: service_role can DELETE (reset role first)
 -- ─────────────────────────────────────────────────────────────────────────────
 
 RESET ROLE;
 
+WITH deleted AS (
+  DELETE FROM public.owner_alert_held RETURNING id
+)
 SELECT ok(
-  (DELETE FROM public.owner_alert_held RETURNING id) IS NOT NULL,
+  (SELECT count(*) FROM deleted) > 0,
   'S7: service_role can DELETE from owner_alert_held'
 );
 

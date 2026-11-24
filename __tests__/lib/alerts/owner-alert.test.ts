@@ -148,6 +148,25 @@ describe("AC3: owner_alert_email change alerts both addresses", () => {
     expect(recipients).not.toContain("new@example.com");
   });
 
+  it("uses detail.oldValue as recipient even when DB already has the new email (committed before call)", async () => {
+    // Simulates standard save-then-notify pattern: DB now holds "new@example.com"
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(
+      makeDb("new@example.com", null)
+    );
+    await sendOwnerAlert("settings.owner_alert_email_change", {
+      auditRowId: "audit-p0a",
+      actorName: "Dave",
+      actorId: "user-4",
+      changedAt: "2026-11-24T11:00:00Z",
+      field: "owner_alert_email",
+      oldValue: "old@example.com",
+      newValue: "new@example.com",
+    });
+    expect(mockSendEmail).toHaveBeenCalledOnce();
+    expect(mockSendEmail.mock.calls[0][0].to).toBe("old@example.com");
+    expect(mockSendEmail.mock.calls[0][0].to).not.toBe("new@example.com");
+  });
+
   it("sends only to old address when second_alert_email is not set", async () => {
     (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(
       makeDb("old@example.com", null)
@@ -221,6 +240,46 @@ describe("AC6: failed alert does not throw", () => {
         newValue: "admin",
       })
     ).resolves.not.toThrow();
+  });
+
+  it("EC3: queues alert in owner_alert_held when sendEmail throws (Resend down)", async () => {
+    let heldInsertCalled = false;
+    const settingsRows = [{ key: "owner_alert_email", value: "owner@example.com" }];
+    const settingsChain = {
+      select: () => settingsChain,
+      in: () => settingsChain,
+      then(resolve: (v: unknown) => unknown) {
+        return Promise.resolve({ data: settingsRows, error: null }).then(resolve);
+      },
+    };
+    const heldChain = {
+      insert: () => {
+        heldInsertCalled = true;
+        return {
+          then(resolve: (v: unknown) => unknown) {
+            return Promise.resolve({ data: null, error: null }).then(resolve);
+          },
+        };
+      },
+    };
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: (table: string) => {
+        if (table === "site_settings") return settingsChain;
+        if (table === "owner_alert_held") return heldChain;
+        return settingsChain;
+      },
+    });
+    mockSendEmail.mockRejectedValue(new Error("Resend down"));
+    await sendOwnerAlert("role.change", {
+      auditRowId: "audit-ec3",
+      actorName: "Frank",
+      actorId: "user-6",
+      changedAt: "2026-11-24T13:00:00Z",
+      field: "role",
+      oldValue: "viewer",
+      newValue: "admin",
+    });
+    expect(heldInsertCalled).toBe(true);
   });
 
   it("does nothing (no throw) when owner_alert_email is not set", async () => {

@@ -93,10 +93,13 @@ export async function sendOwnerAlert(event: OwnerAlertEvent, detail: AlertDetail
     const text = renderAlertText(event, detail);
     const subject = `[CeylonSafety] Owner alert: ${event}`;
 
-    // AC3: owner_alert_email change → send to OLD address (owner) and second_alert_email.
+    // AC3: owner_alert_email change → send to OLD address (from detail) and second_alert_email.
+    // The caller may have committed the new email before invoking this helper, so reading
+    // owner from the DB would give the new address. Use detail.oldValue instead.
     if (event === "settings.owner_alert_email_change") {
+      const oldOwner = detail.oldValue ?? owner;
       await sendEmail({
-        to: owner,
+        to: oldOwner,
         template: "owner_alert",
         relatedType: "owner_alert",
         relatedId: `${detail.auditRowId}-old`,
@@ -131,5 +134,7 @@ export async function sendOwnerAlert(event: OwnerAlertEvent, detail: AlertDetail
     // AC6: never rethrow — log the failure class only, no PII.
     const name = err instanceof Error ? err.constructor.name : "UnknownError";
     console.error("[owner-alert] send failed:", name, "event:", event);
+    // EC3: queue for retry in next digest run so a Resend outage doesn't silently drop the alert.
+    await holdAlert(event, detail);
   }
 }
