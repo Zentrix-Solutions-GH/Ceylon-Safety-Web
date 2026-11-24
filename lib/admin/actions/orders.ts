@@ -177,6 +177,7 @@ export async function getOrderDetail(
       outcome: pe["outcome"] != null ? String(pe["outcome"]) : null,
     };
     if (isSuperAdmin) {
+      // PayHere POST callbacks do not include PAN or CVV per their docs — raw payload is safe to surface to super_admin.
       event.payload = pe["payload"] as Record<string, unknown> | undefined;
     }
     return event;
@@ -283,6 +284,7 @@ export async function cancelPendingOrder(
   if (action === "already_done" || action === "not_found") return { ok: false, code: "not_allowed" };
   if (action !== "cancelled") return { ok: false, code: "unknown" };
 
+  // releaseCouponUse is a no-op for orders with no coupon (R1 stub); safe to call unconditionally.
   await releaseCouponUse({ id: idParsed.data });
 
   await writeAuditRow({
@@ -409,7 +411,7 @@ export async function grantOrderAccess(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: insertError } = await (sb as any)
     .from("entitlements")
-    .insert(entitlements);
+    .upsert(entitlements, { onConflict: "user_id,document_id,language,source", ignoreDuplicates: true });
 
   if (insertError) return { ok: false, code: "unknown" };
 

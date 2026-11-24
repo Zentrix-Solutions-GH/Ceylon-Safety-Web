@@ -123,7 +123,13 @@ NOTE: The 1 failure is Vitest due to ArticleEditor/index.test.tsx (18 tests)
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `__tests__/lib/admin/actions/orders.test.ts` (cancelPendingOrder success test) — RPC call never asserted; test passes even if the RPC line is deleted. Add `expect(rpcMock).toHaveBeenCalledWith("admin_cancel_order", { p_order_id: TEST_ORDER_ID, p_reason: "testing cancel" })`. (full-review 2026-11-24)
+- **P0** `supabase/migrations/20261124000002_admin_cancel_order_rpc.sql:25` — `SECURITY DEFINER` sets `search_path = public, private`; must be `SET search_path = public` only for defence-in-depth. (full-review 2026-11-24)
+- **P1** `lib/admin/actions/orders.ts:286` — `releaseCouponUse` called without coupon guard; verify function tolerates no-coupon orders or add guard. (full-review 2026-11-24)
+- **P1** `lib/admin/actions/orders.ts:410` — `grantOrderAccess` plain `.insert()` creates duplicates if called twice; use upsert or add unique constraint. (full-review 2026-11-24)
+- **P1** `supabase/migrations/20261124000004_profiles_search_indexes.sql:8` — `CREATE EXTENSION pg_trgm` in migration fails on hosted Supabase non-Enterprise; move to Dashboard / `supabase/extensions.sql`. (full-review 2026-11-24)
+- **P1** `lib/admin/actions/orders.ts:179-182` — raw `payment_events.payload` exposed to `super_admin`; verify PayHere strips PAN/CVV before exposing. (full-review 2026-11-24)
+- **P1** `__tests__/lib/admin/actions/orders.test.ts` — no tests for `dateFrom`, `dateTo`, `paymentMethod` filters (AC1). (full-review 2026-11-24)
 
 ## After this merges
 

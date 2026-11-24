@@ -22,7 +22,7 @@ CREATE OR REPLACE FUNCTION public.admin_cancel_order(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, private
+SET search_path = public
 AS $$
 DECLARE
   v_order record;

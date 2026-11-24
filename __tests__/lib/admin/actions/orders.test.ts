@@ -200,6 +200,57 @@ describe("getOrdersList", () => {
     await getOrdersList({ needsReview: true });
     expect(eqCalls.some(([col, val]) => col === "needs_review" && val === true)).toBe(true);
   });
+
+  it("AC1: filters by paymentMethod", async () => {
+    requireStaffMock.mockResolvedValue(makeStaffOk());
+    let capturedPaymentMethod: unknown;
+    sbFromImpl = () => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockImplementation((col: string, val: unknown) => {
+        if (col === "payment_method") capturedPaymentMethod = val;
+        return { eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), range: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 }) };
+      }),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 }),
+    });
+
+    await getOrdersList({ paymentMethod: "bank_transfer" });
+    expect(capturedPaymentMethod).toBe("bank_transfer");
+  });
+
+  it("AC1: filters by dateFrom using gte", async () => {
+    requireStaffMock.mockResolvedValue(makeStaffOk());
+    let capturedGte: unknown;
+    sbFromImpl = () => ({
+      select: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockImplementation((_col: string, val: unknown) => {
+        capturedGte = val;
+        return { order: vi.fn().mockReturnThis(), range: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 }) };
+      }),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 }),
+    });
+
+    await getOrdersList({ dateFrom: "2026-11-01T00:00:00+00:00" });
+    expect(capturedGte).toBe("2026-11-01T00:00:00+00:00");
+  });
+
+  it("AC1: filters by dateTo using lte", async () => {
+    requireStaffMock.mockResolvedValue(makeStaffOk());
+    let capturedLte: unknown;
+    sbFromImpl = () => ({
+      select: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockImplementation((_col: string, val: unknown) => {
+        capturedLte = val;
+        return { order: vi.fn().mockReturnThis(), range: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 }) };
+      }),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 }),
+    });
+
+    await getOrdersList({ dateTo: "2026-11-30T23:59:59+00:00" });
+    expect(capturedLte).toBe("2026-11-30T23:59:59+00:00");
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -368,6 +419,10 @@ describe("cancelPendingOrder", () => {
     const result = await cancelPendingOrder(TEST_ORDER_ID, "testing cancel");
 
     expect(result).toEqual({ ok: true });
+    expect(rpcMock).toHaveBeenCalledWith("admin_cancel_order", {
+      p_order_id: TEST_ORDER_ID,
+      p_reason: "testing cancel",
+    });
     expect(writeAuditRowMock).toHaveBeenCalledWith(
       expect.objectContaining({ action: "order.cancel", entityId: TEST_ORDER_ID })
     );
@@ -517,7 +572,7 @@ describe("grantOrderAccess", () => {
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: order, error: null }),
       };
-      return { insert: vi.fn().mockResolvedValue({ error: null }) };
+      return { upsert: vi.fn().mockResolvedValue({ error: null }) };
     };
 
     const result = await grantOrderAccess(TEST_ORDER_ID, "support case");
@@ -533,24 +588,24 @@ describe("grantOrderAccess", () => {
         { id: "oi-2", document_id: "doc-2", language: "si" },
       ],
     };
-    const insertMock = vi.fn().mockResolvedValue({ error: null });
+    const upsertMock = vi.fn().mockResolvedValue({ error: null });
     sbFromImpl = (table: string) => {
       if (table === "orders") return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: order, error: null }),
       };
-      return { insert: insertMock };
+      return { upsert: upsertMock };
     };
 
     const result = await grantOrderAccess(TEST_ORDER_ID, "CS-123 support case");
 
     expect(result).toEqual({ ok: true });
-    expect(insertMock).toHaveBeenCalled();
-    const insertArg = insertMock.mock.calls[0][0] as Array<Record<string, unknown>>;
-    expect(Array.isArray(insertArg)).toBe(true);
-    expect(insertArg).toHaveLength(2);
-    expect(insertArg[0]).toMatchObject({ source: "admin_grant", document_id: "doc-1", language: "en" });
+    expect(upsertMock).toHaveBeenCalled();
+    const upsertArg = upsertMock.mock.calls[0][0] as Array<Record<string, unknown>>;
+    expect(Array.isArray(upsertArg)).toBe(true);
+    expect(upsertArg).toHaveLength(2);
+    expect(upsertArg[0]).toMatchObject({ source: "admin_grant", document_id: "doc-1", language: "en" });
     expect(writeAuditRowMock).toHaveBeenCalledWith(
       expect.objectContaining({ action: "order.grant", entityId: TEST_ORDER_ID })
     );
@@ -568,7 +623,7 @@ describe("grantOrderAccess", () => {
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: order, error: null }),
       };
-      return { insert: vi.fn().mockResolvedValue({ error: null }) };
+      return { upsert: vi.fn().mockResolvedValue({ error: null }) };
     };
 
     await grantOrderAccess(TEST_ORDER_ID, "support");

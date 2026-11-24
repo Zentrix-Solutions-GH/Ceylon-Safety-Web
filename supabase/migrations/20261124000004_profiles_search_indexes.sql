@@ -2,6 +2,11 @@
 -- getOrdersList uses .or(profiles.first_name.ilike.%x%, ...) which translates to
 -- a subquery WHERE user_id IN (SELECT id FROM profiles WHERE ...).
 -- Without these indexes that subquery does a seq scan at 100k+ rows.
+--
+-- NOTE: pg_trgm must be enabled via the Supabase Dashboard (Database → Extensions)
+-- before this migration runs on hosted projects. The CREATE EXTENSION line is kept
+-- here for local `supabase start` compatibility only; hosted environments need the
+-- Dashboard step first (the IF NOT EXISTS makes this a no-op once it is enabled).
 
 BEGIN;
 
