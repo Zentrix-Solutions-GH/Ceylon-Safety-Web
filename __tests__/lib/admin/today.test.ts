@@ -111,9 +111,9 @@ beforeEach(() => {
   mockWriteSessionStart.mockResolvedValue(undefined);
 });
 
-// ─── AC6: mfa_required / reauth_required propagated ──────────────────────────
+// ─── AC6 / S17: auth error propagation ───────────────────────────────────────
 
-describe("AC6: auth error propagation", () => {
+describe("AC6 / S17: auth error propagation", () => {
   it("propagates mfa_required from requireStaff on first call", async () => {
     mockRequireStaff.mockResolvedValue({ ok: false, code: "mfa_required" });
     const result = await getAdminToday();
@@ -125,6 +125,14 @@ describe("AC6: auth error propagation", () => {
     mockRequireStaff.mockResolvedValue({ ok: false, code: "reauth_required" });
     const result = await getAdminToday();
     expect(result).toEqual({ ok: false, code: "reauth_required" });
+    expect(mockWriteSessionStart).not.toHaveBeenCalled();
+  });
+
+  it("S17: propagates not_allowed for a suspended/blocked account", async () => {
+    // requireStaff returns not_allowed for all 4 perms (suspended account path)
+    mockRequireStaff.mockResolvedValue({ ok: false, code: "not_allowed" });
+    const result = await getAdminToday();
+    expect(result).toEqual({ ok: false, code: "not_allowed" });
     expect(mockWriteSessionStart).not.toHaveBeenCalled();
   });
 });
@@ -218,6 +226,57 @@ describe("EC1: empty queues", () => {
     expect(result.downloadRequests).toEqual({ count: 0, oldestAt: null });
     expect(result.ordersNeedingReview).toEqual({ count: 0, oldestAt: null });
     expect(result.todayOrders).toEqual({ count: 0, grossCents: 0 });
+  });
+});
+
+// ─── EC4: video_comments counted when article_comments is empty ───────────────
+
+describe("EC4: video_comments positive path", () => {
+  it("counts video comments when article_comments is empty", async () => {
+    setupAdminWithAllPerms();
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "user_roles") return qb({ data: [], error: null });
+      if (table === "article_comments")
+        return qb({ data: { count: 0, oldest: null }, error: null });
+      if (table === "video_comments")
+        return qb({ data: { count: 3, oldest: "2026-11-20T07:00:00.000Z" }, error: null });
+      return qb({ data: { count: 0, oldest: null }, error: null });
+    });
+    const result = await getAdminToday();
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.comments).toEqual({
+      count: 3,
+      oldestAt: "2026-11-20T07:00:00.000Z",
+    });
+  });
+});
+
+// ─── AC2: last-position permission succeeds ───────────────────────────────────
+
+describe("AC2: last-position permission loop", () => {
+  it("returns orders lines when only orders.read is granted (first 3 perms denied)", async () => {
+    // requireStaff returns not_allowed for the first 3 perms, ok for the 4th
+    let callCount = 0;
+    mockRequireStaff.mockImplementation(() => {
+      callCount++;
+      if (callCount < 4) return Promise.resolve({ ok: false, code: "not_allowed" });
+      return Promise.resolve({ ok: true, user: ADMIN_USER });
+    });
+    // has_permission for the already-denied perms: return false; orders.read not re-checked
+    mockRpc.mockResolvedValue({ data: false, error: null });
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "user_roles") return qb({ data: [], error: null });
+      return qb({ data: { count: 1, oldest: "2026-11-24T01:00:00.000Z" }, error: null });
+    });
+    const result = await getAdminToday();
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.comments).toBeUndefined();
+    expect(result.bankSlips).toBeUndefined();
+    expect(result.downloadRequests).toBeUndefined();
+    expect(result.ordersNeedingReview).toBeDefined();
+    expect(result.todayOrders).toBeDefined();
   });
 });
 
