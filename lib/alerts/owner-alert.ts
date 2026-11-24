@@ -69,7 +69,7 @@ async function holdAlert(event: OwnerAlertEvent, detail: AlertDetail): Promise<v
   const { error } = await db.from("owner_alert_held").insert({
     event,
     detail: detail as unknown as Record<string, unknown>,
-    audit_row_id: isNaN(Number(detail.auditRowId)) ? null : Number(detail.auditRowId),
+    audit_row_id: /^\d+$/.test(detail.auditRowId) ? Number(detail.auditRowId) : null,
   });
   if (error) {
     console.error("[owner-alert] holdAlert insert failed:", (error as { code?: string }).code ?? "unknown");

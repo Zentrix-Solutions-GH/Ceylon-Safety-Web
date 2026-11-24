@@ -121,9 +121,16 @@ export async function ownerDigestJob(): Promise<{ ok: boolean }> {
     });
 
     // Clear held alerts that were included.
+    // Wrapped separately: a delete failure must not set ok:false after a successful send,
+    // which would prevent future runs from ever reaching the delete (idempotency blocks re-send).
     if (heldAlerts.length > 0) {
       const ids = heldAlerts.map((h) => h.id);
-      await db.from("owner_alert_held").delete().in("id", ids);
+      try {
+        await db.from("owner_alert_held").delete().in("id", ids);
+      } catch (delErr: unknown) {
+        const delName = delErr instanceof Error ? delErr.constructor.name : "UnknownError";
+        console.error("[owner-digest] held-alert delete failed:", delName);
+      }
     }
 
     return { ok: true };
