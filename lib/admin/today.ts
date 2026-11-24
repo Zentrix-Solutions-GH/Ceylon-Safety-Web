@@ -110,12 +110,17 @@ async function requireAnyQueuePermission(): Promise<
  * queue counts visible to Admins/Maintainers (design section 4.5).
  * Uses service role to read across RLS.
  */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function getSuperAdminIds(): Promise<string[]> {
   const { data } = await createSupabaseServiceRoleClient()
     .from("user_roles")
     .select("user_id")
     .eq("role", "super_admin");
-  return (data ?? []).map((r: { user_id: string }) => r.user_id);
+  // Guard: only pass well-formed UUIDs into the PostgREST CSV filter.
+  return (data ?? [])
+    .map((r: { user_id: string }) => r.user_id)
+    .filter((id: string) => UUID_RE.test(id));
 }
 
 // ─── Queue helpers ────────────────────────────────────────────────────────────
@@ -220,7 +225,8 @@ export async function getAdminToday(): Promise<ActionResult<AdminTodayResult>> {
   // is constant for the duration of the staff window (up to 12 h). Using the
   // access_token would cause duplicate rows on token refresh (P1d fix).
   const sessionKey = user.lastFullSignIn ?? user.id;
-  await writeSessionStart(user.id, sessionKey);
+  // Audit failure must not block the read — catch and swallow.
+  try { await writeSessionStart(user.id, sessionKey); } catch { /* non-fatal */ }
 
   // Fetch super_admin IDs once to exclude from counts (design section 4.5).
   const saIds = await getSuperAdminIds();
