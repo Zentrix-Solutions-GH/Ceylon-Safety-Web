@@ -40,6 +40,20 @@ describe("getDayEmailCount", () => {
     expect(count).toBe(42);
   });
 
+  it("returns Infinity on DB error (fail-safe: treat as over-budget)", async () => {
+    const errorChain = {
+      select: () => errorChain,
+      gte: () => errorChain,
+      lt: () => errorChain,
+      then(resolve: (v: unknown) => unknown) {
+        return Promise.resolve({ count: null, error: { code: "PGRST301" } }).then(resolve);
+      },
+    };
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({ from: () => errorChain });
+    const count = await getDayEmailCount("2026-11-24");
+    expect(count).toBe(Infinity);
+  });
+
   it("EC2: uses Asia/Colombo timezone (UTC+5:30) for day boundaries", async () => {
     let capturedGte = "";
     let capturedLt = "";
