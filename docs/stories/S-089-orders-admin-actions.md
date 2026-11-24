@@ -129,7 +129,8 @@ NOTE: The 1 failure is Vitest due to ArticleEditor/index.test.tsx (18 tests)
 - **P1** `lib/admin/actions/orders.ts:410` — `grantOrderAccess` plain `.insert()` creates duplicates if called twice; use upsert or add unique constraint. (full-review 2026-11-24)
 - **P1** `supabase/migrations/20261124000004_profiles_search_indexes.sql:8` — `CREATE EXTENSION pg_trgm` in migration fails on hosted Supabase non-Enterprise; move to Dashboard / `supabase/extensions.sql`. (full-review 2026-11-24)
 - **P1** `lib/admin/actions/orders.ts:179-182` — raw `payment_events.payload` exposed to `super_admin`; verify PayHere strips PAN/CVV before exposing. (full-review 2026-11-24)
-- **P1** `__tests__/lib/admin/actions/orders.test.ts` — no tests for `dateFrom`, `dateTo`, `paymentMethod` filters (AC1). (full-review 2026-11-24)
+- **P1** `__tests__/lib/admin/actions/orders.test.ts` — no tests for `dateFrom`, `dateTo`, `paymentMethod` filters (AC1). (full-review 2026-11-24) → **Fixed in re-review commit 61a7690**
+- **P1** `lib/admin/actions/orders.ts:413` — `grantOrderAccess` upsert uses `onConflict: "user_id,document_id,language,source"` but no unique constraint on those columns exists in migrations; existing unique index covers `order_item_id` only. Add migration or verify constraint. (full-review re-review 2026-11-24)
 
 ## After this merges
 
