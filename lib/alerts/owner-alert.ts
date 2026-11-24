@@ -3,6 +3,7 @@ import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/resend/client";
 import { isBudgetExceeded, isSecurityAlert } from "@/lib/alerts/email-budget";
 import type { OwnerAlertEvent } from "@/types/audit";
+import type { Json } from "@/types/database";
 
 export interface AlertDetail {
   auditRowId: string;
@@ -69,12 +70,12 @@ async function readAlertAddresses(): Promise<{ owner: string | null; second: str
 
 // Hold an alert in owner_alert_held when budget is exceeded.
 async function holdAlert(event: OwnerAlertEvent, detail: AlertDetail): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = createSupabaseServiceRoleClient() as any;
+  const db = createSupabaseServiceRoleClient();
+  const parsedId = parseInt(detail.auditRowId, 10);
   const { error } = await db.from("owner_alert_held").insert({
     event,
-    detail: detail as unknown as Record<string, unknown>,
-    audit_row_id: /^\d+$/.test(detail.auditRowId) ? Number(detail.auditRowId) : null,
+    detail: detail as unknown as { [key: string]: Json },
+    audit_row_id: !isNaN(parsedId) ? parsedId : null,
   });
   if (error) {
     console.error("[owner-alert] holdAlert insert failed:", (error as { code?: string }).code ?? "unknown");

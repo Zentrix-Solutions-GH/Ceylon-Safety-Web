@@ -64,12 +64,13 @@ function makeDb(opts: {
     },
   };
 
+  const heldResult = {
+    then(resolve: (v: unknown) => unknown) {
+      return Promise.resolve({ data: heldAlerts, error: null }).then(resolve);
+    },
+  };
   const heldChain: Chain = {
-    select: () => ({
-      then(resolve: (v: unknown) => unknown) {
-        return Promise.resolve({ data: heldAlerts, error: null }).then(resolve);
-      },
-    }),
+    select: () => ({ lt: () => heldResult }),
     delete: () => ({
       in: () => Promise.resolve({ error: null }),
     }),
@@ -162,5 +163,43 @@ describe("AC5: owner digest job", () => {
     const result = await ownerDigestJob();
     expect(result.ok).toBe(true);
     expect(mockSendEmail).not.toHaveBeenCalled();
+  });
+
+  it("AC5 idempotency: second run returns ok:true when sendEmail resolves silently (duplicate)", async () => {
+    // sendEmail swallows the unique-violation internally and returns void.
+    // A second ownerDigestJob call must still return ok:true.
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(
+      makeDb({
+        auditRows: [
+          { id: "a4", action: "order.paid", created_at: "2026-11-24T05:00:00Z", actor_id: "user-1" },
+        ],
+        heldAlerts: [],
+      })
+    );
+    const first = await ownerDigestJob();
+    const second = await ownerDigestJob();
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+    expect(mockSendEmail).toHaveBeenCalledTimes(2);
+  });
+
+  it("AC7: digest body does not expose actor_id or other customer PII", async () => {
+    (createSupabaseServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue(
+      makeDb({
+        auditRows: [
+          {
+            id: "a5",
+            action: "order.paid",
+            created_at: "2026-11-24T05:00:00Z",
+            actor_id: "sensitive-uuid-should-not-appear",
+          },
+        ],
+        heldAlerts: [],
+      })
+    );
+    await ownerDigestJob();
+    const call = mockSendEmail.mock.calls[0][0];
+    expect(call.html).not.toContain("sensitive-uuid-should-not-appear");
+    expect(call.text).not.toContain("sensitive-uuid-should-not-appear");
   });
 });

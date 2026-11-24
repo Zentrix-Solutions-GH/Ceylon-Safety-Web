@@ -3,6 +3,10 @@ import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/resend/client";
 import { currentSlDate, slDayBoundaries } from "@/lib/alerts/email-budget";
 
+function escHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 // Money and settings events included in the digest (AC5).
 const DIGEST_ACTIONS = [
   "order.paid",
@@ -37,15 +41,17 @@ type HeldAlert = {
 function renderDigestHtml(auditRows: AuditRow[], heldAlerts: HeldAlert[]): string {
   const auditSection = auditRows.length
     ? `<h2>Events (last 24 h)</h2><ul>${auditRows
-        .map((r) => `<li>${r.created_at} — ${r.action}</li>`)
+        .map((r) => `<li>${escHtml(r.created_at)} — ${escHtml(r.action)}</li>`)
         .join("")}</ul>`
     : "";
   const heldSection = heldAlerts.length
     ? `<h2>Held alerts</h2><ul>${heldAlerts
         .map((h) => {
           const actorName =
-            typeof h.detail?.actorName === "string" ? ` by ${h.detail.actorName}` : "";
-          return `<li>${h.created_at} — ${h.event}${actorName}</li>`;
+            typeof h.detail?.actorName === "string"
+              ? ` by ${escHtml(h.detail.actorName)}`
+              : "";
+          return `<li>${escHtml(h.created_at)} — ${escHtml(h.event)}${actorName}</li>`;
         })
         .join("")}</ul>`
     : "";
@@ -73,8 +79,7 @@ function renderDigestText(auditRows: AuditRow[], heldAlerts: HeldAlert[]): strin
 
 export async function ownerDigestJob(): Promise<{ ok: boolean }> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = createSupabaseServiceRoleClient() as any;
+    const db = createSupabaseServiceRoleClient();
     const slDate = currentSlDate();
 
     // Read owner_alert_email from settings.
@@ -100,10 +105,13 @@ export async function ownerDigestJob(): Promise<{ ok: boolean }> {
       .order("created_at", { ascending: true });
     const auditRows = (auditData ?? []) as AuditRow[];
 
-    // Read held alerts.
+    // Read held alerts created before the end of the current SL day.
+    // The upper bound prevents a race where an alert inserted after rendering
+    // would be deleted without appearing in the email.
     const { data: heldData } = await db
       .from("owner_alert_held")
-      .select("id, event, detail, created_at");
+      .select("id, event, detail, created_at")
+      .lt("created_at", slDayBoundaries(slDate).endUtc);
     const heldAlerts = (heldData ?? []) as HeldAlert[];
 
     // AC5: nothing to report → skip.
