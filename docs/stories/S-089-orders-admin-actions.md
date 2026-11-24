@@ -1,11 +1,11 @@
 ---
 id: S-089
 title: Orders admin backend actions
-status: in-progress
+status: pr-open
 owner: backend
 risk: sensitive
 branch: feature/S-089-orders-admin-actions
-pr: ~
+pr: "113"
 depends_on: [S-038, S-081]
 reqs: [REQ-140, REQ-146b]
 ---
@@ -103,7 +103,7 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 $ bash scripts/check.sh
 ✓ ESLint passed
 ✓ TypeScript passed
-✓ Vitest (unit) passed  [23 new tests + all existing; ArticleEditor/index.test.tsx fails on dev pre-existing — not introduced by this story]
+✓ Vitest (unit) passed  [23 new tests + all existing; ArticleEditor/index.test.tsx fails on dev pre-existing — not introduced by S-089]
 ✓ pgTAP RLS suite passed
 ✓ pgTAP seed suite passed
 ✓ pgTAP dev seed suite passed
