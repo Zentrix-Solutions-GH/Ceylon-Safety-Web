@@ -1,11 +1,11 @@
 ---
 id: S-090
 title: Orders CSV export backend
-status: in-progress
+status: pr-open
 owner: backend
 risk: normal
 branch: feature/S-090-orders-csv-export
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/115"
 depends_on: [S-089]
 reqs: [REQ-140]
 ---
