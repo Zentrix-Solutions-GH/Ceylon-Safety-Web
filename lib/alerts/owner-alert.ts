@@ -20,16 +20,21 @@ function maskSensitive(value: string): string {
   return value.replace(/\d{8,}/g, "****");
 }
 
+// Minimal HTML escaping for interpolated values — prevents malformed email HTML.
+function escHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function renderAlertHtml(event: OwnerAlertEvent, detail: AlertDetail): string {
-  const actorLabel = detail.actorIsSuperAdmin ? "Support" : detail.actorName;
-  const oldVal = detail.oldValue ? maskSensitive(detail.oldValue) : "(not set)";
-  const newVal = detail.newValue ? maskSensitive(detail.newValue) : "(not set)";
+  const actorLabel = escHtml(detail.actorIsSuperAdmin ? "Support" : detail.actorName);
+  const oldVal = detail.oldValue ? escHtml(maskSensitive(detail.oldValue)) : "(not set)";
+  const newVal = detail.newValue ? escHtml(maskSensitive(detail.newValue)) : "(not set)";
   return `
 <p><strong>Owner security alert</strong></p>
-<p>Event: ${event}<br>
+<p>Event: ${escHtml(event)}<br>
 Changed by: ${actorLabel}<br>
-At: ${detail.changedAt}</p>
-${detail.field ? `<p>Field: ${detail.field}<br>Old: ${oldVal}<br>New: ${newVal}</p>` : ""}
+At: ${escHtml(detail.changedAt)}</p>
+${detail.field ? `<p>Field: ${escHtml(detail.field)}<br>Old: ${oldVal}<br>New: ${newVal}</p>` : ""}
 <p>CeylonSafety admin system</p>
   `.trim();
 }
@@ -78,6 +83,10 @@ async function holdAlert(event: OwnerAlertEvent, detail: AlertDetail): Promise<v
 
 // AC1, AC3, AC4, AC6, EC1, EC4.
 export async function sendOwnerAlert(event: OwnerAlertEvent, detail: AlertDetail): Promise<void> {
+  // Track whether at least one send succeeded so the catch doesn't re-queue if
+  // only the second (non-critical) send in the two-address path failed.
+  // Declared outside try so catch can read it.
+  let sent = false;
   try {
     const { owner, second } = await readAlertAddresses();
     if (!owner) return;
@@ -107,6 +116,7 @@ export async function sendOwnerAlert(event: OwnerAlertEvent, detail: AlertDetail
         html,
         text,
       });
+      sent = true;
       if (second) {
         await sendEmail({
           to: second,
@@ -130,11 +140,13 @@ export async function sendOwnerAlert(event: OwnerAlertEvent, detail: AlertDetail
       html,
       text,
     });
+    sent = true;
   } catch (err: unknown) {
     // AC6: never rethrow — log the failure class only, no PII.
     const name = err instanceof Error ? err.constructor.name : "UnknownError";
     console.error("[owner-alert] send failed:", name, "event:", event);
-    // EC3: queue for retry in next digest run so a Resend outage doesn't silently drop the alert.
-    await holdAlert(event, detail);
+    // EC3: queue for retry only when no send succeeded (avoids redundant held row
+    // when the primary send worked but an optional second address failed).
+    if (!sent) await holdAlert(event, detail);
   }
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/resend/client";
-import { currentSlDate } from "@/lib/alerts/email-budget";
+import { currentSlDate, slDayBoundaries } from "@/lib/alerts/email-budget";
 
 // Money and settings events included in the digest (AC5).
 const DIGEST_ACTIONS = [
@@ -88,8 +88,10 @@ export async function ownerDigestJob(): Promise<{ ok: boolean }> {
       return { ok: true };
     }
 
-    // Read last-24h audit rows (AC5).
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    // Read audit rows for the current SL calendar day (AC5).
+    // Uses the same SL day as the idempotency key so the digest covers exactly
+    // the rows that would be described as "today" to the owner.
+    const since = slDayBoundaries(slDate).startUtc;
     const { data: auditData } = await db
       .from("admin_audit_log")
       .select("id, action, actor_id, created_at")

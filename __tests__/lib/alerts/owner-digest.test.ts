@@ -10,15 +10,20 @@ vi.mock("@/lib/resend/client", () => ({
 }));
 vi.mock("@/lib/alerts/email-budget", () => ({
   currentSlDate: vi.fn().mockReturnValue("2026-11-24"),
+  slDayBoundaries: vi.fn().mockReturnValue({
+    startUtc: "2026-11-23T18:30:00.000Z",
+    endUtc: "2026-11-24T18:29:59.999Z",
+  }),
 }));
 
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/resend/client";
-import { currentSlDate } from "@/lib/alerts/email-budget";
+import { currentSlDate, slDayBoundaries } from "@/lib/alerts/email-budget";
 import { ownerDigestJob } from "@/lib/jobs/owner-digest";
 
 const mockSendEmail = sendEmail as ReturnType<typeof vi.fn>;
 const mockCurrentSlDate = currentSlDate as ReturnType<typeof vi.fn>;
+const mockSlDayBoundaries = slDayBoundaries as ReturnType<typeof vi.fn>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Chain = Record<string, (...args: any[]) => unknown>;
@@ -84,6 +89,10 @@ beforeEach(() => {
   vi.resetAllMocks();
   mockSendEmail.mockResolvedValue(undefined);
   mockCurrentSlDate.mockReturnValue("2026-11-24");
+  mockSlDayBoundaries.mockReturnValue({
+    startUtc: "2026-11-23T18:30:00.000Z",
+    endUtc: "2026-11-24T18:29:59.999Z",
+  });
 });
 
 describe("AC5: owner digest job", () => {
