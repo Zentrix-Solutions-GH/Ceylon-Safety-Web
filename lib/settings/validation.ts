@@ -82,6 +82,7 @@ const businessSchema = z.object({
     .nullable()
     .optional(),
   owner_alert_email: z.string().email().nullable().optional(),
+  second_alert_email: z.string().email().nullable().optional(),
 });
 
 // Analytics measurement id: G- followed by alphanumeric (ASSUMED — format to verify per AC3 note)

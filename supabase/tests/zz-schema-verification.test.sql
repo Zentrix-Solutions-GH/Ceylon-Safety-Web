@@ -250,7 +250,8 @@ DECLARE
     'payment_events', 'bank_transfer_slips', 'entitlements',
     'download_logs', 'download_requests', 'invoices', 'email_logs',
     'courses', 'trainers', 'activity_images', 'banners',
-    'admin_audit_log'
+    'admin_audit_log',
+    'owner_alert_held'
   ];
   t text;
   actual_count int;
@@ -272,12 +273,12 @@ BEGIN
   JOIN pg_namespace n ON n.oid = c.relnamespace
   WHERE n.nspname = 'public' AND c.relkind = 'r';
 
-  ASSERT actual_count = 37,
-    format('AC1: expected 37 tables in public schema, found %s', actual_count);
+  ASSERT actual_count = 38,
+    format('AC1: expected 38 tables in public schema, found %s', actual_count);
 END;
 $$;
 
-SELECT pass('AC1: all 37 mandatory tables present and count is exact');
+SELECT pass('AC1: all 38 mandatory tables present and count is exact');
 
 DO $$
   DECLARE t text;

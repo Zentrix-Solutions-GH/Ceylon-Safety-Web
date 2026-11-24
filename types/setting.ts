@@ -35,6 +35,7 @@ export interface BusinessGroupValues {
   business_address?: string | null;
   bank_account_details?: string | null;
   owner_alert_email?: string | null;
+  second_alert_email?: string | null;
 }
 
 export interface AnalyticsGroupValues {
