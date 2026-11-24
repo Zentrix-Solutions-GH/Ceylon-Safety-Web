@@ -1,5 +1,7 @@
 import "server-only";
 
+import { unstable_noStore as noStore } from "next/cache";
+
 import { requireStaff } from "@/lib/auth/server";
 import { writeSessionStart } from "@/lib/audit/index";
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
@@ -89,7 +91,7 @@ async function requireAnyQueuePermission(): Promise<
       const supabase = await createSupabaseServerClient();
       const checks = await Promise.all(
         remaining.map((p) =>
-          supabase.rpc("has_permission", { p_action: p }).then(({ data }) => ({ p, ok: !!data }))
+          supabase.rpc("has_permission", { p_action: p }).then(({ data, error }) => ({ p, ok: !error && !!data }))
         )
       );
       for (const { p, ok } of checks) permMap[p] = ok;
@@ -141,10 +143,13 @@ async function countComments(supabase: Supabase, saIds: string[]): Promise<Queue
     baseQuery("video_comments"),
   ]);
 
-  const artCount = (artResult.data as { count: number; oldest: string | null } | null)?.count ?? 0;
-  const artOldest = (artResult.data as { count: number; oldest: string | null } | null)?.oldest ?? null;
-  const vidCount = (vidResult.data as { count: number; oldest: string | null } | null)?.count ?? 0;
-  const vidOldest = (vidResult.data as { count: number; oldest: string | null } | null)?.oldest ?? null;
+  type AggRow = { count: number; oldest: string | null };
+  const artRow = (artResult.data as AggRow[] | null)?.[0] ?? null;
+  const vidRow = (vidResult.data as AggRow[] | null)?.[0] ?? null;
+  const artCount = artRow?.count ?? 0;
+  const artOldest = artRow?.oldest ?? null;
+  const vidCount = vidRow?.count ?? 0;
+  const vidOldest = vidRow?.oldest ?? null;
 
   const count = artCount + vidCount;
   let oldestAt: string | null = null;
@@ -157,16 +162,20 @@ async function countComments(supabase: Supabase, saIds: string[]): Promise<Queue
   return { count, oldestAt };
 }
 
-async function countBankSlips(supabase: Supabase): Promise<BankSlipLine> {
+async function countBankSlips(): Promise<BankSlipLine> {
+  // bank_transfer_queue has REVOKE ALL FROM authenticated — must use service role.
+  const srClient = createSupabaseServiceRoleClient();
   // Both queries are independent — run concurrently.
   const [{ data: totalData }, { data: secondData }] = await Promise.all([
-    supabase.from("bank_transfer_queue").select("count, oldest:created_at.min()"),
+    srClient.from("bank_transfer_queue").select("count, oldest:created_at.min()"),
     // Second-approval count requires a filtered query on the same view (P1c fix).
-    supabase.from("bank_transfer_queue").select("count").eq("awaiting_second_approval", true),
+    srClient.from("bank_transfer_queue").select("count").eq("awaiting_second_approval", true),
   ]);
 
-  const total = totalData as { count: number; oldest: string | null } | null;
-  const second = secondData as { count: number } | null;
+  type TotalRow = { count: number; oldest: string | null };
+  type SecondRow = { count: number };
+  const total = (totalData as TotalRow[] | null)?.[0] ?? null;
+  const second = (secondData as SecondRow[] | null)?.[0] ?? null;
 
   return {
     count: total?.count ?? 0,
@@ -179,12 +188,13 @@ async function countDownloadRequests(supabase: Supabase, saIds: string[]): Promi
   let q = supabase
     .from("download_requests")
     .select("count, oldest:requested_at.min()")
-    .eq("status", "pending");
+    .eq("status", "open");
   if (saIds.length > 0) {
     q = q.not("user_id", "in", `(${saIds.join(",")})`);
   }
   const { data } = await q;
-  const row = data as { count: number; oldest: string | null } | null;
+  type DownRow = { count: number; oldest: string | null };
+  const row = (data as DownRow[] | null)?.[0] ?? null;
   return { count: row?.count ?? 0, oldestAt: row?.oldest ?? null };
 }
 
@@ -193,7 +203,8 @@ async function countOrdersNeedingReview(supabase: Supabase): Promise<QueueLine> 
     .from("orders")
     .select("count, oldest:created_at.min()")
     .eq("needs_review", true);
-  const row = data as { count: number; oldest: string | null } | null;
+  type OrdRow = { count: number; oldest: string | null };
+  const row = (data as OrdRow[] | null)?.[0] ?? null;
   return { count: row?.count ?? 0, oldestAt: row?.oldest ?? null };
 }
 
@@ -205,13 +216,15 @@ async function countTodayOrders(supabase: Supabase): Promise<TodayOrdersLine> {
     .eq("status", "paid")
     .gte("paid_at", start)
     .lt("paid_at", end);
-  const row = data as { count: number; gross: number | null } | null;
+  type TodayRow = { count: number; gross: number | null };
+  const row = (data as TodayRow[] | null)?.[0] ?? null;
   return { count: row?.count ?? 0, grossCents: row?.gross ?? 0 };
 }
 
 // ─── Main action ──────────────────────────────────────────────────────────────
 
 export async function getAdminToday(): Promise<ActionResult<AdminTodayResult>> {
+  noStore(); // AC3: counts must never be served from the Next.js data cache
   // Auth: any staff with at least one queue permission (AC1/AC2/AC6).
   const auth = await requireAnyQueuePermission();
   if (!auth.ok) return auth as ActionResult<AdminTodayResult>;
@@ -239,7 +252,7 @@ export async function getAdminToday(): Promise<ActionResult<AdminTodayResult>> {
   }
 
   if (permMap["bank_transfers.review"]) {
-    tasks.push(countBankSlips(supabase).then((l) => { result.bankSlips = l; }));
+    tasks.push(countBankSlips().then((l) => { result.bankSlips = l; }));
   }
 
   if (permMap["download_requests.review"]) {

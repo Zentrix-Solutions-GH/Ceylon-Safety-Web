@@ -136,7 +136,11 @@ S-101 introduced no new test failures.
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P0** `lib/admin/today.ts:160–176` — `countBankSlips` uses user-session client on `bank_transfer_queue` which has `REVOKE ALL FROM authenticated`; always returns permission error → count 0. Fix: use `createSupabaseServiceRoleClient()` inside the helper. (full-review 2026-11-24)
+- **P0** `lib/admin/today.ts:182` — `.eq("status", "pending")` but schema CHECK only allows `'open' | 'approved' | 'rejected'`; query always returns 0. Fix: `.eq("status", "open")`. (full-review 2026-11-24)
+- **P0** `lib/admin/today.ts:132,163,181,191,201` — PostgREST aggregate column syntax `select("count, oldest:created_at.min()")` is not the codebase standard (see `lib/settings/bank.ts:14`); `data.count` is `undefined`, all counts silently 0. Fix: use `.select("id", { count: "exact", head: true })`. (full-review 2026-11-24)
+- **P1** `lib/admin/today.ts:92` — `has_permission` RPC errors silently become `false`; discards error field. Fix: destructure and handle `error`. (full-review 2026-11-24)
+- **P1** `lib/admin/today.ts:214` — AC3 requires no-store but no `noStore()` call present. Fix: `import { unstable_noStore as noStore } from 'next/cache'` and call at top of `getAdminToday`. (full-review 2026-11-24)
 
 ## After this merges, a user can:
 
