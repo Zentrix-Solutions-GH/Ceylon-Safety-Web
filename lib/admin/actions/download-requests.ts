@@ -153,14 +153,14 @@ export async function approveDownloadRequest(
   if (buyerEmail) {
     // Fetch order_item_id from the entitlement for the download URL.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: ent } = await (sbService as any)
+    const { data: ent, error: entErr } = await (sbService as any)
       .from("entitlements")
       .select("order_item_id")
       .eq("id", (req as { entitlement_id: string }).entitlement_id)
-      .single() as { data: { order_item_id: string | null } | null };
+      .single() as { data: { order_item_id: string | null } | null; error: { code: string } | null };
     const orderItemId = ent?.order_item_id;
 
-    if (!orderItemId) {
+    if (entErr || !orderItemId) {
       console.error("[approveDownloadRequest] entitlement missing order_item_id — approval email not sent", {
         request_id: requestId,
         entitlement_id: (req as { entitlement_id: string }).entitlement_id,
@@ -173,7 +173,7 @@ export async function approveDownloadRequest(
         renderEmail: () => renderDownloadApprovedEmail({
           downloadUrl: `${publicConfig.appUrl}/download/${orderItemId}`,
           appUrl:      publicConfig.appUrl,
-          supportEmail: serverConfig.emailFrom,
+          supportEmail: serverConfig.supportEmail,
         }),
       });
     }
@@ -248,7 +248,7 @@ export async function rejectDownloadRequest(
       relatedId:   requestId,
       renderEmail: () => renderDownloadRejectedEmail({
         adminNote:    note.trim(),
-        supportEmail: serverConfig.emailFrom,
+        supportEmail: serverConfig.supportEmail,
       }),
     });
   } else {

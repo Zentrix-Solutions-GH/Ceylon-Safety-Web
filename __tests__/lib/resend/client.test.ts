@@ -1,6 +1,6 @@
 // S-088: AC7, AC9 — Resend retry + PII-free error logging
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -70,6 +70,7 @@ function makeSuccess() {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers();
   vi.clearAllMocks();
   updateEqMock.mockResolvedValue({ error: null });
   updateMock.mockReturnValue({ eq: updateEqMock });
@@ -90,6 +91,10 @@ beforeEach(() => {
   sendMock = vi.fn().mockResolvedValue(makeSuccess());
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 // ─── AC7: retry on 5xx ────────────────────────────────────────────────────────
 
 describe("sendEmail retry on 5xx (AC7)", () => {
@@ -99,7 +104,9 @@ describe("sendEmail retry on 5xx (AC7)", () => {
       .mockResolvedValueOnce(make5xxError())
       .mockResolvedValueOnce(makeSuccess());
 
-    await sendEmail(EMAIL_OPTS);
+    const p = sendEmail(EMAIL_OPTS);
+    await vi.runAllTimersAsync();
+    await p;
 
     expect(sendMock).toHaveBeenCalledTimes(3);
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ status: "sent" }));
@@ -108,7 +115,9 @@ describe("sendEmail retry on 5xx (AC7)", () => {
   it("marks failed and does not retry a 4th time after 3 consecutive 5xx", async () => {
     sendMock = vi.fn().mockResolvedValue(make5xxError());
 
-    await sendEmail(EMAIL_OPTS);
+    const p = sendEmail(EMAIL_OPTS);
+    await vi.runAllTimersAsync();
+    await p;
 
     expect(sendMock).toHaveBeenCalledTimes(3);
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
@@ -120,7 +129,9 @@ describe("sendEmail retry on 5xx (AC7)", () => {
       .mockRejectedValueOnce(new FetchError())
       .mockResolvedValueOnce(makeSuccess());
 
-    await sendEmail(EMAIL_OPTS);
+    const p = sendEmail(EMAIL_OPTS);
+    await vi.runAllTimersAsync();
+    await p;
 
     expect(sendMock).toHaveBeenCalledTimes(2);
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ status: "sent" }));
@@ -131,7 +142,9 @@ describe("sendEmail retry on 5xx (AC7)", () => {
       .mockResolvedValueOnce(makeRateLimitError())
       .mockResolvedValueOnce(makeSuccess());
 
-    await sendEmail(EMAIL_OPTS);
+    const p = sendEmail(EMAIL_OPTS);
+    await vi.runAllTimersAsync();
+    await p;
 
     expect(sendMock).toHaveBeenCalledTimes(2);
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ status: "sent" }));
@@ -156,7 +169,9 @@ describe("sendEmail raises alert on permanent failure (EC1/EC3)", () => {
   it("calls raiseEmailAlert when all 3 retries exhausted (EC1 — 429)", async () => {
     sendMock = vi.fn().mockResolvedValue(makeRateLimitError());
 
-    await sendEmail(EMAIL_OPTS);
+    const p = sendEmail(EMAIL_OPTS);
+    await vi.runAllTimersAsync();
+    await p;
 
     expect(sendMock).toHaveBeenCalledTimes(3);
     expect(vi.mocked(raiseEmailAlert)).toHaveBeenCalledOnce();
@@ -201,7 +216,9 @@ describe("sendEmail PII guard (AC9)", () => {
     }
     sendMock = vi.fn().mockRejectedValue(new NetworkError());
 
-    await sendEmail(EMAIL_OPTS);
+    const p = sendEmail(EMAIL_OPTS);
+    await vi.runAllTimersAsync();
+    await p;
 
     const updateArg = vi.mocked(updateMock).mock.calls[0]?.[0] as { error?: string };
     const stored = updateArg?.error ?? "";
@@ -279,6 +296,41 @@ describe("sendQueuedEmail (AC3, AC4, EC2)", () => {
       template: "download_request_approved" as const,
       relatedType: "download_request",
       relatedId: "req-not-found",
+      renderEmail: () => ({ subject: "X", html: "<p>X</p>", text: "X" }),
+    });
+
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("logs and returns without sending when DB fetch returns an error", async () => {
+    const { sendQueuedEmail } = await import("@/lib/resend/client");
+
+    fromMock.mockReturnValue({
+      insert: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({ single: selectSingleMock }),
+      }),
+      update: updateMock,
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: null,
+                  error: { code: "08006", message: "connection failure" },
+                }),
+              }),
+            }),
+          }),
+        }),
+      }),
+    });
+
+    await sendQueuedEmail({
+      template: "download_request_approved" as const,
+      relatedType: "download_request",
+      relatedId: "req-db-error",
       renderEmail: () => ({ subject: "X", html: "<p>X</p>", text: "X" }),
     });
 

@@ -134,7 +134,7 @@ export async function expireBankOrdersJob(): Promise<{ ok: boolean }> {
             renderEmail: () => renderBankRejectedEmail({
               reason:       "Your bank transfer order expired before the payment could be verified.",
               orderPageUrl: `${publicConfig.appUrl}/orders/${order.id}`,
-              supportEmail: serverConfig.emailFrom,
+              supportEmail: serverConfig.supportEmail,
             }),
           });
         }

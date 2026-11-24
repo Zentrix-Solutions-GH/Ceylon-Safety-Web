@@ -159,7 +159,7 @@ export interface SendQueuedEmailOptions {
 export async function sendQueuedEmail(opts: SendQueuedEmailOptions): Promise<void> {
   const db = createSupabaseServiceRoleClient();
 
-  const { data: row } = await db
+  const { data: row, error: fetchErr } = await db
     .from("email_logs")
     .select("id, to_email")
     .eq("template", opts.template)
@@ -168,6 +168,15 @@ export async function sendQueuedEmail(opts: SendQueuedEmailOptions): Promise<voi
     .eq("status", "queued")
     .maybeSingle();
 
+  if (fetchErr) {
+    console.error("[sendQueuedEmail] DB fetch failed — email not sent", {
+      template: opts.template,
+      related_type: opts.relatedType,
+      related_id: opts.relatedId,
+      code: fetchErr.code,
+    });
+    return;
+  }
   if (!row) return;
 
   const logRow = row as { id: number; to_email: string };

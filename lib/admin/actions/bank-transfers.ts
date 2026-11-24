@@ -272,7 +272,7 @@ export async function rejectBankOrder(
         renderEmail: () => renderBankRejectedEmail({
           reason:       reason.trim(),
           orderPageUrl: `${publicConfig.appUrl}/orders/${orderId}`,
-          supportEmail: serverConfig.emailFrom,
+          supportEmail: serverConfig.supportEmail,
         }),
       });
     }
@@ -364,7 +364,7 @@ export async function rejectAndCancelBankOrder(
         renderEmail: () => renderBankRejectedEmail({
           reason:       reason.trim(),
           orderPageUrl: `${publicConfig.appUrl}/orders/${orderId}`,
-          supportEmail: serverConfig.emailFrom,
+          supportEmail: serverConfig.supportEmail,
         }),
       });
     }

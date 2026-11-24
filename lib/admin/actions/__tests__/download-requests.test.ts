@@ -214,6 +214,34 @@ describe("approveDownloadRequest — self-approval (AC10)", () => {
 
 // ─── approveDownloadRequest — AC10: success ───────────────────────────────────
 
+describe("approveDownloadRequest — entitlement fetch error skips email", () => {
+  it("returns ok:true but does not send email when entitlements DB returns error", async () => {
+    mockStaffOk();
+    const dbWithEntErr = {
+      ...makeServiceDb(OPEN_REQUEST_WITH_PROFILE),
+      from: vi.fn((table: string) => {
+        if (table === "entitlements") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: null,
+              error: { code: "08006", message: "connection failure" },
+            }),
+          };
+        }
+        return makeServiceDb(OPEN_REQUEST_WITH_PROFILE).from(table);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    vi.mocked(createSupabaseServerClient).mockResolvedValue(dbWithEntErr as never);
+    vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(dbWithEntErr as never);
+    const result = await approveDownloadRequest(REQUEST_ID);
+    expect(result.ok).toBe(true);
+    expect(vi.mocked(sendQueuedEmail)).not.toHaveBeenCalled();
+  });
+});
+
 describe("approveDownloadRequest — success (AC10/AC3)", () => {
   it("calls approve_download_request RPC and sends approval email (AC3)", async () => {
     mockStaffOk();

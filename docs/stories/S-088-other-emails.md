@@ -159,6 +159,7 @@ check.sh: 9 passed, 1 failed
 - **P0** `lib/admin/actions/bank-transfers.ts:255–261` and `:340–346` — `email_logs.insert()` result not checked before calling `sendQueuedEmail`; a non-unique DB error silently drops the email with no log. Fix: capture `{ error: insertError }`, check for non-null + non-23505, and log or return error. (full-review 2026-11-24)
 - **P1** `lib/admin/actions/__tests__/download-requests.test.ts` — `approveDownloadRequest` success test asserts only `result.ok`; does not assert `sendQueuedEmail` is called with `download_request_approved`. Add mock + call assertion. (full-review 2026-11-24)
 - **P1** `lib/admin/actions/__tests__/download-requests.test.ts` — `rejectDownloadRequest` success test has the same gap for `download_request_rejected`. (full-review 2026-11-24)
+- **Re-review 2026-11-24** (HEAD 5fddffb): All P0 and P1 findings resolved. One P2 remains: no test for the error-skip branch in `bank-transfers.reject.test.ts` (non-unique insert error → `sendQueuedEmail` not called). Overall 91/100. APPROVE WITH FOLLOW-UPS.
 
 ## After this merges
 

@@ -55,9 +55,8 @@ describe("renderBankExpiringEmail (AC2)", () => {
 
   it("includes expiry date formatted in Asia/Colombo in html", () => {
     const { html } = renderBankExpiringEmail(data);
-    // "30 November 2026" in Asia/Colombo
-    expect(html).toContain("2026");
-    expect(html).toContain("November");
+    // 2026-11-30T00:00:00Z = 05:30 on 30 Nov 2026 in Asia/Colombo → "30 November 2026"
+    expect(html).toContain("30 November 2026");
   });
 
   it("includes text part", () => {
