@@ -27,6 +27,7 @@ export type AuditEventName =
   // Settings and ads
   | "settings.change"
   | "settings.contact_change"
+  | "settings.business_change"
   | "ads.settings_change"
   // Documents
   | "document.save"
@@ -54,6 +55,18 @@ export type AuditEventName =
   | "support.read"
   | "support.download"
   | "user.remove_mfa";
+
+// S-100: owner alert event names (subset of AuditEventName plus owner-alert-specific triggers)
+export type OwnerAlertEvent =
+  | "settings.super_admin_change"      // any Super Admin-only settings group save
+  | "settings.bank_details_change"     // bank_account_details changed (security — bypasses budget)
+  | "settings.owner_alert_email_change"// owner_alert_email changed (security — bypasses budget)
+  | "settings.contact_change"          // contact group saved (security — bypasses budget)
+  | "role.change"                      // staff role or permission changed (security)
+  | "document.language_file_replace"   // published doc language file replaced (security)
+  | "price.drop_over_50pct"            // document price dropped > 50 % (security)
+  | "page.publish_legal"               // legal page published (admin panel section 13.2)
+  | "order.csv_export";                // CSV export run (S-090)
 
 export type AuditEvent = {
   action: AuditEventName;
