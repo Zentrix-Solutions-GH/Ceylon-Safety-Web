@@ -13,7 +13,6 @@ vi.mock("@/lib/config", () => ({
 
 const mockRpc = vi.fn();
 const mockFrom = vi.fn();
-
 const mockServiceRoleFrom = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -63,14 +62,44 @@ const ADMIN_USER = {
   lastFullSignIn: LAST_SIGN_IN,
 };
 
-/** Returns a minimal chainable Supabase query builder that resolves to `result`. */
-function qb(result: { data: unknown; error: null | { message: string } }) {
+/**
+ * Smart query builder that adapts its resolution based on how select() is called:
+ * - select(..., { head: true }) → resolves with { count, data: null }
+ * - .maybeSingle()             → resolves with { data: singleData }
+ * - plain .then               → resolves with { data: rows }
+ *
+ * opts.oldest is used for both created_at and requested_at single-row returns.
+ */
+function qb(opts: {
+  count?: number;
+  oldest?: string | null;
+  rows?: unknown[];
+}) {
+  let isHead = false;
   const chain: Record<string, unknown> = {};
-  const methods = ["select", "eq", "neq", "in", "not", "is", "gte", "lt", "order", "limit", "single", "maybeSingle"];
-  for (const m of methods) {
-    chain[m] = vi.fn(() => chain);
-  }
-  chain.then = (resolve: (v: unknown) => void) => Promise.resolve(result).then(resolve);
+  const methods = ["eq", "neq", "in", "not", "is", "gte", "lt", "order", "limit", "single"];
+  for (const m of methods) chain[m] = vi.fn(() => chain);
+
+  chain.select = vi.fn((_cols: string, options?: { head?: boolean }) => {
+    if (options?.head) isHead = true;
+    return chain;
+  });
+
+  chain.maybeSingle = vi.fn(() => {
+    const oldest = opts.oldest != null ? opts.oldest : null;
+    return Promise.resolve({
+      data: oldest !== null ? { created_at: oldest, requested_at: oldest } : null,
+      error: null,
+    });
+  });
+
+  chain.then = (resolve: (v: unknown) => void) =>
+    Promise.resolve(
+      isHead
+        ? { data: null, count: opts.count ?? 0, error: null }
+        : { data: opts.rows ?? null, error: null }
+    ).then(resolve);
+
   return chain;
 }
 
@@ -100,27 +129,30 @@ function setupNoPermissions() {
 }
 
 /**
- * mockFrom: returns [] for user_roles (SA IDs fetch) and
- * count=0 aggregate for all queue tables.
- * mockServiceRoleFrom: returns aggregate data for bank_transfer_queue.
+ * Sets up all queue tables to return empty counts.
+ * user_roles returns [] for getSuperAdminIds.
+ * orders also provides a rows array for the sum aggregate query.
  */
 function setupEmptyQueues() {
   mockFrom.mockImplementation((table: string) => {
-    if (table === "user_roles") return qb({ data: [], error: null });
-    return qb({ data: [{ count: 0, oldest: null }], error: null });
+    if (table === "user_roles") return qb({ rows: [] });
+    if (table === "orders") return qb({ count: 0, oldest: null, rows: [{ gross: 0 }] });
+    return qb({ count: 0, oldest: null });
   });
-  mockServiceRoleFrom.mockImplementation(() =>
-    qb({ data: [{ count: 0, oldest: null }], error: null })
-  );
+  mockServiceRoleFrom.mockImplementation((table: string) => {
+    if (table === "user_roles") return qb({ rows: [] });
+    return qb({ count: 0, oldest: null }); // bank_transfer_queue
+  });
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockWriteSessionStart.mockResolvedValue(undefined);
-  // Default: service role returns empty bank_transfer_queue rows
-  mockServiceRoleFrom.mockImplementation(() =>
-    qb({ data: [{ count: 0, oldest: null }], error: null })
-  );
+  // Default: service role returns empty rows (bank_transfer_queue + user_roles cache)
+  mockServiceRoleFrom.mockImplementation((table: string) => {
+    if (table === "user_roles") return qb({ rows: [] });
+    return qb({ count: 0, oldest: null });
+  });
 });
 
 // ─── AC6 / S17: auth error propagation ───────────────────────────────────────
@@ -166,8 +198,8 @@ describe("AC2: permission filtering", () => {
       Promise.resolve({ data: p_action === "comments.moderate", error: null })
     );
     mockFrom.mockImplementation((table: string) => {
-      if (table === "user_roles") return qb({ data: [], error: null });
-      return qb({ data: [{ count: 2, oldest: "2026-01-01T00:00:00Z" }], error: null });
+      if (table === "user_roles") return qb({ rows: [] });
+      return qb({ count: 2, oldest: "2026-01-01T00:00:00Z" });
     });
     const result = await getAdminToday();
     expect(result).toMatchObject({ ok: true });
@@ -201,33 +233,6 @@ describe("AC7: session_start audit", () => {
   });
 });
 
-// ─── AC1: counts per queue ────────────────────────────────────────────────────
-
-describe("AC1: counts returned per queue", () => {
-  it("returns all five lines when caller has all permissions", async () => {
-    setupAdminWithAllPerms();
-    const OLDEST = "2026-11-01T08:00:00.000Z";
-    let callCount = 0;
-    const countingQb = () => {
-      callCount++;
-      return qb({ data: [{ count: callCount, oldest: OLDEST }], error: null });
-    };
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "user_roles") return qb({ data: [], error: null });
-      return countingQb();
-    });
-    mockServiceRoleFrom.mockImplementation(() => countingQb());
-    const result = await getAdminToday();
-    expect(result).toMatchObject({ ok: true });
-    if (!result.ok) return;
-    expect(result.comments).toBeDefined();
-    expect(result.bankSlips).toBeDefined();
-    expect(result.downloadRequests).toBeDefined();
-    expect(result.ordersNeedingReview).toBeDefined();
-    expect(result.todayOrders).toBeDefined();
-  });
-});
-
 // ─── P0 fix: bank slips uses service-role client ─────────────────────────────
 
 describe("countBankSlips: service-role client", () => {
@@ -240,6 +245,35 @@ describe("countBankSlips: service-role client", () => {
     // Verify bank_transfer_queue was queried via the service-role from.
     const calls = mockServiceRoleFrom.mock.calls.map((c) => c[0]);
     expect(calls).toContain("bank_transfer_queue");
+  });
+});
+
+// ─── AC1: counts per queue ────────────────────────────────────────────────────
+
+describe("AC1: counts returned per queue", () => {
+  it("returns all five lines when caller has all permissions", async () => {
+    setupAdminWithAllPerms();
+    let callCount = 0;
+    const countingQb = () => {
+      callCount++;
+      return qb({ count: callCount, oldest: "2026-11-01T08:00:00.000Z", rows: [{ gross: callCount * 100 }] });
+    };
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "user_roles") return qb({ rows: [] });
+      return countingQb();
+    });
+    mockServiceRoleFrom.mockImplementation((table: string) => {
+      if (table === "user_roles") return qb({ rows: [] });
+      return countingQb();
+    });
+    const result = await getAdminToday();
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.comments).toBeDefined();
+    expect(result.bankSlips).toBeDefined();
+    expect(result.downloadRequests).toBeDefined();
+    expect(result.ordersNeedingReview).toBeDefined();
+    expect(result.todayOrders).toBeDefined();
   });
 });
 
@@ -266,12 +300,10 @@ describe("EC4: video_comments positive path", () => {
   it("counts video comments when article_comments is empty", async () => {
     setupAdminWithAllPerms();
     mockFrom.mockImplementation((table: string) => {
-      if (table === "user_roles") return qb({ data: [], error: null });
-      if (table === "article_comments")
-        return qb({ data: [{ count: 0, oldest: null }], error: null });
-      if (table === "video_comments")
-        return qb({ data: [{ count: 3, oldest: "2026-11-20T07:00:00.000Z" }], error: null });
-      return qb({ data: [{ count: 0, oldest: null }], error: null });
+      if (table === "user_roles") return qb({ rows: [] });
+      if (table === "article_comments") return qb({ count: 0, oldest: null });
+      if (table === "video_comments") return qb({ count: 3, oldest: "2026-11-20T07:00:00.000Z" });
+      return qb({ count: 0, oldest: null, rows: [{ gross: 0 }] });
     });
     const result = await getAdminToday();
     expect(result).toMatchObject({ ok: true });
@@ -297,8 +329,8 @@ describe("AC2: last-position permission loop", () => {
     // has_permission for the already-denied perms: return false; orders.read not re-checked
     mockRpc.mockResolvedValue({ data: false, error: null });
     mockFrom.mockImplementation((table: string) => {
-      if (table === "user_roles") return qb({ data: [], error: null });
-      return qb({ data: [{ count: 1, oldest: "2026-11-24T01:00:00.000Z" }], error: null });
+      if (table === "user_roles") return qb({ rows: [] });
+      return qb({ count: 1, oldest: "2026-11-24T01:00:00.000Z", rows: [{ gross: 1000 }] });
     });
     const result = await getAdminToday();
     expect(result).toMatchObject({ ok: true });

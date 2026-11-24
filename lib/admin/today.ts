@@ -105,24 +105,29 @@ async function requireAnyQueuePermission(): Promise<
   };
 }
 
-// ─── Super Admin IDs (design section 4.5) ────────────────────────────────────
+// ─── Super Admin IDs with 5-minute cache (design section 4.5) ────────────────
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+let _saIdCache: { ids: string[]; expiresAt: number } | null = null;
 
 /**
  * Returns the IDs of all super_admin accounts so they can be excluded from
  * queue counts visible to Admins/Maintainers (design section 4.5).
- * Uses service role to read across RLS.
+ * Uses service role to read across RLS. Cached for 5 minutes (super_admin
+ * membership changes rarely; avoids a service-role round-trip on every request).
  */
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 async function getSuperAdminIds(): Promise<string[]> {
+  const now = Date.now();
+  if (_saIdCache && _saIdCache.expiresAt > now) return _saIdCache.ids;
   const { data } = await createSupabaseServiceRoleClient()
     .from("user_roles")
     .select("user_id")
     .eq("role", "super_admin");
-  // Guard: only pass well-formed UUIDs into the PostgREST CSV filter.
-  return (data ?? [])
+  const ids = (data ?? [])
     .map((r: { user_id: string }) => r.user_id)
     .filter((id: string) => UUID_RE.test(id));
+  _saIdCache = { ids, expiresAt: now + 5 * 60 * 1000 };
+  return ids;
 }
 
 // ─── Queue helpers ────────────────────────────────────────────────────────────
@@ -130,33 +135,34 @@ async function getSuperAdminIds(): Promise<string[]> {
 type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 async function countComments(supabase: Supabase, saIds: string[]): Promise<QueueLine> {
-  function baseQuery(table: "article_comments" | "video_comments") {
-    let q = supabase.from(table).select("count, oldest:created_at.min()").eq("status", "pending");
-    if (saIds.length > 0) {
-      q = q.not("user_id", "in", `(${saIds.join(",")})`);
-    }
-    return q;
+  function countQ(table: "article_comments" | "video_comments") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q: any = supabase.from(table).select("id", { count: "exact", head: true }).eq("status", "pending");
+    if (saIds.length > 0) q = q.not("user_id", "in", `(${saIds.join(",")})`);
+    return q as Promise<{ count: number | null; error: unknown }>;
+  }
+  function oldestQ(table: "article_comments" | "video_comments") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q: any = supabase.from(table).select("created_at").eq("status", "pending").order("created_at", { ascending: true }).limit(1);
+    if (saIds.length > 0) q = q.not("user_id", "in", `(${saIds.join(",")})`);
+    return q.maybeSingle() as Promise<{ data: { created_at: string } | null; error: unknown }>;
   }
 
-  const [artResult, vidResult] = await Promise.all([
-    baseQuery("article_comments"),
-    baseQuery("video_comments"),
+  const [artCnt, artOld, vidCnt, vidOld] = await Promise.all([
+    countQ("article_comments"),
+    oldestQ("article_comments"),
+    countQ("video_comments"),
+    oldestQ("video_comments"),
   ]);
 
-  type AggRow = { count: number; oldest: string | null };
-  const artRow = (artResult.data as AggRow[] | null)?.[0] ?? null;
-  const vidRow = (vidResult.data as AggRow[] | null)?.[0] ?? null;
-  const artCount = artRow?.count ?? 0;
-  const artOldest = artRow?.oldest ?? null;
-  const vidCount = vidRow?.count ?? 0;
-  const vidOldest = vidRow?.oldest ?? null;
-
-  const count = artCount + vidCount;
+  const count = (artCnt.count ?? 0) + (vidCnt.count ?? 0);
+  const artOldestAt = artOld.data?.created_at ?? null;
+  const vidOldestAt = vidOld.data?.created_at ?? null;
   let oldestAt: string | null = null;
-  if (artOldest && vidOldest) {
-    oldestAt = artOldest < vidOldest ? artOldest : vidOldest;
+  if (artOldestAt && vidOldestAt) {
+    oldestAt = artOldestAt < vidOldestAt ? artOldestAt : vidOldestAt;
   } else {
-    oldestAt = artOldest ?? vidOldest;
+    oldestAt = artOldestAt ?? vidOldestAt;
   }
 
   return { count, oldestAt };
@@ -164,61 +170,59 @@ async function countComments(supabase: Supabase, saIds: string[]): Promise<Queue
 
 async function countBankSlips(): Promise<BankSlipLine> {
   // bank_transfer_queue has REVOKE ALL FROM authenticated — must use service role.
-  const srClient = createSupabaseServiceRoleClient();
-  // Both queries are independent — run concurrently.
-  const [{ data: totalData }, { data: secondData }] = await Promise.all([
-    srClient.from("bank_transfer_queue").select("count, oldest:created_at.min()"),
-    // Second-approval count requires a filtered query on the same view (P1c fix).
-    srClient.from("bank_transfer_queue").select("count").eq("awaiting_second_approval", true),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sr: any = createSupabaseServiceRoleClient();
+  const [cntRes, oldRes, secRes] = await Promise.all([
+    sr.from("bank_transfer_queue").select("id", { count: "exact", head: true }) as Promise<{ count: number | null; error: unknown }>,
+    sr.from("bank_transfer_queue").select("created_at").order("created_at", { ascending: true }).limit(1).maybeSingle() as Promise<{ data: { created_at: string } | null; error: unknown }>,
+    sr.from("bank_transfer_queue").select("id", { count: "exact", head: true }).eq("awaiting_second_approval", true) as Promise<{ count: number | null; error: unknown }>,
   ]);
 
-  type TotalRow = { count: number; oldest: string | null };
-  type SecondRow = { count: number };
-  const total = (totalData as TotalRow[] | null)?.[0] ?? null;
-  const second = (secondData as SecondRow[] | null)?.[0] ?? null;
-
   return {
-    count: total?.count ?? 0,
-    oldestAt: total?.oldest ?? null,
-    needsSecondApproval: second?.count ?? 0,
+    count: cntRes.count ?? 0,
+    oldestAt: oldRes.data?.created_at ?? null,
+    needsSecondApproval: secRes.count ?? 0,
   };
 }
 
 async function countDownloadRequests(supabase: Supabase, saIds: string[]): Promise<QueueLine> {
-  let q = supabase
-    .from("download_requests")
-    .select("count, oldest:requested_at.min()")
-    .eq("status", "open");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let countQ: any = supabase.from("download_requests").select("id", { count: "exact", head: true }).eq("status", "open");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let oldestQ: any = supabase.from("download_requests").select("requested_at").eq("status", "open").order("requested_at", { ascending: true }).limit(1);
   if (saIds.length > 0) {
-    q = q.not("user_id", "in", `(${saIds.join(",")})`);
+    const csv = `(${saIds.join(",")})`;
+    countQ = countQ.not("user_id", "in", csv);
+    oldestQ = oldestQ.not("user_id", "in", csv);
   }
-  const { data } = await q;
-  type DownRow = { count: number; oldest: string | null };
-  const row = (data as DownRow[] | null)?.[0] ?? null;
-  return { count: row?.count ?? 0, oldestAt: row?.oldest ?? null };
+  const [cntRes, oldRes] = await Promise.all([
+    countQ as Promise<{ count: number | null; error: unknown }>,
+    oldestQ.maybeSingle() as Promise<{ data: { requested_at: string } | null; error: unknown }>,
+  ]);
+  return { count: cntRes.count ?? 0, oldestAt: oldRes.data?.requested_at ?? null };
 }
 
 async function countOrdersNeedingReview(supabase: Supabase): Promise<QueueLine> {
-  const { data } = await supabase
-    .from("orders")
-    .select("count, oldest:created_at.min()")
-    .eq("needs_review", true);
-  type OrdRow = { count: number; oldest: string | null };
-  const row = (data as OrdRow[] | null)?.[0] ?? null;
-  return { count: row?.count ?? 0, oldestAt: row?.oldest ?? null };
+  const [cntRes, oldRes] = await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.from("orders").select("id", { count: "exact", head: true }).eq("needs_review", true) as any) as Promise<{ count: number | null; error: unknown }>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.from("orders").select("created_at").eq("needs_review", true).order("created_at", { ascending: true }).limit(1).maybeSingle() as any) as Promise<{ data: { created_at: string } | null; error: unknown }>,
+  ]);
+  return { count: cntRes.count ?? 0, oldestAt: oldRes.data?.created_at ?? null };
 }
 
 async function countTodayOrders(supabase: Supabase): Promise<TodayOrdersLine> {
   const { start, end } = todayColomboRange();
-  const { data } = await supabase
-    .from("orders")
-    .select("count, gross:total_cents.sum()")
-    .eq("status", "paid")
-    .gte("paid_at", start)
-    .lt("paid_at", end);
-  type TodayRow = { count: number; gross: number | null };
-  const row = (data as TodayRow[] | null)?.[0] ?? null;
-  return { count: row?.count ?? 0, grossCents: row?.gross ?? 0 };
+  // Count uses the standard pattern; gross uses the aggregate column (no equivalent in head mode).
+  const [cntRes, sumRes] = await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "paid").gte("paid_at", start).lt("paid_at", end) as any) as Promise<{ count: number | null; error: unknown }>,
+    supabase.from("orders").select("gross:total_cents.sum()").eq("status", "paid").gte("paid_at", start).lt("paid_at", end),
+  ]);
+  type SumRow = { gross: number | null };
+  const sumRow = (sumRes.data as SumRow[] | null)?.[0] ?? null;
+  return { count: cntRes.count ?? 0, grossCents: sumRow?.gross ?? 0 };
 }
 
 // ─── Main action ──────────────────────────────────────────────────────────────
