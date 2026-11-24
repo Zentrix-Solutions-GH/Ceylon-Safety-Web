@@ -4,7 +4,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/config", () => ({
-  serverConfig: { supabaseServiceRoleKey: "srk" },
+  serverConfig: { supabaseServiceRoleKey: "srk", emailFrom: "no-reply@ceylonsafety.lk" },
+  publicConfig: { appUrl: "https://ceylonsafety.lk" },
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(),
@@ -12,10 +13,19 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 vi.mock("@/lib/auth/server", () => ({ requireStaff: vi.fn() }));
 vi.mock("@/lib/ratelimit", () => ({ checkRateLimit: vi.fn() }));
+vi.mock("@/lib/resend/client", () => ({ sendQueuedEmail: vi.fn() }));
+vi.mock("@/lib/resend/templates/download-request-approved", () => ({
+  renderDownloadApprovedEmail: vi.fn(() => ({ subject: "Approved", html: "<p>a</p>", text: "a" })),
+}));
+vi.mock("@/lib/resend/templates/download-request-rejected", () => ({
+  renderDownloadRejectedEmail: vi.fn(() => ({ subject: "Rejected", html: "<p>r</p>", text: "r" })),
+}));
 
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { requireStaff } from "@/lib/auth/server";
 import { checkRateLimit } from "@/lib/ratelimit";
+import { sendQueuedEmail } from "@/lib/resend/client";
+import { renderDownloadApprovedEmail } from "@/lib/resend/templates/download-request-approved";
 import {
   approveDownloadRequest,
   rejectDownloadRequest,
@@ -49,6 +59,12 @@ const OPEN_REQUEST = {
   decision_note: null,
 };
 
+// Includes embedded profiles join — used to exercise the email-send path.
+const OPEN_REQUEST_WITH_PROFILE = {
+  ...OPEN_REQUEST,
+  profiles: { email: "buyer@example.com", phone: null },
+};
+
 function makeServiceDb(requestRow: Record<string, unknown> | null, rpcError: unknown = null) {
   return {
     from: vi.fn((table: string) => {
@@ -72,7 +88,7 @@ function makeServiceDb(requestRow: Record<string, unknown> | null, rpcError: unk
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({
-            data: { id: ENT_ID, user_id: BUYER_ID },
+            data: { id: ENT_ID, user_id: BUYER_ID, order_item_id: "oi-uuid-approve-1" },
             error: null,
           }),
         };
@@ -199,19 +215,57 @@ describe("approveDownloadRequest — self-approval (AC10)", () => {
 
 // ─── approveDownloadRequest — AC10: success ───────────────────────────────────
 
-describe("approveDownloadRequest — success (AC10)", () => {
-  it("calls approve_download_request RPC and queues email on success", async () => {
+describe("approveDownloadRequest — entitlement fetch error skips email", () => {
+  it("returns ok:true but does not send email when entitlements DB returns error", async () => {
     mockStaffOk();
-    const db = makeServiceDb(OPEN_REQUEST);
+    const dbWithEntErr = {
+      ...makeServiceDb(OPEN_REQUEST_WITH_PROFILE),
+      from: vi.fn((table: string) => {
+        if (table === "entitlements") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: null,
+              error: { code: "08006", message: "connection failure" },
+            }),
+          };
+        }
+        return makeServiceDb(OPEN_REQUEST_WITH_PROFILE).from(table);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    vi.mocked(createSupabaseServerClient).mockResolvedValue(dbWithEntErr as never);
+    vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(dbWithEntErr as never);
+    const result = await approveDownloadRequest(REQUEST_ID);
+    expect(result.ok).toBe(true);
+    expect(vi.mocked(sendQueuedEmail)).not.toHaveBeenCalled();
+  });
+});
+
+describe("approveDownloadRequest — success (AC10/AC3)", () => {
+  it("calls approve_download_request RPC and sends approval email with correct download URL (AC3)", async () => {
+    mockStaffOk();
+    const db = makeServiceDb(OPEN_REQUEST_WITH_PROFILE);
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
     const result = await approveDownloadRequest(REQUEST_ID);
     expect(result.ok).toBe(true);
-    // RPC must have been called
     expect(db.rpc).toHaveBeenCalledWith("approve_download_request", {
       p_request_id: REQUEST_ID,
       p_admin_id: STAFF_ID,
     });
+    expect(vi.mocked(sendQueuedEmail)).toHaveBeenCalledWith(
+      expect.objectContaining({ template: "download_request_approved" })
+    );
+    // AC3: invoke the captured renderEmail lambda to verify it passes the correct download URL
+    const callArg = vi.mocked(sendQueuedEmail).mock.calls[0]?.[0];
+    callArg?.renderEmail("buyer@example.com");
+    expect(vi.mocked(renderDownloadApprovedEmail)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        downloadUrl: "https://ceylonsafety.lk/download/oi-uuid-approve-1",
+      })
+    );
   });
 });
 
@@ -248,14 +302,17 @@ describe("rejectDownloadRequest — concurrent already_done from DB (AC12)", () 
   });
 });
 
-describe("rejectDownloadRequest — success (AC11)", () => {
-  it("marks request rejected and queues email", async () => {
+describe("rejectDownloadRequest — success (AC11/AC4)", () => {
+  it("marks request rejected and sends rejection email (AC4)", async () => {
     mockStaffOk();
-    const db = makeServiceDb(OPEN_REQUEST);
+    const db = makeServiceDb(OPEN_REQUEST_WITH_PROFILE);
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
     vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(db as never);
     const result = await rejectDownloadRequest(REQUEST_ID, "buyer already received refund");
     expect(result.ok).toBe(true);
+    expect(vi.mocked(sendQueuedEmail)).toHaveBeenCalledWith(
+      expect.objectContaining({ template: "download_request_rejected" })
+    );
   });
 });
 

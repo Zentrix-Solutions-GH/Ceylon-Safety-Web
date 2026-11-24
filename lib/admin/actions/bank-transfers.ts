@@ -7,6 +7,9 @@ import { requireStepUp } from "@/lib/auth/step-up";
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { isSelfApproval, fetchApprovalDownloadLimit } from "@/lib/bank/review";
+import { publicConfig, serverConfig } from "@/lib/config";
+import { sendQueuedEmail } from "@/lib/resend/client";
+import { renderBankRejectedEmail } from "@/lib/resend/templates/bank-rejected";
 import type { ActionResult } from "@/types/api";
 import type { BankQueueItem, BankQueueResult } from "@/types/bank-slip";
 
@@ -240,22 +243,39 @@ export async function rejectBankOrder(
     });
 
   if (auditErr) {
-    console.error("[rejectBankOrder] audit insert failed", { slip_id: slipId, msg: auditErr.message });
+    console.error("[rejectBankOrder] audit insert failed", { slip_id: slipId, code: auditErr.code });
   }
 
-  // Queue rejection email (AC13).
+  // Queue + send rejection email (S-088 AC1).
   const buyerEmail = Array.isArray(order.profiles)
     ? order.profiles[0]?.email
     : (order.profiles as { email?: string | null } | null)?.email;
 
   if (buyerEmail) {
-    await sbService.from("email_logs").insert({
+    const { error: emailInsertErr } = await sbService.from("email_logs").insert({
       to_email:     buyerEmail,
       template:     "bank_rejected",
       related_type: "bank_transfer_slip",
       related_id:   slipId,
       status:       "queued",
     });
+    if (emailInsertErr && emailInsertErr.code !== "23505") {
+      console.error("[rejectBankOrder] email_logs insert failed — rejection email not sent", {
+        slip_id: slipId,
+        code: emailInsertErr.code,
+      });
+    } else {
+      await sendQueuedEmail({
+        template:    "bank_rejected",
+        relatedType: "bank_transfer_slip",
+        relatedId:   slipId,
+        renderEmail: () => renderBankRejectedEmail({
+          reason:       reason.trim(),
+          orderPageUrl: `${publicConfig.appUrl}/orders/${orderId}`,
+          supportEmail: serverConfig.supportEmail,
+        }),
+      });
+    }
   }
 
   return { ok: true };
@@ -318,19 +338,36 @@ export async function rejectAndCancelBankOrder(
     entity_id:   orderId,
   });
 
-  // Queue rejection email (AC13).
+  // Queue + send rejection email (S-088 AC1).
   const buyerEmail = Array.isArray(order.profiles)
     ? order.profiles[0]?.email
     : (order.profiles as { email?: string | null } | null)?.email;
 
   if (buyerEmail) {
-    await sbService.from("email_logs").insert({
+    const { error: emailInsertErr } = await sbService.from("email_logs").insert({
       to_email:     buyerEmail,
       template:     "bank_rejected",
       related_type: "order",
       related_id:   orderId,
       status:       "queued",
     });
+    if (emailInsertErr && emailInsertErr.code !== "23505") {
+      console.error("[rejectAndCancelBankOrder] email_logs insert failed — rejection email not sent", {
+        order_id: orderId,
+        code: emailInsertErr.code,
+      });
+    } else {
+      await sendQueuedEmail({
+        template:    "bank_rejected",
+        relatedType: "order",
+        relatedId:   orderId,
+        renderEmail: () => renderBankRejectedEmail({
+          reason:       reason.trim(),
+          orderPageUrl: `${publicConfig.appUrl}/orders/${orderId}`,
+          supportEmail: serverConfig.supportEmail,
+        }),
+      });
+    }
   }
 
   return { ok: true };

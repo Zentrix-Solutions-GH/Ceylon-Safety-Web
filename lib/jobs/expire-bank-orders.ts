@@ -1,6 +1,10 @@
 import "server-only";
 
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { publicConfig, serverConfig } from "@/lib/config";
+import { sendQueuedEmail } from "@/lib/resend/client";
+import { renderBankExpiringEmail } from "@/lib/resend/templates/bank-expiring";
+import { renderBankRejectedEmail } from "@/lib/resend/templates/bank-rejected";
 
 const DEFAULT_EXPIRY_DAYS = 7;
 const DEFAULT_WARNING_DAYS = 1;
@@ -45,7 +49,7 @@ export async function expireBankOrdersJob(): Promise<{ ok: boolean }> {
   // Fetch all pending_verification bank-transfer orders.
   const { data: orders, error } = await sb
     .from("orders")
-    .select("id, user_id, created_at, bank_expiry_warned_at, profiles(email)")
+    .select("id, order_number, user_id, created_at, bank_expiry_warned_at, profiles(email)")
     .eq("status", "pending_verification")
     .eq("payment_provider", "bank_transfer")
     .order("created_at", { ascending: true });
@@ -72,6 +76,7 @@ export async function expireBankOrdersJob(): Promise<{ ok: boolean }> {
 
   for (const order of orders as Array<{
     id: string;
+    order_number: string;
     user_id: string;
     created_at: string;
     bank_expiry_warned_at: string | null;
@@ -120,7 +125,18 @@ export async function expireBankOrdersJob(): Promise<{ ok: boolean }> {
           status:       "queued",
         });
         if (emailErr) {
-          console.error("[expire-bank-orders] email queue failed", { order_id: order.id, msg: emailErr.message });
+          console.error("[expire-bank-orders] email queue failed", { order_id: order.id, code: emailErr.code });
+        } else {
+          await sendQueuedEmail({
+            template:    "bank_rejected",
+            relatedType: "order",
+            relatedId:   order.id,
+            renderEmail: () => renderBankRejectedEmail({
+              reason:       "Your bank transfer order expired before the payment could be verified.",
+              orderPageUrl: `${publicConfig.appUrl}/orders/${order.id}`,
+              supportEmail: serverConfig.supportEmail,
+            }),
+          });
         }
       }
 
@@ -141,13 +157,29 @@ export async function expireBankOrdersJob(): Promise<{ ok: boolean }> {
       }
 
       if (buyerEmail) {
-        await sb.from("email_logs").insert({
+        const { error: emailErr } = await sb.from("email_logs").insert({
           to_email:     buyerEmail,
           template:     "bank_expiring",
           related_type: "order",
           related_id:   order.id,
           status:       "queued",
         });
+        if (!emailErr) {
+          // Calculate expiry date for the template (AC2).
+          const expiryDate = new Date(
+            new Date(order.created_at).getTime() + expiryDays * 24 * 60 * 60 * 1000
+          ).toISOString();
+          await sendQueuedEmail({
+            template:    "bank_expiring",
+            relatedType: "order",
+            relatedId:   order.id,
+            renderEmail: () => renderBankExpiringEmail({
+              orderNumber: order.order_number,
+              expiryDate,
+              appUrl:      publicConfig.appUrl,
+            }),
+          });
+        }
       }
     }
   }

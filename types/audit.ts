@@ -37,6 +37,9 @@ export type AuditEventName =
   | "document.hide"
   // Money and access
   | "order.grant"
+  | "order.cancel"
+  | "order.resolve_review"
+  | "order.resend_email"
   | "order.paid"
   | "order.chargeback"
   | "bank_transfer.approve"

@@ -1225,7 +1225,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "approve_bank_transfer_locked":
+            "admin_cancel_order":
+{ Args: { "p_order_id": string,"p_reason": string }; Returns: Json
+                           },
+"approve_bank_transfer_locked":
 { Args: { "p_actor_id": string,"p_download_limit": number,"p_order_id": string,"p_slip_id": string,"p_threshold_cents": number }; Returns: Json
                            },
 "cancel_order_locked":
