@@ -284,6 +284,64 @@ describe("expireBankOrdersJob — AC11", () => {
     expect(emailInsertFn).not.toHaveBeenCalled();
   });
 
+  it("AC2 boundary: sends warning email for order exactly (expiryDays - warningDays) old", async () => {
+    // expiryDays=7, warningDays=1 → warning fires when age ≥ 6 days
+    const warningBoundaryOrder: Order = {
+      id: "order-warn-boundary",
+      order_number: "ORD-WARN-1",
+      user_id: "buyer-warn-1",
+      created_at: daysAgo(6),
+      bank_expiry_warned_at: null,
+      profiles: { email: "warn@example.com" },
+    };
+    const updateFn = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null, count: 1 }),
+      }),
+    });
+    const emailInsertFn = vi.fn().mockResolvedValue({ error: null });
+    const sb = {
+      from: vi.fn((t: string) => makeChainFor(t, {
+        settings: DEFAULT_SETTINGS,
+        orders: [warningBoundaryOrder],
+        slips: [],
+        updateFn,
+        emailInsertFn,
+      })),
+    };
+    vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(sb as never);
+
+    const result = await expireBankOrdersJob();
+    expect(result.ok).toBe(true);
+    expect(vi.mocked(sendQueuedEmail)).toHaveBeenCalledWith(
+      expect.objectContaining({ template: "bank_expiring" })
+    );
+  });
+
+  it("AC2 boundary: does NOT send warning email for order one day short of threshold", async () => {
+    // age 5 days < 6-day threshold → no warning
+    const tooEarlyOrder: Order = {
+      id: "order-too-early",
+      order_number: "ORD-WARN-2",
+      user_id: "buyer-warn-2",
+      created_at: daysAgo(5),
+      bank_expiry_warned_at: null,
+      profiles: { email: "early@example.com" },
+    };
+    const sb = {
+      from: vi.fn((t: string) => makeChainFor(t, {
+        settings: DEFAULT_SETTINGS,
+        orders: [tooEarlyOrder],
+        slips: [],
+      })),
+    };
+    vi.mocked(createSupabaseServiceRoleClient).mockResolvedValue(sb as never);
+
+    const result = await expireBankOrdersJob();
+    expect(result.ok).toBe(true);
+    expect(vi.mocked(sendQueuedEmail)).not.toHaveBeenCalled();
+  });
+
   it("uses bank_order_expiry_days setting (not hardcoded 7)", async () => {
     const tenDayOrder: Order = {
       id: "order-ten-1",

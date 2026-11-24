@@ -25,6 +25,7 @@ import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/l
 import { requireStaff } from "@/lib/auth/server";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { sendQueuedEmail } from "@/lib/resend/client";
+import { renderDownloadApprovedEmail } from "@/lib/resend/templates/download-request-approved";
 import {
   approveDownloadRequest,
   rejectDownloadRequest,
@@ -243,7 +244,7 @@ describe("approveDownloadRequest — entitlement fetch error skips email", () =>
 });
 
 describe("approveDownloadRequest — success (AC10/AC3)", () => {
-  it("calls approve_download_request RPC and sends approval email (AC3)", async () => {
+  it("calls approve_download_request RPC and sends approval email with correct download URL (AC3)", async () => {
     mockStaffOk();
     const db = makeServiceDb(OPEN_REQUEST_WITH_PROFILE);
     vi.mocked(createSupabaseServerClient).mockResolvedValue(db as never);
@@ -256,6 +257,14 @@ describe("approveDownloadRequest — success (AC10/AC3)", () => {
     });
     expect(vi.mocked(sendQueuedEmail)).toHaveBeenCalledWith(
       expect.objectContaining({ template: "download_request_approved" })
+    );
+    // AC3: invoke the captured renderEmail lambda to verify it passes the correct download URL
+    const callArg = vi.mocked(sendQueuedEmail).mock.calls[0]?.[0];
+    callArg?.renderEmail("buyer@example.com");
+    expect(vi.mocked(renderDownloadApprovedEmail)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        downloadUrl: "https://ceylonsafety.lk/download/oi-uuid-approve-1",
+      })
     );
   });
 });

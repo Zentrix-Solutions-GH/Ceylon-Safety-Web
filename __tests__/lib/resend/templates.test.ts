@@ -126,9 +126,10 @@ describe("renderIdleDeletionWarningEmail (AC5)", () => {
     appUrl: "https://ceylonsafety.lk",
   };
 
-  it("includes deletion date in html", () => {
+  it("includes deletion date formatted in Asia/Colombo in html", () => {
     const { html } = renderIdleDeletionWarningEmail(data);
-    expect(html).toContain("2027");
+    // 2027-01-15T00:00:00Z = 05:30 on 15 Jan 2027 in Asia/Colombo → "15 January 2027"
+    expect(html).toContain("15 January 2027");
   });
 
   it("includes sign-in link in html", () => {

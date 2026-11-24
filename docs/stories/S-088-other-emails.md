@@ -51,6 +51,8 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 - Admin "Resend email" button on the order screen (that is part of S-089/S-104 order-admin)
 - Idle-deletion cron job wiring (Release 2)
 - The receipt and bank-approval emails (S-086)
+- AC6 trigger wiring: Supabase Auth sends the account-deletion OTP natively via magic link; our `account-deletion-otp.tsx` is a template stub only. No server action calls `sendQueuedEmail` for this template in Release 1. (story correction, confirmed in Plan section)
+- EC4 OTP server-side expiry: Supabase Auth enforces the OTP TTL server-side; our code does not issue or expire OTPs directly. No implementation or test needed in this story.
 
 ## Assumptions accepted
 

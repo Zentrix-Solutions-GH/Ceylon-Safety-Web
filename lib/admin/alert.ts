@@ -1,6 +1,9 @@
 import "server-only";
 
 export interface EmailAlertPayload {
+  // NOTE: email_logs.id is BIGINT; Supabase JS types it as number. For IDs above 2^53
+  // the JS number loses precision. Acceptable for typical volumes; revisit if logs table
+  // grows to billions of rows.
   logId: number;
   template: string;
   errorName: string;
