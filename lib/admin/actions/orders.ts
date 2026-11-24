@@ -411,7 +411,7 @@ export async function grantOrderAccess(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: insertError } = await (sb as any)
     .from("entitlements")
-    .upsert(entitlements, { onConflict: "user_id,document_id,language,source", ignoreDuplicates: true });
+    .upsert(entitlements, { onConflict: "user_id,document_id,language", ignoreDuplicates: true });
 
   if (insertError) return { ok: false, code: "unknown" };
 
