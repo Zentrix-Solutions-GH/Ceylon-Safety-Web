@@ -1,7 +1,7 @@
 ---
 id: S-092
 title: Checkout page
-status: ready
+status: in-progress
 owner: frontend
 risk: normal
 branch: feature/S-092-checkout-page
@@ -51,11 +51,13 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 - PayHere return/cancel pages (S-093)
 - Bank transfer pending page (S-094)
 - Coupon input (Release 2)
+- EC3 "Replace it" vs "Continue that order" distinction: both buttons currently retry `createCheckout`, which reuses the existing pending order per commerce design 4.3. If "Replace" should cancel the old order and create a new one, a `replaceExisting` flag needs to be added to `CheckoutInput` (backend change, out of S-092 scope). Product owner to clarify.
 
 ## Assumptions accepted
 
 - PayHere auto-submit form uses the fields returned by `createCheckout` (commerce design section 5.1)
-- Billing form pre-fill comes from the user's saved profile address (REQ-117)
+- Billing form pre-fill comes from the user's saved profile address (REQ-117, Q35 assumed)
+- `/checkout/pending` page stub included in this story scope (vertical-slice fix): shows order number and "bank details will be emailed" message. S-094 replaces the stub with the full bank details + slip upload UI.
 
 ## Test plan
 
@@ -70,14 +72,62 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 
 ## Plan
 
-Prior art: S-078 (createCheckout, createBankOrder server actions); commerce design section 4.2 checkout page spec; file-structure components/checkout/*.
+Prior art: S-078 (createCheckout, createBankOrder server actions in `lib/orders/create.ts`); commerce design section 4.2 checkout page spec; file-structure `components/checkout/*`; S-091 cart page for action/client pattern. Naming: `PaymentMethodPicker` already exists in components/checkout/ — keep that name (not `PaymentMethodChoice` from design doc).
+
+### Files to create / edit
+
+| File | Action |
+|---|---|
+| `messages/en.ts` | Add checkout i18n keys |
+| `app/(customer)/checkout/actions.ts` | New — `"use server"` wrappers for `createCheckout` / `createBankOrder` |
+| `app/(customer)/checkout/page.tsx` | Implement — server component, fetch cart + profile, pass to client |
+| `app/(customer)/checkout/CheckoutClient.tsx` | New — client component, form state, submit handlers |
+| `app/(customer)/checkout/pending/page.tsx` | Implement — minimal stub ("Order placed, bank details incoming") |
+| `components/checkout/OrderSummary.tsx` | Implement |
+| `components/checkout/BillingForm.tsx` | Implement |
+| `components/checkout/TermsCheckbox.tsx` | Implement |
+| `components/checkout/PaymentMethodPicker.tsx` | Implement |
+| `components/checkout/PayHereRedirect.tsx` | Implement |
+| `__tests__/app/(customer)/checkout.test.tsx` | New tests |
+| `__tests__/components/checkout/TermsCheckbox.test.tsx` | New tests |
+| `__tests__/components/checkout/PayHereRedirect.test.tsx` | New tests |
+
+### Step order
+
+1. i18n keys in `messages/en.ts`
+2. `actions.ts` — thin wrappers only (server already in lib/orders/create.ts)
+3. Component stubs → real implementations (OrderSummary, BillingForm, TermsCheckbox, PaymentMethodPicker, PayHereRedirect)
+4. `CheckoutClient.tsx` — ties components together with form state and action calls
+5. `page.tsx` — server shell: auth guard logs the user and passes cart + profile to CheckoutClient
+6. `pending/page.tsx` — stub with order number from search param
+7. Write tests first (TDD), then implement
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
+Round 2 (after reviewer P0/P1/P2 fixes):
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+── TypeScript ──
+✓ TypeScript passed
+── Vitest (unit) ──
+ Test Files  1 failed | 278 passed | 15 skipped (294)
+      Tests  18 failed | 2907 passed | 60 skipped (2985)
+✗ Vitest (unit) FAILED
+  → Pre-existing failure: __tests__/components/admin/ArticleEditor/index.test.tsx (18 tests)
+    Not introduced by S-092 — no changes to that file (git diff confirmed).
+    New S-092 tests: 22 passed (checkout.test.tsx × 14, TermsCheckbox.test.tsx × 5, PayHereRedirect.test.tsx × 3)
+✓ pgTAP RLS suite passed
+✓ pgTAP seed suite passed
+✓ pgTAP dev seed suite passed
+✓ EC3 dev seed guard (execution) passed
+✓ Types file freshness passed
+✓ Public pages session check — checked 20 file(s), no violations
+✓ Dev seed guard passed
+⚠ Google Fonts check skipped (no build output)
+⚠ PayHere bundle check skipped (no build output)
+  check.sh: 9 passed, 1 failed (pre-existing ArticleEditor, not S-092)
 ```
 
 ## Review notes
