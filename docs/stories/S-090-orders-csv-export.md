@@ -139,6 +139,10 @@ Note: `ArticleEditor/index.test.tsx` failures are pre-existing on `dev` (not int
 
 - **P1** `__tests__/app/api/admin/orders-export.test.ts` — `# EXPORT_ERROR` sentinel path is untested. After fixing P0 above, add: mock DB to error on second `range()` call; assert body contains `# EXPORT_ERROR` and audit receives `db_error: true`.
 
+**full-review 2026-11-25 (re-review, HEAD 097309a) — Score 94/100 — APPROVE**
+
+All previous findings resolved. No new findings.
+
 ## After this merges
 
 - S-103 (admin orders list) can add the "Export CSV" button
