@@ -12,7 +12,10 @@ ON CONFLICT (role, action) DO NOTHING;
 -- Extend the audit log CHECK constraint to include order.export (S-090).
 -- NOT VALID skips the existing-row scan; all existing rows already satisfy this
 -- constraint because we are only adding values, not removing any.
--- Run VALIDATE CONSTRAINT separately during a maintenance window if needed.
+-- NOTE: DROP CONSTRAINT + ADD CONSTRAINT each acquire AccessExclusiveLock on
+-- admin_audit_log. Run during a low-traffic window (e.g. overnight).
+-- VALIDATE CONSTRAINT (if ever needed) can run concurrently with SHARE UPDATE
+-- EXCLUSIVE and is safe to run any time.
 ALTER TABLE public.admin_audit_log
   DROP CONSTRAINT IF EXISTS admin_audit_log_action_check;
 

@@ -59,20 +59,17 @@ export async function checkExportRateLimit(adminId: string): Promise<ExportRateL
     const redis = getRedis();
     const key = `export:orders:${adminId}`;
     count = await redis.incr(key);
-    // NX: set TTL only if the key has no expiry yet.
-    // - On the first call (count === 1) this always fires and pins the expiry.
-    // - On calls 2 and 3 the NX is a no-op, so the expiry never drifts.
-    // - If a prior call crashed after INCR but before this line, the key has
-    //   no TTL; NX will set it on the next call, self-healing the gap.
+    // Set TTL only on the first call for this key (count === 1 means the key
+    // was just created by this INCR and has no TTL yet). For counts 2 and 3
+    // the TTL is already set; touching it again would re-extend the window.
     // expire is in a separate try so a failure here does not swallow the count.
-    try {
-      await (redis.expire as (key: string, seconds: number, option: string) => Promise<0 | 1>)(
-        key, retryAfterSeconds, "NX",
-      );
-    } catch {
-      // Best-effort fallback: set TTL without NX so the key eventually expires
-      // even if the NX call failed (prevents a permanent no-TTL counter).
-      redis.expire(key, retryAfterSeconds).catch(() => undefined);
+    if (count === 1) {
+      try {
+        await redis.expire(key, retryAfterSeconds);
+      } catch {
+        // Best-effort: if expire fails the counter has no TTL this day.
+        // The next day's first call creates a fresh key so it self-heals.
+      }
     }
   } catch {
     // Fail open — do not block exports when Redis is unavailable.

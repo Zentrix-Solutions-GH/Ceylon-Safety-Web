@@ -153,4 +153,32 @@ describe("Upstash Redis path: 3 exports allowed, 4th blocked", () => {
     const result = await checkExportRateLimit("admin-fail-open");
     expect(result.allowed).toBe(true);
   });
+
+  it("4th export blocked even when expire throws — INCR counter is authoritative", async () => {
+    // expire throws; the INCR counter must still enforce the 3-per-day limit.
+    // The inner try/catch on expire must not swallow the count so that blocking
+    // still kicks in on the 4th call.
+    let counter = 0;
+    vi.resetModules();
+    vi.doMock("@upstash/redis", () => ({
+      Redis: vi.fn().mockImplementation(() => ({
+        incr() { return Promise.resolve(++counter); },
+        expire() { return Promise.reject(new Error("expire unsupported")); },
+      })),
+    }));
+    process.env.UPSTASH_REDIS_REST_URL = "https://fake.upstash.io";
+    process.env.UPSTASH_REDIS_REST_TOKEN = "fake-token";
+    const { checkExportRateLimit } = await import("@/lib/admin/export/csv-rate-limit");
+    const id = `admin-expire-throw-${Date.now()}`;
+
+    const r1 = await checkExportRateLimit(id);
+    const r2 = await checkExportRateLimit(id);
+    const r3 = await checkExportRateLimit(id);
+    const r4 = await checkExportRateLimit(id);
+
+    expect(r1.allowed).toBe(true);
+    expect(r2.allowed).toBe(true);
+    expect(r3.allowed).toBe(true);
+    expect(r4.allowed).toBe(false); // 4th call blocked by counter despite expire having no TTL
+  });
 });

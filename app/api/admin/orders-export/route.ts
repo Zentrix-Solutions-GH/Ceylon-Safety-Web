@@ -212,6 +212,9 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
       controller.enqueue(enc.encode(csvRow(headers) + "\n"));
 
       // Paginate in CHUNK_SIZE chunks
+      // OFFSET pagination: each page costs DB a full scan of prior rows.
+      // Acceptable at current scale (<10k orders/day); switch to keyset cursor
+      // on (created_at, order_number) when export latency becomes a concern.
       let offset = 0;
       while (true) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -459,6 +459,14 @@ describe("AC7: streams in 50-row chunks", () => {
     expect(db.range).toHaveBeenCalledWith(0, 49);
   });
 
+  it("response body is a ReadableStream (not a buffered body)", async () => {
+    okAuth();
+    mockDb([makeRow()]);
+
+    const res = await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
+    expect(res.body).toBeInstanceOf(ReadableStream);
+  });
+
   it("multi-page: calls range (0,49) then (50,99) when first page is full", async () => {
     okAuth();
     // 50 identical rows on the first call → loop continues; 1 row on the second → stops
