@@ -187,8 +187,8 @@ SELECT ok(
 -- Admin permission count
 SELECT is(
   (SELECT count(*)::int FROM public.role_permissions WHERE role = 'admin'),
-  18,
-  'AC4: admin has exactly 18 role_permissions rows'
+  19,
+  'AC4: admin has exactly 19 role_permissions rows'
 );
 
 -- Editor has 15 permission rows (articles.*, videos.*, documents.*, etc.)
@@ -399,8 +399,8 @@ SELECT is(
 
 SELECT is(
   (SELECT count(*)::int FROM public.role_permissions WHERE role = 'admin'),
-  18,
-  'AC8: role_permissions rows only for admin (18)'
+  19,
+  'AC8: role_permissions rows only for admin (19)'
 );
 
 -- ─────────────────────────────────────────────────────────────────────────────
