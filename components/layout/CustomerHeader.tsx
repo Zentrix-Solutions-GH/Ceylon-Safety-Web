@@ -1,12 +1,10 @@
-"use client";
-
-// AC4: simple customer-area header — account menu only; no full nav, no ads, no analytics.
-// Uses HeaderPersonal from S-025 for the sign-in state (reuses the existing client component).
+// AC4: customer layout — simple header with account menu; no public nav, ads or analytics.
+// AC8 (S-091): cartCount passed from server layout (app/(customer)/layout.tsx) for badge.
 import Link from "next/link";
 import { HeaderPersonal } from "@/components/layout/HeaderPersonal";
 import { t } from "@/messages/en";
 
-export function CustomerHeader() {
+export function CustomerHeader({ cartCount }: { cartCount?: number } = {}) {
   return (
     <header
       className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
@@ -22,7 +20,7 @@ export function CustomerHeader() {
         </Link>
 
         {/* Account menu: My Purchases, Profile, Sign out — rendered by HeaderPersonal */}
-        <HeaderPersonal />
+        <HeaderPersonal cartCount={cartCount} />
       </div>
     </header>
   );

@@ -1,7 +1,7 @@
 ---
 id: S-091
 title: Cart page
-status: ready
+status: in-progress
 owner: frontend
 risk: normal
 branch: feature/S-091-cart-page
@@ -30,7 +30,7 @@ Build the `/cart` page that shows the signed-in buyer's saved cart, lets them re
 - [ ] AC3: Removing an item calls the cart backend action (S-075) and re-fetches totals; the UI updates without a full page reload
 - [ ] AC4: Server-computed subtotal and total are displayed; prices are never computed in the browser
 - [ ] AC5: Empty cart state shows a message and a "Browse documents" link to `/documents`
-- [ ] AC6: Items marked `unavailable` (document hidden or language file missing) are shown with an "Unavailable" badge and cannot be checked out; a message explains what to do
+- [ ] AC6: Items marked `unavailable` (document hidden or language file missing) are shown with an "Unavailable" badge and cannot be checked out; a message explains the user must remove them before proceeding. Items are **not** auto-removed — the user decides. (Overrides commerce design §3.2 auto-remove behaviour; decision confirmed by owner 2026-11-25.)
 - [ ] AC7: "Proceed to Checkout" button is disabled while the cart contains unavailable items or is empty
 - [ ] AC8: Cart item count in the Header (S-025) reflects the current cart after any add/remove without a page reload
 - [ ] AC9: No coupon input in Release 1 (CouponInput component rendered only in Release 2)
@@ -39,7 +39,7 @@ Build the `/cart` page that shows the signed-in buyer's saved cart, lets them re
 
 - [ ] EC1: Network error on remove → show an inline error; item stays in cart
 - [ ] EC2: Another tab removes the last item → on focus, the page re-fetches and shows the empty state
-- [ ] EC3: `unavailable` item that was in the cart before the document was hidden → shown with badge, not silently removed
+- [ ] EC3: `unavailable` item that was in the cart before the document was hidden → shown with badge, not silently removed (item became unavailable after being added; badge + message prompts user to remove)
 
 ## Contract
 
@@ -69,14 +69,56 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 
 ## Plan
 
-Prior art: S-075 (cart backend, `/api/cart/calculate`); file-structure `components/cart/CartItemRow.tsx`, `CouponInput.tsx`. Page lives at `app/(customer)/cart/page.tsx`.
+Prior art: Searched "cart calculate remove header badge customer" in docs/. S-075 (cart backend, `lib/cart/index.ts`, `lib/cart/calculate.ts`, `/api/cart/calculate` route). File-structure stubs: `components/cart/CartItemRow.tsx`, `CouponInput.tsx`, `app/(customer)/cart/page.tsx`. `HeaderPersonal.tsx` has badge slot `<span>` with comment "count filled by S-091". Pattern: `router.refresh()` after mutations (see `DocumentModal.tsx:140`) revalidates server components so counts update (AC8).
+
+**Unavailable items:** Show badge + message, do NOT auto-remove. Owner decision 2026-11-25. Overrides commerce design §3.2.
+
+**Files to create / edit:**
+1. `messages/en.ts` — add `cart.*` keys (AC-rule: all UI strings from here)
+2. `app/(customer)/cart/page.tsx` — Server Component: auth guard (middleware covers it; redirect fallback), `calculateCart(userId)` via `lib/cart/calculate`, pass to `CartPageClient`
+3. `components/cart/CartPageClient.tsx` — NEW Client Component: state for `CartCalculateResponse`, remove handler (calls `removeFromCart` server action, then `router.refresh()` + re-fetches totals via `/api/cart/calculate`), renders `CartItemRow` list, empty state, unavailable warning, Proceed button
+4. `components/cart/CartItemRow.tsx` — Client Component: title, language badge, price, unavailable badge, remove button
+5. `components/layout/HeaderPersonal.tsx` — add optional `cartCount?: number` prop; render count in existing badge `<span>` (AC8)
+6. `components/layout/CustomerHeader.tsx` — fetch cart count (count of `cart_items` rows for user) server-side; pass to `HeaderPersonal`
+
+**No new DB migrations.** No `types/` changes (consumes existing `CartLineResult`, `CartCalculateResponse` from `types/cart.ts`).
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Test Files  1 failed | 267 passed | 15 skipped (283)
+Tests  18 failed | 2825 passed | 60 skipped (2903)
+✗ Vitest (unit) FAILED
+
+NOTE: The 1 failure is 18 tests in __tests__/components/admin/ArticleEditor/index.test.tsx.
+These are PRE-EXISTING failures on dev (confirmed on base dev before S-091).
+S-091 introduced no new test failures. (Verified after re-review fixes: 2826 passing, same pre-existing 18 failing.)
+
+── pgTAP RLS suite ──
+✓ pgTAP RLS suite passed
+
+── pgTAP seed suite ──
+✓ pgTAP seed suite passed
+
+── pgTAP dev seed suite ──
+✓ pgTAP dev seed suite passed
+
+── Types file freshness ──
+✓ Types file freshness passed
+
+── Public pages session check ──
+✓ Public pages session check (AC11) passed
+
+check.sh: 9 passed, 1 failed
 ```
 
 ## Review notes
