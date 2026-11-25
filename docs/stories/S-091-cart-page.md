@@ -123,9 +123,12 @@ check.sh: 9 passed, 1 failed
 
 ## Review notes
 
-- **P1** `app/(customer)/layout.tsx:14-25` — `getCartCount` queries `cart_items` directly in the layout, bypassing `lib/cart/`. Move to `lib/cart/getCartCount(userId): Promise<number>` for consistency and testability. (full-review 2026-11-25)
-- **P1** `components/cart/CartPageClient.tsx:38-50` — `visibilitychange` re-fetch silently drops non-ok HTTP responses; stale totals remain displayed. Add error/stale indicator when `!res.ok`. (full-review 2026-11-25)
-- **P1** `app/(customer)/cart/page.tsx` — AC1 redirect has no unit test. Add `__tests__/app/(customer)/cart-page.test.tsx` mocking `requireActiveAccount` returning `{ ok: false }` and asserting `redirect` is called. (full-review 2026-11-25)
+- ~~**P1** `app/(customer)/layout.tsx:14-25` — `getCartCount` queries `cart_items` directly in the layout, bypassing `lib/cart/`. Move to `lib/cart/getCartCount(userId): Promise<number>` for consistency and testability. (full-review 2026-11-25) — **Resolved** (re-review 2026-11-25)~~
+- ~~**P1** `components/cart/CartPageClient.tsx:38-50` — `visibilitychange` re-fetch silently drops non-ok HTTP responses; stale totals remain displayed. Add error/stale indicator when `!res.ok`. (full-review 2026-11-25) — **Resolved** (re-review 2026-11-25)~~
+- ~~**P1** `app/(customer)/cart/page.tsx` — AC1 redirect has no unit test. (full-review 2026-11-25) — **Resolved** (re-review 2026-11-25)~~
+- ~~**P1** `app/(customer)/layout.tsx:14-20` — serial DB calls without React.cache() — **Resolved** in `8e5a335`; `user-cache.ts` created with `cache(getCurrentUser)`. (re-review 2026-11-25)~~
+- ~~**P1** `app/(customer)/cart/actions.ts:14-16` — exhaustive auth code mapping — **Resolved** in `8e5a335`; `reauth_required` → `not_allowed` added. (re-review 2026-11-25)~~
+- ~~**P1** AC8 wiring integration test missing — **Resolved** in `8e5a335`; `__tests__/app/(customer)/layout-badge.test.tsx` added. (re-review 2026-11-25)~~
 
 ## After this merges
 
