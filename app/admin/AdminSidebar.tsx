@@ -211,14 +211,24 @@ export default function AdminSidebar({ role, badgeCounts, ordersNeedingReview = 
                         >
                           <span>{item.label}</span>
                           {count > 0 && (
-                            <span
-                              aria-label={ageIso
-                                ? `${count} ${item.badge ? t(BADGE_ARIA[item.badge]) : ""} — ${t("admin.today.oldest_age_label")}: ${formatRelativeAge(ageIso)}`
-                                : `${count} ${item.badge ? t(BADGE_ARIA[item.badge]) : ""}`}
-                              title={ageIso ? `${t("admin.today.oldest_age_label")}: ${formatRelativeAge(ageIso)}` : undefined}
-                              className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground"
-                            >
-                              {count > 99 ? "99+" : count}
+                            <span className="group/badge relative ml-2 inline-flex">
+                              <span
+                                aria-label={ageIso
+                                  ? `${count} ${item.badge ? t(BADGE_ARIA[item.badge]) : ""} — ${t("admin.today.oldest_age_label")}: ${formatRelativeAge(ageIso)}`
+                                  : `${count} ${item.badge ? t(BADGE_ARIA[item.badge]) : ""}`}
+                                title={ageIso ? `${t("admin.today.oldest_age_label")}: ${formatRelativeAge(ageIso)}` : undefined}
+                                className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground"
+                              >
+                                {count > 99 ? "99+" : count}
+                              </span>
+                              {ageIso && (
+                                <span
+                                  role="tooltip"
+                                  className="pointer-events-none absolute bottom-full right-0 z-50 mb-1 whitespace-nowrap rounded bg-popover px-2 py-1 text-xs text-popover-foreground shadow invisible group-hover/badge:visible group-focus-within/badge:visible"
+                                >
+                                  {t("admin.today.oldest_age_label")}: {formatRelativeAge(ageIso)}
+                                </span>
+                              )}
                             </span>
                           )}
                           {showOrdersDot && count === 0 && (

@@ -157,7 +157,7 @@ export default async function AdminTodayPage() {
                   {todayOrders.count}
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  LKR {formatPrice(todayOrders.grossCents)}
+                  {t("admin.today.today_orders_currency")} {formatPrice(todayOrders.grossCents)}
                 </span>
               </div>
               <Link

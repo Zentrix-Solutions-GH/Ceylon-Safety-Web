@@ -491,6 +491,7 @@ const en = {
   "admin.today.age_minutes_suffix": "m ago",
   "admin.today.age_hours_suffix": "h ago",
   "admin.today.age_days_suffix": "d ago",
+  "admin.today.today_orders_currency": "LKR",
 
   // S-058: Admin articles list
   "admin.articles.page_title": "Articles",
