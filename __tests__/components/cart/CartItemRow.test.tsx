@@ -64,8 +64,19 @@ describe("CartItemRow", () => {
     expect(screen.getByText("TA")).toBeInTheDocument();
   });
 
-  it("AC6: unavailable item shows Unavailable badge", () => {
+  it("AC6: unavailable item shows Unavailable badge (document_unavailable)", () => {
     render(<CartItemRow item={UNAVAILABLE_ITEM} onRemove={vi.fn()} isRemoving={false} />);
+    expect(screen.getByText(/cart\.item\.unavailable/)).toBeInTheDocument();
+  });
+
+  it("AC6: unavailable item shows Unavailable badge (language_unavailable)", () => {
+    const languageUnavailableItem: CartLineResult = {
+      ...AVAILABLE_ITEM,
+      cartItemId: "item-3",
+      available: false,
+      unavailableReason: "language_unavailable",
+    };
+    render(<CartItemRow item={languageUnavailableItem} onRemove={vi.fn()} isRemoving={false} />);
     expect(screen.getByText(/cart\.item\.unavailable/)).toBeInTheDocument();
   });
 

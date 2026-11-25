@@ -102,6 +102,20 @@ describe("CartPageClient — AC4: server-computed totals", () => {
     const totals = screen.getAllByText(/2,498/);
     expect(totals.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("AC4: displays server total even when it differs from sum of item prices (e.g. discount applied)", () => {
+    // Server returns a discounted total (199900) less than item sum (249800)
+    const discountedCart: CartCalculateResponse = {
+      items: [ITEM_1, ITEM_2],
+      subtotal: 249800,
+      total: 199900,
+    };
+    render(<CartPageClient initialCart={discountedCart} />);
+    // Discounted total 199900 cents = LKR 1,999.00 — must appear
+    expect(screen.getByText(/1,999/)).toBeInTheDocument();
+    // Summed total 249800 cents = LKR 2,498.00 — appears as subtotal, not as the total row
+    // Both values present is acceptable; the key invariant is the total row tracks the server value
+  });
 });
 
 describe("CartPageClient — AC3: remove item", () => {

@@ -7,13 +7,9 @@ import { t } from "@/messages/en";
 import { removeFromCartAction } from "@/app/(customer)/cart/actions";
 import CartItemRow from "@/components/cart/CartItemRow";
 import type { CartCalculateResponse } from "@/types/cart";
+import { formatPrice } from "@/components/cart/format-price";
 
-function formatPrice(cents: number): string {
-  return (cents / 100).toLocaleString("en-LK", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
+const CART_CALCULATE_URL = "/api/cart/calculate";
 
 interface CartPageClientProps {
   initialCart: CartCalculateResponse;
@@ -33,7 +29,7 @@ export default function CartPageClient({ initialCart }: CartPageClientProps) {
   // EC2: when the tab regains focus, re-fetch the cart in case another tab made changes
   const refetch = useCallback(async () => {
     try {
-      const res = await fetch("/api/cart/calculate", {
+      const res = await fetch(CART_CALCULATE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
@@ -79,7 +75,7 @@ export default function CartPageClient({ initialCart }: CartPageClientProps) {
 
     // Re-fetch totals from server (AC3/AC4: prices never computed in browser)
     try {
-      const res = await fetch("/api/cart/calculate", {
+      const res = await fetch(CART_CALCULATE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),

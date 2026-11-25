@@ -3,15 +3,9 @@
 import Image from "next/image";
 import { t } from "@/messages/en";
 import type { CartLineResult } from "@/types/cart";
+import { formatPrice } from "@/components/cart/format-price";
 
 const LANG_BADGE: Record<string, string> = { en: "EN", si: "SI", ta: "TA" };
-
-function formatPrice(cents: number): string {
-  return (cents / 100).toLocaleString("en-LK", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
 
 interface CartItemRowProps {
   item: CartLineResult;
