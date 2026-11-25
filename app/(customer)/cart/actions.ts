@@ -12,7 +12,9 @@ export async function removeFromCartAction(
   // Security: verify caller identity before delegating
   const auth = await requireActiveAccount();
   if (!auth.ok) {
-    if (auth.code === "account_suspended") return { ok: false, code: "not_allowed" };
+    if (auth.code === "account_suspended" || auth.code === "reauth_required") {
+      return { ok: false, code: "not_allowed" };
+    }
     return { ok: false, code: "not_signed_in" };
   }
 

@@ -5,14 +5,14 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { CustomerHeader } from "@/components/layout/CustomerHeader";
 import { getCartCount } from "@/lib/cart/count";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getCurrentUserCached } from "./user-cache";
 
 export const metadata: Metadata = {
   robots: { index: false },
 };
 
 export default async function CustomerLayout({ children }: { children: ReactNode }) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserCached();
   const cartCount = user ? await getCartCount(user.id) : 0;
   return (
     <>
