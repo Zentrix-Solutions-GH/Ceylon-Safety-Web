@@ -56,10 +56,15 @@ export async function checkExportRateLimit(adminId: string): Promise<ExportRateL
   try {
     const redis = getRedis();
     const key = `export:orders:${adminId}`;
-    const pipe = redis.pipeline();
-    pipe.incr(key);
-    pipe.expire(key, retryAfterSeconds);
-    const [count] = (await pipe.exec()) as [number, number];
+    const count = await redis.incr(key);
+    // NX: set TTL only if the key has no expiry yet.
+    // - On the first call (count === 1) this always fires and pins the expiry.
+    // - On calls 2 and 3 the NX is a no-op, so the expiry never drifts.
+    // - If a prior call crashed after INCR but before this line, the key has
+    //   no TTL; NX will set it on the next call, self-healing the gap.
+    await (redis.expire as (key: string, seconds: number, option: string) => Promise<0 | 1>)(
+      key, retryAfterSeconds, "NX",
+    );
 
     if (count > MAX_EXPORTS_PER_DAY) {
       return { allowed: false, retryAfterSeconds };

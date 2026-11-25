@@ -23,6 +23,21 @@ function daysBetween(a: string, b: string): number {
   return (new Date(b).getTime() - new Date(a).getTime()) / 86_400_000;
 }
 
+// Convert an ISO date (YYYY-MM-DD) to UTC equivalents of day-start and day-end
+// in Asia/Colombo (UTC+5:30, no DST). Avoids PostgREST timezone-offset parsing
+// ambiguity by using plain UTC strings.
+// e.g. "2026-11-01" → "2026-10-31T18:30:00Z"  (00:00:00+05:30 in UTC)
+// e.g. "2026-11-30" → "2026-11-30T18:29:59Z"  (23:59:59+05:30 in UTC)
+const COLOMBO_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+function colomboDayStartUTC(isoDate: string): string {
+  const ms = new Date(`${isoDate}T00:00:00Z`).getTime() - COLOMBO_OFFSET_MS;
+  return new Date(ms).toISOString().slice(0, 19) + "Z";
+}
+function colomboDayEndUTC(isoDate: string): string {
+  const ms = new Date(`${isoDate}T23:59:59Z`).getTime() - COLOMBO_OFFSET_MS;
+  return new Date(ms).toISOString().slice(0, 19) + "Z";
+}
+
 // ---------------------------------------------------------------------------
 // CSV helpers
 // ---------------------------------------------------------------------------
@@ -158,8 +173,8 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
             "order_items(title_snapshot, language, line_total_cents)",
           )
           .eq("status", "paid")
-          .gte("created_at", `${from}T00:00:00+05:30`)
-          .lte("created_at", `${to}T23:59:59+05:30`)
+          .gte("created_at", colomboDayStartUTC(from))
+          .lte("created_at", colomboDayEndUTC(to))
           .order("created_at", { ascending: true })
           .range(offset, offset + CHUNK_SIZE - 1);
 

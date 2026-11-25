@@ -141,12 +141,23 @@ describe("AC1: valid range returns CSV with correct columns", () => {
 
   it("date is in Asia/Colombo timezone (UTC+5:30)", async () => {
     okAuth();
-    // 2026-11-01T00:00:00Z = 2026-11-01T05:30:00+05:30
+    // 2026-11-01T00:00:00Z = 2026-11-01T05:30:00+05:30 → shows as 2026-11-01
     mockDb([makeRow({ created_at: "2026-11-01T00:00:00.000Z" })]);
 
     const res = await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
     const text = await res.text();
     expect(text).toContain("2026-11-01");
+  });
+
+  it("gte/lte use UTC equivalents of Colombo day boundaries", async () => {
+    okAuth();
+    const db = mockDb([makeRow()]);
+
+    await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
+    // 2026-11-01 00:00:00+05:30 = 2026-10-31T18:30:00Z
+    // 2026-11-30 23:59:59+05:30 = 2026-11-30T18:29:59Z
+    expect(db.select().gte).toHaveBeenCalledWith("created_at", "2026-10-31T18:30:00Z");
+    expect(db.select().lte).toHaveBeenCalledWith("created_at", "2026-11-30T18:29:59Z");
   });
 
   it("sets Cache-Control: no-store header", async () => {
