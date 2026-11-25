@@ -92,12 +92,13 @@ export default async function AdminTodayPage() {
     );
   }
 
+  // todayOrders is a summary row, not an actionable queue item — exclude it
+  // from hasLines so the empty state fires when queues are clear but orders exist.
   const hasLines =
     comments != null ||
     bankSlips != null ||
     downloadRequests != null ||
-    ordersNeedingReview != null ||
-    todayOrders != null;
+    ordersNeedingReview != null;
 
   return (
     <div className="max-w-xl">
@@ -107,8 +108,7 @@ export default async function AdminTodayPage() {
         <p className="text-muted-foreground">{t("admin.today.empty")}</p>
       )}
 
-      {hasLines && (
-        <ul>
+      <ul>
           {comments != null && (
             <QueueRow
               label={t("admin.today.comments_label")}
@@ -169,7 +169,6 @@ export default async function AdminTodayPage() {
             </li>
           )}
         </ul>
-      )}
     </div>
   );
 }

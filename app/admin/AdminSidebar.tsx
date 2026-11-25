@@ -229,7 +229,7 @@ export default function AdminSidebar({ role, badgeCounts, ordersNeedingReview = 
                               {count > 99 ? "99+" : count}
                             </span>
                           )}
-                          {showOrdersDot && (
+                          {showOrdersDot && count === 0 && (
                             <span
                               role="img"
                               aria-label={t("admin.badge.orders_needs_review_aria")}
