@@ -84,7 +84,7 @@ Prior art: searched docs/ for "today list", "dashboard", "REQ-140", "badges", "a
 ## Evidence
 
 ```
-$ bash scripts/check.sh   # run on branch HEAD d00e8b1, 2026-11-25
+$ bash scripts/check.sh   # run on branch HEAD a95175b, 2026-11-25
 
 ── ESLint ──
 ✓ ESLint passed
@@ -124,9 +124,11 @@ S-102 tests (run separately: npx vitest run __tests__/admin/):
 
 - **P1** `app/admin/page.tsx:5` — `getAdminTodayCached` imported from `./layout`; layout is dual-purpose. Fixed: moved to `app/admin/today-cache.ts`. (full-review 2026-11-25)
 - **P1** `app/admin/format-relative-age.ts:4-9` — hardcoded English strings bypassed `messages/en.ts`. Fixed: added keys `admin.today.age_just_now/minutes_suffix/hours_suffix/days_suffix`; function now calls `t()`. (full-review 2026-11-25)
-- **P1** `app/admin/AdminSidebar.tsx:217` — age text in `title` attr only (mouse-only, fails WCAG 2.1 1.4.13). Fixed: age included in `aria-label` so keyboard/screen-reader users can access it; `title` retained for sighted mouse users. (full-review 2026-11-25)
+- **P1** `app/admin/AdminSidebar.tsx:217` — age text in `title` attr only (mouse-only, fails WCAG 2.1 1.4.13). Fixed: CSS tooltip (`role="tooltip"`, `group-hover/badge:visible group-focus-within/badge:visible`) added for sighted keyboard users; `aria-label` retains age for screen readers. (re-review 6 2026-11-25)
 - **P1** `app/admin/AdminSidebar.tsx` — `formatRelativeAge` had no isolated unit test; test was wall-clock-coupled. Fixed: extracted to `app/admin/format-relative-age.ts`, test imports real function. (full-review 2026-11-25)
 - **P1** `app/admin/layout.tsx` — badge counts serialized for all keys regardless of role. Fixed: `Partial<AdminBadgeCounts>` used; layout only includes keys for fields backend returned. (full-review 2026-11-25)
+- **P0** `app/admin/page.tsx:160` — `"LKR"` hardcoded, bypassing `messages/en.ts`. Fixed: `admin.today.today_orders_currency` key added; `t()` used. (re-review 6 2026-11-25)
+- **P1** `__tests__/admin/badges.test.tsx:85` — test asserted `title` but not `aria-label` contained age. Fixed: assertion `aria-label contains "1d ago"` added. (re-review 6 2026-11-25)
 
 ## After this merges, a user can:
 
