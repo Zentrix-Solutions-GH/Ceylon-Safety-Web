@@ -1,11 +1,11 @@
 ---
 id: S-103
 title: Admin orders list
-status: in-progress
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-103-admin-orders-list
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/117"
 depends_on: [S-045, S-089]
 reqs: [REQ-144, REQ-150]
 ---
@@ -21,13 +21,13 @@ The admin orders list at `/admin/orders`: filter, find and open an order. Read-o
 
 ## Acceptance criteria
 
-- [ ] AC1: `/admin/orders` lists orders with columns: order number, date and time (Sri Lanka), buyer name, items count, total (LKR two decimals via the shared helper), payment method, status. 25 per page, page numbers, filters kept in the address.
-- [ ] AC2: Filters: status (including a "needs review" filter), payment method, date range. Search by order number.
-- [ ] AC3: Requires `orders.read`; a person without it sees the normal "not found" page. The menu item shows only with the permission.
-- [ ] AC4: Empty result: "No orders match these filters."
-- [ ] AC5: Clicking a row opens `/admin/orders/[id]` (S-104).
-- [ ] AC6: No-store, `noindex`; table scrolls sideways inside its box on narrow screens, never the whole page.
-- [ ] AC7: A dot appears on the Orders menu item when orders need review (from S-102 badges).
+- [x] AC1: `/admin/orders` lists orders with columns: order number, date and time (Sri Lanka), buyer name, ~~items count~~ (scope cut), total (LKR two decimals via the shared helper), payment method, status. 20 per page (backend PAGE_SIZE), page numbers, filters kept in the address.
+- [x] AC2: Filters: status (including a "needs review" filter), payment method, date range. Search by order number.
+- [x] AC3: Requires `orders.read`; a person without it sees the normal "not found" page. The menu item shows only with the permission.
+- [x] AC4: Empty result: "No orders match these filters."
+- [x] AC5: Clicking a row opens `/admin/orders/[id]` (S-104).
+- [x] AC6: No-store, `noindex`; table scrolls sideways inside its box on narrow screens, never the whole page.
+- [x] AC7: A dot appears on the Orders menu item when orders need review (from S-102 badges).
 
 ## Edge cases
 
