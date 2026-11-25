@@ -10,6 +10,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 type BadgeCounts = { comments: number; bankTransfers: number; downloadRequests: number };
@@ -89,7 +93,6 @@ describe("AC3: oldest age shown on badge hover", () => {
     const badge = screen.getByText("3");
     expect(badge).toHaveAttribute("title");
     expect(badge.getAttribute("title")).toContain("1d ago");
-    vi.useRealTimers();
   });
 
   it("badge has no title attribute when no oldestAt is provided", () => {

@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAdminTodayCached } from "./today-cache";
 import AdminShell from "./AdminShell";
+import type { AdminBadgeCounts } from "./AdminShell";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -40,7 +41,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   // S-102: Fetch badge counts for sidebar. Non-fatal — shell renders without them.
   // Only include keys for fields the backend returned (i.e. the user has that permission).
   // Omitting a key prevents its zero from reaching the client-component serialization.
-  let badgeCounts: Partial<{ comments: number; bankTransfers: number; downloadRequests: number }> | null = null;
+  let badgeCounts: Partial<AdminBadgeCounts> | null = null;
   let ordersNeedingReview = false;
   let badgeOldestAt: Partial<Record<"comments" | "bankTransfers" | "downloadRequests", string>> = {};
   try {
