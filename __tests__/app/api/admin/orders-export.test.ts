@@ -398,6 +398,20 @@ describe("EC2: 4th export returns 429", () => {
 });
 
 // ---------------------------------------------------------------------------
+// AC7 — 50-row chunk boundary
+// ---------------------------------------------------------------------------
+
+describe("AC7: streams in 50-row chunks", () => {
+  it("calls range with (0, 49) on the first page", async () => {
+    okAuth();
+    const db = mockDb([makeRow()]);
+
+    await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
+    expect(db.range).toHaveBeenCalledWith(0, 49);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // CSV injection guard
 // ---------------------------------------------------------------------------
 
