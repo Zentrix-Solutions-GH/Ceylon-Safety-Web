@@ -5,25 +5,15 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { CustomerHeader } from "@/components/layout/CustomerHeader";
 import { getCartCount } from "@/lib/cart/count";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/server";
 
 export const metadata: Metadata = {
   robots: { index: false },
 };
 
-async function getUserId(): Promise<string | null> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data: userData } = await supabase.auth.getUser();
-    return userData?.user?.id ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export default async function CustomerLayout({ children }: { children: ReactNode }) {
-  const userId = await getUserId();
-  const cartCount = userId ? await getCartCount(userId) : 0;
+  const user = await getCurrentUser();
+  const cartCount = user ? await getCartCount(user.id) : 0;
   return (
     <>
       <CustomerHeader cartCount={cartCount} />

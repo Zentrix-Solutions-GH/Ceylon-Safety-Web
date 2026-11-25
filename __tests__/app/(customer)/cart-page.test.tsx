@@ -1,4 +1,5 @@
 // S-091: CartPage RSC — AC1 auth guard
+import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -32,13 +33,16 @@ describe("CartPage — AC1: auth guard", () => {
     expect(mockCalculateCart).not.toHaveBeenCalled();
   });
 
-  it("renders CartPageClient for authenticated user", async () => {
+  it("renders CartPageClient for authenticated user with calculated cart", async () => {
+    const mockCart = { items: [{ documentId: "d1", language: "EN", title: "Test", price: 500, available: true, cartItemId: "ci-1" }], subtotal: 500, total: 500 };
     mockRequireActiveAccount.mockResolvedValue({ ok: true, user: { id: "user-1" } });
-    mockCalculateCart.mockResolvedValue({ items: [], subtotal: 0, total: 0 });
+    mockCalculateCart.mockResolvedValue(mockCart);
 
     const result = await CartPage();
 
     expect(mockCalculateCart).toHaveBeenCalledWith("user-1");
+    // Result must be a React element whose initialCart prop carries server-computed totals
     expect(result).not.toBeNull();
+    expect((result as React.ReactElement).props.initialCart).toEqual(mockCart);
   });
 });
