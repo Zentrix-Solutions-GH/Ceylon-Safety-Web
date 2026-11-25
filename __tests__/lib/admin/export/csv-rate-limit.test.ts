@@ -18,7 +18,6 @@ async function importModule(upstashAvailable = false) {
     }));
     process.env.UPSTASH_REDIS_REST_URL = "https://fake.upstash.io";
     process.env.UPSTASH_REDIS_REST_TOKEN = "fake-token";
-    process.env.RATELIMIT_HASH_SECRET = "a".repeat(64);
   } else {
     vi.doMock("@upstash/redis", () => ({ Redis: vi.fn() }));
     delete process.env.UPSTASH_REDIS_REST_URL;

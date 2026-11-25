@@ -256,29 +256,42 @@ describe("AC3: rate limit 3 exports per day", () => {
 // ---------------------------------------------------------------------------
 
 describe("AC4: audit log row written", () => {
-  it("writes order.export audit row on success", async () => {
+  it("writes a started audit row before the stream opens (TCP disconnect protection)", async () => {
+    okAuth();
+    mockDb([makeRow()]);
+
+    // The started row fires synchronously before the response is returned.
+    await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
+    const startedCall = mockWriteAuditRow.mock.calls[0][0];
+    expect(startedCall.action).toBe("order.export");
+    expect(startedCall.after?.status).toBe("started");
+    expect(startedCall.after?.row_count).toBe(0);
+  });
+
+  it("writes a completed audit row after stream closes", async () => {
     okAuth();
     mockDb([makeRow()]);
 
     const res = await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
-    await res.text(); // drain stream so async callbacks fire
-    expect(mockWriteAuditRow).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "order.export" }),
-    );
+    await res.text(); // drain stream so fireAuditAndAlert() completes
+    const completedCall = mockWriteAuditRow.mock.calls[1][0];
+    expect(completedCall.action).toBe("order.export");
+    expect(completedCall.after?.status).toBe("completed");
   });
 
-  it("audit row includes actorId, from, to, row_count, include_email", async () => {
+  it("audit completion row includes actorId, from, to, row_count, include_email", async () => {
     okAuth(SUPER_ADMIN_USER);
     mockDb([makeRow(), makeRow({ order_number: "CS-2026-0002" })]);
 
     const res = await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
     await res.text(); // drain stream so fireAuditAndAlert() completes before asserting
-    const call = mockWriteAuditRow.mock.calls[0][0];
+    const call = mockWriteAuditRow.mock.calls[1][0]; // calls[1] = completion row
     expect(call.actorId).toBe(SUPER_ADMIN_USER.id);
     expect(call.after).toMatchObject({
       from: "2026-11-01",
       to: "2026-11-30",
       include_email: false,
+      status: "completed",
     });
     expect(call.after?.row_count).toBe(2);
   });
@@ -289,7 +302,7 @@ describe("AC4: audit log row written", () => {
 
     const res = await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30&include_email=true");
     await res.text();
-    const call = mockWriteAuditRow.mock.calls[0][0];
+    const call = mockWriteAuditRow.mock.calls[1][0]; // calls[1] = completion row
     expect(call.after?.include_email).toBe(true);
   });
 });
@@ -362,6 +375,18 @@ describe("AC6: date range validation", () => {
     const body = await res.json();
     expect(body.error).toBe("validation_failed");
   });
+
+  it("invalid calendar date that passes ISO regex returns 400 (e.g. 2026-13-01)", async () => {
+    mockRequireStaff.mockResolvedValue({ ok: true, user: SUPER_ADMIN_USER });
+    const res = await GET("/api/admin/orders-export?from=2026-13-01&to=2026-11-30");
+    expect(res.status).toBe(400);
+  });
+
+  it("invalid calendar date in to param returns 400 (e.g. 2026-02-31)", async () => {
+    mockRequireStaff.mockResolvedValue({ ok: true, user: SUPER_ADMIN_USER });
+    const res = await GET("/api/admin/orders-export?from=2026-01-01&to=2026-02-31");
+    expect(res.status).toBe(400);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -373,6 +398,18 @@ describe("unauthenticated returns 401", () => {
     mockRequireStaff.mockResolvedValue({ ok: false, code: "reauth_required" });
     const res = await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
     expect(res.status).toBe(401);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC1 — admin-only: staff/editor without orders.export permission → 403
+// ---------------------------------------------------------------------------
+
+describe("AC1: staff role without orders.export permission returns 403", () => {
+  it("returns 403 when requireStaff denies (staff role, no orders.export)", async () => {
+    mockRequireStaff.mockResolvedValue({ ok: false, code: "permission_denied" });
+    const res = await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
+    expect(res.status).toBe(403);
   });
 });
 
@@ -471,7 +508,7 @@ describe("DB error mid-stream: audit receives db_error:true", () => {
 
     expect(res.status).toBe(200);
 
-    const call = mockWriteAuditRow.mock.calls[0][0];
+    const call = mockWriteAuditRow.mock.calls[1][0]; // calls[1] = completion row
     expect(call.after?.db_error).toBe(true);
   });
 });

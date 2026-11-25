@@ -20,7 +20,7 @@ Allow admins to download a CSV of paid order lines for the accountant. The expor
 
 ## Acceptance criteria
 
-- [x] AC1: `GET /api/admin/orders-export?from=YYYY-MM-DD&to=YYYY-MM-DD` (requires `orders.export`, admin only) returns a streaming `text/csv` response with headers: order_ref, date (Asia/Colombo), buyer_name, document_title, language, unit_price_lkr, total_lkr, payment_method, status — one row per order item
+- [x] AC1: `GET /api/admin/orders-export?from=YYYY-MM-DD&to=YYYY-MM-DD` (requires `orders.export` — B1/M16/A4 owner-confirmed 2026-11-25; admin only) returns a streaming `text/csv` response with headers: order_ref, date (Asia/Colombo), buyer_name (owner-confirmed 2026-11-25), document_title, language, unit_price_lkr, total_lkr, payment_method, status — one row per order item
 - [x] AC2: Buyer email is NOT included in the CSV by default; a Super Admin may pass `?include_email=true` to add an `email` column; non-Super-Admin with `include_email=true` returns 403
 - [x] AC3: Rate limit: at most 3 exports per calendar day per admin user; over the limit returns 429 with a `Retry-After` header
 - [x] AC4: Each export writes an `order.export` row to the audit log with: admin user id, `from`, `to`, row count, `include_email` flag

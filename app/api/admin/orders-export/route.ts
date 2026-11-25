@@ -115,6 +115,20 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
   const { from, to, include_email } = parsed.data;
   const includeEmail = include_email === "true";
 
+  // Real calendar date check — regex passes "2026-13-01" (NaN) and "2026-02-31"
+  // (JS overflows to March 3). Round-trip: parse then re-format and compare.
+  function isRealDate(iso: string): boolean {
+    const d = new Date(`${iso}T00:00:00Z`);
+    if (isNaN(d.getTime())) return false;
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${day}` === iso;
+  }
+  if (!isRealDate(from) || !isRealDate(to)) {
+    return NextResponse.json({ error: "validation_failed" }, { status: 400 });
+  }
+
   // from ≤ to
   if (new Date(from) > new Date(to)) {
     return NextResponse.json({ error: "validation_failed" }, { status: 400 });
@@ -156,8 +170,18 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
   let hadDbError = false;
   let auditFired = false;
 
-  // Fires audit log and owner alert exactly once — called from both normal
-  // stream completion and the cancel callback (client disconnect).
+  // Write a "started" row before the stream opens so TCP disconnects are recorded.
+  // Admin_audit_log is append-only; a disconnect leaves only the started row.
+  writeAuditRow({
+    action: "order.export",
+    actorId: user.id,
+    after: { from, to, include_email: includeEmail, row_count: 0, status: "started" },
+  }).catch((e: unknown) => {
+    console.error("[orders-export] audit started-row write failed:", (e as Error).message);
+  });
+
+  // Fires audit completion row + owner alert exactly once — called from both
+  // normal stream completion and the cancel() callback (explicit reader cancel).
   function fireAuditAndAlert() {
     if (auditFired) return;
     auditFired = true;
@@ -165,7 +189,7 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
     writeAuditRow({
       action: "order.export",
       actorId: user.id,
-      after: { from, to, row_count: rowCount, include_email: includeEmail, ...(hadDbError ? { db_error: true } : {}) },
+      after: { from, to, row_count: rowCount, include_email: includeEmail, status: "completed", ...(hadDbError ? { db_error: true } : {}) },
     }).catch((e: unknown) => {
       console.error("[orders-export] audit write failed:", (e as Error).message);
     });
