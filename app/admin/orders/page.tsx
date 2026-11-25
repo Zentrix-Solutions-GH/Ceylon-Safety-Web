@@ -59,10 +59,15 @@ export default async function AdminOrdersPage({
   const data = result.data;
   if (!data) notFound();
 
+  // key forces OrdersListClient to remount on every URL change so uncontrolled
+  // filter inputs always reflect the current search params.
+  const clientKey = new URLSearchParams(params as Record<string, string>).toString();
+
   return (
     <div>
       <h1 className="mb-6 text-2xl font-semibold">{t("admin.orders.heading")}</h1>
       <OrdersListClient
+        key={clientKey}
         items={data.items}
         total={data.total}
         page={data.page}

@@ -161,7 +161,6 @@ export default function OrdersListClient({
     <div>
       {/* ── Filters ────────────────────────────────────────────────────── */}
       <form
-        role="search"
         className="mb-4 flex flex-wrap gap-3 items-end"
         onSubmit={(e) => {
           e.preventDefault();
