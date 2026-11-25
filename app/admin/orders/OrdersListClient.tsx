@@ -165,13 +165,16 @@ export default function OrdersListClient({
         onSubmit={(e) => {
           e.preventDefault();
           const fd = new FormData(e.currentTarget);
+          const rawFrom = fd.get("dateFrom") as string | null;
+          const rawTo = fd.get("dateTo") as string | null;
           navigate({
             status: fd.get("status") as string | undefined,
             paymentMethod: fd.get("paymentMethod") as string | undefined,
             needsReview: fd.get("needsReview") === "on" ? "true" : undefined,
             search: fd.get("search") as string | undefined,
-            dateFrom: fd.get("dateFrom") as string | undefined,
-            dateTo: fd.get("dateTo") as string | undefined,
+            // Backend schema requires ISO 8601 with offset; date inputs emit YYYY-MM-DD.
+            dateFrom: rawFrom ? `${rawFrom}T00:00:00+05:30` : undefined,
+            dateTo: rawTo ? `${rawTo}T23:59:59+05:30` : undefined,
           });
         }}
       >

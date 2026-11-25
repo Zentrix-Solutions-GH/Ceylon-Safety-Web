@@ -513,6 +513,7 @@ const en = {
   "admin.orders.filter.search_placeholder": "Order number…",
   "admin.orders.filter.apply": "Apply",
   "admin.orders.empty": "No orders match these filters.",
+  "admin.orders.load_error": "Could not load orders. Please try again.",
   "admin.orders.deleted_user": "Deleted user",
   "admin.orders.pagination_label": "Pagination",
   "admin.orders.page_prev": "Previous",

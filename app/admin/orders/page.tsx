@@ -45,14 +45,11 @@ export default async function AdminOrdersPage({
 
   if (!result.ok) {
     if (result.code === "not_allowed") notFound();
-    // Other errors: show empty state via empty items
     return (
-      <OrdersListClient
-        items={[]}
-        total={0}
-        page={1}
-        pageSize={20}
-      />
+      <div>
+        <h1 className="mb-6 text-2xl font-semibold">{t("admin.orders.heading")}</h1>
+        <p className="text-destructive py-8 text-center">{t("admin.orders.load_error")}</p>
+      </div>
     );
   }
 

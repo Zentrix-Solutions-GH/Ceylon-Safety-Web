@@ -88,9 +88,8 @@ describe("OrdersListClient — AC1: columns", () => {
 
   it("renders date in Sri Lanka timezone (UTC+5:30)", async () => {
     await renderPage();
-    // 2026-11-01T10:30:00Z = 16:00 IST = 16:00 Asia/Colombo
-    // We just verify a date string is present — exact format is locale-dependent
-    expect(screen.getByText(/2026/)).toBeInTheDocument();
+    // 2026-11-01T10:30:00Z = 16:00 in Asia/Colombo (UTC+5:30)
+    expect(screen.getByText(/16:00/)).toBeInTheDocument();
   });
 
   it("renders payment method in table row", async () => {
@@ -144,6 +143,14 @@ describe("OrdersListClient — AC2: filter controls", () => {
     await renderPage();
     expect(screen.getByLabelText(/to/i)).toBeInTheDocument();
   });
+
+  it("submitting status filter calls router.push with status param", async () => {
+    await renderPage();
+    const select = screen.getByRole("combobox", { name: /status/i });
+    await userEvent.selectOptions(select, "paid");
+    await userEvent.click(screen.getByRole("button", { name: /apply/i }));
+    expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("status=paid"));
+  });
 });
 
 // ─── AC4 / EC3: empty state ───────────────────────────────────────────────────
@@ -169,9 +176,17 @@ describe("AC4/EC3: empty state", () => {
 describe("EC2: anonymised buyer", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("shows 'Deleted user' when buyerName is empty", async () => {
+  it("shows 'Deleted user' when buyerName is empty string", async () => {
     mockGetOrdersList.mockResolvedValue(
       makeResult([makeItem({ buyerName: "", buyerEmail: "" })]),
+    );
+    await renderPage();
+    expect(screen.getByText(/deleted user/i)).toBeInTheDocument();
+  });
+
+  it("shows 'Deleted user' when buyerName is whitespace only", async () => {
+    mockGetOrdersList.mockResolvedValue(
+      makeResult([makeItem({ buyerName: "   ", buyerEmail: "" })]),
     );
     await renderPage();
     expect(screen.getByText(/deleted user/i)).toBeInTheDocument();
@@ -188,6 +203,12 @@ describe("AC3: permission guard", () => {
     mockGetOrdersList.mockResolvedValue({ ok: false, code: "not_allowed" });
     await renderPage();
     expect(notFound).toHaveBeenCalled();
+  });
+
+  it("shows error message on non-not_allowed server error", async () => {
+    mockGetOrdersList.mockResolvedValue({ ok: false, code: "validation_failed" });
+    await renderPage();
+    expect(screen.getByText(/could not load orders/i)).toBeInTheDocument();
   });
 });
 
