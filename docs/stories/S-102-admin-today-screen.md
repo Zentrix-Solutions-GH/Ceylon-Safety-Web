@@ -1,11 +1,11 @@
 ---
 id: S-102
 title: Admin Today list and menu badges
-status: draft
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-102-admin-today-screen
-pr: ~
+pr: https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/114
 depends_on: [S-045, S-101]
 reqs: [REQ-140, REQ-150]
 ---
@@ -21,17 +21,17 @@ The first admin screen after sign-in: one plain list of waiting work, oldest fir
 
 ## Acceptance criteria
 
-- [ ] AC1: `/admin` renders the Today list from `getAdminToday` (S-101): comments waiting, bank slips waiting (with "needs second approval" count), download requests waiting, orders needing review, today's orders and gross LKR. Each line has a button that opens its queue.
-- [ ] AC2: Lines the person may not open are not rendered. Empty state: "Nothing is waiting. Well done."
-- [ ] AC3: Menu badges (Comments, Bank transfers, Download requests, and a dot on Orders for `needs_review`) show the counts from the same call; "99+" above 99; the oldest item's age on hover; counted once per page load, no polling.
-- [ ] AC4: Page and calls are never cached; errors show the mapped plain sentence (`mfa_required`, `reauth_required`, `rate_limited`).
+- [x] AC1: `/admin` renders the Today list from `getAdminToday` (S-101): comments waiting, bank slips waiting (with "needs second approval" count), download requests waiting, orders needing review, today's orders and gross LKR. Each line has a button that opens its queue.
+- [x] AC2: Lines the person may not open are not rendered. Empty state: "Nothing is waiting. Well done."
+- [x] AC3: Menu badges (Comments, Bank transfers, Download requests, and a dot on Orders for `needs_review`) show the counts from the same call; "99+" above 99; the oldest item's age on hover; counted once per page load, no polling.
+- [x] AC4: Page and calls are never cached; errors show the mapped plain sentence (`mfa_required`, `reauth_required`, `rate_limited`).
 - [ ] AC5: Keyboard reachable, visible focus, colour is never the only signal (WCAG 2.1 AA target).
 
 ## Edge cases
 
-- [ ] EC1: A role with one permission sees only that line.
-- [ ] EC2: The call fails — the page shows a retry message, not a blank screen.
-- [ ] EC3: Counts above 99 show "99+".
+- [x] EC1: A role with one permission sees only that line.
+- [x] EC2: The call fails — the page shows a retry message, not a blank screen.
+- [x] EC3: Counts above 99 show "99+".
 - [ ] EC4: The shell below 1024 px shows the "works best on a computer" note from S-045.
 
 ## Contract
@@ -60,21 +60,76 @@ Types added or changed in `types/` by this story:
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
+Prior art: searched docs/ for "today list", "dashboard", "REQ-140", "badges", "admin panel design". Found: `docs/superpowers/specs/2026-10-17-ceylonsafety-admin-panel-design.md` §3.2–3.5, §5.1, §12, §17 — this story implements the Today list described there. `lib/admin/today.ts` and `types/admin.ts` already exist from S-101. `AdminShell` / `AdminSidebar` already support `badgeCounts` from S-045. `lib/utils/price.ts` has `formatPrice` for LKR cents display.
 
-Prior art: read admin panel design sections 3.2–3.5, 5.1, 12, 17 and frontend architecture notes on admin layout. Implements the Today list and badges; supersedes the "StatsCard" tile idea in the file-structure tree for Release 1.
+**Decision on `ordersNeedingReview` dot**: `AdminBadgeCounts` in `types/api.ts` (backend-owned) does not include orders. Rather than adding a types-layer change, the layout page will read `AdminTodayResult` directly and pass a boolean `ordersNeedingReview` prop to AdminShell/AdminSidebar to render the dot. No types/ changes needed.
+
+**Queue button routes**: Queue screens don't exist yet. Buttons render as links pointing to the eventual routes (`/admin/comments`, `/admin/bank-transfers`, `/admin/download-requests`, `/admin/orders`). They are always rendered (not disabled) — the routes will return 404 until those stories ship.
+
+**Files to create / edit (frontend only)**:
+
+| File | Action | Reason |
+|---|---|---|
+| `app/admin/page.tsx` | replace stub | Main Today list page (Server Component) |
+| `app/admin/AdminShell.tsx` | edit | Add `ordersNeedingReview?: boolean` prop, pass to sidebar |
+| `app/admin/AdminSidebar.tsx` | edit | Render dot on Orders when `ordersNeedingReview` is true; add age tooltip |
+| `messages/en.ts` | edit | Add all today-page UI strings |
+| `__tests__/admin/today.test.tsx` | create | AC1/AC2/AC4/EC2 component tests |
+| `__tests__/admin/badges.test.tsx` | create | AC3/EC3 badge formatting + hover age |
+
+**No backend files, no types/ changes, no migration needed.**
+
+**Step order**: messages → tests (red) → page + shell changes (green) → check.sh → review → PR.
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
+```
+$ bash scripts/check.sh   # run on branch HEAD (re-review 7 fixes), 2026-11-25
 
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+ Test Files  1 failed | 268 passed | 15 skipped (284)
+      Tests  18 failed | 2843 passed | 60 skipped (2921)
+
+The 18 failures are all in __tests__/components/admin/ArticleEditor/index.test.tsx:
+  TypeError: Cannot read properties of undefined (reading 'clear')  at localStorage.clear() :97
+  This failure exists on dev HEAD (e45a59d) before any S-102 change — pre-existing.
+
+✗ Vitest (unit) FAILED (pre-existing, unrelated to S-102)
+
+── pgTAP / seed / types-freshness / public-pages ──
+(Supabase not running during this run — skipped per check.sh design)
+
+S-102 tests (run separately: npx vitest run __tests__/admin/):
+  ✓ __tests__/admin/today.test.tsx           20 tests
+  ✓ __tests__/admin/badges.test.tsx           9 tests
+  ✓ __tests__/admin/format-relative-age.test.ts  6 tests
+  ✓ __tests__/admin/layout.test.tsx          39 tests
+  ✓ __tests__/admin/error.test.tsx            4 tests
+  ✓ __tests__/admin/staff.test.tsx           24 tests
+  Total: 102 tests, all pass
 ```
-$ bash scripts/check.sh
-```
+
+## Out of scope
+
+- `e2e/admin-today.spec.ts` (AC5 keyboard focus Playwright test) — no Playwright setup exists in this project. JSDOM axe tests cover role/ARIA/label violations. Full keyboard focus-ring and colour-independence verification requires a future e2e story. AC5 checkbox unchecked to reflect this gap.
+- Visible focus rings on the orders dot (colour-only signal) — cannot be verified without a real browser; deferred to future e2e story.
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `app/admin/page.tsx:5` — `getAdminTodayCached` imported from `./layout`; layout is dual-purpose. Fixed: moved to `app/admin/today-cache.ts`. (full-review 2026-11-25)
+- **P1** `app/admin/format-relative-age.ts:4-9` — hardcoded English strings bypassed `messages/en.ts`. Fixed: added keys `admin.today.age_just_now/minutes_suffix/hours_suffix/days_suffix`; function now calls `t()`. (full-review 2026-11-25)
+- **P1** `app/admin/AdminSidebar.tsx:217` — age text in `title` attr only (mouse-only, fails WCAG 2.1 1.4.13). Fixed: CSS tooltip (`role="tooltip"`, `group-hover/badge:visible group-focus-within/badge:visible`) added for sighted keyboard users; `aria-label` retains age for screen readers. (re-review 6 2026-11-25)
+- **P1** `app/admin/AdminSidebar.tsx` — `formatRelativeAge` had no isolated unit test; test was wall-clock-coupled. Fixed: extracted to `app/admin/format-relative-age.ts`, test imports real function. (full-review 2026-11-25)
+- **P1** `app/admin/layout.tsx` — badge counts serialized for all keys regardless of role. Fixed: `Partial<AdminBadgeCounts>` used; layout only includes keys for fields backend returned. (full-review 2026-11-25)
+- **P0** `app/admin/page.tsx:160` — `"LKR"` hardcoded, bypassing `messages/en.ts`. Fixed: `admin.today.today_orders_currency` key added; `t()` used. (re-review 6 2026-11-25)
+- **P1** `__tests__/admin/badges.test.tsx:85` — test asserted `title` but not `aria-label` contained age. Fixed: assertion `aria-label contains "1d ago"` added. (re-review 6 2026-11-25)
+- **P1** `app/admin/AdminSidebar.tsx:224` — `group-focus-within/badge` never fired: focused element (Link) is a parent of the group span, not a child. Fixed: `group/nav-item` added to `<li>`; tooltip uses `group-focus-within/nav-item:visible`. Also added `id` to tooltip and `aria-describedby` to badge (P2). (re-review 7 2026-11-25)
 
 ## After this merges, a user can:
 

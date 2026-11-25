@@ -8,6 +8,7 @@ import type { MessageKey } from "@/messages/en";
 import { PERMISSION_MAP } from "@/lib/auth/permissions";
 import type { UserRole } from "@/types/auth";
 import type { AdminBadgeCounts } from "./AdminShell";
+import { formatRelativeAge } from "./format-relative-age";
 
 // ─── Permission helpers ───────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ interface NavItem {
   href: string;
   permission?: string;
   badge?: keyof AdminBadgeCounts;
+  ordersDot?: boolean;
 }
 
 interface NavGroup {
@@ -48,7 +50,7 @@ function buildGroups(): NavGroup[] {
   return [
     {
       label: t("admin.nav.today"),
-      items: [{ label: t("admin.nav.today"), href: "/admin/dashboard" }],
+      items: [{ label: t("admin.nav.today"), href: "/admin" }],
     },
     {
       label: t("admin.nav.work_queues"),
@@ -72,7 +74,7 @@ function buildGroups(): NavGroup[] {
       permission: "documents.*",
       items: [
         { label: t("admin.nav.documents"), href: "/admin/documents", permission: "documents.*" },
-        { label: t("admin.nav.orders"), href: "/admin/orders", permission: "orders.read" },
+        { label: t("admin.nav.orders"), href: "/admin/orders", permission: "orders.read", ordersDot: true },
       ],
     },
     {
@@ -134,12 +136,14 @@ function buildGroups(): NavGroup[] {
 
 interface AdminSidebarProps {
   role: UserRole;
-  badgeCounts: AdminBadgeCounts | null;
+  badgeCounts: Partial<AdminBadgeCounts> | null;
+  ordersNeedingReview?: boolean;
+  badgeOldestAt?: Partial<Record<keyof AdminBadgeCounts, string>>;
   open: boolean;
   onClose: () => void;
 }
 
-export default function AdminSidebar({ role, badgeCounts, open, onClose }: AdminSidebarProps) {
+export default function AdminSidebar({ role, badgeCounts, ordersNeedingReview = false, badgeOldestAt, open, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   // buildGroups() calls t() which returns static strings — memoize to avoid rebuilding the array on every render.
   const groups = useMemo(() => buildGroups(), []);
@@ -190,9 +194,11 @@ export default function AdminSidebar({ role, badgeCounts, open, onClose }: Admin
                 <ul role="list">
                   {visibleItems.map((item) => {
                     const count = item.badge ? (badgeCounts?.[item.badge] ?? 0) : 0;
+                    const ageIso = item.badge ? badgeOldestAt?.[item.badge] : undefined;
                     const isActive = pathname === item.href;
+                    const showOrdersDot = !!item.ordersDot && ordersNeedingReview;
                     return (
-                      <li key={item.href}>
+                      <li key={item.href} className="group/nav-item">
                         <Link
                           href={item.href}
                           aria-current={isActive ? "page" : undefined}
@@ -205,12 +211,34 @@ export default function AdminSidebar({ role, badgeCounts, open, onClose }: Admin
                         >
                           <span>{item.label}</span>
                           {count > 0 && (
-                            <span
-                              aria-label={`${count} ${item.badge ? t(BADGE_ARIA[item.badge]) : ""}`}
-                              className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground"
-                            >
-                              {count > 99 ? "99+" : count}
+                            <span className="group/badge relative ml-2 inline-flex">
+                              <span
+                                aria-label={ageIso
+                                  ? `${count} ${item.badge ? t(BADGE_ARIA[item.badge]) : ""} — ${t("admin.today.oldest_age_label")}: ${formatRelativeAge(ageIso)}`
+                                  : `${count} ${item.badge ? t(BADGE_ARIA[item.badge]) : ""}`}
+                                aria-describedby={ageIso && item.badge ? `badge-age-${item.badge}` : undefined}
+                                title={ageIso ? `${t("admin.today.oldest_age_label")}: ${formatRelativeAge(ageIso)}` : undefined}
+                                className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground"
+                              >
+                                {count > 99 ? "99+" : count}
+                              </span>
+                              {ageIso && item.badge && (
+                                <span
+                                  id={`badge-age-${item.badge}`}
+                                  role="tooltip"
+                                  className="pointer-events-none absolute bottom-full right-0 z-50 mb-1 whitespace-nowrap rounded bg-popover px-2 py-1 text-xs text-popover-foreground shadow invisible group-hover/badge:visible group-focus-within/nav-item:visible"
+                                >
+                                  {t("admin.today.oldest_age_label")}: {formatRelativeAge(ageIso)}
+                                </span>
+                              )}
                             </span>
+                          )}
+                          {showOrdersDot && count === 0 && (
+                            <span
+                              role="img"
+                              aria-label={t("admin.badge.orders_needs_review_aria")}
+                              className="ml-2 h-2 w-2 rounded-full bg-destructive"
+                            />
                           )}
                         </Link>
                       </li>
