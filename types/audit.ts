@@ -44,6 +44,7 @@ export type AuditEventName =
   | "order.chargeback"
   | "order.export"
   | "bank_transfer.approve"
+  | "bank_transfer.first_approve"
   | "bank_transfer.reject"
   | "download_request.approve"
   | "download_request.reject"
