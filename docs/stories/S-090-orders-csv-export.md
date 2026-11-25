@@ -143,6 +143,15 @@ Note: `ArticleEditor/index.test.tsx` failures are pre-existing on `dev` (not int
 
 All previous findings resolved. No new findings.
 
+**Reviewer REQUEST CHANGES (HEAD 85a00396) — P1/P2 findings — fixed in 88665a6**
+
+- **P1** `route.ts:263` — `# EXPORT_ERROR` sentinel row in CSV output corrupts RFC 4180 parsers. Removed; `db_error: true` in audit is the signal. ✓ Fixed
+- **P1** `migration:28` / `types/audit.ts:47` — `bank_transfer.first_approve` added with no AC in S-090. Added inline comments citing S-089 as owning story. ✓ Fixed
+- **P1** `migration:14-29` — DROP+ADD CHECK constraint takes full table lock. Changed ADD to use `NOT VALID`. ✓ Fixed
+- **P1** `orders-export.test.ts:274` — AC4 row_count test missing `await res.text()` drain before audit assertion — structurally flaky. Added drain. ✓ Fixed
+- **P2** `route.ts:175` — `actorName: user.id` passed bare UUID. Now uses `role:uuid` prefix. ✓ Fixed
+- **P2** `csv-rate-limit.ts:30` — `_mem` Map missing per-process warning. Added comment. ✓ Fixed
+
 ## After this merges
 
 - S-103 (admin orders list) can add the "Export CSV" button
