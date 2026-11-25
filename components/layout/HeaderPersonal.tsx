@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { t, errorMessage } from "@/messages/en";
 
 // AC2: personal parts are a client component; Header never reads the session on the server.
-export function HeaderPersonal() {
+export function HeaderPersonal({ cartCount }: { cartCount?: number } = {}) {
   const { user, isLoading, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -96,8 +96,15 @@ export function HeaderPersonal() {
         className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600 transition-colors relative"
       >
         <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-        {/* Fixed-width badge slot — count filled by S-091. */}
-        <span className="absolute top-1 right-1 w-4 h-4 shrink-0" aria-hidden="true" />
+        {/* AC8 (S-091): cart count badge — count passed from server component parent. */}
+        {cartCount != null && cartCount > 0 && (
+          <span
+            className="absolute -top-1 -right-1 min-w-4 h-4 px-0.5 text-[10px] font-bold leading-4 text-center bg-primary text-white rounded-full"
+            aria-label={cartCount === 1 ? t("cart.header.count_one") : t("cart.header.count", { count: String(cartCount) })}
+          >
+            {cartCount > 99 ? "99+" : cartCount}
+          </span>
+        )}
       </Link>
 
       {/* AC2: fixed-size placeholder while the session is not yet known. */}

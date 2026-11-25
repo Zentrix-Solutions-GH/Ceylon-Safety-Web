@@ -1,11 +1,11 @@
 ---
 id: S-091
 title: Cart page
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-091-cart-page
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/116"
 depends_on: [S-027, S-075]
 reqs: [REQ-044b, REQ-044c, REQ-044d, REQ-044e, REQ-044f, REQ-044h]
 ---
@@ -25,21 +25,21 @@ Build the `/cart` page that shows the signed-in buyer's saved cart, lets them re
 
 ## Acceptance criteria
 
-- [ ] AC1: Unauthenticated visitor at `/cart` is redirected to `/sign-in?next=/cart`
-- [ ] AC2: Each `CartItemRow` shows: document title, language badge (EN / SI / TA), price (LKR, two decimals), remove button
-- [ ] AC3: Removing an item calls the cart backend action (S-075) and re-fetches totals; the UI updates without a full page reload
-- [ ] AC4: Server-computed subtotal and total are displayed; prices are never computed in the browser
-- [ ] AC5: Empty cart state shows a message and a "Browse documents" link to `/documents`
-- [ ] AC6: Items marked `unavailable` (document hidden or language file missing) are shown with an "Unavailable" badge and cannot be checked out; a message explains what to do
-- [ ] AC7: "Proceed to Checkout" button is disabled while the cart contains unavailable items or is empty
-- [ ] AC8: Cart item count in the Header (S-025) reflects the current cart after any add/remove without a page reload
-- [ ] AC9: No coupon input in Release 1 (CouponInput component rendered only in Release 2)
+- [x] AC1: Unauthenticated visitor at `/cart` is redirected to `/sign-in?next=/cart`
+- [x] AC2: Each `CartItemRow` shows: document title, language badge (EN / SI / TA), price (LKR, two decimals), remove button
+- [x] AC3: Removing an item calls the cart backend action (S-075) and re-fetches totals; the UI updates without a full page reload
+- [x] AC4: Server-computed subtotal and total are displayed; prices are never computed in the browser
+- [x] AC5: Empty cart state shows a message and a "Browse documents" link to `/documents`
+- [x] AC6: Items marked `unavailable` (document hidden or language file missing) are shown with an "Unavailable" badge and cannot be checked out; a message explains the user must remove them before proceeding. Items are **not** auto-removed — the user decides. (Overrides commerce design §3.2 auto-remove behaviour; decision confirmed by owner 2026-11-25.)
+- [x] AC7: "Proceed to Checkout" button is disabled while the cart contains unavailable items or is empty
+- [x] AC8: Cart item count in the Header (S-025) reflects the current cart after any add/remove without a page reload
+- [x] AC9: No coupon input in Release 1 (CouponInput component rendered only in Release 2)
 
 ## Edge cases
 
-- [ ] EC1: Network error on remove → show an inline error; item stays in cart
-- [ ] EC2: Another tab removes the last item → on focus, the page re-fetches and shows the empty state
-- [ ] EC3: `unavailable` item that was in the cart before the document was hidden → shown with badge, not silently removed
+- [x] EC1: Network error on remove → show an inline error; item stays in cart
+- [x] EC2: Another tab removes the last item → on focus, the page re-fetches and shows the empty state
+- [x] EC3: `unavailable` item that was in the cart before the document was hidden → shown with badge, not silently removed (item became unavailable after being added; badge + message prompts user to remove)
 
 ## Contract
 
@@ -69,19 +69,66 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 
 ## Plan
 
-Prior art: S-075 (cart backend, `/api/cart/calculate`); file-structure `components/cart/CartItemRow.tsx`, `CouponInput.tsx`. Page lives at `app/(customer)/cart/page.tsx`.
+Prior art: Searched "cart calculate remove header badge customer" in docs/. S-075 (cart backend, `lib/cart/index.ts`, `lib/cart/calculate.ts`, `/api/cart/calculate` route). File-structure stubs: `components/cart/CartItemRow.tsx`, `CouponInput.tsx`, `app/(customer)/cart/page.tsx`. `HeaderPersonal.tsx` has badge slot `<span>` with comment "count filled by S-091". Pattern: `router.refresh()` after mutations (see `DocumentModal.tsx:140`) revalidates server components so counts update (AC8).
+
+**Unavailable items:** Show badge + message, do NOT auto-remove. Owner decision 2026-11-25. Overrides commerce design §3.2.
+
+**Files to create / edit:**
+1. `messages/en.ts` — add `cart.*` keys (AC-rule: all UI strings from here)
+2. `app/(customer)/cart/page.tsx` — Server Component: auth guard (middleware covers it; redirect fallback), `calculateCart(userId)` via `lib/cart/calculate`, pass to `CartPageClient`
+3. `components/cart/CartPageClient.tsx` — NEW Client Component: state for `CartCalculateResponse`, remove handler (calls `removeFromCart` server action, then `router.refresh()` + re-fetches totals via `/api/cart/calculate`), renders `CartItemRow` list, empty state, unavailable warning, Proceed button
+4. `components/cart/CartItemRow.tsx` — Client Component: title, language badge, price, unavailable badge, remove button
+5. `components/layout/HeaderPersonal.tsx` — add optional `cartCount?: number` prop; render count in existing badge `<span>` (AC8)
+6. `components/layout/CustomerHeader.tsx` — fetch cart count (count of `cart_items` rows for user) server-side; pass to `HeaderPersonal`
+
+**No new DB migrations.** No `types/` changes (consumes existing `CartLineResult`, `CartCalculateResponse` from `types/cart.ts`).
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+
+── ESLint ──
+✓ ESLint passed
+
+── TypeScript ──
+✓ TypeScript passed
+
+── Vitest (unit) ──
+Test Files  1 failed | 267 passed | 15 skipped (283)
+Tests  18 failed | 2825 passed | 60 skipped (2903)
+✗ Vitest (unit) FAILED
+
+NOTE: The 1 failure is 18 tests in __tests__/components/admin/ArticleEditor/index.test.tsx.
+These are PRE-EXISTING failures on dev (confirmed on base dev before S-091).
+S-091 introduced no new test failures. (Verified after re-review fixes: 2826 passing, same pre-existing 18 failing.)
+
+── pgTAP RLS suite ──
+✓ pgTAP RLS suite passed
+
+── pgTAP seed suite ──
+✓ pgTAP seed suite passed
+
+── pgTAP dev seed suite ──
+✓ pgTAP dev seed suite passed
+
+── Types file freshness ──
+✓ Types file freshness passed
+
+── Public pages session check ──
+✓ Public pages session check (AC11) passed
+
+check.sh: 9 passed, 1 failed
 ```
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- ~~**P1** `app/(customer)/layout.tsx:14-25` — `getCartCount` queries `cart_items` directly in the layout, bypassing `lib/cart/`. Move to `lib/cart/getCartCount(userId): Promise<number>` for consistency and testability. (full-review 2026-11-25) — **Resolved** (re-review 2026-11-25)~~
+- ~~**P1** `components/cart/CartPageClient.tsx:38-50` — `visibilitychange` re-fetch silently drops non-ok HTTP responses; stale totals remain displayed. Add error/stale indicator when `!res.ok`. (full-review 2026-11-25) — **Resolved** (re-review 2026-11-25)~~
+- ~~**P1** `app/(customer)/cart/page.tsx` — AC1 redirect has no unit test. (full-review 2026-11-25) — **Resolved** (re-review 2026-11-25)~~
+- ~~**P1** `app/(customer)/layout.tsx:14-20` — serial DB calls without React.cache() — **Resolved** in `8e5a335`; `user-cache.ts` created with `cache(getCurrentUser)`. (re-review 2026-11-25)~~
+- ~~**P1** `app/(customer)/cart/actions.ts:14-16` — exhaustive auth code mapping — **Resolved** in `8e5a335`; `reauth_required` → `not_allowed` added. (re-review 2026-11-25)~~
+- ~~**P1** AC8 wiring integration test missing — **Resolved** in `8e5a335`; `__tests__/app/(customer)/layout-badge.test.tsx` added. (re-review 2026-11-25)~~
 
 ## After this merges
 

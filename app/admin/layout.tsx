@@ -5,7 +5,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getAdminTodayCached } from "./today-cache";
 import AdminShell from "./AdminShell";
+import type { AdminBadgeCounts } from "./AdminShell";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -36,11 +38,40 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     // Non-fatal — email fallback is fine
   }
 
+  // S-102: Fetch badge counts for sidebar. Non-fatal — shell renders without them.
+  // Only include keys for fields the backend returned (i.e. the user has that permission).
+  // Omitting a key prevents its zero from reaching the client-component serialization.
+  let badgeCounts: Partial<AdminBadgeCounts> | null = null;
+  let ordersNeedingReview = false;
+  let badgeOldestAt: Partial<Record<"comments" | "bankTransfers" | "downloadRequests", string>> = {};
+  try {
+    const todayResult = await getAdminTodayCached();
+    if (todayResult.ok) {
+      // ActionResult<AdminTodayResult> success shape: { ok: true } & AdminTodayResult
+      badgeCounts = {
+        ...(todayResult.comments != null ? { comments: todayResult.comments.count } : {}),
+        ...(todayResult.bankSlips != null ? { bankTransfers: todayResult.bankSlips.count } : {}),
+        ...(todayResult.downloadRequests != null ? { downloadRequests: todayResult.downloadRequests.count } : {}),
+      };
+      ordersNeedingReview = (todayResult.ordersNeedingReview?.count ?? 0) > 0;
+      badgeOldestAt = {
+        ...(todayResult.comments?.oldestAt ? { comments: todayResult.comments.oldestAt } : {}),
+        ...(todayResult.bankSlips?.oldestAt ? { bankTransfers: todayResult.bankSlips.oldestAt } : {}),
+        ...(todayResult.downloadRequests?.oldestAt ? { downloadRequests: todayResult.downloadRequests.oldestAt } : {}),
+      };
+    }
+  } catch {
+    // Non-fatal — badges just won't show
+  }
+
   return (
     <AdminShell
       displayName={displayName}
       email={user.email}
       role={user.claimedRole!}
+      badgeCounts={badgeCounts}
+      ordersNeedingReview={ordersNeedingReview}
+      badgeOldestAt={badgeOldestAt}
     >
       {children}
     </AdminShell>

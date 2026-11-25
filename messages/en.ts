@@ -468,6 +468,30 @@ const en = {
   "admin.badge.comments_aria": "pending comments",
   "admin.badge.bank_transfers_aria": "pending bank transfers",
   "admin.badge.download_requests_aria": "pending download requests",
+  "admin.badge.orders_needs_review_aria": "orders need review",
+
+  // S-102: Admin Today page
+  "admin.today.page_title": "Today",
+  "admin.today.heading": "Today",
+  "admin.today.empty": "Nothing is waiting. Well done.",
+  "admin.today.error_mfa_required": "Enter the code from your authenticator app.",
+  "admin.today.error_reauth_required": "Please sign in again to continue.",
+  "admin.today.error_rate_limited": "Too many requests. Please wait and try again.",
+  "admin.today.error_generic": "Could not load the Today list.",
+  "admin.today.retry": "Try again",
+  "admin.today.comments_label": "Comments waiting",
+  "admin.today.bank_slips_label": "Bank transfers waiting",
+  "admin.today.bank_slips_second_approval": "need second approval",
+  "admin.today.download_requests_label": "Download requests waiting",
+  "admin.today.orders_review_label": "Orders needing review",
+  "admin.today.today_orders_label": "Today's orders",
+  "admin.today.view_queue": "View queue",
+  "admin.today.oldest_age_label": "Oldest waiting",
+  "admin.today.age_just_now": "just now",
+  "admin.today.age_minutes_suffix": "m ago",
+  "admin.today.age_hours_suffix": "h ago",
+  "admin.today.age_days_suffix": "d ago",
+  "admin.today.today_orders_currency": "LKR",
 
   // S-058: Admin articles list
   "admin.articles.page_title": "Articles",
@@ -881,6 +905,25 @@ const en = {
   "locked_preview.alt": "Locked preview of {title}",
   "locked_preview.placeholder_alt": "No preview available",
   "locked_preview.purchase_to_unlock": "Purchase to unlock",
+
+  // Cart page (S-091)
+  "cart.page_title": "Your Cart",
+  "cart.empty.title": "Your cart is empty",
+  "cart.empty.browse": "Browse documents",
+  "cart.item.remove": "Remove item",
+  "cart.item.removing": "Removing…",
+  "cart.item.unavailable": "Unavailable",
+  "cart.item.unavailable_reason.document_unavailable": "This document is no longer available.",
+  "cart.item.unavailable_reason.language_unavailable": "This language file is not available.",
+  "cart.unavailable.warning": "Some items in your cart are unavailable. Please remove them before proceeding.",
+  "cart.summary.subtotal": "Subtotal",
+  "cart.summary.total": "Total",
+  "cart.checkout.proceed": "Proceed to Checkout",
+  "cart.checkout.proceed_aria": "Proceed to checkout",
+  "cart.error.remove_failed": "Could not remove item. Please try again.",
+  "cart.error.stale_totals": "Prices may be outdated. Refresh the page to see the latest totals.",
+  "cart.header.count": "{count} items in cart",
+  "cart.header.count_one": "1 item in cart",
 } as const;
 
 export type MessageKey = keyof typeof en;
