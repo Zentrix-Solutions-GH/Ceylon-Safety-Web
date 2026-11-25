@@ -8,25 +8,12 @@ async function importModule(upstashAvailable = false) {
   vi.resetModules();
 
   if (upstashAvailable) {
-    // Minimal Upstash pipeline mock: INCR increments a shared counter; EXPIRE is a no-op.
+    // Minimal Upstash mock: incr increments a shared counter; expire is a no-op.
     let counter = 0;
     vi.doMock("@upstash/redis", () => ({
       Redis: vi.fn().mockImplementation(() => ({
-        pipeline: () => {
-          const ops: Array<() => number | undefined> = [];
-          const pipe = {
-            incr(_key: string) {
-              ops.push(() => { counter += 1; return counter; });
-              return pipe;
-            },
-            expire(_key: string, _ttl: number) {
-              ops.push(() => undefined);
-              return pipe;
-            },
-            async exec() { return ops.map((fn) => fn()); },
-          };
-          return pipe;
-        },
+        incr() { return Promise.resolve(++counter); },
+        expire() { return Promise.resolve(1); },
       })),
     }));
     process.env.UPSTASH_REDIS_REST_URL = "https://fake.upstash.io";

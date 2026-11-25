@@ -279,7 +279,7 @@ describe("AC4: audit log row written", () => {
       to: "2026-11-30",
       include_email: false,
     });
-    expect(typeof call.after?.row_count).toBe("number");
+    expect(call.after?.row_count).toBe(2);
   });
 
   it("audit row include_email is true when super admin passes include_email=true", async () => {
@@ -419,6 +419,30 @@ describe("AC7: streams in 50-row chunks", () => {
 
     await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
     expect(db.range).toHaveBeenCalledWith(0, 49);
+  });
+
+  it("multi-page: calls range (0,49) then (50,99) when first page is full", async () => {
+    okAuth();
+    // 50 identical rows on the first call → loop continues; 1 row on the second → stops
+    const page1 = Array.from({ length: 50 }, () => makeRow());
+    const page2 = [makeRow({ order_number: "CS-2026-0051" })];
+
+    const rangeFn = vi.fn()
+      .mockResolvedValueOnce({ data: page1, error: null })
+      .mockResolvedValueOnce({ data: page2, error: null });
+    const orderFn = vi.fn().mockReturnValue({ range: rangeFn });
+    const eqFn = vi.fn().mockReturnThis();
+    const gteFn = vi.fn().mockReturnThis();
+    const lteFn = vi.fn().mockReturnThis();
+    const selectFn = vi.fn().mockReturnValue({ eq: eqFn, gte: gteFn, lte: lteFn, order: orderFn });
+    mockSupabase.mockReturnValue({ from: vi.fn().mockReturnValue({ select: selectFn }) });
+
+    const res = await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
+    await res.text();
+
+    expect(rangeFn).toHaveBeenCalledTimes(2);
+    expect(rangeFn).toHaveBeenNthCalledWith(1, 0, 49);
+    expect(rangeFn).toHaveBeenNthCalledWith(2, 50, 99);
   });
 });
 

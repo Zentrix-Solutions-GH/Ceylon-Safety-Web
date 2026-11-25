@@ -119,6 +119,16 @@ Note: `ArticleEditor/index.test.tsx` failures are pre-existing on `dev` (not int
 
 <!-- Filled in by reviewer/security-reviewer agents and /full-review -->
 
+**full-review 2026-11-25 — PR #115 — Score 83/100 — APPROVE WITH FOLLOW-UPS**
+
+- **P0** `__tests__/app/api/admin/orders-export.test.ts` — Multi-page pagination untested. The loop that increments `offset += CHUNK_SIZE` is never exercised. Add a test: mock DB to return 50 rows on first call and 1 row on second; assert `range` called with `(0, 49)` then `(50, 99)`.
+
+- **P0** `__tests__/app/api/admin/orders-export.test.ts:296` — `row_count` asserted by type only (`typeof === "number"`); a bug that always writes `0` passes. Assert the exact count value.
+
+- **P1** `app/api/admin/orders-export/route.ts:166` — Silent partial CSV on DB error. After HTTP 200 is committed, a mid-stream DB error breaks the loop silently — client receives a truncated CSV indistinguishable from a complete one. Fix: set `hadDbError` flag, append sentinel comment row `# EXPORT_ERROR`, include `db_error: true` in audit `after`.
+
+- **P1** `app/api/admin/orders-export/route.ts:217` — Audit log and owner alert dropped on client disconnect. Both are fire-and-forget at end of `ReadableStream.start()`; if the client disconnects before `controller.close()`, neither fires. Fix: move `writeAuditRow` to before the stream opens (with placeholder `row_count`), or handle the stream `cancel` callback.
+
 ## After this merges
 
 - S-103 (admin orders list) can add the "Export CSV" button

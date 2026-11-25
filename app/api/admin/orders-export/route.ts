@@ -153,6 +153,32 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
   if (includeEmail) headers.push("email");
 
   let rowCount = 0;
+  let hadDbError = false;
+  let auditFired = false;
+
+  // Fires audit log and owner alert exactly once — called from both normal
+  // stream completion and the cancel callback (client disconnect).
+  function fireAuditAndAlert() {
+    if (auditFired) return;
+    auditFired = true;
+
+    writeAuditRow({
+      action: "order.export",
+      actorId: user.id,
+      after: { from, to, row_count: rowCount, include_email: includeEmail, ...(hadDbError ? { db_error: true } : {}) },
+    }).catch((e: unknown) => {
+      console.error("[orders-export] audit write failed:", (e as Error).message);
+    });
+
+    sendOwnerAlert("order.csv_export", {
+      auditRowId: "0",
+      actorName: user.id,
+      actorId: user.id,
+      changedAt: new Date().toISOString(),
+    }).catch((e: unknown) => {
+      console.error("[orders-export] owner alert failed:", (e as Error).message);
+    });
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -178,7 +204,11 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
           .order("created_at", { ascending: true })
           .range(offset, offset + CHUNK_SIZE - 1);
 
-        if (error || !data || data.length === 0) break;
+        if (!data || data.length === 0) break;
+        if (error) {
+          hadDbError = true;
+          break;
+        }
 
         for (const order of data as ExportRow[]) {
           const buyerName =
@@ -228,26 +258,20 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
         offset += CHUNK_SIZE;
       }
 
-      // 5. Audit log (after streaming so row_count is known)
-      writeAuditRow({
-        action: "order.export",
-        actorId: user.id,
-        after: { from, to, row_count: rowCount, include_email: includeEmail },
-      }).catch((e: unknown) => {
-        console.error("[orders-export] audit write failed:", (e as Error).message);
-      });
+      // Signal a partial export so the client can detect truncation.
+      if (hadDbError) {
+        controller.enqueue(enc.encode("# EXPORT_ERROR\n"));
+      }
 
-      // 6. Owner alert (non-blocking)
-      sendOwnerAlert("order.csv_export", {
-        auditRowId: "0",
-        actorName: user.id,
-        actorId: user.id,
-        changedAt: new Date().toISOString(),
-      }).catch((e: unknown) => {
-        console.error("[orders-export] owner alert failed:", (e as Error).message);
-      });
+      // 5 & 6. Audit log + owner alert (normal completion path)
+      fireAuditAndAlert();
 
       controller.close();
+    },
+
+    // Fires when the client disconnects before the stream closes normally.
+    cancel() {
+      fireAuditAndAlert();
     },
   });
 
