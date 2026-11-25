@@ -26,6 +26,7 @@ function secondsUntilMidnightColombo(): number {
 }
 
 // In-memory fallback keyed by adminId — only used in dev/test (Upstash absent).
+// WARNING: per-process, not shared across serverless instances.
 // Stores { count, resetsAt (epoch ms) }.
 const _mem = new Map<string, { count: number; resetsAt: number }>();
 

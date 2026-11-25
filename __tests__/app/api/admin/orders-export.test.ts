@@ -271,7 +271,8 @@ describe("AC4: audit log row written", () => {
     okAuth(SUPER_ADMIN_USER);
     mockDb([makeRow(), makeRow({ order_number: "CS-2026-0002" })]);
 
-    await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
+    const res = await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
+    await res.text(); // drain stream so fireAuditAndAlert() completes before asserting
     const call = mockWriteAuditRow.mock.calls[0][0];
     expect(call.actorId).toBe(SUPER_ADMIN_USER.id);
     expect(call.after).toMatchObject({
@@ -450,8 +451,8 @@ describe("AC7: streams in 50-row chunks", () => {
 // DB error mid-stream — sentinel row
 // ---------------------------------------------------------------------------
 
-describe("DB error mid-stream appends # EXPORT_ERROR sentinel", () => {
-  it("appends # EXPORT_ERROR row and sets db_error:true in audit when DB errors on second page", async () => {
+describe("DB error mid-stream: audit receives db_error:true", () => {
+  it("sets db_error:true in audit and still returns 200 when DB errors on second page", async () => {
     okAuth();
     // First page returns 50 rows (full chunk) → loop continues; second page errors
     const page1 = Array.from({ length: 50 }, () => makeRow());
@@ -466,10 +467,9 @@ describe("DB error mid-stream appends # EXPORT_ERROR sentinel", () => {
     mockSupabase.mockReturnValue({ from: vi.fn().mockReturnValue({ select: selectFn }) });
 
     const res = await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
-    const text = await res.text();
+    await res.text(); // drain stream so async callbacks fire
 
     expect(res.status).toBe(200);
-    expect(text).toContain("# EXPORT_ERROR");
 
     const call = mockWriteAuditRow.mock.calls[0][0];
     expect(call.after?.db_error).toBe(true);

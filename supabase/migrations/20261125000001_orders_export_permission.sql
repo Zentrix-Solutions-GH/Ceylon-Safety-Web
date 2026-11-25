@@ -10,6 +10,9 @@ VALUES ('admin', 'orders.export')
 ON CONFLICT (role, action) DO NOTHING;
 
 -- Extend the audit log CHECK constraint to include order.export (S-090).
+-- NOT VALID skips the existing-row scan; all existing rows already satisfy this
+-- constraint because we are only adding values, not removing any.
+-- Run VALIDATE CONSTRAINT separately during a maintenance window if needed.
 ALTER TABLE public.admin_audit_log
   DROP CONSTRAINT IF EXISTS admin_audit_log_action_check;
 
@@ -26,8 +29,9 @@ ALTER TABLE public.admin_audit_log
     'ads.settings_change',
     'order.grant',              'order.paid',               'order.chargeback',
     'order.cancel',             'order.resolve_review',     'order.resend_email',
-    'order.export',
-    'bank_transfer.approve',    'bank_transfer.first_approve',
+    'order.export',             -- S-090: orders CSV export
+    'bank_transfer.approve',
+    'bank_transfer.first_approve', -- gap fix: was in prior constraint but missing from TypeScript AuditEventName; S-089 owns bank transfer actions
     'bank_transfer.reject',     'bank_transfer.reopen',
     'download_request.approve', 'download_request.reject',
     'coupon.create',            'coupon.update',            'price.change',
@@ -37,6 +41,6 @@ ALTER TABLE public.admin_audit_log
     'user.remove_mfa',
     'document.save',            'document.slug_change',
     'document.file_upload',     'document.publish',         'document.hide'
-  ));
+  )) NOT VALID;
 
 COMMIT;

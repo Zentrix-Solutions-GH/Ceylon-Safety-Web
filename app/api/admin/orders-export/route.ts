@@ -172,7 +172,7 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
 
     sendOwnerAlert("order.csv_export", {
       auditRowId: "0",
-      actorName: user.id,
+      actorName: user.claimedRole === "super_admin" ? `super_admin:${user.id}` : `admin:${user.id}`,
       actorId: user.id,
       changedAt: new Date().toISOString(),
     }).catch((e: unknown) => {
@@ -256,11 +256,6 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
 
         if (data.length < CHUNK_SIZE) break;
         offset += CHUNK_SIZE;
-      }
-
-      // Signal a partial export so the client can detect truncation.
-      if (hadDbError) {
-        controller.enqueue(enc.encode("# EXPORT_ERROR\n"));
       }
 
       // 5 & 6. Audit log + owner alert (normal completion path)

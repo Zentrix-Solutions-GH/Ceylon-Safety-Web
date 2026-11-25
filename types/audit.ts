@@ -44,7 +44,7 @@ export type AuditEventName =
   | "order.chargeback"
   | "order.export"
   | "bank_transfer.approve"
-  | "bank_transfer.first_approve"
+  | "bank_transfer.first_approve" // gap fix: event was written by S-089 flow but missing from this union; added in S-090 migration
   | "bank_transfer.reject"
   | "download_request.approve"
   | "download_request.reject"
