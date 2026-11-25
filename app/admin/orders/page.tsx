@@ -61,7 +61,9 @@ export default async function AdminOrdersPage({
 
   // key forces OrdersListClient to remount on every URL change so uncontrolled
   // filter inputs always reflect the current search params.
-  const clientKey = new URLSearchParams(params as Record<string, string>).toString();
+  const clientKey = new URLSearchParams(
+    Object.entries(params).filter((e): e is [string, string] => e[1] !== undefined),
+  ).toString();
 
   return (
     <div>
