@@ -84,7 +84,7 @@ Prior art: searched docs/ for "today list", "dashboard", "REQ-140", "badges", "a
 ## Evidence
 
 ```
-$ bash scripts/check.sh   # run on branch HEAD a95175b, 2026-11-25
+$ bash scripts/check.sh   # run on branch HEAD (re-review 7 fixes), 2026-11-25
 
 ── ESLint ──
 ✓ ESLint passed
@@ -129,6 +129,7 @@ S-102 tests (run separately: npx vitest run __tests__/admin/):
 - **P1** `app/admin/layout.tsx` — badge counts serialized for all keys regardless of role. Fixed: `Partial<AdminBadgeCounts>` used; layout only includes keys for fields backend returned. (full-review 2026-11-25)
 - **P0** `app/admin/page.tsx:160` — `"LKR"` hardcoded, bypassing `messages/en.ts`. Fixed: `admin.today.today_orders_currency` key added; `t()` used. (re-review 6 2026-11-25)
 - **P1** `__tests__/admin/badges.test.tsx:85` — test asserted `title` but not `aria-label` contained age. Fixed: assertion `aria-label contains "1d ago"` added. (re-review 6 2026-11-25)
+- **P1** `app/admin/AdminSidebar.tsx:224` — `group-focus-within/badge` never fired: focused element (Link) is a parent of the group span, not a child. Fixed: `group/nav-item` added to `<li>`; tooltip uses `group-focus-within/nav-item:visible`. Also added `id` to tooltip and `aria-describedby` to badge (P2). (re-review 7 2026-11-25)
 
 ## After this merges, a user can:
 
