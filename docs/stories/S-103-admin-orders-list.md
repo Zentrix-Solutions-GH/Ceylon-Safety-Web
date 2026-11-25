@@ -1,7 +1,7 @@
 ---
 id: S-103
 title: Admin orders list
-status: ready
+status: in-progress
 owner: frontend
 risk: normal
 branch: feature/S-103-admin-orders-list
@@ -44,6 +44,7 @@ Types added or changed in `types/` by this story:
 ## Out of scope
 
 - Order detail and actions (S-104), refunds (not in v1, REQ-052), CSV export button (the export story is S-090 plus its screen part, see report), coupons (Release 2).
+- **Items count column** (scope cut): `AdminOrderListItem` from S-089 does not include `itemCount`. Adding it requires a backend story to update the type and the `getOrdersList` query. The column is omitted from this table.
 
 ## Assumptions accepted
 
@@ -60,16 +61,45 @@ Types added or changed in `types/` by this story:
 
 ## Plan
 
-<!-- Filled in by /story-run at Step 3. Do not edit manually. -->
-
 Prior art: read admin panel design sections 3.3, 4.3 (rows 12–16), 12 (list rules), 17 (empty states), 20.1 and file-structure `admin/orders/`. Implements the "Orders list and detail, minimal actions" row (list part); supersedes nothing.
+
+**Pre-coding notes resolved:**
+
+1. **items count column — SCOPE CUT**: `AdminOrderListItem` (types/order.ts, backend-owned) has no `itemCount` field and `getOrdersList` does not query it. The column is dropped from this table. Added to Out of scope.
+2. **page size**: `getOrdersList` PAGE_SIZE is 20 (backend constant). AC1 says 25; frontend uses `result.data.pageSize` from the response (20). No backend change possible without a backend story.
+3. **AC7 (orders dot)**: already implemented in S-102. `AdminLayout` reads `ordersNeedingReview` from `getAdminTodayCached()` and passes it to `AdminShell` → `AdminSidebar`. No work needed in this story.
+4. **permission guard**: on `not_allowed` → `notFound()` per AC3.
+
+**Files to create/edit (frontend-owned only):**
+
+| File | Action |
+|---|---|
+| `messages/en.ts` | Add `admin.orders.*` string keys |
+| `app/admin/orders/page.tsx` | Replace stub — server component, reads searchParams, calls `getOrdersList`, passes to client |
+| `app/admin/orders/OrdersListClient.tsx` | New — client component: table, filters, pagination, empty state |
+| `__tests__/admin/orders-list.test.tsx` | New — component tests for AC1/AC2/AC4/EC2/EC3 |
+
+**Files NOT touched:** `lib/`, `types/`, `supabase/`, `middleware.ts`
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
 ```
 $ bash scripts/check.sh
+✓ ESLint — 0 errors, 0 warnings
+✓ TypeScript — tsc --noEmit: no errors
+Test Files  1 failed | 269 passed | 15 skipped (285)
+Tests       18 failed | 2863 passed | 60 skipped (2941)
+✗ Vitest (unit) FAILED
+
+Pre-existing failure (not caused by S-103):
+  __tests__/components/admin/ArticleEditor/index.test.tsx — 18 tests fail with
+  "TypeError: Cannot read properties of undefined (reading 'clear')" on
+  localStorage.clear() in beforeEach. ArticleEditor code not touched by this story.
+
+S-103 tests: 19 passed (0 failed)
+$ npx vitest run __tests__/admin/orders-list.test.tsx
+  ✓ __tests__/admin/orders-list.test.tsx (19 tests) 609ms
+  Test Files  1 passed (1)   Tests  19 passed (19)
 ```
 
 ## Review notes
