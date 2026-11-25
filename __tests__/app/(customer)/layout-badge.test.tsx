@@ -4,13 +4,10 @@ import { render, screen } from "@testing-library/react";
 import React from "react";
 
 const mockGetCurrentUserCached = vi.fn();
+const mockGetCartCountCached = vi.fn();
 vi.mock("@/app/(customer)/user-cache", () => ({
   getCurrentUserCached: (...args: unknown[]) => mockGetCurrentUserCached(...args),
-}));
-
-const mockGetCartCount = vi.fn();
-vi.mock("@/lib/cart/count", () => ({
-  getCartCount: (...args: unknown[]) => mockGetCartCount(...args),
+  getCartCountCached: (...args: unknown[]) => mockGetCartCountCached(...args),
 }));
 
 vi.mock("@/messages/en", () => ({
@@ -59,12 +56,12 @@ beforeEach(() => {
 describe("CustomerLayout — AC8: cart count badge chain", () => {
   it("passes cartCount from getCartCount to CustomerHeader when user is signed in", async () => {
     mockGetCurrentUserCached.mockResolvedValue({ id: "user-1" });
-    mockGetCartCount.mockResolvedValue(3);
+    mockGetCartCountCached.mockResolvedValue(3);
 
     const element = await CustomerLayout({ children: <div /> });
     render(element as React.ReactElement);
 
-    expect(mockGetCartCount).toHaveBeenCalledWith("user-1");
+    expect(mockGetCartCountCached).toHaveBeenCalledWith("user-1");
     expect(screen.getByLabelText(/cart\.header\.count/)).toHaveTextContent("3");
   });
 
@@ -74,7 +71,7 @@ describe("CustomerLayout — AC8: cart count badge chain", () => {
     const element = await CustomerLayout({ children: <div /> });
     render(element as React.ReactElement);
 
-    expect(mockGetCartCount).not.toHaveBeenCalled();
+    expect(mockGetCartCountCached).not.toHaveBeenCalled();
     expect(screen.queryByLabelText(/cart\.header\.count/)).toBeNull();
   });
 });
