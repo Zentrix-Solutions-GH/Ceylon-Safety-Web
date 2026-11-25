@@ -62,7 +62,7 @@ describe("AC1: renders Today list lines from getAdminToday", () => {
     await renderPage();
     expect(screen.getByText(/Bank transfers waiting/i)).toBeInTheDocument();
     expect(screen.getByText("5")).toBeInTheDocument();
-    expect(screen.getByText(/needs second approval/i)).toBeInTheDocument();
+    expect(screen.getByText(/need second approval/i)).toBeInTheDocument();
   });
 
   it("shows download requests line when present", async () => {

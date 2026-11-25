@@ -231,7 +231,7 @@ export default function AdminSidebar({ role, badgeCounts, ordersNeedingReview = 
                           )}
                           {showOrdersDot && (
                             <span
-                              role="status"
+                              role="img"
                               aria-label={t("admin.badge.orders_needs_review_aria")}
                               className="ml-2 h-2 w-2 rounded-full bg-destructive"
                             />

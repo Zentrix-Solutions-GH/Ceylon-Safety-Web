@@ -481,7 +481,7 @@ const en = {
   "admin.today.retry": "Try again",
   "admin.today.comments_label": "Comments waiting",
   "admin.today.bank_slips_label": "Bank transfers waiting",
-  "admin.today.bank_slips_second_approval": "needs second approval",
+  "admin.today.bank_slips_second_approval": "need second approval",
   "admin.today.download_requests_label": "Download requests waiting",
   "admin.today.orders_review_label": "Orders needing review",
   "admin.today.today_orders_label": "Today's orders",

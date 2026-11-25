@@ -47,12 +47,12 @@ describe("AC3: badge counts in sidebar", () => {
 
   it("shows orders needs-review dot when ordersNeedingReview is true", () => {
     renderSidebar({ comments: 0, bankTransfers: 0, downloadRequests: 0 }, true);
-    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /orders need review/i })).toBeInTheDocument();
   });
 
   it("does not show orders dot when ordersNeedingReview is false", () => {
     renderSidebar({ comments: 0, bankTransfers: 0, downloadRequests: 0 }, false);
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: /orders need review/i })).not.toBeInTheDocument();
   });
 });
 
