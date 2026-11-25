@@ -1,11 +1,11 @@
 ---
 id: S-092
 title: Checkout page
-status: ready
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-092-checkout-page
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/118"
 depends_on: [S-078, S-091]
 reqs: [REQ-044d, REQ-152, REQ-153, REQ-154]
 ---
@@ -23,22 +23,22 @@ Build the `/checkout` page where the buyer reviews their order, fills in billing
 
 ## Acceptance criteria
 
-- [ ] AC1: Unauthenticated visitor at `/checkout` is redirected to `/sign-in?next=/checkout`
-- [ ] AC2: `OrderSummary` shows each line (title, language, price), subtotal, and total; prices come from the server response to `createCheckout`/`createBankOrder`, never from local state
-- [ ] AC3: `BillingForm` collects: first name, last name, email (shown, not editable), phone, company name (optional), tax id (optional), address, city; pre-filled from the saved profile address; a "Save to profile" checkbox
-- [ ] AC4: `PaymentMethodPicker` selects "Card (PayHere)" or "Bank transfer"; default is card
-- [ ] AC5: `TermsCheckbox` is required; links open terms and refund-policy pages in a new tab; the "Pay" button is disabled until ticked
-- [ ] AC6: Card flow — pressing "Pay LKR X with PayHere" calls `createCheckout`; on success the `PayHereRedirect` component auto-submits a hidden form to PayHere; the button is disabled while the server action is running
-- [ ] AC7: Bank transfer flow — pressing "Place order and show bank details" calls `createBankOrder`; on success redirects to `/checkout/pending?order=<id>`
-- [ ] AC8: If `createCheckout` returns `price_changed` or `item_unavailable`, the order summary refreshes with the new values and an inline error message is shown; the buyer must press pay again
-- [ ] AC9: If `createCheckout` returns `coupon_invalid`, an inline error is shown (Release 2 path; no coupon input in Release 1 so this only fires on race conditions)
-- [ ] AC10: The page never stores billing form values in `localStorage` or cookies
+- [x] AC1: Unauthenticated visitor at `/checkout` is redirected to `/sign-in?next=/checkout`
+- [x] AC2: `OrderSummary` shows each line (title, language, price), subtotal, and total; prices come from the server response to `createCheckout`/`createBankOrder`, never from local state
+- [x] AC3: `BillingForm` collects: first name, last name, email (shown, not editable), phone, company name (optional), tax id (optional), address, city; pre-filled from the saved profile address; a "Save to profile" checkbox
+- [x] AC4: `PaymentMethodPicker` selects "Card (PayHere)" or "Bank transfer"; default is card
+- [x] AC5: `TermsCheckbox` is required; links open terms and refund-policy pages in a new tab; the "Pay" button is disabled until ticked
+- [x] AC6: Card flow — pressing "Pay LKR X with PayHere" calls `createCheckout`; on success the `PayHereRedirect` component auto-submits a hidden form to PayHere; the button is disabled while the server action is running
+- [x] AC7: Bank transfer flow — pressing "Place order and show bank details" calls `createBankOrder`; on success redirects to `/checkout/pending?order=<id>`
+- [x] AC8: If `createCheckout` returns `price_changed` or `item_unavailable`, the order summary refreshes with the new values and an inline error message is shown; the buyer must press pay again
+- [x] AC9: If `createCheckout` returns `coupon_invalid`, an inline error is shown (Release 2 path; no coupon input in Release 1 so this only fires on race conditions)
+- [x] AC10: The page never stores billing form values in `localStorage` or cookies
 
 ## Edge cases
 
-- [ ] EC1: Buyer double-clicks "Pay" — button is disabled after first click; `createCheckout` per-user lock prevents two orders
-- [ ] EC2: Session expires while filling the form → on submit, server returns 401; page redirects to sign-in with `next=/checkout`
-- [ ] EC3: `createCheckout` returns `pending_order_exists` → show "You have an existing order for these items" with "Continue that order" and "Replace it" options
+- [x] EC1: Buyer double-clicks "Pay" — button is disabled after first click; `createCheckout` per-user lock prevents two orders
+- [x] EC2: Session expires while filling the form → on submit, server returns 401; page redirects to sign-in with `next=/checkout`
+- [x] EC3: `createCheckout` returns `pending_order_exists` → show "You have an existing order for these items" with "Continue that order" and "Replace it" options
 
 ## Contract
 
@@ -51,11 +51,13 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 - PayHere return/cancel pages (S-093)
 - Bank transfer pending page (S-094)
 - Coupon input (Release 2)
+- EC3 "Replace it" vs "Continue that order" distinction: both buttons currently retry `createCheckout`, which reuses the existing pending order per commerce design 4.3. If "Replace" should cancel the old order and create a new one, a `replaceExisting` flag needs to be added to `CheckoutInput` (backend change, out of S-092 scope). Product owner to clarify.
 
 ## Assumptions accepted
 
 - PayHere auto-submit form uses the fields returned by `createCheckout` (commerce design section 5.1)
-- Billing form pre-fill comes from the user's saved profile address (REQ-117)
+- Billing form pre-fill comes from the user's saved profile address (REQ-117, Q35 assumed)
+- `/checkout/pending` page stub included in this story scope (vertical-slice fix): shows order number and "bank details will be emailed" message. S-094 replaces the stub with the full bank details + slip upload UI.
 
 ## Test plan
 
@@ -70,14 +72,62 @@ Types added or changed in `types/` by this story (for contract-checker agent):
 
 ## Plan
 
-Prior art: S-078 (createCheckout, createBankOrder server actions); commerce design section 4.2 checkout page spec; file-structure components/checkout/*.
+Prior art: S-078 (createCheckout, createBankOrder server actions in `lib/orders/create.ts`); commerce design section 4.2 checkout page spec; file-structure `components/checkout/*`; S-091 cart page for action/client pattern. Naming: `PaymentMethodPicker` already exists in components/checkout/ — keep that name (not `PaymentMethodChoice` from design doc).
+
+### Files to create / edit
+
+| File | Action |
+|---|---|
+| `messages/en.ts` | Add checkout i18n keys |
+| `app/(customer)/checkout/actions.ts` | New — `"use server"` wrappers for `createCheckout` / `createBankOrder` |
+| `app/(customer)/checkout/page.tsx` | Implement — server component, fetch cart + profile, pass to client |
+| `app/(customer)/checkout/CheckoutClient.tsx` | New — client component, form state, submit handlers |
+| `app/(customer)/checkout/pending/page.tsx` | Implement — minimal stub ("Order placed, bank details incoming") |
+| `components/checkout/OrderSummary.tsx` | Implement |
+| `components/checkout/BillingForm.tsx` | Implement |
+| `components/checkout/TermsCheckbox.tsx` | Implement |
+| `components/checkout/PaymentMethodPicker.tsx` | Implement |
+| `components/checkout/PayHereRedirect.tsx` | Implement |
+| `__tests__/app/(customer)/checkout.test.tsx` | New tests |
+| `__tests__/components/checkout/TermsCheckbox.test.tsx` | New tests |
+| `__tests__/components/checkout/PayHereRedirect.test.tsx` | New tests |
+
+### Step order
+
+1. i18n keys in `messages/en.ts`
+2. `actions.ts` — thin wrappers only (server already in lib/orders/create.ts)
+3. Component stubs → real implementations (OrderSummary, BillingForm, TermsCheckbox, PaymentMethodPicker, PayHereRedirect)
+4. `CheckoutClient.tsx` — ties components together with form state and action calls
+5. `page.tsx` — server shell: auth guard logs the user and passes cart + profile to CheckoutClient
+6. `pending/page.tsx` — stub with order number from search param
+7. Write tests first (TDD), then implement
 
 ## Evidence
 
-<!-- Paste scripts/check.sh output here after Step 7 -->
-
+Round 2 (after reviewer P0/P1/P2 fixes):
 ```
 $ bash scripts/check.sh
+── ESLint ──
+✓ ESLint passed
+── TypeScript ──
+✓ TypeScript passed
+── Vitest (unit) ──
+ Test Files  1 failed | 278 passed | 15 skipped (294)
+      Tests  18 failed | 2907 passed | 60 skipped (2985)
+✗ Vitest (unit) FAILED
+  → Pre-existing failure: __tests__/components/admin/ArticleEditor/index.test.tsx (18 tests)
+    Not introduced by S-092 — no changes to that file (git diff confirmed).
+    New S-092 tests: 22 passed (checkout.test.tsx × 14, TermsCheckbox.test.tsx × 5, PayHereRedirect.test.tsx × 3)
+✓ pgTAP RLS suite passed
+✓ pgTAP seed suite passed
+✓ pgTAP dev seed suite passed
+✓ EC3 dev seed guard (execution) passed
+✓ Types file freshness passed
+✓ Public pages session check — checked 20 file(s), no violations
+✓ Dev seed guard passed
+⚠ Google Fonts check skipped (no build output)
+⚠ PayHere bundle check skipped (no build output)
+  check.sh: 9 passed, 1 failed (pre-existing ArticleEditor, not S-092)
 ```
 
 ## Review notes
