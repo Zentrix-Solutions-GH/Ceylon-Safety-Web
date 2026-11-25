@@ -8,19 +8,7 @@ import type { MessageKey } from "@/messages/en";
 import { PERMISSION_MAP } from "@/lib/auth/permissions";
 import type { UserRole } from "@/types/auth";
 import type { AdminBadgeCounts } from "./AdminShell";
-
-// ─── Age formatting ───────────────────────────────────────────────────────────
-
-function formatRelativeAge(isoString: string): string {
-  const diffMs = Date.now() - new Date(isoString).getTime();
-  const diffMins = Math.floor(diffMs / 60_000);
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
-}
+import { formatRelativeAge } from "./format-relative-age";
 
 // ─── Permission helpers ───────────────────────────────────────────────────────
 
@@ -148,7 +136,7 @@ function buildGroups(): NavGroup[] {
 
 interface AdminSidebarProps {
   role: UserRole;
-  badgeCounts: AdminBadgeCounts | null;
+  badgeCounts: Partial<AdminBadgeCounts> | null;
   ordersNeedingReview?: boolean;
   badgeOldestAt?: Partial<Record<keyof AdminBadgeCounts, string>>;
   open: boolean;

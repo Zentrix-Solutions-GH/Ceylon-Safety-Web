@@ -38,7 +38,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   // S-102: Fetch badge counts for sidebar. Non-fatal — shell renders without them.
-  let badgeCounts = null;
+  // Only include keys for fields the backend returned (i.e. the user has that permission).
+  // Omitting a key prevents its zero from reaching the client-component serialization.
+  let badgeCounts: Partial<{ comments: number; bankTransfers: number; downloadRequests: number }> | null = null;
   let ordersNeedingReview = false;
   let badgeOldestAt: Partial<Record<"comments" | "bankTransfers" | "downloadRequests", string>> = {};
   try {
@@ -46,9 +48,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     if (todayResult.ok) {
       // ActionResult<AdminTodayResult> success shape: { ok: true } & AdminTodayResult
       badgeCounts = {
-        comments: todayResult.comments?.count ?? 0,
-        bankTransfers: todayResult.bankSlips?.count ?? 0,
-        downloadRequests: todayResult.downloadRequests?.count ?? 0,
+        ...(todayResult.comments != null ? { comments: todayResult.comments.count } : {}),
+        ...(todayResult.bankSlips != null ? { bankTransfers: todayResult.bankSlips.count } : {}),
+        ...(todayResult.downloadRequests != null ? { downloadRequests: todayResult.downloadRequests.count } : {}),
       };
       ordersNeedingReview = (todayResult.ordersNeedingReview?.count ?? 0) > 0;
       badgeOldestAt = {

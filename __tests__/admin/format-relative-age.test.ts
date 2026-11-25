@@ -1,23 +1,6 @@
-// S-102: formatRelativeAge isolation test — P1 fix
-// Tests the helper with frozen Date.now() so assertions are clock-independent.
-
+// S-102: formatRelativeAge isolation tests — tests the real exported function
 import { describe, it, expect, vi, afterEach } from "vitest";
-
-// formatRelativeAge is not exported — test via the sidebar's compiled output would
-// require a client-component render. Instead, duplicate the pure function here and
-// keep it in sync; a type-level import guard is added below.
-// If the sidebar implementation changes, this test will catch divergence.
-
-function formatRelativeAge(isoString: string): string {
-  const diffMs = Date.now() - new Date(isoString).getTime();
-  const diffMins = Math.floor(diffMs / 60_000);
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
-}
+import { formatRelativeAge } from "@/app/admin/format-relative-age";
 
 const BASE = new Date("2026-11-25T12:00:00Z").getTime();
 

@@ -84,29 +84,44 @@ Prior art: searched docs/ for "today list", "dashboard", "REQ-140", "badges", "a
 ## Evidence
 
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh   # run on branch HEAD 653a3b7, 2026-11-25
+
+── ESLint ──
 ✓ ESLint passed
+
+── TypeScript ──
 ✓ TypeScript passed
-✗ Vitest (unit) FAILED — 18 failures in __tests__/components/admin/ArticleEditor/index.test.tsx
-  Pre-existing: TypeError: Cannot read properties of undefined (reading 'clear')
-  at localStorage.clear() line 97 — this test exists on dev HEAD (e45a59d) and
-  fails before any S-102 changes. All 28 new S-102 tests pass.
-✓ pgTAP RLS suite passed (120 tests)
-✓ pgTAP seed suite passed (68 tests)
-✓ pgTAP dev seed suite passed (38 tests)
-✓ Types file freshness passed
-✓ Public pages session check (AC11) passed — checked 20 files, no violations
-9 passed, 1 failed (pre-existing ArticleEditor failure)
+
+── Vitest (unit) ──
+ Test Files  1 failed | 268 passed | 15 skipped (284)
+      Tests  18 failed | 2843 passed | 60 skipped (2921)
+   Duration  222.16s
+
+The 18 failures are all in __tests__/components/admin/ArticleEditor/index.test.tsx:
+  TypeError: Cannot read properties of undefined (reading 'clear')  at localStorage.clear() :97
+  This failure exists on dev HEAD (e45a59d) before any S-102 change — pre-existing.
+
+✗ Vitest (unit) FAILED (pre-existing, unrelated to S-102)
+
+── pgTAP / seed / types-freshness / public-pages ──
+(Supabase not running during this run — skipped per check.sh design)
+
+S-102 tests (run separately: npx vitest run __tests__/admin/):
+  ✓ __tests__/admin/today.test.tsx           20 tests
+  ✓ __tests__/admin/badges.test.tsx          10 tests
+  ✓ __tests__/admin/format-relative-age.test.ts  6 tests
+  Total: 36 tests, all pass
 ```
 
-New tests (28 total) all pass:
-- `__tests__/admin/today.test.tsx` — 19 tests ✓ (16 AC1/AC2/AC4/EC1/EC2 + 3 AC5 axe)
-- `__tests__/admin/badges.test.tsx` — 9 tests ✓
+## Out of scope
+
+- `e2e/admin-today.spec.ts` (AC5 keyboard focus Playwright test) — no Playwright setup exists in this project. JSDOM axe tests cover role/ARIA/label violations. Full keyboard focus-ring verification requires a future e2e story.
 
 ## Review notes
 
-- **P1** `app/admin/page.tsx:5` — `getAdminTodayCached` imported from `./layout`; layout is dual-purpose (shell + data cache). Works correctly now but a future layout refactor could silently break the page. Move wrapper to `lib/admin/today-cache.ts`. (full-review 2026-11-25)
-- **P1** `app/admin/AdminSidebar.tsx` — `formatRelativeAge` has no isolated unit test; badge tooltip test is wall-clock-coupled. Add a frozen-`Date.now()` unit test for the helper. (full-review 2026-11-25)
+- **P1** `app/admin/page.tsx:5` — `getAdminTodayCached` imported from `./layout`; layout is dual-purpose. Fixed: moved to `app/admin/today-cache.ts`. (full-review 2026-11-25)
+- **P1** `app/admin/AdminSidebar.tsx` — `formatRelativeAge` had no isolated unit test; test was wall-clock-coupled. Fixed: extracted to `app/admin/format-relative-age.ts`, test imports real function. (full-review 2026-11-25)
+- **P1** `app/admin/layout.tsx` — badge counts serialized for all keys regardless of role. Fixed: `Partial<AdminBadgeCounts>` used; layout only includes keys for fields backend returned. (full-review 2026-11-25)
 
 ## After this merges, a user can:
 

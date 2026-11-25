@@ -14,7 +14,7 @@ interface AdminShellProps {
   displayName: string;
   email: string;
   role: UserRole;
-  badgeCounts?: AdminBadgeCounts | null;
+  badgeCounts?: Partial<AdminBadgeCounts> | null;
   ordersNeedingReview?: boolean;
   badgeOldestAt?: Partial<Record<keyof AdminBadgeCounts, string>>;
 }

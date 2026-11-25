@@ -41,6 +41,15 @@ beforeEach(() => {
   vi.resetModules();
 });
 
+// ─── AC4: no-cache export ─────────────────────────────────────────────────────
+
+describe("AC4: page is not statically cached", () => {
+  it("exports dynamic = force-dynamic", async () => {
+    const mod = await import("@/app/admin/page");
+    expect((mod as Record<string, unknown>).dynamic).toBe("force-dynamic");
+  });
+});
+
 // ─── AC1: Today list lines ────────────────────────────────────────────────────
 
 describe("AC1: renders Today list lines from getAdminToday", () => {

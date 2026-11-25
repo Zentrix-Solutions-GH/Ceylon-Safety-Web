@@ -1,7 +1,7 @@
 // S-102: Admin Today badges — AC3, EC3
 
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import * as React from "react";
 import AdminSidebar from "@/app/admin/AdminSidebar";
 
@@ -78,7 +78,9 @@ describe("EC3: counts above 99 show 99+", () => {
 // ─── AC3: age tooltip ────────────────────────────────────────────────────────
 
 describe("AC3: oldest age shown on badge hover", () => {
-  it("badge has a title attribute with age when oldestAt is provided", () => {
+  it("badge title shows formatted age for a known timestamp", () => {
+    // 2026-11-24T08:00:00Z is exactly 28h before 2026-11-25T12:00:00Z
+    vi.setSystemTime(new Date("2026-11-25T12:00:00Z"));
     renderSidebar(
       { comments: 3, bankTransfers: 0, downloadRequests: 0 },
       false,
@@ -86,7 +88,8 @@ describe("AC3: oldest age shown on badge hover", () => {
     );
     const badge = screen.getByText("3");
     expect(badge).toHaveAttribute("title");
-    expect(badge.getAttribute("title")).toMatch(/ago/);
+    expect(badge.getAttribute("title")).toContain("1d ago");
+    vi.useRealTimers();
   });
 
   it("badge has no title attribute when no oldestAt is provided", () => {
