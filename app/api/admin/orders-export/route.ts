@@ -204,11 +204,11 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
           .order("created_at", { ascending: true })
           .range(offset, offset + CHUNK_SIZE - 1);
 
-        if (!data || data.length === 0) break;
         if (error) {
           hadDbError = true;
           break;
         }
+        if (!data || data.length === 0) break;
 
         for (const order of data as ExportRow[]) {
           const buyerName =

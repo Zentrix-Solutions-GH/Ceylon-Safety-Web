@@ -111,3 +111,47 @@ describe("secondsUntilMidnightColombo returns a sane value", () => {
     expect(retryAfterSeconds).toBeLessThanOrEqual(86_400);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Upstash Redis path (upstashAvailable = true)
+// ---------------------------------------------------------------------------
+
+describe("Upstash Redis path: 3 exports allowed, 4th blocked", () => {
+  it("allows first 3 calls for the same adminId", async () => {
+    const { checkExportRateLimit } = await importModule(true);
+    const id = `admin-redis-${Date.now()}`;
+
+    for (let i = 0; i < 3; i++) {
+      const result = await checkExportRateLimit(id);
+      expect(result.allowed).toBe(true);
+    }
+  });
+
+  it("blocks the 4th call and returns retryAfterSeconds > 0", async () => {
+    const { checkExportRateLimit } = await importModule(true);
+    const id = `admin-redis-block-${Date.now()}`;
+
+    for (let i = 0; i < 3; i++) {
+      await checkExportRateLimit(id);
+    }
+    const result = await checkExportRateLimit(id);
+    expect(result.allowed).toBe(false);
+    expect(result.retryAfterSeconds).toBeGreaterThan(0);
+  });
+
+  it("fails open when redis.incr throws", async () => {
+    vi.resetModules();
+    vi.doMock("@upstash/redis", () => ({
+      Redis: vi.fn().mockImplementation(() => ({
+        incr() { return Promise.reject(new Error("connection refused")); },
+        expire() { return Promise.resolve(1); },
+      })),
+    }));
+    process.env.UPSTASH_REDIS_REST_URL = "https://fake.upstash.io";
+    process.env.UPSTASH_REDIS_REST_TOKEN = "fake-token";
+    const { checkExportRateLimit } = await import("@/lib/admin/export/csv-rate-limit");
+
+    const result = await checkExportRateLimit("admin-fail-open");
+    expect(result.allowed).toBe(true);
+  });
+});

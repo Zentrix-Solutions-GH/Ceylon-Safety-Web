@@ -129,6 +129,16 @@ Note: `ArticleEditor/index.test.tsx` failures are pre-existing on `dev` (not int
 
 - **P1** `app/api/admin/orders-export/route.ts:217` — Audit log and owner alert dropped on client disconnect. Both are fire-and-forget at end of `ReadableStream.start()`; if the client disconnects before `controller.close()`, neither fires. Fix: move `writeAuditRow` to before the stream opens (with placeholder `row_count`), or handle the stream `cancel` callback.
 
+**full-review 2026-11-25 (re-review, HEAD d266c74)**
+
+- **P0** `app/api/admin/orders-export/route.ts:207` — `hadDbError` guard is unreachable. Supabase returns `{ data: null, error }` on failure; `if (!data || data.length === 0) break;` fires first so `hadDbError` is never set. `# EXPORT_ERROR` sentinel and `db_error: true` are dead code. Fix: check `error` before `!data`.
+
+- **P1** `app/api/admin/orders-export/route.ts:272` — `ReadableStream.cancel` does not fire on TCP disconnect in Next.js Node.js runtime — only on explicit consumer `reader.cancel()`. Silent network drops still lose audit/alert. Fix: write initial audit row before stream opens with `row_count: 0`, update on completion.
+
+- **P1** `__tests__/lib/admin/export/csv-rate-limit.test.ts` — Upstash Redis code path (`importModule(true)`) is never called; `incr`/`expire` sequence has zero test coverage.
+
+- **P1** `__tests__/app/api/admin/orders-export.test.ts` — `# EXPORT_ERROR` sentinel path is untested. After fixing P0 above, add: mock DB to error on second `range()` call; assert body contains `# EXPORT_ERROR` and audit receives `db_error: true`.
+
 ## After this merges
 
 - S-103 (admin orders list) can add the "Export CSV" button

@@ -447,6 +447,58 @@ describe("AC7: streams in 50-row chunks", () => {
 });
 
 // ---------------------------------------------------------------------------
+// DB error mid-stream — sentinel row
+// ---------------------------------------------------------------------------
+
+describe("DB error mid-stream appends # EXPORT_ERROR sentinel", () => {
+  it("appends # EXPORT_ERROR row and sets db_error:true in audit when DB errors on second page", async () => {
+    okAuth();
+    // First page returns 50 rows (full chunk) → loop continues; second page errors
+    const page1 = Array.from({ length: 50 }, () => makeRow());
+    const rangeFn = vi.fn()
+      .mockResolvedValueOnce({ data: page1, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "db timeout", code: "57014" } });
+    const orderFn = vi.fn().mockReturnValue({ range: rangeFn });
+    const eqFn = vi.fn().mockReturnThis();
+    const gteFn = vi.fn().mockReturnThis();
+    const lteFn = vi.fn().mockReturnThis();
+    const selectFn = vi.fn().mockReturnValue({ eq: eqFn, gte: gteFn, lte: lteFn, order: orderFn });
+    mockSupabase.mockReturnValue({ from: vi.fn().mockReturnValue({ select: selectFn }) });
+
+    const res = await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
+    const text = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(text).toContain("# EXPORT_ERROR");
+
+    const call = mockWriteAuditRow.mock.calls[0][0];
+    expect(call.after?.db_error).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ReadableStream cancel() — audit fires on explicit abort
+// ---------------------------------------------------------------------------
+
+describe("ReadableStream cancel: audit fires on explicit consumer cancel", () => {
+  it("calls writeAuditRow even when the stream reader is cancelled before completion", async () => {
+    okAuth();
+    // Return enough rows to keep the stream open long enough to cancel
+    mockDb(Array.from({ length: 3 }, () => makeRow()));
+
+    const res = await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
+
+    // Read and immediately cancel via the reader
+    const reader = res.body!.getReader();
+    await reader.read(); // read first chunk (header row)
+    await reader.cancel(); // explicit consumer cancel
+
+    // fireAuditAndAlert should have been called via the cancel() callback
+    expect(mockWriteAuditRow).toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // CSV injection guard
 // ---------------------------------------------------------------------------
 
