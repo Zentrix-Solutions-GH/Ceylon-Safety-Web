@@ -1,11 +1,11 @@
 ---
 id: S-091
 title: Cart page
-status: in-progress
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-091-cart-page
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/116"
 depends_on: [S-027, S-075]
 reqs: [REQ-044b, REQ-044c, REQ-044d, REQ-044e, REQ-044f, REQ-044h]
 ---
@@ -25,21 +25,21 @@ Build the `/cart` page that shows the signed-in buyer's saved cart, lets them re
 
 ## Acceptance criteria
 
-- [ ] AC1: Unauthenticated visitor at `/cart` is redirected to `/sign-in?next=/cart`
-- [ ] AC2: Each `CartItemRow` shows: document title, language badge (EN / SI / TA), price (LKR, two decimals), remove button
-- [ ] AC3: Removing an item calls the cart backend action (S-075) and re-fetches totals; the UI updates without a full page reload
-- [ ] AC4: Server-computed subtotal and total are displayed; prices are never computed in the browser
-- [ ] AC5: Empty cart state shows a message and a "Browse documents" link to `/documents`
-- [ ] AC6: Items marked `unavailable` (document hidden or language file missing) are shown with an "Unavailable" badge and cannot be checked out; a message explains the user must remove them before proceeding. Items are **not** auto-removed — the user decides. (Overrides commerce design §3.2 auto-remove behaviour; decision confirmed by owner 2026-11-25.)
-- [ ] AC7: "Proceed to Checkout" button is disabled while the cart contains unavailable items or is empty
-- [ ] AC8: Cart item count in the Header (S-025) reflects the current cart after any add/remove without a page reload
-- [ ] AC9: No coupon input in Release 1 (CouponInput component rendered only in Release 2)
+- [x] AC1: Unauthenticated visitor at `/cart` is redirected to `/sign-in?next=/cart`
+- [x] AC2: Each `CartItemRow` shows: document title, language badge (EN / SI / TA), price (LKR, two decimals), remove button
+- [x] AC3: Removing an item calls the cart backend action (S-075) and re-fetches totals; the UI updates without a full page reload
+- [x] AC4: Server-computed subtotal and total are displayed; prices are never computed in the browser
+- [x] AC5: Empty cart state shows a message and a "Browse documents" link to `/documents`
+- [x] AC6: Items marked `unavailable` (document hidden or language file missing) are shown with an "Unavailable" badge and cannot be checked out; a message explains the user must remove them before proceeding. Items are **not** auto-removed — the user decides. (Overrides commerce design §3.2 auto-remove behaviour; decision confirmed by owner 2026-11-25.)
+- [x] AC7: "Proceed to Checkout" button is disabled while the cart contains unavailable items or is empty
+- [x] AC8: Cart item count in the Header (S-025) reflects the current cart after any add/remove without a page reload
+- [x] AC9: No coupon input in Release 1 (CouponInput component rendered only in Release 2)
 
 ## Edge cases
 
-- [ ] EC1: Network error on remove → show an inline error; item stays in cart
-- [ ] EC2: Another tab removes the last item → on focus, the page re-fetches and shows the empty state
-- [ ] EC3: `unavailable` item that was in the cart before the document was hidden → shown with badge, not silently removed (item became unavailable after being added; badge + message prompts user to remove)
+- [x] EC1: Network error on remove → show an inline error; item stays in cart
+- [x] EC2: Another tab removes the last item → on focus, the page re-fetches and shows the empty state
+- [x] EC3: `unavailable` item that was in the cart before the document was hidden → shown with badge, not silently removed (item became unavailable after being added; badge + message prompts user to remove)
 
 ## Contract
 
