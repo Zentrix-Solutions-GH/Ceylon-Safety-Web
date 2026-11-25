@@ -897,6 +897,7 @@ const en = {
   "cart.checkout.proceed": "Proceed to Checkout",
   "cart.checkout.proceed_aria": "Proceed to checkout",
   "cart.error.remove_failed": "Could not remove item. Please try again.",
+  "cart.error.stale_totals": "Prices may be outdated. Refresh the page to see the latest totals.",
   "cart.header.count": "{count} items in cart",
   "cart.header.count_one": "1 item in cart",
 } as const;

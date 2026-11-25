@@ -24,6 +24,7 @@ export default function CartPageClient({ initialCart }: CartPageClientProps) {
   const [cart, setCart] = useState<CartCalculateResponse>(initialCart);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [staleData, setStaleData] = useState(false);
 
   const hasUnavailable = cart.items.some((item) => !item.available);
   const isEmpty = cart.items.length === 0;
@@ -40,10 +41,15 @@ export default function CartPageClient({ initialCart }: CartPageClientProps) {
       if (res.ok) {
         const updated: CartCalculateResponse = await res.json();
         setCart(updated);
+        setStaleData(false);
         router.refresh();
+      } else {
+        // Non-ok response (e.g. 429, 500) — keep existing items but flag stale totals
+        setStaleData(true);
       }
     } catch {
-      // silent — stale data is acceptable on background re-fetch
+      // Network failure — flag stale totals so the user knows prices may be outdated
+      setStaleData(true);
     }
   }, [router]);
 
@@ -60,6 +66,7 @@ export default function CartPageClient({ initialCart }: CartPageClientProps) {
   async function handleRemove(cartItemId: string) {
     setRemovingId(cartItemId);
     setRemoveError(null);
+    setStaleData(false);
 
     const result = await removeFromCartAction(cartItemId);
 
@@ -114,6 +121,12 @@ export default function CartPageClient({ initialCart }: CartPageClientProps) {
       {removeError && (
         <div role="alert" className="mb-4 text-sm text-destructive bg-destructive/10 rounded p-3">
           {removeError}
+        </div>
+      )}
+
+      {staleData && (
+        <div role="status" className="mb-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
+          {t("cart.error.stale_totals")}
         </div>
       )}
 

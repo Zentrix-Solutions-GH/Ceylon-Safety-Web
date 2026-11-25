@@ -4,29 +4,26 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { CustomerHeader } from "@/components/layout/CustomerHeader";
+import { getCartCount } from "@/lib/cart/count";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   robots: { index: false },
 };
 
-async function getCartCount(): Promise<number> {
+async function getUserId(): Promise<string | null> {
   try {
     const supabase = await createSupabaseServerClient();
     const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return 0;
-    const { count } = await supabase
-      .from("cart_items")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userData.user.id);
-    return count ?? 0;
+    return userData?.user?.id ?? null;
   } catch {
-    return 0;
+    return null;
   }
 }
 
 export default async function CustomerLayout({ children }: { children: ReactNode }) {
-  const cartCount = await getCartCount();
+  const userId = await getUserId();
+  const cartCount = userId ? await getCartCount(userId) : 0;
   return (
     <>
       <CustomerHeader cartCount={cartCount} />

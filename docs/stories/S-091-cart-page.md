@@ -123,7 +123,9 @@ check.sh: 9 passed, 1 failed
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `app/(customer)/layout.tsx:14-25` — `getCartCount` queries `cart_items` directly in the layout, bypassing `lib/cart/`. Move to `lib/cart/getCartCount(userId): Promise<number>` for consistency and testability. (full-review 2026-11-25)
+- **P1** `components/cart/CartPageClient.tsx:38-50` — `visibilitychange` re-fetch silently drops non-ok HTTP responses; stale totals remain displayed. Add error/stale indicator when `!res.ok`. (full-review 2026-11-25)
+- **P1** `app/(customer)/cart/page.tsx` — AC1 redirect has no unit test. Add `__tests__/app/(customer)/cart-page.test.tsx` mocking `requireActiveAccount` returning `{ ok: false }` and asserting `redirect` is called. (full-review 2026-11-25)
 
 ## After this merges
 
