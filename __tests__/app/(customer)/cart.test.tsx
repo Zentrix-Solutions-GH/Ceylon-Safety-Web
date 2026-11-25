@@ -188,6 +188,7 @@ describe("CartPageClient — AC6/AC7: unavailable items", () => {
     render(<CartPageClient initialCart={FULL_CART} />);
     const proceed = screen.getByRole("link", { name: /cart\.checkout\.proceed/ });
     expect(proceed).not.toHaveAttribute("aria-disabled", "true");
+    expect(proceed).toHaveAttribute("href", "/checkout");
   });
 
   it("AC6: shows warning message explaining unavailable items must be removed", () => {
