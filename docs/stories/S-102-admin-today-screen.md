@@ -105,7 +105,8 @@ New tests (28 total) all pass:
 
 ## Review notes
 
-<!-- Filled in by reviewer/security-reviewer agents and /full-review -->
+- **P1** `app/admin/page.tsx:5` — `getAdminTodayCached` imported from `./layout`; layout is dual-purpose (shell + data cache). Works correctly now but a future layout refactor could silently break the page. Move wrapper to `lib/admin/today-cache.ts`. (full-review 2026-11-25)
+- **P1** `app/admin/AdminSidebar.tsx` — `formatRelativeAge` has no isolated unit test; badge tooltip test is wall-clock-coupled. Add a frozen-`Date.now()` unit test for the helper. (full-review 2026-11-25)
 
 ## After this merges, a user can:
 

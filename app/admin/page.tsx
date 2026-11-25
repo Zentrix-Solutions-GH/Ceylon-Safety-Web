@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { getAdminTodayCached } from "./layout";
+import { getAdminTodayCached } from "./today-cache";
 import { formatPrice } from "@/lib/utils/price";
 import { t } from "@/messages/en";
 
@@ -108,7 +108,7 @@ export default async function AdminTodayPage() {
         <p className="text-muted-foreground">{t("admin.today.empty")}</p>
       )}
 
-      <ul>
+      {(hasLines || todayOrders != null) && <ul>
           {comments != null && (
             <QueueRow
               label={t("admin.today.comments_label")}
@@ -168,7 +168,7 @@ export default async function AdminTodayPage() {
               </Link>
             </li>
           )}
-        </ul>
+        </ul>}
     </div>
   );
 }

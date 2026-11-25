@@ -13,8 +13,8 @@ expect.extend(toHaveNoViolations);
 
 const mockGetAdminToday = vi.fn();
 
-// page.tsx imports getAdminTodayCached from ./layout
-vi.mock("@/app/admin/layout", () => ({
+// page.tsx imports getAdminTodayCached from ./today-cache
+vi.mock("@/app/admin/today-cache", () => ({
   getAdminTodayCached: (...args: unknown[]) => mockGetAdminToday(...args),
 }));
 

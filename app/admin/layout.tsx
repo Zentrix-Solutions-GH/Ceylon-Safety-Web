@@ -2,16 +2,11 @@
 // AC6: no ad/analytics scripts — this layout has no ScriptGate.
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
-import { cache } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getAdminToday } from "@/lib/admin/today";
+import { getAdminTodayCached } from "./today-cache";
 import AdminShell from "./AdminShell";
-
-// React cache() deduplicates concurrent calls within one request render.
-// app/admin/page.tsx imports this wrapper so layout + page share one result.
-export const getAdminTodayCached = cache(getAdminToday);
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },

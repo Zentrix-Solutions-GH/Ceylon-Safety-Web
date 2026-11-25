@@ -14,6 +14,7 @@ import type { AdminBadgeCounts } from "./AdminShell";
 function formatRelativeAge(isoString: string): string {
   const diffMs = Date.now() - new Date(isoString).getTime();
   const diffMins = Math.floor(diffMs / 60_000);
+  if (diffMins < 1) return "just now";
   if (diffMins < 60) return `${diffMins}m ago`;
   const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return `${diffHours}h ago`;
@@ -47,6 +48,7 @@ interface NavItem {
   href: string;
   permission?: string;
   badge?: keyof AdminBadgeCounts;
+  ordersDot?: boolean;
 }
 
 interface NavGroup {
@@ -84,7 +86,7 @@ function buildGroups(): NavGroup[] {
       permission: "documents.*",
       items: [
         { label: t("admin.nav.documents"), href: "/admin/documents", permission: "documents.*" },
-        { label: t("admin.nav.orders"), href: "/admin/orders", permission: "orders.read" },
+        { label: t("admin.nav.orders"), href: "/admin/orders", permission: "orders.read", ordersDot: true },
       ],
     },
     {
@@ -206,7 +208,7 @@ export default function AdminSidebar({ role, badgeCounts, ordersNeedingReview = 
                     const count = item.badge ? (badgeCounts?.[item.badge] ?? 0) : 0;
                     const ageIso = item.badge ? badgeOldestAt?.[item.badge] : undefined;
                     const isActive = pathname === item.href;
-                    const showOrdersDot = item.href === "/admin/orders" && ordersNeedingReview;
+                    const showOrdersDot = !!item.ordersDot && ordersNeedingReview;
                     return (
                       <li key={item.href}>
                         <Link
