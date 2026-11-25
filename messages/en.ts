@@ -905,6 +905,25 @@ const en = {
   "locked_preview.alt": "Locked preview of {title}",
   "locked_preview.placeholder_alt": "No preview available",
   "locked_preview.purchase_to_unlock": "Purchase to unlock",
+
+  // Cart page (S-091)
+  "cart.page_title": "Your Cart",
+  "cart.empty.title": "Your cart is empty",
+  "cart.empty.browse": "Browse documents",
+  "cart.item.remove": "Remove item",
+  "cart.item.removing": "Removing…",
+  "cart.item.unavailable": "Unavailable",
+  "cart.item.unavailable_reason.document_unavailable": "This document is no longer available.",
+  "cart.item.unavailable_reason.language_unavailable": "This language file is not available.",
+  "cart.unavailable.warning": "Some items in your cart are unavailable. Please remove them before proceeding.",
+  "cart.summary.subtotal": "Subtotal",
+  "cart.summary.total": "Total",
+  "cart.checkout.proceed": "Proceed to Checkout",
+  "cart.checkout.proceed_aria": "Proceed to checkout",
+  "cart.error.remove_failed": "Could not remove item. Please try again.",
+  "cart.error.stale_totals": "Prices may be outdated. Refresh the page to see the latest totals.",
+  "cart.header.count": "{count} items in cart",
+  "cart.header.count_one": "1 item in cart",
 } as const;
 
 export type MessageKey = keyof typeof en;
