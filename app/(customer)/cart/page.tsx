@@ -13,6 +13,7 @@ export default async function CartPage() {
   const auth = await requireActiveAccount();
   if (!auth.ok) {
     redirect("/sign-in?next=/cart");
+    return;
   }
 
   const cart = await calculateCart(auth.user.id);

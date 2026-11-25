@@ -54,7 +54,7 @@ export default function CartItemRow({ item, onRemove, isRemoving }: CartItemRowP
         <button
           type="button"
           onClick={() => item.cartItemId && onRemove(item.cartItemId)}
-          disabled={isRemoving}
+          disabled={isRemoving || !item.cartItemId}
           aria-label={t("cart.item.remove")}
           className="text-xs text-muted-foreground hover:text-destructive disabled:opacity-50 transition-colors"
         >
