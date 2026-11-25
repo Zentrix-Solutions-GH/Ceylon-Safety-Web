@@ -487,6 +487,10 @@ const en = {
   "admin.today.today_orders_label": "Today's orders",
   "admin.today.view_queue": "View queue",
   "admin.today.oldest_age_label": "Oldest waiting",
+  "admin.today.age_just_now": "just now",
+  "admin.today.age_minutes_suffix": "m ago",
+  "admin.today.age_hours_suffix": "h ago",
+  "admin.today.age_days_suffix": "d ago",
 
   // S-058: Admin articles list
   "admin.articles.page_title": "Articles",

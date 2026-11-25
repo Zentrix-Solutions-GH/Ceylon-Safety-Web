@@ -25,7 +25,7 @@ The first admin screen after sign-in: one plain list of waiting work, oldest fir
 - [x] AC2: Lines the person may not open are not rendered. Empty state: "Nothing is waiting. Well done."
 - [x] AC3: Menu badges (Comments, Bank transfers, Download requests, and a dot on Orders for `needs_review`) show the counts from the same call; "99+" above 99; the oldest item's age on hover; counted once per page load, no polling.
 - [x] AC4: Page and calls are never cached; errors show the mapped plain sentence (`mfa_required`, `reauth_required`, `rate_limited`).
-- [x] AC5: Keyboard reachable, visible focus, colour is never the only signal (WCAG 2.1 AA target).
+- [ ] AC5: Keyboard reachable, visible focus, colour is never the only signal (WCAG 2.1 AA target).
 
 ## Edge cases
 
@@ -84,7 +84,7 @@ Prior art: searched docs/ for "today list", "dashboard", "REQ-140", "badges", "a
 ## Evidence
 
 ```
-$ bash scripts/check.sh   # run on branch HEAD 653a3b7, 2026-11-25
+$ bash scripts/check.sh   # run on branch HEAD d00e8b1, 2026-11-25
 
 ── ESLint ──
 ✓ ESLint passed
@@ -95,7 +95,6 @@ $ bash scripts/check.sh   # run on branch HEAD 653a3b7, 2026-11-25
 ── Vitest (unit) ──
  Test Files  1 failed | 268 passed | 15 skipped (284)
       Tests  18 failed | 2843 passed | 60 skipped (2921)
-   Duration  222.16s
 
 The 18 failures are all in __tests__/components/admin/ArticleEditor/index.test.tsx:
   TypeError: Cannot read properties of undefined (reading 'clear')  at localStorage.clear() :97
@@ -108,18 +107,24 @@ The 18 failures are all in __tests__/components/admin/ArticleEditor/index.test.t
 
 S-102 tests (run separately: npx vitest run __tests__/admin/):
   ✓ __tests__/admin/today.test.tsx           20 tests
-  ✓ __tests__/admin/badges.test.tsx          10 tests
+  ✓ __tests__/admin/badges.test.tsx           9 tests
   ✓ __tests__/admin/format-relative-age.test.ts  6 tests
-  Total: 36 tests, all pass
+  ✓ __tests__/admin/layout.test.tsx          39 tests
+  ✓ __tests__/admin/error.test.tsx            4 tests
+  ✓ __tests__/admin/staff.test.tsx           24 tests
+  Total: 102 tests, all pass
 ```
 
 ## Out of scope
 
-- `e2e/admin-today.spec.ts` (AC5 keyboard focus Playwright test) — no Playwright setup exists in this project. JSDOM axe tests cover role/ARIA/label violations. Full keyboard focus-ring verification requires a future e2e story.
+- `e2e/admin-today.spec.ts` (AC5 keyboard focus Playwright test) — no Playwright setup exists in this project. JSDOM axe tests cover role/ARIA/label violations. Full keyboard focus-ring and colour-independence verification requires a future e2e story. AC5 checkbox unchecked to reflect this gap.
+- Visible focus rings on the orders dot (colour-only signal) — cannot be verified without a real browser; deferred to future e2e story.
 
 ## Review notes
 
 - **P1** `app/admin/page.tsx:5` — `getAdminTodayCached` imported from `./layout`; layout is dual-purpose. Fixed: moved to `app/admin/today-cache.ts`. (full-review 2026-11-25)
+- **P1** `app/admin/format-relative-age.ts:4-9` — hardcoded English strings bypassed `messages/en.ts`. Fixed: added keys `admin.today.age_just_now/minutes_suffix/hours_suffix/days_suffix`; function now calls `t()`. (full-review 2026-11-25)
+- **P1** `app/admin/AdminSidebar.tsx:217` — age text in `title` attr only (mouse-only, fails WCAG 2.1 1.4.13). Fixed: age included in `aria-label` so keyboard/screen-reader users can access it; `title` retained for sighted mouse users. (full-review 2026-11-25)
 - **P1** `app/admin/AdminSidebar.tsx` — `formatRelativeAge` had no isolated unit test; test was wall-clock-coupled. Fixed: extracted to `app/admin/format-relative-age.ts`, test imports real function. (full-review 2026-11-25)
 - **P1** `app/admin/layout.tsx` — badge counts serialized for all keys regardless of role. Fixed: `Partial<AdminBadgeCounts>` used; layout only includes keys for fields backend returned. (full-review 2026-11-25)
 

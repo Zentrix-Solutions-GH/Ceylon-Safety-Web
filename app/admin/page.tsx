@@ -108,7 +108,7 @@ export default async function AdminTodayPage() {
         <p className="text-muted-foreground">{t("admin.today.empty")}</p>
       )}
 
-      {(hasLines || todayOrders != null) && <ul>
+      {(hasLines || todayOrders != null) && <ul aria-label={t("admin.today.heading")}>
           {comments != null && (
             <QueueRow
               label={t("admin.today.comments_label")}
