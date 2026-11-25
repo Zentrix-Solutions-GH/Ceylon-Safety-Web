@@ -160,6 +160,34 @@ describe("CartPageClient — EC2: visibilitychange re-fetch", () => {
     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByText(/cart\.empty\.title/)).toBeInTheDocument());
   });
+
+  it("EC2: when re-fetch returns non-ok, shows stale-data banner and keeps items", async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false });
+
+    render(<CartPageClient initialCart={FULL_CART} />);
+    expect(screen.getByText("Fire Safety Checklist")).toBeInTheDocument();
+
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole("status")).toBeInTheDocument());
+    expect(screen.getByText("Fire Safety Checklist")).toBeInTheDocument();
+  });
+
+  it("EC2: when re-fetch throws, shows stale-data banner and keeps items", async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error("network error"));
+
+    render(<CartPageClient initialCart={FULL_CART} />);
+    expect(screen.getByText("Fire Safety Checklist")).toBeInTheDocument();
+
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole("status")).toBeInTheDocument());
+    expect(screen.getByText("Fire Safety Checklist")).toBeInTheDocument();
+  });
 });
 
 describe("CartPageClient — AC6/AC7: unavailable items", () => {

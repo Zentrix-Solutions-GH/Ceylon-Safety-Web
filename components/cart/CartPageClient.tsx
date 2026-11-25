@@ -42,6 +42,7 @@ export default function CartPageClient({ initialCart }: CartPageClientProps) {
         const updated: CartCalculateResponse = await res.json();
         setCart(updated);
         setStaleData(false);
+        setRemoveError(null);
         router.refresh();
       } else {
         // Non-ok response (e.g. 429, 500) — keep existing items but flag stale totals
@@ -99,8 +100,11 @@ export default function CartPageClient({ initialCart }: CartPageClientProps) {
       return;
     }
 
-    router.refresh(); // AC8: revalidate server components so header cart count updates
-    setRemovingId(null);
+    try {
+      router.refresh(); // AC8: revalidate server components so header cart count updates
+    } finally {
+      setRemovingId(null);
+    }
   }
 
   if (isEmpty) {
