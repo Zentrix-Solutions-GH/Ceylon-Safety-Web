@@ -1,11 +1,11 @@
 ---
 id: S-092
 title: Checkout page
-status: in-progress
+status: pr-open
 owner: frontend
 risk: normal
 branch: feature/S-092-checkout-page
-pr: ~
+pr: "https://github.com/Zentrix-Solutions-GH/Ceylon-Safety-Web/pull/118"
 depends_on: [S-078, S-091]
 reqs: [REQ-044d, REQ-152, REQ-153, REQ-154]
 ---
@@ -23,22 +23,22 @@ Build the `/checkout` page where the buyer reviews their order, fills in billing
 
 ## Acceptance criteria
 
-- [ ] AC1: Unauthenticated visitor at `/checkout` is redirected to `/sign-in?next=/checkout`
-- [ ] AC2: `OrderSummary` shows each line (title, language, price), subtotal, and total; prices come from the server response to `createCheckout`/`createBankOrder`, never from local state
-- [ ] AC3: `BillingForm` collects: first name, last name, email (shown, not editable), phone, company name (optional), tax id (optional), address, city; pre-filled from the saved profile address; a "Save to profile" checkbox
-- [ ] AC4: `PaymentMethodPicker` selects "Card (PayHere)" or "Bank transfer"; default is card
-- [ ] AC5: `TermsCheckbox` is required; links open terms and refund-policy pages in a new tab; the "Pay" button is disabled until ticked
-- [ ] AC6: Card flow — pressing "Pay LKR X with PayHere" calls `createCheckout`; on success the `PayHereRedirect` component auto-submits a hidden form to PayHere; the button is disabled while the server action is running
-- [ ] AC7: Bank transfer flow — pressing "Place order and show bank details" calls `createBankOrder`; on success redirects to `/checkout/pending?order=<id>`
-- [ ] AC8: If `createCheckout` returns `price_changed` or `item_unavailable`, the order summary refreshes with the new values and an inline error message is shown; the buyer must press pay again
-- [ ] AC9: If `createCheckout` returns `coupon_invalid`, an inline error is shown (Release 2 path; no coupon input in Release 1 so this only fires on race conditions)
-- [ ] AC10: The page never stores billing form values in `localStorage` or cookies
+- [x] AC1: Unauthenticated visitor at `/checkout` is redirected to `/sign-in?next=/checkout`
+- [x] AC2: `OrderSummary` shows each line (title, language, price), subtotal, and total; prices come from the server response to `createCheckout`/`createBankOrder`, never from local state
+- [x] AC3: `BillingForm` collects: first name, last name, email (shown, not editable), phone, company name (optional), tax id (optional), address, city; pre-filled from the saved profile address; a "Save to profile" checkbox
+- [x] AC4: `PaymentMethodPicker` selects "Card (PayHere)" or "Bank transfer"; default is card
+- [x] AC5: `TermsCheckbox` is required; links open terms and refund-policy pages in a new tab; the "Pay" button is disabled until ticked
+- [x] AC6: Card flow — pressing "Pay LKR X with PayHere" calls `createCheckout`; on success the `PayHereRedirect` component auto-submits a hidden form to PayHere; the button is disabled while the server action is running
+- [x] AC7: Bank transfer flow — pressing "Place order and show bank details" calls `createBankOrder`; on success redirects to `/checkout/pending?order=<id>`
+- [x] AC8: If `createCheckout` returns `price_changed` or `item_unavailable`, the order summary refreshes with the new values and an inline error message is shown; the buyer must press pay again
+- [x] AC9: If `createCheckout` returns `coupon_invalid`, an inline error is shown (Release 2 path; no coupon input in Release 1 so this only fires on race conditions)
+- [x] AC10: The page never stores billing form values in `localStorage` or cookies
 
 ## Edge cases
 
-- [ ] EC1: Buyer double-clicks "Pay" — button is disabled after first click; `createCheckout` per-user lock prevents two orders
-- [ ] EC2: Session expires while filling the form → on submit, server returns 401; page redirects to sign-in with `next=/checkout`
-- [ ] EC3: `createCheckout` returns `pending_order_exists` → show "You have an existing order for these items" with "Continue that order" and "Replace it" options
+- [x] EC1: Buyer double-clicks "Pay" — button is disabled after first click; `createCheckout` per-user lock prevents two orders
+- [x] EC2: Session expires while filling the form → on submit, server returns 401; page redirects to sign-in with `next=/checkout`
+- [x] EC3: `createCheckout` returns `pending_order_exists` → show "You have an existing order for these items" with "Continue that order" and "Replace it" options
 
 ## Contract
 
