@@ -201,6 +201,16 @@ describe("AC2: buyer email column", () => {
     expect(text).not.toContain("nimal@example.com");
   });
 
+  it("email is not fetched from DB when include_email is not set (data minimisation)", async () => {
+    okAuth(ADMIN_USER);
+    const db = mockDb([makeRow()]);
+
+    await GET("/api/admin/orders-export?from=2026-11-01&to=2026-11-30");
+    // The select string passed to Supabase must not include email field
+    const selectArg: string = db.select.mock.calls[0][0];
+    expect(selectArg).not.toContain("email");
+  });
+
   it("super admin with include_email=true gets email column", async () => {
     okAuth(SUPER_ADMIN_USER);
     mockDb([makeRow()]);

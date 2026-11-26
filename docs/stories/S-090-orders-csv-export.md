@@ -92,26 +92,37 @@ Prior art: searched `grep -ril "csv export\|orders.export\|rate.limit" docs/` �
 ## Evidence
 
 ```
-$ bash scripts/check.sh
+$ bash scripts/check.sh   # run after round 4 fixes with Supabase running
 ── ESLint ──
 ✓ ESLint passed
 ── TypeScript ──
 ✓ TypeScript passed
 ── Vitest (unit) ──
-✗ Vitest (unit) FAILED — 18 failures in __tests__/components/admin/ArticleEditor/index.test.tsx
-  Pre-existing on dev (confirmed: same 18 failures on dev before this branch).
-  All 265 other test files pass (2815 tests). S-090 tests: 26/26 pass.
+1 failed | 277 passed | 15 skipped (293 test files)
+18 failed | 2932 passed | 60 skipped (3010 tests)
+  18 failures are __tests__/components/admin/ArticleEditor/index.test.tsx
+  — pre-existing on dev (TypeError: Cannot read properties of undefined reading 'clear')
+  — confirmed same failures on dev before this branch
+S-090 tests: 47/47 pass (orders-export.test.ts 38, csv-rate-limit.test.ts 9)
 ── pgTAP RLS suite ──
-✓ pgTAP RLS suite passed
+✓ pgTAP RLS suite passed (120 tests)
 ── pgTAP seed suite ──
-✓ pgTAP seed suite passed
+✓ pgTAP seed suite passed (68 tests — role_permissions count 19 for orders.export confirmed)
+── pgTAP dev seed suite ──
+✓ pgTAP dev seed suite passed (38 tests)
 ── Types file freshness ──
 ✓ Types file freshness passed
-── Public pages session check (AC11) ──
-✓ Public pages session check (AC11) passed
+── Public pages session check ──
+check-public-pages: OK — checked 20 file(s), no violations.
+✓ Public pages session check passed
 ── Dev seed guard ──
 ✓ Dev seed guard passed
+Google Fonts check: ⚠ skipped (no build output — not applicable for backend PR)
+PayHere bundle check: ⚠ skipped (no build output — not applicable for backend PR)
+exit code: 1 (sole cause: pre-existing ArticleEditor/index.test.tsx — not S-090)
 ```
+
+EC3 (DB query >30 s → streaming keeps connection alive): **not verified — infrastructure property; cannot be unit tested.**
 
 Note: `ArticleEditor/index.test.tsx` failures are pre-existing on `dev` (not introduced by S-090).
 

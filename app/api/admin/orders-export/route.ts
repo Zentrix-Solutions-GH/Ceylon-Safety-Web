@@ -71,6 +71,17 @@ function formatLkr(cents: number): string {
   return (cents / 100).toFixed(2);
 }
 
+// Round-trip calendar-date check: regex allows "2026-13-01" (invalid month)
+// and "2026-02-31" (JS overflows to March 3 instead of returning NaN).
+function isRealDate(iso: string): boolean {
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (isNaN(d.getTime())) return false;
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}` === iso;
+}
+
 // ---------------------------------------------------------------------------
 // DB row types
 // ---------------------------------------------------------------------------
@@ -81,7 +92,7 @@ interface ExportRow {
   status: string;
   payment_method: string | null;
   total_cents: number;
-  profiles: { first_name: string; last_name: string; email: string } | null;
+  profiles: { first_name: string; last_name: string; email?: string } | null;
   order_items: Array<{
     title_snapshot: string;
     language: string;
@@ -115,16 +126,6 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
   const { from, to, include_email } = parsed.data;
   const includeEmail = include_email === "true";
 
-  // Real calendar date check — regex passes "2026-13-01" (NaN) and "2026-02-31"
-  // (JS overflows to March 3). Round-trip: parse then re-format and compare.
-  function isRealDate(iso: string): boolean {
-    const d = new Date(`${iso}T00:00:00Z`);
-    if (isNaN(d.getTime())) return false;
-    const y = d.getUTCFullYear();
-    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(d.getUTCDate()).padStart(2, "0");
-    return `${y}-${m}-${day}` === iso;
-  }
   if (!isRealDate(from) || !isRealDate(to)) {
     return NextResponse.json({ error: "validation_failed" }, { status: 400 });
   }
@@ -195,7 +196,7 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
     });
 
     sendOwnerAlert("order.csv_export", {
-      auditRowId: "0",
+      auditRowId: "n/a", // no DB-linked audit row id for CSV exports; held alerts store null
       actorName: user.claimedRole === "super_admin" ? `super_admin:${user.id}` : `admin:${user.id}`,
       actorId: user.id,
       changedAt: new Date().toISOString(),
@@ -215,21 +216,26 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
       // OFFSET pagination: each page costs DB a full scan of prior rows.
       // Acceptable at current scale (<10k orders/day); switch to keyset cursor
       // on (created_at, order_number) when export latency becomes a concern.
+      // Omit email from the profiles join when not requested (data minimisation).
+      const profileCols = includeEmail
+        ? "profiles!orders_user_id_fkey(first_name, last_name, email)"
+        : "profiles!orders_user_id_fkey(first_name, last_name)";
       let offset = 0;
       while (true) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error } = await (db as any)
+        const { data, error } = (await (db as any)
           .from("orders")
           .select(
             "order_number, created_at, status, payment_method, total_cents, " +
-            "profiles!orders_user_id_fkey(first_name, last_name, email), " +
+            profileCols + ", " +
             "order_items(title_snapshot, language, line_total_cents)",
           )
           .eq("status", "paid")
           .gte("created_at", colomboDayStartUTC(from))
           .lte("created_at", colomboDayEndUTC(to))
           .order("created_at", { ascending: true })
-          .range(offset, offset + CHUNK_SIZE - 1);
+          .range(offset, offset + CHUNK_SIZE - 1)
+        ) as { data: ExportRow[] | null; error: { message: string } | null };
 
         if (error) {
           hadDbError = true;
@@ -237,7 +243,7 @@ export async function GET(request: NextRequest): Promise<NextResponse | Response
         }
         if (!data || data.length === 0) break;
 
-        for (const order of data as ExportRow[]) {
+        for (const order of data) {
           const buyerName =
             order.profiles
               ? `${order.profiles.first_name} ${order.profiles.last_name}`.trim()
